@@ -90,7 +90,7 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 4. 并发执行优化
 
 ## 当前状态
-🚀 **阶段4任务2完成：V8编译优化配置系统！** - 智能代码分析，自动优化策略！
+🎯 **阶段4任务3完成：热路径代码检测系统！** - 智能识别频繁执行代码，生成优化建议！
 
 ### 已完成
 - [x] Rust 项目初始化
@@ -174,6 +174,26 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
     - ✅ 4/4 代码分析器测试全部通过
     - ✅ 集成到 Runtime::execute_code_with_file 流程
     - 🚀 **V8编译优化配置完成，为JIT优化奠定基础！**
+
+15. ✅ **阶段4任务3: 热路径代码检测系统** - 智能识别！🎯
+    - ✅ 创建 src/hot_path_tracker.rs 完整热路径跟踪模块
+    - ✅ 实现 HotPathTracker 结构体和配置（HotPathConfig）
+    - ✅ 实现多维度热路径检测：执行次数、执行时间、代码复杂度
+    - ✅ 实现智能阈值系统：
+      - 执行次数≥10次
+      - 执行时间>1ms且复杂度>10分
+      - 复杂度>20分且执行≥3次
+      - 复杂度>50分且执行≥2次
+    - ✅ 实现代码ID生成（基于代码哈希和文件路径）
+    - ✅ 生成智能优化建议（函数拆分、循环优化、算法改进等）
+    - ✅ 完整的统计跟踪：执行次数、平均时间、复杂度评分
+    - ✅ 集成到 Runtime 结构体，添加 hot_path_tracker 字段
+    - ✅ 在 execute_code_with_file 中自动跟踪执行
+    - ✅ 添加公共API：get_hot_path_stats()、get_hot_paths()、reset_hot_path_tracking()
+    - ✅ verbose模式下智能输出优化建议
+    - ✅ 7/7 单元测试全部通过
+    - ✅ 创建基准测试框架 (tests/hot_path_benchmark.rs)
+    - 🎯 **热路径检测系统完成，为JIT优化提供关键数据！**
 
 ### 测试结果
 - 单元测试：4/4 基础测试框架已建立 ✅
