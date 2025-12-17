@@ -286,7 +286,7 @@ impl Runtime {
         let module_loader = Some(Arc::new(module_loader::ModuleLoader::from_current_dir()?));
 
         // 初始化深度优化器
-        let deep_optimizer = Some(Arc::new(deep_optimization::DeepOptimizer::new_default()));
+        let deep_optimizer = Some(Arc::new(deep_optimization::DeepOptimizer::with_verbose(verbose)));
 
         // === LAZY MODULES (initialized on demand - for faster startup) ===
         // AI modules and precompiled cache are lazily initialized

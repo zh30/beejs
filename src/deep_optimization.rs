@@ -84,6 +84,7 @@ pub struct MemoryLayoutAnalysis {
 pub struct DeepOptimizer {
     config: DeepOptimizationConfig,
     stats: OptimizationStats,
+    verbose: bool,
 }
 
 /// 优化统计
@@ -99,15 +100,20 @@ pub struct OptimizationStats {
 }
 
 impl DeepOptimizer {
-    pub fn new(config: DeepOptimizationConfig) -> Self {
+    pub fn new(config: DeepOptimizationConfig, verbose: bool) -> Self {
         Self {
             config,
             stats: OptimizationStats::default(),
+            verbose,
         }
     }
 
     pub fn new_default() -> Self {
-        Self::new(DeepOptimizationConfig::default())
+        Self::new(DeepOptimizationConfig::default(), false)
+    }
+
+    pub fn with_verbose(verbose: bool) -> Self {
+        Self::new(DeepOptimizationConfig::default(), verbose)
     }
 
     /// 执行逃逸分析
@@ -340,7 +346,9 @@ impl DeepOptimizer {
     pub fn optimize_code(&self, code: &str) -> OptimizationResult {
         let start_time = Instant::now();
 
-        println!("\n🔍 执行深度代码优化分析...");
+        if self.verbose {
+            println!("\n🔍 执行深度代码优化分析...");
+        }
 
         // 执行各项分析
         let escape_analysis = self.analyze_escape(code);
@@ -372,7 +380,9 @@ impl DeepOptimizer {
 
         let optimization_time = start_time.elapsed();
 
-        println!("✅ 深度优化分析完成，收益: {:.1}", total_benefit);
+        if self.verbose {
+            println!("✅ 深度优化分析完成，收益: {:.1}", total_benefit);
+        }
 
         OptimizationResult {
             original_code: code.to_string(),
@@ -400,36 +410,44 @@ impl DeepOptimizer {
 
         // 应用循环展开（实际应用）
         if loop_unroll.can_unroll && self.config.enable_loop_unrolling {
-            println!(
-                "  🔄 应用循环展开优化 (展开因子: {})",
-                loop_unroll.unroll_factor
-            );
+            if self.verbose {
+                println!(
+                    "  🔄 应用循环展开优化 (展开因子: {})",
+                    loop_unroll.unroll_factor
+                );
+            }
             optimized = self.apply_loop_unrolling(&optimized, loop_unroll.unroll_factor);
             has_optimization = true;
         }
 
         // 应用函数内联（实际应用）
         if inline.can_inline && self.config.enable_inline_optimization {
-            println!("  📦 应用函数内联优化");
+            if self.verbose {
+                println!("  📦 应用函数内联优化");
+            }
             optimized = self.apply_inline_optimization(&optimized);
             has_optimization = true;
         }
 
         // 应用逃逸分析优化（实际应用）
         if escape.allocation_elimination_possible && self.config.enable_escape_analysis {
-            println!("  🎯 应用逃逸分析优化");
+            if self.verbose {
+                println!("  🎯 应用逃逸分析优化");
+            }
             optimized = self.apply_escape_optimization(&optimized);
             has_optimization = true;
         }
 
         // 应用内存布局优化（实际应用）
         if memory.cache_friendly && self.config.enable_memory_layout_optimization {
-            println!("  💾 应用内存布局优化");
+            if self.verbose {
+                println!("  💾 应用内存布局优化");
+            }
             optimized = self.apply_memory_layout_optimization(&optimized);
             has_optimization = true;
         }
 
-        if !has_optimization {
+        if !has_optimization && self.verbose {
             println!("  ⚠️  无可应用的优化");
         }
 
@@ -623,6 +641,13 @@ mod tests {
     #[test]
     fn test_deep_optimizer_creation() {
         let optimizer = DeepOptimizer::new_default();
+        let stats = optimizer.get_stats();
+        assert_eq!(stats.escape_analysis_count, 0);
+    }
+
+    #[test]
+    fn test_deep_optimizer_with_verbose() {
+        let optimizer = DeepOptimizer::with_verbose(true);
         let stats = optimizer.get_stats();
         assert_eq!(stats.escape_analysis_count, 0);
     }
