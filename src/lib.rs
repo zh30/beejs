@@ -208,8 +208,21 @@ impl Runtime {
                     // Convert result to string (improved formatting)
                     let result_str = match result {
                         Some(v) => {
-                            // Use Debug formatting for consistency
-                            format!("{:?}", v)
+                            // Use a more concise Debug format that removes the type wrapper
+                            let mut s = format!("{:?}", v);
+                            // Remove "String(" prefix and ")" suffix if present
+                            if s.starts_with("String(") && s.ends_with(')') {
+                                s = s[7..s.len() - 1].to_string();
+                            }
+                            // Remove "Int(" prefix and ")" suffix if present
+                            else if s.starts_with("Int(") && s.ends_with(')') {
+                                s = s[4..s.len() - 1].to_string();
+                            }
+                            // Remove "Bool(" prefix and ")" suffix if present
+                            else if s.starts_with("Bool(") && s.ends_with(')') {
+                                s = s[5..s.len() - 1].to_string();
+                            }
+                            s
                         }
                         None => "undefined".to_string(),
                     };
