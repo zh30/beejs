@@ -1,4 +1,4 @@
-use std::sync::{Mutex, Once};
+use std::sync::{Arc, Mutex, Once};
 use std::collections::VecDeque;
 use rusty_v8 as v8;
 
@@ -166,60 +166,42 @@ pub fn get_pool() -> Option<&'static IsolatePool> {
     None
 }
 
-/// 测试专用的 V8 Isolate 管理器
-/// 确保在测试环境中串行化管理 Isolate，避免并行创建导致的线程问题
-static TEST_ISOLATE_MANAGER: Once = Once::new();
-static mut TEST_ISOLATE: Option<v8::OwnedIsolate> = None;
-static TEST_ISOLATE_LOCK: Mutex<()> = Mutex::new(());
+/// 测试专用的 V8 Isolate 管理器（简化版本）
+/// 在测试环境中禁用全局 Isolate 池，每个 Runtime 使用独立的 Isolate
+/// 关键原则：确保 Isolate 在创建它的线程上被销毁
 
-/// 测试环境安全的 Isolate 获取
-/// 确保所有测试串行使用同一个 Isolate，避免线程问题
+/// 测试环境安全的 Isolate 获取（简化版本）
+/// 返回一个新创建的 Isolate，不进行复用
 #[allow(dead_code)]
 pub fn get_test_isolate() -> Option<v8::OwnedIsolate> {
-    // 只在测试环境中提供功能
+    // 在测试环境中总是创建新的 Isolate
+    // 确保它在与创建线程相同的线程上被销毁
     #[cfg(not(test))]
     {
         return None;
     }
 
-    // 使用 Once 确保只初始化一次
-    #[allow(unreachable_code)]
-    TEST_ISOLATE_MANAGER.call_once(|| {
-        // 检查 V8 是否可用（通过 lib.rs 中的函数）
-        if crate::is_v8_available() {
-            unsafe {
-                TEST_ISOLATE = Some(v8::Isolate::new(Default::default()));
-            }
-        }
-    });
-
-    // 获取锁确保串行访问
-    #[allow(unreachable_code)]
-    let _lock = TEST_ISOLATE_LOCK.lock().unwrap();
-
-    // 安全地获取 Isolate
-    #[allow(static_mut_refs)]
-    unsafe {
-        TEST_ISOLATE.take()
+    // 检查 V8 是否可用（通过 lib.rs 中的函数）
+    if crate::is_v8_available() {
+        Some(v8::Isolate::new(Default::default()))
+    } else {
+        None
     }
 }
 
-/// 测试环境安全的 Isolate 归还
+/// 测试环境安全的 Isolate 归还（简化版本）
+/// 直接丢弃 Isolate，确保在正确的线程上触发 Drop
 #[allow(dead_code)]
 pub fn return_test_isolate(isolate: v8::OwnedIsolate) {
-    // 只在测试环境中提供功能
-    #[cfg(not(test))]
-    {
-        drop(isolate);
-        return;
-    }
+    // 直接丢弃 Isolate，它会在当前线程的当前作用域结束时被正确销毁
+    drop(isolate);
+}
 
-    #[allow(unreachable_code)]
-    let _lock = TEST_ISOLATE_LOCK.lock().unwrap();
-    #[allow(static_mut_refs)]
-    unsafe {
-        TEST_ISOLATE = Some(isolate);
-    }
+/// 测试环境安全检查：清理测试 Isolate（空实现）
+/// 不需要全局清理，因为每个 Isolate 都有自己的生命周期
+#[allow(dead_code)]
+pub fn cleanup_test_isolate() {
+    // 空实现：不需要全局清理
 }
 
 /// 从池中获取Isolate

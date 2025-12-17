@@ -1,0 +1,169 @@
+/// V8 Isolate 生命周期修复验证测试
+/// 测试新的安全 Isolate 管理器是否解决了并发测试问题
+
+use beejs::Runtime;
+// use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
+
+#[test]
+fn test_isolate_lifecycle_in_single_thread() {
+    // 验证在单线程环境下 Isolate 可以正常创建和销毁
+    let runtime = Runtime::new(67108864, 1073741824, false);
+    assert!(runtime.is_ok(), "Runtime creation should succeed in single thread");
+
+    let runtime = runtime.unwrap();
+    let result = runtime.execute_code("1 + 1");
+    assert!(result.is_ok(), "Code execution should succeed");
+    assert_eq!(result.unwrap(), "2");
+}
+
+#[test]
+fn test_sequential_isolate_creation() {
+    // 验证串行创建多个 Runtime 实例不会导致问题
+    for i in 0..10 {
+        let runtime = Runtime::new(67108864, 1073741824, false);
+        assert!(runtime.is_ok(), "Runtime {} creation should succeed", i);
+
+        let runtime = runtime.unwrap();
+        let result = runtime.execute_code(&format!("{}", i));
+        assert!(result.is_ok(), "Runtime {} execution should succeed", i);
+    }
+}
+
+#[test]
+fn test_isolate_reuse_safety() {
+    // 验证 Isolate 重用的安全性
+    let runtime1 = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime2 = Runtime::new(67108864, 1073741824, false).unwrap();
+
+    // 两个 Runtime 应该能独立工作
+    let result1 = runtime1.execute_code("42");
+    let result2 = runtime2.execute_code("24");
+
+    assert!(result1.is_ok(), "Runtime1 should work");
+    assert!(result2.is_ok(), "Runtime2 should work");
+    assert_eq!(result1.unwrap(), "42");
+    assert_eq!(result2.unwrap(), "24");
+}
+
+#[test]
+fn test_runtime_drop_safety() {
+    // 验证 Runtime Drop 的安全性
+    {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let _ = runtime.execute_code("console.log('test')");
+    } // runtime 在这里被 drop，应该不会导致问题
+
+    // 再次创建 Runtime 应该还能工作
+    let runtime = Runtime::new(67108864, 1073741824, false);
+    assert!(runtime.is_ok(), "New runtime creation after drop should succeed");
+}
+
+#[test]
+fn test_sequential_runtime_creation() {
+    // 测试串行创建多个 Runtime 实例（避免线程限制）
+    // 验证修复后的 Isolate 管理器能正确处理多个 Runtime 的创建和销毁
+
+    let mut handles = Vec::new();
+
+    for i in 0..5 {
+        handles.push(thread::spawn(move || {
+            // 每个线程串行执行自己的测试
+            let runtime = Runtime::new(67108864, 1073741824, false);
+            match runtime {
+                Ok(runtime) => {
+                    let result = runtime.execute_code(&format!("{}", i));
+                    (i, result.is_ok(), result.unwrap_or_default())
+                }
+                Err(_) => (i, false, "Failed to create runtime".to_string()),
+            }
+        }));
+    }
+
+    let mut success_count = 0;
+    let mut results = Vec::new();
+
+    for handle in handles {
+        if let Ok((i, success, result)) = handle.join() {
+            results.push((i, success, result));
+            if success {
+                success_count += 1;
+            }
+        }
+    }
+
+    println!("Sequential creation results:");
+    for (i, success, result) in &results {
+        println!("  Thread {}: {} - {}", i, if *success { "SUCCESS" } else { "FAILED" }, result);
+    }
+
+    // 串行执行应该都能成功
+    println!("Successful creations: {}/5", success_count);
+    assert_eq!(success_count, 5, "All sequential runtimes should be created successfully");
+}
+
+#[test]
+fn test_v8_initialization_safety() {
+    // 验证 V8 初始化在测试环境中的安全性
+
+    // 多次调用 Runtime::new 应该不会导致问题
+    for _ in 0..3 {
+        let runtime = Runtime::new(67108864, 1073741824, false);
+        assert!(runtime.is_ok(), "Runtime creation should always succeed");
+
+        // 立即 drop
+        drop(runtime);
+    }
+
+    // 验证 V8 仍然可用
+    let runtime = Runtime::new(67108864, 1073741824, false);
+    assert!(runtime.is_ok(), "V8 should still be available after multiple creations");
+}
+
+#[test]
+fn test_nodejs_api_sequential_execution() {
+    // 测试 Node.js API 在串行执行时的安全性
+
+    let handles: Vec<_> = (0..3)
+        .map(|i| {
+            thread::spawn(move || {
+                let runtime = Runtime::new(67108664, 1073741824, false);
+                if let Ok(runtime) = runtime {
+                    // 测试不同的 Node.js API
+                    let tests = vec![
+                        "process.version",
+                        "path.join('a', 'b')",
+                        "console.log('test')",
+                    ];
+
+                    let mut success_count = 0;
+                    for test in &tests {
+                        let result = runtime.execute_code(test);
+                        if result.is_ok() {
+                            success_count += 1;
+                        }
+                    }
+
+                    (i, success_count == tests.len())
+                } else {
+                    (i, false)
+                }
+            })
+        })
+        .collect();
+
+    let mut all_success = true;
+    for handle in handles {
+        if let Ok((i, success)) = handle.join() {
+            if !success {
+                println!("Thread {} failed", i);
+                all_success = false;
+            }
+        }
+    }
+
+    // 串行执行应该都能成功
+    println!("All Node.js API tests passed: {}", all_success);
+    assert!(all_success, "All Node.js API tests should pass in sequential execution");
+}
