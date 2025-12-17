@@ -12,8 +12,10 @@ use crate::module_loader::ModuleLoader;
 thread_local! {
     static MODULE_CACHE: Mutex<HashMap<String, v8::Global<v8::Object>>> = Mutex::new(HashMap::new());
     static LOADING_MODULES: Mutex<HashMap<String, bool>> = Mutex::new(HashMap::new());
-    static MODULE_LOADER: std::cell::Cell<*const ()> = std::cell::Cell::new(std::ptr::null());
 }
+
+// Global module loader for require callback
+static mut MODULE_LOADER_GLOBAL: Option<Arc<ModuleLoader>> = None;
 
 /// Set up all Node.js compatibility globals
 pub fn setup_nodejs_apis(
@@ -432,23 +434,18 @@ fn setup_module_system(
     context: &v8::Local<v8::Context>,
     current_file: Option<&Path>,
 ) -> Result<()> {
-    // Store module loader in thread-local for access in callback
-    let module_loader_ptr = Box::into_raw(Box::new(module_loader)) as *const ();
+    // Store module loader in global variable for access in callback
+    unsafe {
+        MODULE_LOADER_GLOBAL = module_loader;
+    }
 
-    // Create a callback that uses thread-local storage
-    extern "C" fn require_callback(
-        scope: &mut v8::HandleScope,
-        args: v8::FunctionCallbackArguments,
-        mut retval: v8::ReturnValue,
-    ) {
-        // Get module loader from thread-local
+    // Create a callback that uses global storage
+    let require_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+        // Get module loader from global
+        // Safe because we only access this during V8 execution in single-threaded context
+        #[allow(static_mut_refs)]
         let module_loader = unsafe {
-            let ptr = MODULE_LOADER.with(|ml| ml.get());
-            if ptr.is_null() {
-                None
-            } else {
-                Some(Box::from_raw(ptr as *mut Option<Arc<ModuleLoader>>))
-            }
+            MODULE_LOADER_GLOBAL.clone()
         };
 
         if let Some(module_name) = args.get(0).to_string(scope) {
@@ -463,7 +460,7 @@ fn setup_module_system(
                         for (key, value) in &module.exports {
                             let key_v8 = v8::String::new(scope, key).unwrap();
                             let v8_value = match value {
-                                serde_json::Value::String(s) => v8::String::new(scope, s).unwrap().into(),
+                                serde_json::Value::String(s) => v8::String::new(scope, &s).unwrap().into(),
                                 serde_json::Value::Number(n) => {
                                     if let Some(i) = n.as_i64() {
                                         v8::Integer::new(scope, i as i32).into()
@@ -477,7 +474,7 @@ fn setup_module_system(
                                     let v8_arr = v8::Array::new(scope, arr.len() as i32);
                                     for (i, item) in arr.iter().enumerate() {
                                         let v8_item = match item {
-                                            serde_json::Value::String(s) => v8::String::new(scope, s).unwrap().into(),
+                                            serde_json::Value::String(s) => v8::String::new(scope, &s).unwrap().into(),
                                             serde_json::Value::Number(n) => {
                                                 if let Some(i) = n.as_i64() {
                                                     v8::Integer::new(scope, i as i32).into()
@@ -516,14 +513,7 @@ fn setup_module_system(
         } else {
             retval.set(v8::undefined(scope).into());
         }
-    }
-
-    // Store module loader in thread-local
-    MODULE_LOADER.with(|ml| {
-        ml.set(module_loader_ptr);
     });
-
-    let require_func = v8::FunctionTemplate::new(scope, require_callback);
     let require_instance = require_func.get_function(scope).unwrap();
 
     // Set require as a global function
@@ -569,6 +559,7 @@ fn setup_module_system(
     Ok(())
 }
 
+#[allow(dead_code)]
 fn require_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -761,6 +752,7 @@ fn require_callback(
 }
 
 /// Resolve module path from module name
+#[allow(dead_code)]
 fn resolve_module_path(
     scope: &mut v8::HandleScope,
     module_name: &str,
@@ -826,7 +818,7 @@ mod tests {
         let context = v8::Context::new(handle_scope);
         let scope = &mut v8::ContextScope::new(handle_scope, context);
 
-        let result = setup_nodejs_apis(scope, &context, None);
+        let result = setup_nodejs_apis(scope, None, &context, None);
         assert!(result.is_ok());
 
         // Verify process exists

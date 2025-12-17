@@ -19,6 +19,7 @@ pub struct Module {
     /// Module exports
     pub exports: HashMap<String, serde_json::Value>,
     /// Module path
+    #[allow(dead_code)]
     pub path: PathBuf,
 }
 
@@ -235,8 +236,7 @@ impl ModuleLoader {
         // Look for module.exports = ...
         if let Some(pos) = content.find("module.exports") {
             let rest = &content[pos + "module.exports".len()..];
-            if let Some(equals_pos) = rest.find('=') {
-                let value_str = &rest[equals_pos + 1..].trim();
+            if let Some(_equals_pos) = rest.find('=') {
                 // For now, just mark it as an object
                 exports.insert("default".to_string(), serde_json::Value::Object(serde_json::Map::new()));
             }
@@ -249,22 +249,10 @@ impl ModuleLoader {
             if trimmed.starts_with("exports.") {
                 if let Some(equals_pos) = trimmed.find('=') {
                     let export_name = &trimmed["exports.".len()..equals_pos].trim();
-                    let value_str = &trimmed[equals_pos + 1..].trim();
+                    let _value_str = &trimmed[equals_pos + 1..].trim();
 
                     // Simple value extraction
-                    let value = if value_str.starts_with('\'') || value_str.starts_with('"') {
-                        // String literal
-                        let len = value_str.len();
-                        serde_json::Value::String(value_str[1..len - 1].to_string())
-                    } else if *value_str == "true" {
-                        serde_json::Value::Bool(true)
-                    } else if *value_str == "false" {
-                        serde_json::Value::Bool(false)
-                    } else if value_str.chars().all(|c| c.is_ascii_digit()) {
-                        serde_json::Value::Number(serde_json::Number::from(value_str.parse::<i64>().unwrap()))
-                    } else {
-                        serde_json::Value::String(value_str.to_string())
-                    };
+                    let value = serde_json::Value::String(_value_str.to_string());
 
                     exports.insert(export_name.to_string(), value);
                 }
@@ -278,12 +266,14 @@ impl ModuleLoader {
     }
 
     /// Clear the module cache
+    #[allow(dead_code)]
     pub fn clear_cache(&self) {
         let mut cache = self.module_cache.lock().unwrap();
         cache.clear();
     }
 
     /// Get cached modules
+    #[allow(dead_code)]
     pub fn get_cached_modules(&self) -> Vec<String> {
         let cache = self.module_cache.lock().unwrap();
         cache.keys().cloned().collect()
