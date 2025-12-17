@@ -134,13 +134,14 @@ fn main() -> Result<()> {
         OptimizeMode::Auto => beejs::OptimizeMode::Auto,
     };
 
-    let runtime = beejs::Runtime::new_with_optimization(
+    // Use global runtime instance (reused across executions for better performance)
+    let runtime = beejs::get_global_runtime(
         args.stack_size,
         args.max_heap,
         args.verbose,
         optimize_mode,
     )
-    .context("Failed to create runtime")?;
+    .context("Failed to get global runtime")?;
 
     if let Some(ref script) = args.script {
         let result = runtime
@@ -470,7 +471,8 @@ fn execute_script_for_watch(
     verbose: bool,
     optimize_mode: beejs::OptimizeMode,
 ) -> bool {
-    match beejs::Runtime::new_with_optimization(stack_size, max_heap, verbose, optimize_mode) {
+    // Use global runtime instance (reused across executions for better performance)
+    match beejs::get_global_runtime(stack_size, max_heap, verbose, optimize_mode) {
         Ok(runtime) => match runtime.execute_file(script) {
             Ok(result) => {
                 if verbose {
@@ -484,7 +486,7 @@ fn execute_script_for_watch(
             }
         },
         Err(e) => {
-            println!("\x1b[31m[error]\x1b[0m Failed to create runtime: {}", e);
+            println!("\x1b[31m[error]\x1b[0m Failed to get global runtime: {}", e);
             false
         }
     }

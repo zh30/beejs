@@ -176,6 +176,57 @@ pub enum OptimizeMode {
     Auto,
 }
 
+/// Global runtime instance for reuse across multiple script executions
+static GLOBAL_RUNTIME: std::sync::OnceLock<std::sync::Arc<Runtime>> = std::sync::OnceLock::new();
+static RUNTIME_CREATION_PARAMS: std::sync::OnceLock<(usize, usize, bool, OptimizeMode)> = std::sync::OnceLock::new();
+
+/// Get or create the global runtime instance (reused across executions)
+pub fn get_global_runtime(
+    stack_size: usize,
+    max_heap: usize,
+    verbose: bool,
+    optimize_mode: OptimizeMode,
+) -> Result<std::sync::Arc<Runtime>> {
+    // Check if we need to create a new runtime with different parameters
+    if let Some(params) = RUNTIME_CREATION_PARAMS.get() {
+        let (existing_stack, existing_heap, existing_verbose, existing_mode) = params;
+        if *existing_stack != stack_size
+            || *existing_heap != max_heap
+            || *existing_verbose != verbose
+            || *existing_mode != optimize_mode
+        {
+            // Parameters changed, need new runtime
+            GLOBAL_RUNTIME.get().map(|rt| {
+                if verbose {
+                    println!("Runtime parameters changed, creating new instance");
+                }
+                rt.clone()
+            }).ok_or_else(|| {
+                anyhow::anyhow!("Failed to reuse existing runtime with different parameters")
+            })
+        } else {
+            // Same parameters, reuse existing runtime
+            Ok(GLOBAL_RUNTIME.get().unwrap().clone())
+        }
+    } else {
+        // First time creating runtime
+        let runtime = Runtime::new_with_optimization(stack_size, max_heap, verbose, optimize_mode.clone())?;
+        let runtime_arc = std::sync::Arc::new(runtime);
+
+        // Store both the runtime and its creation parameters
+        RUNTIME_CREATION_PARAMS.set((stack_size, max_heap, verbose, optimize_mode.clone()))
+            .map_err(|_| anyhow::anyhow!("Failed to store runtime creation parameters"))?;
+        GLOBAL_RUNTIME.set(runtime_arc.clone())
+            .map_err(|_| anyhow::anyhow!("Failed to set global runtime"))?;
+
+        if verbose {
+            println!("Created global runtime instance (will be reused)");
+        }
+
+        Ok(runtime_arc)
+    }
+}
+
 /// Beejs Runtime - High-performance JavaScript/TypeScript execution engine using V8
 #[allow(dead_code)]
 pub struct Runtime {
