@@ -452,99 +452,8 @@ fn setup_module_system(
         MODULE_LOADER_GLOBAL = module_loader;
     }
 
-    // Create a callback that uses global storage
-    let require_func = v8::FunctionTemplate::new(
-        scope,
-        |scope: &mut v8::HandleScope,
-         args: v8::FunctionCallbackArguments,
-         mut retval: v8::ReturnValue| {
-            // Get module loader from global
-            // Safe because we only access this during V8 execution in single-threaded context
-            #[allow(static_mut_refs)]
-            let module_loader = unsafe { MODULE_LOADER_GLOBAL.clone() };
-
-            if let Some(module_name) = args.get(0).to_string(scope) {
-                let module_name_str = module_name.to_rust_string_lossy(scope);
-
-                // Use the module loader if available
-                if let Some(loader) = &module_loader {
-                    match loader.load_module(&module_name_str) {
-                        Ok(module) => {
-                            // Create a V8 object for the module exports
-                            let exports_obj = v8::Object::new(scope);
-                            for (key, value) in &module.exports {
-                                let key_v8 = v8::String::new(scope, key).unwrap();
-                                let v8_value = match value {
-                                    serde_json::Value::String(s) => {
-                                        v8::String::new(scope, &s).unwrap().into()
-                                    }
-                                    serde_json::Value::Number(n) => {
-                                        if let Some(i) = n.as_i64() {
-                                            v8::Integer::new(scope, i as i32).into()
-                                        } else {
-                                            v8::Number::new(scope, n.as_f64().unwrap_or(0.0)).into()
-                                        }
-                                    }
-                                    serde_json::Value::Bool(b) => {
-                                        v8::Boolean::new(scope, *b).into()
-                                    }
-                                    serde_json::Value::Null => v8::null(scope).into(),
-                                    serde_json::Value::Array(arr) => {
-                                        let v8_arr = v8::Array::new(scope, arr.len() as i32);
-                                        for (i, item) in arr.iter().enumerate() {
-                                            let v8_item = match item {
-                                                serde_json::Value::String(s) => {
-                                                    v8::String::new(scope, &s).unwrap().into()
-                                                }
-                                                serde_json::Value::Number(n) => {
-                                                    if let Some(i) = n.as_i64() {
-                                                        v8::Integer::new(scope, i as i32).into()
-                                                    } else {
-                                                        v8::Number::new(
-                                                            scope,
-                                                            n.as_f64().unwrap_or(0.0),
-                                                        )
-                                                        .into()
-                                                    }
-                                                }
-                                                serde_json::Value::Bool(b) => {
-                                                    v8::Boolean::new(scope, *b).into()
-                                                }
-                                                _ => v8::undefined(scope).into(),
-                                            };
-                                            v8_arr.set_index(scope, i as u32, v8_item);
-                                        }
-                                        v8_arr.into()
-                                    }
-                                    _ => v8::undefined(scope).into(),
-                                };
-                                exports_obj.set(scope, key_v8.into(), v8_value).unwrap();
-                            }
-                            retval.set(exports_obj.into());
-                            return;
-                        }
-                        Err(e) => {
-                            let error_msg =
-                                format!("Error loading module '{}': {}", module_name_str, e);
-                            retval.set(v8::String::new(scope, &error_msg).unwrap().into());
-                            return;
-                        }
-                    }
-                }
-
-                // Fallback: return a simple mock module
-                let mock_exports = v8::Object::new(scope);
-                let key = v8::String::new(scope, "default").unwrap();
-                let value = v8::String::new(scope, &format!("[Module: {}]", module_name_str))
-                    .unwrap()
-                    .into();
-                mock_exports.set(scope, key.into(), value).unwrap();
-                retval.set(mock_exports.into());
-            } else {
-                retval.set(v8::undefined(scope).into());
-            }
-        },
-    );
+    // Create require function using the full implementation
+    let require_func = v8::FunctionTemplate::new(scope, require_callback);
     let require_instance = require_func.get_function(scope).unwrap();
 
     // Set require as a global function
@@ -589,7 +498,6 @@ fn setup_module_system(
     Ok(())
 }
 
-#[allow(dead_code)]
 fn require_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -657,8 +565,6 @@ fn require_callback(
     // Check cache first using absolute path
     let cached_result: Option<v8::Local<v8::Value>> = MODULE_CACHE.with(|cache| {
         let cache_lock = cache.lock().unwrap();
-        let is_cached = cache_lock.contains_key(&cache_key);
-        eprintln!("DEBUG: Cache contains key '{}': {}", cache_key, is_cached);
         if let Some(cached_module) = cache_lock.get(&cache_key) {
             let cached_local = v8::Local::new(scope, cached_module);
             return Some(cached_local.into());

@@ -27,7 +27,6 @@ fn test_parse_package_json() {
 }
 
 #[test]
-#[ignore = "Module system requires require() to return actual module objects, currently returns undefined"]
 fn test_require_basic_module() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
@@ -61,7 +60,10 @@ fn test_require_basic_module() {
     .unwrap();
 
     let result = runtime.execute_file(&main_file);
-    assert!(result.is_ok());
+    if let Err(e) = &result {
+        eprintln!("Error executing file: {:?}", e);
+    }
+    assert!(result.is_ok(), "Expected successful execution, got error: {:?}", result);
     let output = result.unwrap();
     // Note: console.log output may not be captured in test environment
     // We check the return value instead
@@ -69,7 +71,6 @@ fn test_require_basic_module() {
 }
 
 #[test]
-#[ignore = "Module system requires require() to return actual module objects, currently returns undefined"]
 fn test_require_relative_path() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
@@ -108,7 +109,6 @@ fn test_require_relative_path() {
 }
 
 #[test]
-#[ignore = "Module system requires require() to return actual module objects, currently returns undefined"]
 fn test_module_exports_object() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
@@ -181,7 +181,6 @@ fn test_multiple_requires() {
 }
 
 #[test]
-#[ignore = "Module system requires require() to return actual module objects, currently returns undefined"]
 fn test_nested_require() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
@@ -281,7 +280,6 @@ fn test_circular_dependency() {
 }
 
 #[test]
-#[ignore = "Module system requires require() to return actual module objects, currently returns undefined"]
 fn test_module_caching() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
