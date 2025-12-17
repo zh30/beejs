@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex, Once};
+use std::sync::Mutex;
 use std::collections::VecDeque;
 use rusty_v8 as v8;
 
@@ -177,16 +177,10 @@ pub fn get_test_isolate() -> Option<v8::OwnedIsolate> {
     // 在测试环境中总是创建新的 Isolate
     // 确保它在与创建线程相同的线程上被销毁
     #[cfg(not(test))]
-    {
-        return None;
-    }
+    return None;
 
     // 检查 V8 是否可用（通过 lib.rs 中的函数）
-    if crate::is_v8_available() {
-        Some(v8::Isolate::new(Default::default()))
-    } else {
-        None
-    }
+    crate::is_v8_available().then(|| v8::Isolate::new(Default::default()))
 }
 
 /// 测试环境安全的 Isolate 归还（简化版本）
