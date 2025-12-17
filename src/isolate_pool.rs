@@ -174,12 +174,10 @@ pub fn get_pool() -> Option<&'static IsolatePool> {
 /// 返回一个新创建的 Isolate，不进行复用
 #[allow(dead_code)]
 pub fn get_test_isolate() -> Option<v8::OwnedIsolate> {
-    // 在测试环境中总是创建新的 Isolate
-    // 确保它在与创建线程相同的线程上被销毁
     #[cfg(not(test))]
     return None;
 
-    // 检查 V8 是否可用（通过 lib.rs 中的函数）
+    #[cfg(test)]
     crate::is_v8_available().then(|| v8::Isolate::new(Default::default()))
 }
 
