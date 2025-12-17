@@ -1,5 +1,6 @@
 use clap::Parser;
 use std::path::PathBuf;
+use std::fs;
 use anyhow::{Result, Context};
 
 /// Beejs - High-performance JavaScript/TypeScript runtime
@@ -42,6 +43,43 @@ struct Args {
     /// V8 optimization strategy (default: speed)
     #[arg(short, long, value_enum, default_value = "speed")]
     optimize: OptimizeMode,
+
+    /// Package manager commands
+    #[command(subcommand)]
+    command: Option<SubCommand>,
+}
+
+/// Package manager subcommands
+#[derive(clap::Subcommand, Debug)]
+enum SubCommand {
+    /// Initialize a new package.json
+    Init {
+        /// Package name
+        #[arg(long)]
+        name: Option<String>,
+        /// Package version
+        #[arg(long, default_value = "1.0.0")]
+        version: String,
+    },
+    /// Install dependencies
+    Install,
+    /// Add a dependency
+    Add {
+        /// Package name
+        package: String,
+        /// Package version
+        #[arg(long, default_value = "latest")]
+        version: String,
+    },
+    /// Remove a dependency
+    Remove {
+        /// Package name
+        package: String,
+    },
+    /// List installed packages
+    List,
+    /// Clean package cache
+    Clean,
 }
 
 /// V8 optimization modes
@@ -61,6 +99,11 @@ fn main() -> Result<()> {
     if args.version {
         println!("beejs {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
+    }
+
+    // Handle package manager commands
+    if let Some(ref command) = args.command {
+        return run_package_manager_command(command, args.verbose);
     }
 
     // Handle test command
@@ -142,6 +185,132 @@ fn run_tests(args: &Args) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Run package manager command
+fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()> {
+    use beejs::package_manager::{PackageManager, PackageManagerConfig};
+
+    let config = PackageManagerConfig::default();
+    let pm = PackageManager::new(config)
+        .context("Failed to create package manager")?;
+
+    match command {
+        SubCommand::Init { name, version } => {
+            let pkg_name = name.as_deref().unwrap_or("my-package");
+            if verbose {
+                println!("Initializing new package: {}@{}", pkg_name, version);
+            }
+            let package = pm.init_package_json(pkg_name, version)?;
+            println!("Created package.json:");
+            println!("  Name: {}", package.name);
+            println!("  Version: {}", package.version);
+            println!("  Main: {}", package.main.as_deref().unwrap_or("index.js"));
+            Ok(())
+        }
+        SubCommand::Install => {
+            if verbose {
+                println!("Installing dependencies...");
+            }
+
+            // Check if package.json exists
+            let package_json_path = PathBuf::from("package.json");
+            if !package_json_path.exists() {
+                println!("Error: package.json not found. Run 'beejs init' first.");
+                return Ok(());
+            }
+
+            let package = pm.parse_package_json(&package_json_path)
+                .context("Failed to parse package.json")?;
+
+            let results = pm.install_dependencies(&package)
+                .context("Failed to install dependencies")?;
+
+            println!("Installed {} dependencies", results.len());
+            Ok(())
+        }
+        SubCommand::Add { package, version } => {
+            if verbose {
+                println!("Adding dependency: {}@{}", package, version);
+            }
+
+            let mut package_json_path = PathBuf::from("package.json");
+            if !package_json_path.exists() {
+                println!("Error: package.json not found. Run 'beejs init' first.");
+                return Ok(());
+            }
+
+            let mut package_json = pm.parse_package_json(&package_json_path)
+                .context("Failed to parse package.json")?;
+
+            pm.add_dependency(&mut package_json, package, version)?;
+
+            // Write updated package.json
+            let content = serde_json::to_string_pretty(&package_json)
+                .context("Failed to serialize package.json")?;
+
+            fs::write(&package_json_path, content)
+                .context("Failed to write package.json")?;
+
+            println!("Added {}@{}", package, version);
+            Ok(())
+        }
+        SubCommand::Remove { package } => {
+            if verbose {
+                println!("Removing dependency: {}", package);
+            }
+
+            let mut package_json_path = PathBuf::from("package.json");
+            if !package_json_path.exists() {
+                println!("Error: package.json not found.");
+                return Ok(());
+            }
+
+            let mut package_json = pm.parse_package_json(&package_json_path)
+                .context("Failed to parse package.json")?;
+
+            pm.remove_dependency(&mut package_json, package)?;
+
+            // Write updated package.json
+            let content = serde_json::to_string_pretty(&package_json)
+                .context("Failed to serialize package.json")?;
+
+            fs::write(&package_json_path, content)
+                .context("Failed to write package.json")?;
+
+            println!("Removed {}", package);
+            Ok(())
+        }
+        SubCommand::List => {
+            if verbose {
+                println!("Listing installed packages...");
+            }
+
+            let packages = pm.get_installed_packages()
+                .context("Failed to get installed packages")?;
+
+            if packages.is_empty() {
+                println!("No packages installed.");
+            } else {
+                println!("Installed packages:");
+                for pkg in packages {
+                    println!("  {}@{}", pkg.name, pkg.version);
+                }
+            }
+            Ok(())
+        }
+        SubCommand::Clean => {
+            if verbose {
+                println!("Cleaning package cache...");
+            }
+
+            pm.clean_cache()
+                .context("Failed to clean cache")?;
+
+            println!("Cache cleaned successfully.");
+            Ok(())
+        }
+    }
 }
 
 /// Print test results

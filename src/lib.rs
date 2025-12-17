@@ -28,6 +28,7 @@ mod ai_async_queue;
 mod ai_model_interface;
 mod module_loader;
 mod test_runner;
+pub mod package_manager;
 mod deep_optimization;
 pub mod performance_reporter;
 
