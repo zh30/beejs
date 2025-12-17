@@ -1,0 +1,33 @@
+[package]
+name = "beejs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Beejs Team"]
+description = "High-performance JavaScript/TypeScript runtime built with Rust and V8"
+license = "MIT"
+
+[dependencies]
+# V8 integration - will be added after resolving dependencies
+# v8 = { version = "0.56", features = ["serde"] }
+# deno_v8 = "0.100"
+
+# CLI and argument parsing
+clap = { version = "4.0", features = ["derive"] }
+anyhow = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Testing
+[dev-dependencies]
+tempfile = "3.0"
+
+[[bin]]
+name = "beejs"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
