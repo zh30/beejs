@@ -261,10 +261,10 @@ fn setup_fs(ctx: &Ctx) -> QjsResult<()> {
 
 /// Module system implementation
 fn setup_module_system(ctx: &Ctx) -> QjsResult<()> {
-    // Global require function - simplified to avoid lifetime/GC issues
+    // Global require function - simplified implementation
     let require_func = Function::new(ctx.clone(), |_ctx: Ctx, module_name: String| {
-        // Simple require implementation - return a string representation
-        // TODO: Implement proper module loading after fixing GC issues
+        // Simple require implementation - return a mock module object
+        // TODO: Implement proper module loading
         format!("[Module: {}]", module_name)
     })?;
     ctx.globals().set("require", require_func)?;

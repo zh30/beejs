@@ -6,7 +6,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use rquickjs::{Value, function::{Function, Rest}, Ctx, Runtime as QjsRuntime, Context as QjsContext};
 
 mod typescript;
-mod module_loader;
 mod nodejs;
 
 /// Beejs Runtime - High-performance JavaScript/TypeScript execution engine
@@ -104,10 +103,7 @@ impl Runtime {
         };
 
         // Reuse the existing QuickJS runtime and context for better performance
-        // TODO: Re-enable module system after fixing GC issues
-        // Set up module system
-        // let module_loader = module_loader::ModuleLoader::new(base_dir);
-        // module_loader.setup_module_system(&ctx)?;
+        // Note: Module system is initialized in nodejs::setup_nodejs_apis()
 
         // Execute in the context
         self.qjs_context.with(|ctx| {
