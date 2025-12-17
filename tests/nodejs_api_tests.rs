@@ -5,11 +5,11 @@ use std::io::Write;
 #[test]
 fn test_process_argv() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
-    let result = runtime.execute_code("process.argv");
+    // Check that process.argv is an array
+    let result = runtime.execute_code("Array.isArray(process.argv)");
     assert!(result.is_ok());
     let result_str = result.unwrap();
-    // process.argv should be an array
-    assert!(result_str.contains("Array"));
+    assert!(result_str.contains("true"));
 }
 
 #[test]
@@ -181,8 +181,8 @@ fn test_fs_stat_sync() {
     let file = NamedTempFile::new().unwrap();
     let path = file.path().to_str().unwrap().to_string();
 
-    // fs.statSync now returns boolean directly
-    let code = format!(r#"fs.statSync("{}")"#, path);
+    // fs.statSync returns an object with isFile property
+    let code = format!(r#"fs.statSync("{}").isFile"#, path);
     let result = runtime.execute_code(&code);
     assert!(result.is_ok());
     let result_str = result.unwrap();

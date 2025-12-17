@@ -1,21 +1,17 @@
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::env;
-use std::collections::HashMap;
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use rusty_v8 as v8;
 
 /// Node.js compatibility module for V8
 /// Provides fs, path, process and other Node.js core modules
 
-/// Thread-local module cache - stores loaded modules
-std::thread_local! {
-    static MODULE_CACHE: std::cell::RefCell<HashMap<String, v8::Global<v8::Object>>> =
-        std::cell::RefCell::new(HashMap::new());
-}
-
 /// Set up all Node.js compatibility globals
-pub fn setup_nodejs_apis<'a>(scope: &'a mut v8::ContextScope<'a, v8::HandleScope<'a>>, context: &'a v8::Context) -> Result<()> {
+pub fn setup_nodejs_apis(
+    scope: &mut v8::ContextScope<v8::HandleScope>,
+    context: &v8::Local<v8::Context>,
+) -> Result<()> {
     setup_process(scope, context)?;
     setup_path(scope, context)?;
     setup_fs(scope, context)?;
@@ -24,588 +20,458 @@ pub fn setup_nodejs_apis<'a>(scope: &'a mut v8::ContextScope<'a, v8::HandleScope
 }
 
 /// Process module implementation
-fn setup_process<'a>(scope: &'a mut v8::ContextScope<'a, v8::HandleScope<'a>>, context: &'a v8::Context) -> Result<()> {
-    let process = v8::Object::new(scope);
-
-    // process.argv - use Array with length
-    let argv = v8::Array::new(scope, 2);
-    // In a real implementation, these would come from actual CLI args
-    argv.set_index(scope, 0, v8::String::new(scope, "beejs").unwrap().into());
-    argv.set_index(scope, 1, v8::String::new(scope, "<eval>").unwrap().into());
-
-    let process_key = v8::String::new(scope, "process").unwrap();
-    let global = context.global(scope);
-    global.set(scope, process_key.clone().into(), process.into())
-        .ok_or_else(|| anyhow!("Failed to set process on global"))?;
-    process.set(scope, "argv".into(), argv.into())
-        .ok_or_else(|| anyhow!("Failed to set argv on process"))?;
-
-    // process.version
-    process.set(scope, "version".into(), v8::String::new(scope, "1.0.0-beejs").unwrap().into())
-        .ok_or_else(|| anyhow!("Failed to set version on process"))?;
-
-    // process.cwd()
-    let cwd_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let result = match env::current_dir() {
-            Ok(path) => path.to_string_lossy().to_string(),
-            Err(_) => ".".to_string(),
-        };
-        retval.set(v8::String::new(scope, &result).unwrap().into());
-    });
-    let cwd_func_instance = cwd_func.get_function(scope).unwrap();
-    process.set(scope, "cwd".into(), cwd_func_instance.into())
-        .ok_or_else(|| anyhow!("Failed to set cwd on process"))?;
-
-    // process.nextTick()
-    let next_tick_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        // Simple implementation - execute callback immediately
-        // In a real implementation, this would use a task queue
-        retval.set(v8::null(_scope).into());
-    });
-    let next_tick_func_instance = next_tick_func.get_function(scope).unwrap();
-    process.set(scope, "nextTick".into(), next_tick_func_instance.into())
-        .ok_or_else(|| anyhow!("Failed to set nextTick on process"))?;
-
-    // process.env
-    let env = v8::Object::new(scope);
-    for (key, value) in env::vars() {
-        env.set(scope, v8::String::new(scope, &key).unwrap().into(), v8::String::new(scope, &value).unwrap().into())
-            .ok_or_else(|| anyhow!("Failed to set env var on process"))?;
-    }
-    process.set(scope, "env".into(), env.into())
-        .ok_or_else(|| anyhow!("Failed to set env on process"))?;
-
-    Ok(())
-}
-
-/// Create process object for module use
-fn create_process_object<'a>(scope: &'a mut v8::ContextScope<'a, v8::HandleScope<'a>>) -> Result<v8::Local<'a, v8::Object>> {
+fn setup_process(
+    scope: &mut v8::ContextScope<v8::HandleScope>,
+    context: &v8::Local<v8::Context>,
+) -> Result<()> {
     let process = v8::Object::new(scope);
 
     // process.argv
-    let argv = v8::Array::new_with_length(scope, 2);
-    argv.set_index(scope, 0, v8::String::new(scope, "beejs").unwrap().into());
-    argv.set_index(scope, 1, v8::String::new(scope, "<eval>").unwrap().into());
-    process.set(scope, "argv", argv.into())?;
+    let argv = v8::Array::new(scope, 2);
+    let arg0 = v8::String::new(scope, "beejs").unwrap();
+    let arg1 = v8::String::new(scope, "<eval>").unwrap();
+    argv.set_index(scope, 0, arg0.into());
+    argv.set_index(scope, 1, arg1.into());
+
+    let argv_key = v8::String::new(scope, "argv").unwrap();
+    process.set(scope, argv_key.into(), argv.into());
 
     // process.version
-    process.set(scope, "version", v8::String::new(scope, "1.0.0-beejs").unwrap().into())?;
+    let version_key = v8::String::new(scope, "version").unwrap();
+    let version_val = v8::String::new(scope, "1.0.0-beejs").unwrap();
+    process.set(scope, version_key.into(), version_val.into());
 
     // process.cwd()
-    let cwd_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let result = match env::current_dir() {
-            Ok(path) => path.to_string_lossy().to_string(),
-            Err(_) => ".".to_string(),
-        };
-        retval.set(v8::String::new(scope, &result).unwrap().into());
-    });
+    let cwd_func = v8::FunctionTemplate::new(scope, cwd_callback);
     let cwd_func_instance = cwd_func.get_function(scope).unwrap();
-    process.set(scope, "cwd".into(), cwd_func_instance.into())
-        .ok_or_else(|| anyhow!("Failed to set cwd on process"))?;
+    let cwd_key = v8::String::new(scope, "cwd").unwrap();
+    process.set(scope, cwd_key.into(), cwd_func_instance.into());
+
+    // process.nextTick()
+    let next_tick_func = v8::FunctionTemplate::new(scope, next_tick_callback);
+    let next_tick_instance = next_tick_func.get_function(scope).unwrap();
+    let next_tick_key = v8::String::new(scope, "nextTick").unwrap();
+    process.set(scope, next_tick_key.into(), next_tick_instance.into());
 
     // process.env
-    let env = v8::Object::new(scope);
+    let env_obj = v8::Object::new(scope);
     for (key, value) in env::vars() {
-        env.set(scope, v8::String::new(scope, &key).unwrap().into(), v8::String::new(scope, &value).unwrap().into())
-            .ok_or_else(|| anyhow!("Failed to set env var on process"))?;
+        let key_str = v8::String::new(scope, &key).unwrap();
+        let val_str = v8::String::new(scope, &value).unwrap();
+        env_obj.set(scope, key_str.into(), val_str.into());
     }
-    process.set(scope, "env".into(), env.into())
-        .ok_or_else(|| anyhow!("Failed to set env on process"))?;
+    let env_key = v8::String::new(scope, "env").unwrap();
+    process.set(scope, env_key.into(), env_obj.into());
 
-    Ok(process)
+    // Set process on global
+    let global = context.global(scope);
+    let process_key = v8::String::new(scope, "process").unwrap();
+    global.set(scope, process_key.into(), process.into());
+
+    Ok(())
+}
+
+fn cwd_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let result = match env::current_dir() {
+        Ok(path) => path.to_string_lossy().to_string(),
+        Err(_) => ".".to_string(),
+    };
+    let result_str = v8::String::new(scope, &result).unwrap();
+    retval.set(result_str.into());
+}
+
+fn next_tick_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    // Simple implementation - execute callback immediately
+    retval.set(v8::null(scope).into());
 }
 
 /// Path module implementation
-fn setup_path<'a>(scope: &'a mut v8::ContextScope<'a, v8::HandleScope<'a>>, context: &'a v8::Context) -> Result<()> {
-    let path = v8::Object::new(scope);
+fn setup_path(
+    scope: &mut v8::ContextScope<v8::HandleScope>,
+    context: &v8::Local<v8::Context>,
+) -> Result<()> {
+    let path_obj = v8::Object::new(scope);
 
-    // path.join() - accept multiple string arguments
-    let join_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let mut paths = Vec::new();
-        for i in 0..args.length() {
-            let arg = args.get(i);
-            let arg_str = arg.to_string(scope)
-                .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-                .to_rust_string_lossy(scope);
-            if !arg_str.is_empty() {
-                paths.push(arg_str);
-            }
-        }
-        let result = paths.join("/");
-        retval.set(v8::String::new(scope, &result).unwrap().into());
-    });
-    let join_func_instance = join_func.get_function(scope).unwrap();
-    path.set(scope, "join".into(), join_func_instance.into())?;
+    // path.join()
+    let join_func = v8::FunctionTemplate::new(scope, path_join_callback);
+    let join_instance = join_func.get_function(scope).unwrap();
+    let join_key = v8::String::new(scope, "join").unwrap();
+    path_obj.set(scope, join_key.into(), join_instance.into());
 
     // path.resolve()
-    let resolve_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let mut paths = Vec::new();
-        for i in 0..args.length() {
-            let arg = args.get(i);
-            let arg_str = arg.to_string(scope)
-                .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-                .to_rust_string_lossy(scope);
+    let resolve_func = v8::FunctionTemplate::new(scope, path_resolve_callback);
+    let resolve_instance = resolve_func.get_function(scope).unwrap();
+    let resolve_key = v8::String::new(scope, "resolve").unwrap();
+    path_obj.set(scope, resolve_key.into(), resolve_instance.into());
+
+    // path.dirname()
+    let dirname_func = v8::FunctionTemplate::new(scope, path_dirname_callback);
+    let dirname_instance = dirname_func.get_function(scope).unwrap();
+    let dirname_key = v8::String::new(scope, "dirname").unwrap();
+    path_obj.set(scope, dirname_key.into(), dirname_instance.into());
+
+    // path.basename()
+    let basename_func = v8::FunctionTemplate::new(scope, path_basename_callback);
+    let basename_instance = basename_func.get_function(scope).unwrap();
+    let basename_key = v8::String::new(scope, "basename").unwrap();
+    path_obj.set(scope, basename_key.into(), basename_instance.into());
+
+    // path.extname()
+    let extname_func = v8::FunctionTemplate::new(scope, path_extname_callback);
+    let extname_instance = extname_func.get_function(scope).unwrap();
+    let extname_key = v8::String::new(scope, "extname").unwrap();
+    path_obj.set(scope, extname_key.into(), extname_instance.into());
+
+    // Set path on global
+    let global = context.global(scope);
+    let path_key = v8::String::new(scope, "path").unwrap();
+    global.set(scope, path_key.into(), path_obj.into());
+
+    Ok(())
+}
+
+fn path_join_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let mut paths = Vec::new();
+    for i in 0..args.length() {
+        let arg = args.get(i);
+        if let Some(s) = arg.to_string(scope) {
+            let arg_str = s.to_rust_string_lossy(scope);
             if !arg_str.is_empty() {
                 paths.push(arg_str);
             }
         }
+    }
+    let result = paths.join("/");
+    let result_str = v8::String::new(scope, &result).unwrap();
+    retval.set(result_str.into());
+}
 
-        let mut result = PathBuf::new();
-        for p in paths {
-            let path = Path::new(&p);
-            if path.is_absolute() {
-                result = path.to_path_buf();
-            } else {
-                result = result.join(path);
+fn path_resolve_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let mut paths = Vec::new();
+    for i in 0..args.length() {
+        let arg = args.get(i);
+        if let Some(s) = arg.to_string(scope) {
+            let arg_str = s.to_rust_string_lossy(scope);
+            if !arg_str.is_empty() {
+                paths.push(arg_str);
             }
         }
+    }
 
-        // If no paths provided, return current directory
-        if result.as_os_str().is_empty() {
-            result = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        }
-
-        let result_str = result.to_string_lossy().to_string();
-        retval.set(v8::String::new(scope, &result_str).unwrap().into());
-    });
-    let resolve_func_instance = resolve_func.get_function(scope).unwrap();
-    path.set(scope, "resolve".into(), resolve_func_instance.into())?;
-
-    // path.dirname()
-    let dirname_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let arg = args.get(0);
-        let arg_str = arg.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
-        let path = Path::new(&arg_str);
-        let result = if let Some(parent) = path.parent() {
-            parent.to_string_lossy().to_string()
+    let mut result = PathBuf::new();
+    for p in paths {
+        let path = Path::new(&p);
+        if path.is_absolute() {
+            result = path.to_path_buf();
         } else {
-            ".".to_string()
-        };
-        retval.set(v8::String::new(scope, &result).unwrap().into());
-    });
-    let dirname_func_instance = dirname_func.get_function(scope).unwrap();
-    path.set(scope, "dirname".into(), dirname_func_instance.into())?;
+            result = result.join(path);
+        }
+    }
 
-    // path.basename()
-    let basename_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let arg = args.get(0);
-        let arg_str = arg.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
-        let path = Path::new(&arg_str);
-        let result = path.file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or(&arg_str)
-            .to_string();
-        retval.set(v8::String::new(scope, &result).unwrap().into());
-    });
-    let basename_func_instance = basename_func.get_function(scope).unwrap();
-    path.set(scope, "basename".into(), basename_func_instance.into())?;
+    if result.as_os_str().is_empty() {
+        result = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    }
 
-    // path.extname()
-    let extname_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let arg = args.get(0);
-        let arg_str = arg.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
-        let path = Path::new(&arg_str);
-        let result = path.extension()
-            .and_then(|s| {
-                let ext = s.to_str()?;
-                Some(format!(".{}", ext))
-            })
-            .unwrap_or_else(|| "".to_string());
-        retval.set(v8::String::new(scope, &result).unwrap().into());
-    });
-    let extname_func_instance = extname_func.get_function(scope).unwrap();
-    path.set(scope, "extname".into(), extname_func_instance.into())?;
+    let result_str = v8::String::new(scope, &result.to_string_lossy()).unwrap();
+    retval.set(result_str.into());
+}
 
-    let global = scope.global();
-    global.set(scope, v8::String::new(scope, "path").unwrap().into(), path.into())
-        .ok_or_else(|| anyhow!("Failed to set path on global"))?;
+fn path_dirname_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let arg = args.get(0);
+    let arg_str = arg.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let path = Path::new(&arg_str);
+    let result = path.parent()
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|| ".".to_string());
+    let result_str = v8::String::new(scope, &result).unwrap();
+    retval.set(result_str.into());
+}
 
-    Ok(())
+fn path_basename_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let arg = args.get(0);
+    let arg_str = arg.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let path = Path::new(&arg_str);
+    let result = path.file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or(&arg_str)
+        .to_string();
+    let result_str = v8::String::new(scope, &result).unwrap();
+    retval.set(result_str.into());
+}
+
+fn path_extname_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let arg = args.get(0);
+    let arg_str = arg.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let path = Path::new(&arg_str);
+    let result = path.extension()
+        .and_then(|s| s.to_str())
+        .map(|ext| format!(".{}", ext))
+        .unwrap_or_default();
+    let result_str = v8::String::new(scope, &result).unwrap();
+    retval.set(result_str.into());
 }
 
 /// File System module implementation
-fn setup_fs<'a>(scope: &'a mut v8::ContextScope<'a, v8::HandleScope<'a>>, context: &'a v8::Context) -> Result<()> {
+fn setup_fs(
+    scope: &mut v8::ContextScope<v8::HandleScope>,
+    context: &v8::Local<v8::Context>,
+) -> Result<()> {
     let fs_obj = v8::Object::new(scope);
 
     // fs.readFileSync()
-    let read_file_sync = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
-        let _encoding = args.get(1); // Not used in simple implementation
-
-        let path_str = path.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
-
-        let content = match fs::read_to_string(&path_str) {
-            Ok(content) => content,
-            Err(_) => "".to_string(),
-        };
-
-        retval.set(v8::String::new(scope, &content).unwrap().into());
-    });
-    let read_file_sync_instance = read_file_sync.get_function(scope).unwrap();
-    fs_obj.set(scope, "readFileSync".into(), read_file_sync_instance.into())?;
+    let read_func = v8::FunctionTemplate::new(scope, fs_read_file_sync_callback);
+    let read_instance = read_func.get_function(scope).unwrap();
+    let read_key = v8::String::new(scope, "readFileSync").unwrap();
+    fs_obj.set(scope, read_key.into(), read_instance.into());
 
     // fs.writeFileSync()
-    let write_file_sync = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
-        let data = args.get(1);
-        let _encoding = args.get(2); // Not used in simple implementation
-
-        let path_str = path.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
-
-        let data_str = data.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
-
-        let _ = fs::write(&path_str, data_str);
-
-        retval.set_undefined();
-    });
-    let write_file_sync_instance = write_file_sync.get_function(scope).unwrap();
-    fs_obj.set(scope, "writeFileSync".into(), write_file_sync_instance.into())?;
+    let write_func = v8::FunctionTemplate::new(scope, fs_write_file_sync_callback);
+    let write_instance = write_func.get_function(scope).unwrap();
+    let write_key = v8::String::new(scope, "writeFileSync").unwrap();
+    fs_obj.set(scope, write_key.into(), write_instance.into());
 
     // fs.existsSync()
-    let exists_sync = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
-        let path_str = path.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
-
-        let result = Path::new(&path_str).exists();
-        retval.set(v8::Boolean::new(scope, result).into());
-    });
-    let exists_sync_instance = exists_sync.get_function(scope).unwrap();
-    fs_obj.set(scope, "existsSync".into(), exists_sync_instance.into())?;
+    let exists_func = v8::FunctionTemplate::new(scope, fs_exists_sync_callback);
+    let exists_instance = exists_func.get_function(scope).unwrap();
+    let exists_key = v8::String::new(scope, "existsSync").unwrap();
+    fs_obj.set(scope, exists_key.into(), exists_instance.into());
 
     // fs.mkdirSync()
-    let mkdir_sync = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
-        let path_str = path.to_string(_scope)
-            .unwrap_or_else(|| v8::String::new(_scope, "<error>").unwrap())
-            .to_rust_string_lossy(_scope);
-
-        let _ = fs::create_dir_all(&path_str);
-
-        retval.set_undefined();
-    });
-    let mkdir_sync_instance = mkdir_sync.get_function(scope).unwrap();
-    fs_obj.set(scope, "mkdirSync".into(), mkdir_sync_instance.into())?;
+    let mkdir_func = v8::FunctionTemplate::new(scope, fs_mkdir_sync_callback);
+    let mkdir_instance = mkdir_func.get_function(scope).unwrap();
+    let mkdir_key = v8::String::new(scope, "mkdirSync").unwrap();
+    fs_obj.set(scope, mkdir_key.into(), mkdir_instance.into());
 
     // fs.readdirSync()
-    let readdir_sync = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
-        let path_str = path.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
-
-        let mut result_vec = Vec::new();
-        if let Ok(entries) = fs::read_dir(&path_str) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    if let Some(name) = entry.file_name().to_str() {
-                        result_vec.push(name.to_string());
-                    }
-                }
-            }
-        }
-
-        // Create V8 array
-        let array = v8::Array::new_with_length(scope, result_vec.len());
-        for (i, name) in result_vec.iter().enumerate() {
-            array.set_index(scope, i, v8::String::new(scope, name).unwrap().into());
-        }
-
-        retval.set(array.into());
-    });
-    let readdir_sync_instance = readdir_sync.get_function(scope).unwrap();
-    fs_obj.set(scope, "readdirSync".into(), readdir_sync_instance.into())?;
+    let readdir_func = v8::FunctionTemplate::new(scope, fs_readdir_sync_callback);
+    let readdir_instance = readdir_func.get_function(scope).unwrap();
+    let readdir_key = v8::String::new(scope, "readdirSync").unwrap();
+    fs_obj.set(scope, readdir_key.into(), readdir_instance.into());
 
     // fs.statSync()
-    let stat_sync = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let path = args.get(0);
-        let path_str = path.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
+    let stat_func = v8::FunctionTemplate::new(scope, fs_stat_sync_callback);
+    let stat_instance = stat_func.get_function(scope).unwrap();
+    let stat_key = v8::String::new(scope, "statSync").unwrap();
+    fs_obj.set(scope, stat_key.into(), stat_instance.into());
 
-        let result = Path::new(&path_str).is_file();
-        retval.set(v8::Boolean::new(scope, result).into());
-    });
-    let stat_sync_instance = stat_sync.get_function(scope).unwrap();
-    fs_obj.set(scope, "statSync".into(), stat_sync_instance.into())?;
-
-    let global = scope.global();
-    global.set(scope, v8::String::new(scope, "fs").unwrap().into(), fs_obj.into())
-        .ok_or_else(|| anyhow!("Failed to set fs on global"))?;
+    // Set fs on global
+    let global = context.global(scope);
+    let fs_key = v8::String::new(scope, "fs").unwrap();
+    global.set(scope, fs_key.into(), fs_obj.into());
 
     Ok(())
 }
 
-/// Module system implementation - complete require/module.exports support
-fn setup_module_system<'a>(scope: &'a mut v8::ContextScope<'a, v8::HandleScope<'a>>, context: &'a v8::Context) -> Result<()> {
-    // Global require function
-    let require_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let module_name = args.get(0);
-        let module_name_str = module_name.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
+fn fs_read_file_sync_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path = args.get(0);
+    let path_str = path.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
 
-        // Get the current file path from the context
-        let current_file = get_current_script_path(scope);
+    let content = fs::read_to_string(&path_str).unwrap_or_default();
+    let result_str = v8::String::new(scope, &content).unwrap();
+    retval.set(result_str.into());
+}
 
-        // Resolve module path
-        match resolve_module_path(&module_name_str, current_file.as_deref()) {
-            Ok(module_path) => {
-                // Check cache first
-                let cache_key = module_path.clone();
-                if let Some(cached_module) = get_cached_module(&cache_key) {
-                    retval.set(cached_module.into());
-                    return;
-                }
+fn fs_write_file_sync_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    let path = args.get(0);
+    let data = args.get(1);
 
-                // Load and execute module
-                match load_and_execute_module(scope, &module_path, &cache_key) {
-                    Ok(exports) => {
-                        retval.set(exports.into());
-                    }
-                    Err(e) => {
-                        // Return empty object on error
-                        let empty_obj = v8::Object::new(scope);
-                        retval.set(empty_obj.into());
-                    }
-                }
-            }
-            Err(_) => {
-                // Module not found - return empty object
-                let empty_obj = v8::Object::new(scope);
-                retval.set(empty_obj.into());
+    let path_str = path.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+    let data_str = data.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    let _ = fs::write(&path_str, data_str);
+    // Just return - V8 ReturnValue doesn't have set_undefined in 0.20
+}
+
+fn fs_exists_sync_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path = args.get(0);
+    let path_str = path.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    let exists = Path::new(&path_str).exists();
+    retval.set(v8::Boolean::new(scope, exists).into());
+}
+
+fn fs_mkdir_sync_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    let path = args.get(0);
+    let path_str = path.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    let _ = fs::create_dir_all(&path_str);
+    // Just return - V8 ReturnValue doesn't have set_undefined in 0.20
+}
+
+fn fs_readdir_sync_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path = args.get(0);
+    let path_str = path.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    let mut entries = Vec::new();
+    if let Ok(dir) = fs::read_dir(&path_str) {
+        for entry in dir.flatten() {
+            if let Some(name) = entry.file_name().to_str() {
+                entries.push(name.to_string());
             }
         }
-    });
-    let require_func_instance = require_func.get_function(scope).unwrap();
+    }
 
-    let global = scope.global();
-    global.set(scope, v8::String::new(scope, "require").unwrap().into(), require_func_instance.into())
-        .ok_or_else(|| anyhow!("Failed to set require on global"))?;
+    let array = v8::Array::new(scope, entries.len() as i32);
+    for (i, name) in entries.iter().enumerate() {
+        let name_str = v8::String::new(scope, name).unwrap();
+        array.set_index(scope, i as u32, name_str.into());
+    }
+    retval.set(array.into());
+}
 
-    // Module object with exports property
+fn fs_stat_sync_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let path = args.get(0);
+    let path_str = path.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
+
+    // Return a simple stat object with isFile() and isDirectory()
+    let stat_obj = v8::Object::new(scope);
+
+    let is_file = Path::new(&path_str).is_file();
+    let is_dir = Path::new(&path_str).is_dir();
+
+    // Create isFile function
+    let is_file_val = v8::Boolean::new(scope, is_file);
+    let is_file_key = v8::String::new(scope, "isFile").unwrap();
+
+    // Simple approach: store as boolean properties
+    stat_obj.set(scope, is_file_key.into(), is_file_val.into());
+
+    let is_dir_val = v8::Boolean::new(scope, is_dir);
+    let is_dir_key = v8::String::new(scope, "isDirectory").unwrap();
+    stat_obj.set(scope, is_dir_key.into(), is_dir_val.into());
+
+    retval.set(stat_obj.into());
+}
+
+/// Module system implementation
+fn setup_module_system(
+    scope: &mut v8::ContextScope<v8::HandleScope>,
+    context: &v8::Local<v8::Context>,
+) -> Result<()> {
+    // Global require function
+    let require_func = v8::FunctionTemplate::new(scope, require_callback);
+    let require_instance = require_func.get_function(scope).unwrap();
+
+    let global = context.global(scope);
+    let require_key = v8::String::new(scope, "require").unwrap();
+    global.set(scope, require_key.into(), require_instance.into());
+
+    // Module object
     let module = v8::Object::new(scope);
     let exports = v8::Object::new(scope);
-    module.set(scope, "exports", exports.into())?;
-    global.set(scope, v8::String::new(scope, "module").unwrap().into(), module.into())
-        .ok_or_else(|| anyhow!("Failed to set module on global"))?;
+    let exports_key = v8::String::new(scope, "exports").unwrap();
+    module.set(scope, exports_key.into(), exports.into());
 
-    // Also expose exports as a global
-    let exports_obj = v8::Object::new(scope);
-    global.set(scope, v8::String::new(scope, "exports").unwrap().into(), exports_obj.into())
-        .ok_or_else(|| anyhow!("Failed to set exports on global"))?;
+    let module_key = v8::String::new(scope, "module").unwrap();
+    global.set(scope, module_key.into(), module.into());
+
+    // Global exports
+    let exports_global = v8::Object::new(scope);
+    global.set(scope, exports_key.into(), exports_global.into());
 
     Ok(())
 }
 
-/// Get current script path from V8 context
-fn get_current_script_path(scope: &mut v8::HandleScope) -> Option<String> {
-    // Get the script origin from the current context
-    let context = scope.get_current_context();
-    let context_state = context.state(scope);
-    if let Some(state) = context_state {
-        // This is a simplified implementation
-        // In a full implementation, we would track the script origin
-        None
-    } else {
-        None
-    }
-}
+fn require_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    mut retval: v8::ReturnValue,
+) {
+    let module_name = args.get(0);
+    let module_name_str = module_name.to_string(scope)
+        .map(|s| s.to_rust_string_lossy(scope))
+        .unwrap_or_default();
 
-/// Resolve module path from module name
-fn resolve_module_path(module_name: &str, current_file: Option<&str>) -> Result<PathBuf, anyhow::Error> {
     // Handle built-in modules
-    match module_name {
+    match module_name_str.as_str() {
         "path" | "fs" | "process" => {
-            return Ok(PathBuf::from(format!("__beejs_builtin__{}", module_name)));
+            // Get built-in from global
+            let context = scope.get_current_context();
+            let global = context.global(scope);
+            let key = v8::String::new(scope, &module_name_str).unwrap();
+            if let Some(module) = global.get(scope, key.into()) {
+                retval.set(module);
+                return;
+            }
         }
         _ => {}
     }
 
-    // Handle relative paths
-    if module_name.starts_with("./") || module_name.starts_with("../") {
-        if let Some(current) = current_file {
-            let current_path = Path::new(current);
-            let current_dir = current_path.parent().unwrap_or_else(|| Path::new("."));
-            let mut module_path = current_dir.join(module_name);
-
-            // Add .js extension if not present
-            if module_path.extension().is_none() {
-                module_path.set_extension("js");
-            }
-
-            if module_path.exists() {
-                return Ok(module_path);
-            }
-        }
-    }
-
-    // Handle absolute paths
-    if Path::new(module_name).is_absolute() {
-        let mut module_path = PathBuf::from(module_name);
-        if module_path.extension().is_none() {
-            module_path.set_extension("js");
-        }
-        if module_path.exists() {
-            return Ok(module_path);
-        }
-    }
-
-    Err(anyhow!("Module not found: {}", module_name))
-}
-
-/// Get cached module from the global cache
-fn get_cached_module(cache_key: &str) -> Option<v8::Local<v8::Object>> {
-    MODULE_CACHE.with(|cache| {
-        let cache = cache.borrow();
-        if let Some(global_module) = cache.get(cache_key) {
-            // Return a handle to the cached module
-            Some(v8::Local::<'_, v8::Object>::clone(&v8::Local::<'_, v8::Object>::from_global(
-                &v8::HandleScope::empty(),
-                global_module,
-                &mut v8::HandleScope::empty(),
-            )))
-        } else {
-            None
-        }
-    })
-}
-
-/// Load and execute a module
-fn load_and_execute_module<'a>(
-    scope: &'a mut v8::ContextScope<'a, v8::HandleScope<'a>>,
-    module_path: &'a Path,
-    cache_key: &'a str,
-) -> Result<v8::Local<'a, v8::Object>, anyhow::Error> {
-    // Handle built-in modules
-    if module_path.to_string_lossy().starts_with("__beejs_builtin__") {
-        let builtin_name = module_path.to_string_lossy().replace("__beejs_builtin__", "");
-        return get_builtin_module(scope, &builtin_name);
-    }
-
-    // Read the module file
-    let code = fs::read_to_string(module_path)
-        .map_err(|e| anyhow!("Failed to read module: {}", e))?;
-
-    // Get the global context
-    let context = scope.get_current_context();
-    let global = context.global(scope);
-
-    // Create module-scoped objects
-    let module = v8::Object::new(scope);
-    let exports = v8::Object::new(scope);
-
-    // Create require function for this module
-    let module_require = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        let module_name = args.get(0);
-        let module_name_str = module_name.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
-
-        // Resolve relative to current module
-        let current_module_path = module_path.to_string_lossy().to_string();
-        match resolve_module_path(&module_name_str, Some(&current_module_path)) {
-            Ok(resolved_path) => {
-                let sub_cache_key = resolved_path.to_string_lossy().to_string();
-                if let Some(cached) = get_cached_module(&sub_cache_key) {
-                    retval.set(cached.into());
-                    return;
-                }
-
-                match load_and_execute_module(scope, &resolved_path, &sub_cache_key) {
-                    Ok(exports) => retval.set(exports.into()),
-                    Err(_) => {
-                        let empty = v8::Object::new(scope);
-                        retval.set(empty.into());
-                    }
-                }
-            }
-            Err(_) => {
-                let empty = v8::Object::new(scope);
-                retval.set(empty.into());
-            }
-        }
-    });
-    let module_require_instance = module_require.get_function(scope).unwrap();
-
-    // Set up module global with module, exports, require, and built-ins
-    global.set(scope, v8::String::new(scope, "module").unwrap().into(), module.clone().into())
-        .ok_or_else(|| anyhow!("Failed to set module on global"))?;
-    global.set(scope, v8::String::new(scope, "exports").unwrap().into(), exports.clone().into())
-        .ok_or_else(|| anyhow!("Failed to set exports on global"))?;
-    global.set(scope, v8::String::new(scope, "require").unwrap().into(), module_require_instance.into())
-        .ok_or_else(|| anyhow!("Failed to set require on global"))?;
-
-    // Ensure path, fs, process are available by copying from existing global
-    if let Some(path_obj) = global.get(scope, v8::String::new(scope, "path").unwrap().into()) {
-        global.set(scope, v8::String::new(scope, "path").unwrap().into(), path_obj)
-            .ok_or_else(|| anyhow!("Failed to set path on global"))?;
-    }
-    if let Some(fs_obj) = global.get(scope, v8::String::new(scope, "fs").unwrap().into()) {
-        global.set(scope, v8::String::new(scope, "fs").unwrap().into(), fs_obj)
-            .ok_or_else(|| anyhow!("Failed to set fs on global"))?;
-    }
-    if let Some(process_obj) = global.get(scope, v8::String::new(scope, "process").unwrap().into()) {
-        global.set(scope, v8::String::new(scope, "process").unwrap().into(), process_obj)
-            .ok_or_else(|| anyhow!("Failed to set process on global"))?;
-    }
-
-    // Execute the module code
-    let source = v8::String::new(scope, &code).unwrap();
-    let script = match v8::Script::compile(scope, source, None) {
-        Some(script) => script,
-        None => return Err(anyhow!("Failed to compile module")),
-    };
-
-    let _ = script.run(scope);
-
-    // Get the final exports
-    let final_exports = module.get(scope, v8::String::new(scope, "exports").unwrap().into())
-        .unwrap_or_else(|| exports.clone().into());
-
-    // Cache the module
-    let exports_obj = v8::Local::<v8::Object>::try_from(final_exports)
-        .unwrap_or_else(|_| exports.clone());
-
-    // Create a persistent handle for the module
-    let global_exports = v8::Global::new(scope, exports_obj);
-    MODULE_CACHE.with(|cache| {
-        let mut cache = cache.borrow_mut();
-        cache.insert(cache_key.to_string(), global_exports);
-    });
-
-    Ok(exports_obj)
-}
-
-/// Get built-in module
-fn get_builtin_module<'a>(scope: &'a mut v8::ContextScope<'a, v8::HandleScope<'a>>, module_name: &'a str) -> Result<v8::Local<'a, v8::Object>, anyhow::Error> {
-    let global = scope.global();
-    let module_obj = match module_name {
-        "path" => global.get(scope, v8::String::new(scope, "path").unwrap().into()),
-        "fs" => global.get(scope, v8::String::new(scope, "fs").unwrap().into()),
-        "process" => global.get(scope, v8::String::new(scope, "process").unwrap().into()),
-        _ => None,
-    };
-
-    let module = module_obj
-        .ok_or_else(|| anyhow!("Built-in module not found: {}", module_name))?
-        .to_object(scope)
-        .ok_or_else(|| anyhow!("Failed to get module object"))?;
-
-    Ok(module)
+    // For other modules, return empty object
+    let empty = v8::Object::new(scope);
+    retval.set(empty.into());
 }
 
 #[cfg(test)]
@@ -614,31 +480,29 @@ mod tests {
 
     #[test]
     fn test_setup_nodejs_apis() {
-        // Initialize V8
-        let platform = v8::new_default_platform(0, false).unwrap().make_shared();
-        v8::V8::initialize_platform(platform);
-        v8::V8::initialize();
+        // Use the main module's V8 initialization
+        crate::initialize_v8();
 
-        let mut isolate = v8::Isolate::new(v8::CreateParams::default()).unwrap();
-        let scope = &mut v8::HandleScope::new(&mut isolate);
-        let context = v8::Context::new(scope, Default::default());
-        let scope = &mut v8::ContextScope::new(scope, context);
+        let isolate = &mut v8::Isolate::new(Default::default());
+        let handle_scope = &mut v8::HandleScope::new(isolate);
+        let context = v8::Context::new(handle_scope);
+        let scope = &mut v8::ContextScope::new(handle_scope, context);
 
-        let result = setup_nodejs_apis(scope);
+        let result = setup_nodejs_apis(scope, &context);
         assert!(result.is_ok());
 
-        // Verify process is available
-        let global = scope.global();
+        // Verify process exists
+        let global = context.global(scope);
         let process_key = v8::String::new(scope, "process").unwrap();
         let process = global.get(scope, process_key.into()).unwrap();
         assert!(process.is_object());
 
-        // Verify path is available
+        // Verify path exists
         let path_key = v8::String::new(scope, "path").unwrap();
         let path = global.get(scope, path_key.into()).unwrap();
         assert!(path.is_object());
 
-        // Verify fs is available
+        // Verify fs exists
         let fs_key = v8::String::new(scope, "fs").unwrap();
         let fs = global.get(scope, fs_key.into()).unwrap();
         assert!(fs.is_object());

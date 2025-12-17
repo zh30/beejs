@@ -8,13 +8,16 @@ use rusty_v8 as v8;
 mod typescript;
 mod nodejs;
 
-/// Initialize V8 engine
-fn initialize_v8() -> Result<()> {
-    // Create platform with V8 0.20 API
-    let platform = v8::new_default_platform().make_shared();
-    v8::V8::initialize_platform(platform);
-    v8::V8::initialize();
-    Ok(())
+/// Global V8 initialization
+static V8_INIT: std::sync::Once = std::sync::Once::new();
+
+/// Initialize V8 engine (once per process)
+pub fn initialize_v8() {
+    V8_INIT.call_once(|| {
+        let platform = v8::new_default_platform().unwrap();
+        v8::V8::initialize_platform(platform);
+        v8::V8::initialize();
+    });
 }
 
 /// Beejs Runtime - High-performance JavaScript/TypeScript execution engine using V8
@@ -32,7 +35,7 @@ impl Runtime {
         max_heap: usize,
         verbose: bool,
     ) -> Result<Self> {
-        initialize_v8()?;
+        initialize_v8();
 
         if verbose {
             let version = v8::V8::get_version();
@@ -69,11 +72,10 @@ impl Runtime {
         }
 
         // Create a new isolate for each execution
-        let mut isolate = v8::Isolate::new(v8::CreateParams::default());
-        let scope = &mut v8::HandleScope::new(&mut isolate);
-
-        let context = v8::Context::new(scope);
-        let scope = &mut v8::ContextScope::new(scope, context);
+        let isolate = &mut v8::Isolate::new(Default::default());
+        let handle_scope = &mut v8::HandleScope::new(isolate);
+        let context = v8::Context::new(handle_scope);
+        let scope = &mut v8::ContextScope::new(handle_scope, context);
 
         // Set up console API
         self.setup_console(scope, &context)?;
@@ -108,40 +110,56 @@ impl Runtime {
 
         // Convert result to string
         let result_str = result.to_string(scope)
-            .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-            .to_rust_string_lossy(scope);
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_else(|| "<error>".to_string());
 
         Ok(result_str)
     }
 
     /// Set up console API for V8
-    fn setup_console(&self, scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Context) -> Result<()> {
+    fn setup_console(
+        &self,
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
         let console = v8::Object::new(scope);
 
-        // console.log - simple implementation
-        let console_log = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _retval: v8::ReturnValue| {
-            let mut output = String::new();
-            for i in 0..args.length() {
-                if i > 0 {
-                    output.push(' ');
-                }
-                let arg = args.get(i);
-                let arg_str = arg.to_string(_scope)
-                    .unwrap_or_else(|| v8::String::new(_scope, "<error>").unwrap())
-                    .to_rust_string_lossy(_scope);
-                output.push_str(&arg_str);
-            }
-            println!("{}", output);
-        });
-
-        let console_log_fn = console_log.get_function(scope)
+        // console.log
+        let log_func = v8::FunctionTemplate::new(scope, console_log_callback);
+        let log_instance = log_func.get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.log function"))?;
-
-        // Fix double borrow by using temporary variables
         let log_key = v8::String::new(scope, "log").unwrap();
-        console.set(scope, log_key.into(), console_log_fn.into());
+        console.set(scope, log_key.into(), log_instance.into());
 
-        // Get the global object and set console
+        // console.error
+        let error_func = v8::FunctionTemplate::new(scope, console_error_callback);
+        let error_instance = error_func.get_function(scope)
+            .ok_or_else(|| anyhow!("Failed to get console.error function"))?;
+        let error_key = v8::String::new(scope, "error").unwrap();
+        console.set(scope, error_key.into(), error_instance.into());
+
+        // console.warn
+        let warn_func = v8::FunctionTemplate::new(scope, console_warn_callback);
+        let warn_instance = warn_func.get_function(scope)
+            .ok_or_else(|| anyhow!("Failed to get console.warn function"))?;
+        let warn_key = v8::String::new(scope, "warn").unwrap();
+        console.set(scope, warn_key.into(), warn_instance.into());
+
+        // console.info
+        let info_func = v8::FunctionTemplate::new(scope, console_info_callback);
+        let info_instance = info_func.get_function(scope)
+            .ok_or_else(|| anyhow!("Failed to get console.info function"))?;
+        let info_key = v8::String::new(scope, "info").unwrap();
+        console.set(scope, info_key.into(), info_instance.into());
+
+        // console.debug
+        let debug_func = v8::FunctionTemplate::new(scope, console_debug_callback);
+        let debug_instance = debug_func.get_function(scope)
+            .ok_or_else(|| anyhow!("Failed to get console.debug function"))?;
+        let debug_key = v8::String::new(scope, "debug").unwrap();
+        console.set(scope, debug_key.into(), debug_instance.into());
+
+        // Set console on global
         let global = context.global(scope);
         let console_key = v8::String::new(scope, "console").unwrap();
         global.set(scope, console_key.into(), console.into());
@@ -158,6 +176,60 @@ impl Runtime {
     pub fn is_initialized(&self) -> bool {
         true
     }
+}
+
+fn format_args(scope: &mut v8::HandleScope, args: &v8::FunctionCallbackArguments) -> String {
+    let mut output = String::new();
+    for i in 0..args.length() {
+        if i > 0 {
+            output.push(' ');
+        }
+        let arg = args.get(i);
+        if let Some(s) = arg.to_string(scope) {
+            output.push_str(&s.to_rust_string_lossy(scope));
+        }
+    }
+    output
+}
+
+fn console_log_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    println!("{}", format_args(scope, &args));
+}
+
+fn console_error_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    eprintln!("{}", format_args(scope, &args));
+}
+
+fn console_warn_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    eprintln!("{}", format_args(scope, &args));
+}
+
+fn console_info_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    println!("{}", format_args(scope, &args));
+}
+
+fn console_debug_callback(
+    scope: &mut v8::HandleScope,
+    args: v8::FunctionCallbackArguments,
+    _retval: v8::ReturnValue,
+) {
+    println!("[DEBUG] {}", format_args(scope, &args));
 }
 
 impl Drop for Runtime {
@@ -187,6 +259,7 @@ mod tests {
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("1 + 1");
         assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "2");
     }
 
     #[test]
@@ -199,6 +272,7 @@ mod tests {
 
         let result = runtime.execute_file(&file.path().to_path_buf());
         assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "84");
     }
 
     #[test]
@@ -208,5 +282,37 @@ mod tests {
 
         runtime.execute_code("1").unwrap();
         assert_eq!(runtime.execution_count(), 1);
+    }
+
+    #[test]
+    fn test_console_log() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let result = runtime.execute_code("console.log('hello'); 'done'");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "done");
+    }
+
+    #[test]
+    fn test_process_version() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let result = runtime.execute_code("process.version");
+        assert!(result.is_ok());
+        assert!(result.unwrap().contains("beejs"));
+    }
+
+    #[test]
+    fn test_path_join() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let result = runtime.execute_code("path.join('a', 'b', 'c')");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "a/b/c");
+    }
+
+    #[test]
+    fn test_require_builtin() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let result = runtime.execute_code("const p = require('path'); p.join('x', 'y')");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "x/y");
     }
 }
