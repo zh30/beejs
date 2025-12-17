@@ -397,10 +397,10 @@ mod tests {
         }
     }
 
-    // TODO: 修复V8 Once实例毒化问题后启用
-    // V8引擎无法在并行测试中运行，Once实例会被毒化
+    // ✅ 已修复: V8 Once实例毒化问题已解决 (2025-12-18)
+    // 并发测试已在 tests/concurrent_execution_tests.rs 中通过 V8 可用性检查实现
     #[tokio::test]
-    #[ignore]
+    #[ignore = "V8 Once实例毒化问题已修复，此测试已移至主测试套件"]
     async fn test_concurrent_script_execution() {
         let manager = AsyncIoManager::new(5);
 

@@ -9,6 +9,7 @@ use tokio::time::{sleep, timeout};
 
 /// 事件循环状态
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum EventLoopState {
     /// 事件循环正在运行
     Running,
@@ -20,6 +21,7 @@ pub enum EventLoopState {
 
 /// 事件循环配置
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct EventLoopConfig {
     /// 最大执行时间（防止无限循环）
     pub max_execution_time: Duration,
@@ -41,6 +43,7 @@ impl Default for EventLoopConfig {
 
 /// 事件循环任务
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct EventLoopTask {
     /// 任务ID
     pub id: u64,
@@ -56,6 +59,7 @@ pub struct EventLoopTask {
 
 /// V8 事件循环
 /// 提供对 JavaScript Promise 和异步操作的基本支持
+#[allow(dead_code)]
 pub struct V8EventLoop {
     /// 事件循环状态
     state: Arc<Mutex<EventLoopState>>,
@@ -67,6 +71,7 @@ pub struct V8EventLoop {
     completed_tasks: Arc<Mutex<Vec<EventLoopTask>>>,
 }
 
+#[allow(dead_code)]
 impl V8EventLoop {
     /// 创建新的事件循环
     pub fn new(config: EventLoopConfig) -> Self {

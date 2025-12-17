@@ -174,6 +174,7 @@ static TEST_ISOLATE_LOCK: Mutex<()> = Mutex::new(());
 
 /// 测试环境安全的 Isolate 获取
 /// 确保所有测试串行使用同一个 Isolate，避免线程问题
+#[allow(dead_code)]
 pub fn get_test_isolate() -> Option<v8::OwnedIsolate> {
     // 只在测试环境中提供功能
     #[cfg(not(test))]
@@ -182,6 +183,7 @@ pub fn get_test_isolate() -> Option<v8::OwnedIsolate> {
     }
 
     // 使用 Once 确保只初始化一次
+    #[allow(unreachable_code)]
     TEST_ISOLATE_MANAGER.call_once(|| {
         // 检查 V8 是否可用（通过 lib.rs 中的函数）
         if crate::is_v8_available() {
@@ -192,9 +194,11 @@ pub fn get_test_isolate() -> Option<v8::OwnedIsolate> {
     });
 
     // 获取锁确保串行访问
+    #[allow(unreachable_code)]
     let _lock = TEST_ISOLATE_LOCK.lock().unwrap();
 
     // 安全地获取 Isolate
+    #[allow(static_mut_refs)]
     unsafe {
         if let Some(isolate) = TEST_ISOLATE.take() {
             Some(isolate)
@@ -205,6 +209,7 @@ pub fn get_test_isolate() -> Option<v8::OwnedIsolate> {
 }
 
 /// 测试环境安全的 Isolate 归还
+#[allow(dead_code)]
 pub fn return_test_isolate(isolate: v8::OwnedIsolate) {
     // 只在测试环境中提供功能
     #[cfg(not(test))]
@@ -213,7 +218,9 @@ pub fn return_test_isolate(isolate: v8::OwnedIsolate) {
         return;
     }
 
+    #[allow(unreachable_code)]
     let _lock = TEST_ISOLATE_LOCK.lock().unwrap();
+    #[allow(static_mut_refs)]
     unsafe {
         TEST_ISOLATE = Some(isolate);
     }

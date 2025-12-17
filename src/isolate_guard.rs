@@ -5,11 +5,13 @@ use rusty_v8 as v8;
 
 /// Isolate 生命周期守卫
 /// 确保 Isolate 在正确的作用域结束时被清理
+#[allow(dead_code)]
 pub struct IsolateGuard {
     isolate: Option<v8::OwnedIsolate>,
     return_to_pool: bool,
 }
 
+#[allow(dead_code)]
 impl IsolateGuard {
     /// 创建新的 Isolate 守卫
     pub fn new(isolate: v8::OwnedIsolate, return_to_pool: bool) -> Self {
