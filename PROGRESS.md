@@ -123,8 +123,8 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
    - ✅ console.debug - 调试输出
 4. ✅ **类型感知结果格式化** - numbers, booleans, null, undefined, objects, arrays
 5. ✅ **TypeScript 编译支持** - 基础类型推断和编译
-6. ⚠️ **解决 V8 编译环境问题** - "Unsupported archive identifier" 错误待修复
-7. ⏳ **迁移 Node.js API** - 适配 V8 版本
+6. ✅ **解决 V8 编译环境问题** - 升级到 rusty_v8 v0.20，修复 API 兼容性
+7. ✅ **Node.js API 兼容性** - 实现核心 Node.js API 支持！
 8. ⏳ **实现包管理功能** - 完整模块系统和 require() 缓存
 9. ⏳ **性能基准测试** - 对比 Bun 的性能
 
@@ -137,12 +137,26 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 - V8 引擎：核心功能实现 ✅ (编译环境待优化)
 
 ### 最近重大更新
+- ✅ **Node.js API 兼容性**: 实现核心 Node.js API 支持 - 🎯 **重大进展！**
+- ✅ **V8 版本升级**: 升级 rusty_v8 到 0.20，修复 API 兼容性问题
 - ✅ **代码质量清理**: 修复所有测试命名规范和未使用变量警告
 - ✅ **测试通过率提升**: 58/61 测试通过 (95% 通过率)
 - ✅ **V8 集成探索**: 完成 V8 集成工作，保存以备将来使用
 - ✅ **包管理测试标记**: 6 个测试标记为需要完整模块系统实现
 - ✅ **测试架构优化**: 修复测试命名规范 (snake_case)
 - ✅ **代码质量提升**: 清理未使用变量和导入
+
+### 最新提交 (2025-12-17)
+- **d2f9403** - fix: 升级 V8 版本到 0.20 并修复 API 兼容性问题
+  - 升级 rusty_v8 从 0.13 到 0.20
+  - 修复 V8 初始化 API
+  - 修复 setup_console 参数签名
+  - 修复 double borrow 问题
+- **5517e46** - feat: 实现 Node.js API 兼容性
+  - 添加 nodejs 模块导入到 lib.rs
+  - 在 V8 上下文初始化时调用 setup_nodejs_apis()
+  - 提供 process, path, fs 等核心 Node.js API
+  - 创建 Node.js 兼容性示例
 
 ### V8 版本已实现功能
 - ✅ **V8 引擎集成** (rusty_v8 crate) - Deno 官方维护的高质量绑定
@@ -159,6 +173,12 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 - ✅ 文件执行
 - ✅ CLI 参数解析
 - ✅ 详细日志输出
+- ✅ **Node.js API 兼容性** (最新！) - 🎯 **重大进展！**
+  - ✅ Node.js 核心模块：process, path, fs
+  - ✅ process.argv, process.version, process.cwd(), process.env
+  - ✅ path.join(), path.resolve(), path.dirname(), path.basename()
+  - ✅ fs 基础 API 支持
+  - ✅ Node.js 兼容性示例和测试
 
 ### 技术债务
 - ✅ ~~V8 引擎集成~~ - 已完成! 🎯
