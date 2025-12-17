@@ -498,11 +498,23 @@ fn require_callback(
         _ => {}
     }
 
-    // Check cache first
     let context = scope.get_current_context();
+
+    // Resolve module path first to get absolute path
+    let module_path = resolve_module_path(scope, &module_name_str);
+    let cache_key = if let Ok(ref path) = module_path {
+        // Use absolute path as cache key
+        Path::new(path).canonicalize()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|_| module_name_str.clone())
+    } else {
+        module_name_str.clone()
+    };
+
+    // Check cache first using absolute path
     let cached_result = MODULE_CACHE.with(|cache| {
         let cache_lock = cache.lock().unwrap();
-        if let Some(cached_module) = cache_lock.get(&module_name_str) {
+        if let Some(cached_module) = cache_lock.get(&cache_key) {
             let cached_local = v8::Local::new(scope, cached_module);
             return Some(cached_local.into());
         }
@@ -514,14 +526,13 @@ fn require_callback(
         return;
     }
 
-    // Resolve module path
-    let module_path = resolve_module_path(scope, &module_name_str);
-
     // Check if file exists and load module
     if let Ok(path_str) = module_path {
         if Path::new(&path_str).exists() {
             // Read module code
             if let Ok(code) = fs::read_to_string(&path_str) {
+                let global = context.global(scope);
+
                 // Create exports object
                 let exports_obj = v8::Object::new(scope);
                 let exports_key = v8::String::new(scope, "exports").unwrap();
@@ -531,10 +542,8 @@ fn require_callback(
                 module_obj.set(scope, exports_key.into(), exports_obj.into());
                 let module_key = v8::String::new(scope, "module").unwrap();
 
-                let global = context.global(scope);
+                // Set module and exports on global (this is critical!)
                 global.set(scope, module_key.into(), module_obj.into());
-
-                // Set exports on global
                 global.set(scope, exports_key.into(), exports_obj.into());
 
                 // Set __dirname and __filename for the module
@@ -553,9 +562,18 @@ fn require_callback(
                     if let Some(script) = v8::Script::compile(scope, source, None) {
                         let _result = script.run(scope);
 
-                        // Get the final exports from module.exports (this is the canonical source)
-                        let final_exports = module_obj.get(scope, exports_key.into())
+                        // CRITICAL: Get the final exports from global.module.exports
+                        // This is important because module code might reassign module.exports
+                        let module_from_global = global.get(scope, module_key.into())
                             .unwrap_or_else(|| v8::null(scope).into());
+
+                        let final_exports = if module_from_global.is_object() {
+                            module_from_global.to_object(scope)
+                                .and_then(|module| module.get(scope, exports_key.into()))
+                                .unwrap_or_else(|| v8::null(scope).into())
+                        } else {
+                            v8::null(scope).into()
+                        };
 
                         // Cache the module (only if it's an object)
                         if final_exports.is_object() {
@@ -563,7 +581,7 @@ fn require_callback(
                                 let mut cache_lock = cache.lock().unwrap();
                                 let exports_obj = v8::Local::new(scope, &final_exports).to_object(scope).unwrap();
                                 let exports_global = v8::Global::new(scope, &exports_obj);
-                                cache_lock.insert(module_name_str.clone(), exports_global);
+                                cache_lock.insert(cache_key.clone(), exports_global);
                             });
                         }
 
@@ -588,28 +606,44 @@ fn resolve_module_path(
     let context = scope.get_current_context();
     let global = context.global(scope);
 
-    // Try to get __dirname from global (if set)
-    let dirname_key = v8::String::new(scope, "__dirname").unwrap();
-    if let Some(dirname) = global.get(scope, dirname_key.into()) {
-        let dirname_str = dirname.to_string(scope)
+    // Get current file's directory from __filename
+    let filename_key = v8::String::new(scope, "__filename").unwrap();
+    let current_file = if let Some(filename) = global.get(scope, filename_key.into()) {
+        filename.to_string(scope)
             .map(|s| s.to_rust_string_lossy(scope))
-            .unwrap_or_default();
-        if !dirname_str.is_empty() {
-            let mut path = PathBuf::from(dirname_str);
-            path.push(module_name.trim_start_matches("./"));
-            if !path.extension().is_some() {
-                path.set_extension("js");
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
+
+    let base_dir = if !current_file.is_empty() {
+        Path::new(&current_file)
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf()
+    } else {
+        // Fallback to __dirname
+        let dirname_key = v8::String::new(scope, "__dirname").unwrap();
+        if let Some(dirname) = global.get(scope, dirname_key.into()) {
+            let dirname_str = dirname.to_string(scope)
+                .map(|s| s.to_rust_string_lossy(scope))
+                .unwrap_or_default();
+            if !dirname_str.is_empty() {
+                PathBuf::from(dirname_str)
+            } else {
+                PathBuf::from(".")
             }
-            return Ok(path.to_string_lossy().to_string());
+        } else {
+            PathBuf::from(".")
         }
-    }
+    };
 
-    // Default to current directory
-    let mut path = PathBuf::from(".");
-    path.push(module_name);
+    let mut path = base_dir;
+    let module_name_trimmed = module_name.trim_start_matches("./");
+    path.push(module_name_trimmed);
 
-    // Add .js extension if not present
-    if !path.extension().is_some() {
+    // Add .js extension if not present and file doesn't exist
+    if !path.exists() && !path.extension().is_some() {
         path.set_extension("js");
     }
 
