@@ -5,6 +5,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use rquickjs::{Value, function::{Function, Rest}, Ctx};
 
+mod typescript;
+
 /// Beejs Runtime - High-performance JavaScript/TypeScript execution engine
 pub struct Runtime {
     stack_size: usize,
@@ -53,6 +55,34 @@ impl Runtime {
             println!("Executing code: {} bytes", code.len());
         }
 
+        // Check if this is TypeScript code
+        let is_typescript = code.contains(':')
+            || code.contains("interface ")
+            || code.contains("enum ")
+            || code.contains("type ")
+            || code.contains("namespace ");
+
+        let code_to_execute = if is_typescript {
+            // Compile TypeScript to JavaScript
+            if self.verbose {
+                println!("Detected TypeScript code, compiling to JavaScript...");
+            }
+            let mut compiler = typescript::TypeScriptCompiler::new();
+            match compiler.compile(code) {
+                Ok(js_code) => {
+                    if self.verbose {
+                        println!("TypeScript compilation successful");
+                    }
+                    js_code
+                }
+                Err(e) => {
+                    return Err(anyhow!("TypeScript compilation error: {}", e));
+                }
+            }
+        } else {
+            code.to_string()
+        };
+
         // Create a new QuickJS runtime and context
         let rt = rquickjs::Runtime::new().map_err(|e| anyhow!("Failed to create QuickJS runtime: {}", e))?;
         let ctx = rquickjs::Context::full(&rt).map_err(|e| anyhow!("Failed to create QuickJS context: {}", e))?;
@@ -78,7 +108,7 @@ impl Runtime {
             ctx.globals().set("console", console)?;
 
             // Evaluate the code
-            let result: Result<Option<Value>, _> = ctx.eval(code);
+            let result: Result<Option<Value>, _> = ctx.eval(&*code_to_execute);
 
             match result {
                 Ok(result) => {
