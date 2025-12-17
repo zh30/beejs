@@ -24,6 +24,10 @@ struct Args {
     #[arg(short, long)]
     test_pattern: Option<String>,
 
+    /// Watch mode - auto-reload on file changes
+    #[arg(short, long)]
+    watch: bool,
+
     /// Print version and exit
     #[arg(short = 'V', long)]
     version: bool,
@@ -109,6 +113,11 @@ fn main() -> Result<()> {
     // Handle test command
     if args.test {
         return run_tests(&args);
+    }
+
+    // Handle watch mode
+    if args.watch {
+        return run_watch_mode(&args);
     }
 
     if args.verbose {
@@ -350,4 +359,114 @@ fn print_test_results(suites: Vec<beejs::TestSuite>, total_duration: std::time::
     }
     println!("  ⏱️  Total duration: {:.2}s", total_duration.as_secs_f64());
     println!("\n{}", "=".repeat(60));
+}
+
+/// Run watch mode - auto-reload on file changes
+fn run_watch_mode(args: &Args) -> Result<()> {
+    use beejs::watcher::{HotReloader, WatcherConfigBuilder};
+    use std::time::Instant;
+
+    let script = args.script.as_ref().ok_or_else(|| {
+        anyhow::anyhow!("Watch mode requires a script file. Usage: beejs --watch <file.js>")
+    })?;
+
+    if !script.exists() {
+        return Err(anyhow::anyhow!("Script file not found: {:?}", script));
+    }
+
+    // Get the directory to watch (parent of the script or current dir)
+    let watch_dir = script.parent().unwrap_or(std::path::Path::new("."));
+
+    println!("\n\x1b[36m╔══════════════════════════════════════════════════════════╗\x1b[0m");
+    println!("\x1b[36m║\x1b[0m  🚀 Beejs Hot Reload Mode                                \x1b[36m║\x1b[0m");
+    println!("\x1b[36m╚══════════════════════════════════════════════════════════╝\x1b[0m\n");
+
+    // Configure watcher
+    let config = WatcherConfigBuilder::new()
+        .debounce_ms(150)
+        .clear_console(true)
+        .show_notifications(true)
+        .build();
+
+    let mut reloader = HotReloader::with_config(config);
+
+    // Convert optimization mode
+    let optimize_mode = match args.optimize {
+        OptimizeMode::Speed => beejs::OptimizeMode::Speed,
+        OptimizeMode::Size => beejs::OptimizeMode::Size,
+        OptimizeMode::Auto => beejs::OptimizeMode::Auto,
+    };
+
+    // Execute script initially
+    println!("\x1b[36m[beejs]\x1b[0m 🎬 Initial execution: {:?}", script);
+    execute_script_for_watch(script, args.stack_size, args.max_heap, args.verbose, optimize_mode.clone());
+
+    // Start watching
+    let mut rx = reloader.watch(watch_dir)
+        .context("Failed to start file watcher")?;
+
+    println!("\x1b[36m[beejs]\x1b[0m Press Ctrl+C to stop watching\n");
+
+    // Use tokio runtime for async file watching
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(async {
+        while let Some(change) = rx.recv().await {
+            let start = Instant::now();
+
+            // Clear console for clean output
+            reloader.clear_console();
+
+            println!("\n\x1b[36m[beejs]\x1b[0m 🔄 File changed: {:?}", change.path.file_name().unwrap_or_default());
+
+            // Re-execute the script
+            let success = execute_script_for_watch(
+                script,
+                args.stack_size,
+                args.max_heap,
+                args.verbose,
+                optimize_mode.clone(),
+            );
+
+            let duration_ms = start.elapsed().as_millis() as u64;
+            reloader.record_reload(success, duration_ms);
+            reloader.notify_reload(script, success, duration_ms);
+
+            // Show stats
+            let stats = reloader.get_stats();
+            println!(
+                "\x1b[90m[stats] Reloads: {} total, {} successful, {} failed\x1b[0m",
+                stats.total_reloads, stats.successful_reloads, stats.failed_reloads
+            );
+        }
+    });
+
+    Ok(())
+}
+
+/// Execute a script and return success status (for watch mode)
+fn execute_script_for_watch(
+    script: &PathBuf,
+    stack_size: usize,
+    max_heap: usize,
+    verbose: bool,
+    optimize_mode: beejs::OptimizeMode,
+) -> bool {
+    match beejs::Runtime::new_with_optimization(stack_size, max_heap, verbose, optimize_mode) {
+        Ok(runtime) => match runtime.execute_file(script) {
+            Ok(result) => {
+                if verbose {
+                    println!("\x1b[32m[result]\x1b[0m {}", result);
+                }
+                true
+            }
+            Err(e) => {
+                println!("\x1b[31m[error]\x1b[0m Execution failed: {}", e);
+                false
+            }
+        },
+        Err(e) => {
+            println!("\x1b[31m[error]\x1b[0m Failed to create runtime: {}", e);
+            false
+        }
+    }
 }

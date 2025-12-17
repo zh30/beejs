@@ -31,6 +31,7 @@ mod test_runner;
 pub mod package_manager;
 mod deep_optimization;
 pub mod performance_reporter;
+pub mod watcher;
 
 pub use test_runner::{TestRunner, TestRunnerConfig, TestSuite, TestCase, TestStatus, TestStats};
 
