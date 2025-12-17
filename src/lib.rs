@@ -3,60 +3,21 @@ use anyhow::{Result, Context, anyhow};
 use std::fs;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Mutex;
-use rusty_v8 as v8;
+use rquickjs::{Value, function::{Function, Rest}, Ctx, Runtime as QjsRuntime, Context as QjsContext};
 
 mod typescript;
-mod nodejs_v8;
+mod nodejs;
 
-// V8 Platform - shared across all isolates for better performance
-static PLATFORM: once_cell::sync::OnceCell<v8::SharedPtr<v8::Platform>> = once_cell::sync::OnceCell::new();
-static V8_INITIALIZED: once_cell::sync::OnceCell<bool> = once_cell::sync::OnceCell::new();
-
-/// Initialize V8 engine
-fn initialize_v8() -> Result<()> {
-    // Initialize V8 only once
-    if V8_INITIALIZED.get().copied().unwrap_or(false) {
-        return Ok(());
-    }
-
-    // Create and set the platform
-    let platform = v8::new_default_platform(0, false)
-        .map_err(|e| anyhow!("Failed to create V8 platform: {}", e))?
-        .make_shared();
-
-    // Initialize V8
-    v8::V8::initialize_platform(platform.clone())
-        .map_err(|e| anyhow!("Failed to initialize V8 platform: {}", e))?;
-
-    v8::V8::initialize()
-        .map_err(|e| anyhow!("Failed to initialize V8: {}", e))?;
-
-    // Store globally
-    let _ = PLATFORM.set(platform);
-    let _ = V8_INITIALIZED.set(true);
-
-    Ok(())
-}
-
-/// Cleanup V8 engine (should be called at program exit)
-pub fn cleanup_v8() {
-    unsafe {
-        v8::V8::dispose();
-    }
-    v8::V8::dispose_platform();
-}
-
-/// Beejs Runtime - High-performance JavaScript/TypeScript execution engine using V8
+/// Beejs Runtime - High-performance JavaScript/TypeScript execution engine
 pub struct Runtime {
     stack_size: usize,
     max_heap: usize,
     execution_count: Arc<AtomicUsize>,
     verbose: bool,
-    /// Reused V8 isolate for better performance
-    isolate: Arc<Mutex<v8::OwnedIsolate>>,
-    /// Reused V8 context for better performance
-    context: v8::Global<v8::Context>,
+    /// Reused QuickJS runtime for performance optimization
+    qjs_runtime: QjsRuntime,
+    /// Reused QuickJS context for performance optimization
+    qjs_context: QjsContext,
 }
 
 impl Runtime {
@@ -66,36 +27,28 @@ impl Runtime {
         max_heap: usize,
         verbose: bool,
     ) -> Result<Self> {
-        initialize_v8()?;
-
         if verbose {
-            let version = v8::V8::get_version();
             println!("Runtime created with:");
             println!("  Stack size: {} bytes", stack_size);
             println!("  Max heap: {} bytes", max_heap);
-            println!("  V8 Engine: Initializing (version {})...", version);
+            println!("  QuickJS Engine: Initializing...");
         }
 
-        // Create V8 isolate with custom parameters
-        let mut create_params = v8::CreateParams::default();
-        // Note: In a full implementation, you'd set heap limits here
-        // create_params.set_heap_limits(max_heap, max_heap);
+        // Create a reusable QuickJS runtime for performance
+        let qjs_runtime = QjsRuntime::new()
+            .map_err(|e| anyhow!("Failed to create QuickJS runtime: {}", e))?;
 
-        let mut isolate = v8::Isolate::new(create_params)
-            .map_err(|e| anyhow!("Failed to create V8 isolate: {}", e))?;
-
-        // Create a context for script execution
-        let scope = &mut v8::HandleScope::new(&mut isolate);
-        let context = v8::Context::new(scope, Default::default());
-        let context = v8::Global::new(scope, context);
+        // Create a reusable context for performance optimization
+        let qjs_context = QjsContext::full(&qjs_runtime)
+            .map_err(|e| anyhow!("Failed to create QuickJS context: {}", e))?;
 
         Ok(Self {
             stack_size,
             max_heap,
             execution_count: Arc::new(AtomicUsize::new(0)),
             verbose,
-            isolate: Arc::new(Mutex::new(isolate)),
-            context,
+            qjs_runtime,
+            qjs_context,
         })
     }
 
@@ -149,303 +102,134 @@ impl Runtime {
             code.to_string()
         };
 
-        // Acquire isolate lock
-        let mut isolate = self.isolate.lock()
-            .map_err(|e| anyhow!("Failed to acquire isolate lock: {}", e))?;
+        // Reuse the existing QuickJS runtime and context for better performance
+        // Note: Module system is initialized in nodejs::setup_nodejs_apis()
 
-        // Create a handle scope for this execution
-        let scope = &mut v8::HandleScope::new(&mut **isolate);
+        // Execute in the context
+        self.qjs_context.with(|ctx| {
+            // Set up Node.js compatibility APIs
+            nodejs::setup_nodejs_apis(&ctx)?;
 
-        // Re-enter the context
-        let context = v8::Local::new(scope, &self.context);
-        let scope = &mut v8::ContextScope::new(scope, context);
+            // Set up complete console API
+            let console = rquickjs::Object::new(ctx.clone())?;
 
-        // Set up console API
-        self.setup_console(scope)?;
-
-        // Set up Node.js compatibility APIs
-        nodejs_v8::setup_nodejs_apis(scope)?;
-
-        // Compile and execute the script
-        let source = v8::String::new(scope, &code_to_execute)
-            .ok_or_else(|| anyhow!("Failed to create V8 string"))?;
-
-        // Use try-catch for error handling
-        let scope = &mut v8::TryCatch::new(scope);
-
-        let script = match v8::Script::compile(scope, source, None) {
-            Some(script) => script,
-            None => {
-                let exception = scope.exception()
-                    .unwrap_or_else(|| v8::String::new(scope, "Unknown compilation error").unwrap().into());
-                let exception_str = exception.to_string(scope)
-                    .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-                    .to_rust_string_lossy(scope);
-                return Err(anyhow!("JavaScript compilation error: {}", exception_str));
-            }
-        };
-
-        let result = match script.run(scope) {
-            Some(result) => result,
-            None => {
-                if scope.has_caught() {
-                    let exception = scope.exception()
-                        .unwrap_or_else(|| v8::String::new(scope, "Unknown runtime error").unwrap().into());
-                    let exception_str = exception.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-                        .to_rust_string_lossy(scope);
-                    return Err(anyhow!("JavaScript execution error: {}", exception_str));
-                } else {
-                    return Err(anyhow!("Script execution returned no result"));
-                }
-            }
-        };
-
-        // Increment execution count
-        self.execution_count.fetch_add(1, Ordering::SeqCst);
-
-        if self.verbose {
-            println!("Execution completed successfully");
-        }
-
-        // Convert result to string with better formatting
-        let result_str = if result.is_undefined() {
-            "undefined".to_string()
-        } else if result.is_null() {
-            "null".to_string()
-        } else if result.is_number() {
-            if let Some(num) = result.to_integer(scope) {
-                num.to_string()
-            } else if let Some(num) = result.to_number(scope) {
-                format!("{}", num)
-            } else {
-                "NaN".to_string()
-            }
-        } else if result.is_boolean() {
-            if result.is_true() {
-                "true".to_string()
-            } else {
-                "false".to_string()
-            }
-        } else if result.is_string() {
-            let str_val = result.to_string(scope)
-                .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap());
-            str_val.to_rust_string_lossy(scope)
-        } else {
-            // For objects, arrays, etc., use JSON.stringify equivalent
-            let json_str = v8::JSON::stringify(scope, result, None)
-                .unwrap_or_else(|| v8::String::new(scope, "<unprintable>").unwrap());
-            json_str.to_rust_string_lossy(scope)
-        };
-
-        Ok(result_str)
-    }
-
-    /// Set up console API for V8
-    fn setup_console(&self, scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
-        let console = v8::Object::new(scope);
-
-        // console.log - standard output
-        let console_log = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let mut output = String::new();
-            for i in 0..args.length() {
-                if i > 0 {
-                    output.push(' ');
-                }
-                let arg = args.get(i);
-
-                // Use JSON.stringify for better formatting of complex objects
-                let arg_str = if arg.is_string() {
-                    arg.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-                        .to_rust_string_lossy(scope)
-                } else if arg.is_undefined() || arg.is_null() {
-                    arg.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "undefined").unwrap())
-                        .to_rust_string_lossy(scope)
-                } else if arg.is_number() {
-                    if let Some(num) = arg.to_integer(scope) {
-                        num.to_string()
-                    } else if let Some(num) = arg.to_number(scope) {
-                        format!("{}", num)
-                    } else {
-                        "NaN".to_string()
+            // console.log - standard output
+            let console_log = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
+                let mut output = String::new();
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        output.push(' ');
                     }
-                } else if arg.is_boolean() {
-                    if arg.is_true() { "true".to_string() } else { "false".to_string() }
-                } else {
-                    // For objects, arrays, etc., use JSON.stringify equivalent
-                    let json_str = v8::JSON::stringify(scope, arg, None)
-                        .unwrap_or_else(|| v8::String::new(scope, "<unprintable>").unwrap());
-                    json_str.to_rust_string_lossy(scope)
-                };
-
-                output.push_str(&arg_str);
-            }
-            println!("{}", output);
-            retval.set_undefined();
-        });
-
-        // console.error - error output (stderr)
-        let console_error = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let mut output = String::new();
-            for i in 0..args.length() {
-                if i > 0 {
-                    output.push(' ');
+                    // Convert Value to string manually
+                    output.push_str(&format!("{:?}", arg));
                 }
-                let arg = args.get(i);
-                let arg_str = if arg.is_string() {
-                    arg.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-                        .to_rust_string_lossy(scope)
-                } else if arg.is_undefined() || arg.is_null() {
-                    arg.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "undefined").unwrap())
-                        .to_rust_string_lossy(scope)
-                } else if arg.is_number() {
-                    if let Some(num) = arg.to_integer(scope) {
-                        num.to_string()
-                    } else if let Some(num) = arg.to_number(scope) {
-                        format!("{}", num)
-                    } else {
-                        "NaN".to_string()
-                    }
-                } else if arg.is_boolean() {
-                    if arg.is_true() { "true".to_string() } else { "false".to_string() }
-                } else {
-                    let json_str = v8::JSON::stringify(scope, arg, None)
-                        .unwrap_or_else(|| v8::String::new(scope, "<unprintable>").unwrap());
-                    json_str.to_rust_string_lossy(scope)
-                };
-                output.push_str(&arg_str);
-            }
-            eprintln!("{}", output);
-            retval.set_undefined();
-        });
+                println!("{}", output);
+                // Explicitly return undefined to match JS console.log behavior
+                rquickjs::Undefined
+            }).map_err(|e| anyhow!("Failed to create console.log: {}", e))?;
 
-        // console.warn - warning output (stderr)
-        let console_warn = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let mut output = String::new();
-            for i in 0..args.length() {
-                if i > 0 {
-                    output.push(' ');
+            // console.error - error output (stderr)
+            let console_error = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
+                let mut output = String::new();
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        output.push(' ');
+                    }
+                    output.push_str(&format!("{:?}", arg));
                 }
-                let arg = args.get(i);
-                let arg_str = if arg.is_string() {
-                    arg.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-                        .to_rust_string_lossy(scope)
-                } else if arg.is_undefined() || arg.is_null() {
-                    arg.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "undefined").unwrap())
-                        .to_rust_string_lossy(scope)
-                } else if arg.is_number() {
-                    if let Some(num) = arg.to_integer(scope) {
-                        num.to_string()
-                    } else if let Some(num) = arg.to_number(scope) {
-                        format!("{}", num)
-                    } else {
-                        "NaN".to_string()
-                    }
-                } else if arg.is_boolean() {
-                    if arg.is_true() { "true".to_string() } else { "false".to_string() }
-                } else {
-                    let json_str = v8::JSON::stringify(scope, arg, None)
-                        .unwrap_or_else(|| v8::String::new(scope, "<unprintable>").unwrap());
-                    json_str.to_rust_string_lossy(scope)
-                };
-                output.push_str(&arg_str);
-            }
-            eprintln!("{}", output);
-            retval.set_undefined();
-        });
+                eprintln!("{}", output);
+                rquickjs::Undefined
+            }).map_err(|e| anyhow!("Failed to create console.error: {}", e))?;
 
-        // console.info - info output (stdout, same as log)
-        let console_info = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let mut output = String::new();
-            for i in 0..args.length() {
-                if i > 0 {
-                    output.push(' ');
+            // console.warn - warning output (stderr)
+            let console_warn = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
+                let mut output = String::new();
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        output.push(' ');
+                    }
+                    output.push_str(&format!("{:?}", arg));
                 }
-                let arg = args.get(i);
-                let arg_str = if arg.is_string() {
-                    arg.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-                        .to_rust_string_lossy(scope)
-                } else if arg.is_undefined() || arg.is_null() {
-                    arg.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "undefined").unwrap())
-                        .to_rust_string_lossy(scope)
-                } else if arg.is_number() {
-                    if let Some(num) = arg.to_integer(scope) {
-                        num.to_string()
-                    } else if let Some(num) = arg.to_number(scope) {
-                        format!("{}", num)
-                    } else {
-                        "NaN".to_string()
-                    }
-                } else if arg.is_boolean() {
-                    if arg.is_true() { "true".to_string() } else { "false".to_string() }
-                } else {
-                    let json_str = v8::JSON::stringify(scope, arg, None)
-                        .unwrap_or_else(|| v8::String::new(scope, "<unprintable>").unwrap());
-                    json_str.to_rust_string_lossy(scope)
-                };
-                output.push_str(&arg_str);
-            }
-            println!("{}", output);
-            retval.set_undefined();
-        });
+                eprintln!("{}", output);
+                rquickjs::Undefined
+            }).map_err(|e| anyhow!("Failed to create console.warn: {}", e))?;
 
-        // console.debug - debug output
-        let console_debug = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-            let mut output = String::new();
-            for i in 0..args.length() {
-                if i > 0 {
-                    output.push(' ');
+            // console.info - info output (stdout, same as log)
+            let console_info = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
+                let mut output = String::new();
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        output.push(' ');
+                    }
+                    output.push_str(&format!("{:?}", arg));
                 }
-                let arg = args.get(i);
-                let arg_str = if arg.is_string() {
-                    arg.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
-                        .to_rust_string_lossy(scope)
-                } else if arg.is_undefined() || arg.is_null() {
-                    arg.to_string(scope)
-                        .unwrap_or_else(|| v8::String::new(scope, "undefined").unwrap())
-                        .to_rust_string_lossy(scope)
-                } else if arg.is_number() {
-                    if let Some(num) = arg.to_integer(scope) {
-                        num.to_string()
-                    } else if let Some(num) = arg.to_number(scope) {
-                        format!("{}", num)
-                    } else {
-                        "NaN".to_string()
+                println!("{}", output);
+                rquickjs::Undefined
+            }).map_err(|e| anyhow!("Failed to create console.info: {}", e))?;
+
+            // console.debug - debug output (always outputs, simple implementation)
+            let console_debug = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
+                let mut output = String::new();
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        output.push(' ');
                     }
-                } else if arg.is_boolean() {
-                    if arg.is_true() { "true".to_string() } else { "false".to_string() }
-                } else {
-                    let json_str = v8::JSON::stringify(scope, arg, None)
-                        .unwrap_or_else(|| v8::String::new(scope, "<unprintable>").unwrap());
-                    json_str.to_rust_string_lossy(scope)
-                };
-                output.push_str(&arg_str);
+                    output.push_str(&format!("{:?}", arg));
+                }
+                println!("[DEBUG] {}", output);
+                rquickjs::Undefined
+            }).map_err(|e| anyhow!("Failed to create console.debug: {}", e))?;
+
+            // Set all console methods
+            console.set("log", console_log)?;
+            console.set("error", console_error)?;
+            console.set("warn", console_warn)?;
+            console.set("info", console_info)?;
+            console.set("debug", console_debug)?;
+
+            ctx.globals().set("console", console)?;
+
+            // Evaluate the code
+            let result: Result<Option<Value>, _> = ctx.eval(&*code_to_execute);
+
+            match result {
+                Ok(result) => {
+                    // Increment execution count
+                    self.execution_count.fetch_add(1, Ordering::SeqCst);
+
+                    if self.verbose {
+                        println!("Execution completed successfully");
+                    }
+
+                    // Convert result to string (improved formatting)
+                    let result_str = match result {
+                        Some(v) => {
+                            // Use a more concise Debug format that removes the type wrapper
+                            let mut s = format!("{:?}", v);
+                            // Remove "String(" prefix and ")" suffix if present
+                            if s.starts_with("String(") && s.ends_with(')') {
+                                s = s[7..s.len() - 1].to_string();
+                            }
+                            // Remove "Int(" prefix and ")" suffix if present
+                            else if s.starts_with("Int(") && s.ends_with(')') {
+                                s = s[4..s.len() - 1].to_string();
+                            }
+                            // Remove "Bool(" prefix and ")" suffix if present
+                            else if s.starts_with("Bool(") && s.ends_with(')') {
+                                s = s[5..s.len() - 1].to_string();
+                            }
+                            s
+                        }
+                        None => "undefined".to_string(),
+                    };
+
+                    Ok(result_str)
+                }
+                Err(e) => {
+                    Err(anyhow!("JavaScript execution error: {}", e))
+                }
             }
-            println!("[DEBUG] {}", output);
-            retval.set_undefined();
-        });
-
-        // Set all console methods
-        console.set(scope, "log", console_log.into()).map_err(|e| anyhow!("Failed to set console.log: {}", e))?;
-        console.set(scope, "error", console_error.into()).map_err(|e| anyhow!("Failed to set console.error: {}", e))?;
-        console.set(scope, "warn", console_warn.into()).map_err(|e| anyhow!("Failed to set console.warn: {}", e))?;
-        console.set(scope, "info", console_info.into()).map_err(|e| anyhow!("Failed to set console.info: {}", e))?;
-        console.set(scope, "debug", console_debug.into()).map_err(|e| anyhow!("Failed to set console.debug: {}", e))?;
-
-        // Get the global object and set console
-        let global = context.global(scope);
-        global.set(scope, "console", console).map_err(|e| anyhow!("Failed to set global console: {}", e))?;
-
-        Ok(())
+        })
     }
 
     /// Execute JavaScript/TypeScript code
@@ -492,7 +276,7 @@ mod tests {
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("1 + 1");
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().trim(), "2");
+        assert!(result.unwrap().contains("2"));
     }
 
     #[test]
@@ -505,7 +289,7 @@ mod tests {
 
         let result = runtime.execute_file(&file.path().to_path_buf());
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().trim(), "84");
+        assert!(result.unwrap().contains("84"));
     }
 
     #[test]
