@@ -7,6 +7,7 @@ use rquickjs::{Value, function::{Function, Rest}, Ctx, Runtime as QjsRuntime, Co
 
 mod typescript;
 mod module_loader;
+mod nodejs;
 
 /// Beejs Runtime - High-performance JavaScript/TypeScript execution engine
 pub struct Runtime {
@@ -110,6 +111,9 @@ impl Runtime {
 
         // Execute in the context
         self.qjs_context.with(|ctx| {
+            // Set up Node.js compatibility APIs
+            nodejs::setup_nodejs_apis(&ctx)?;
+
             // Set up complete console API
             let console = rquickjs::Object::new(ctx.clone())?;
 
