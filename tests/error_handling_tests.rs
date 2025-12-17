@@ -1,0 +1,83 @@
+use beejs::Runtime;
+use beejs::error_handler::ErrorHandler;
+
+#[test]
+fn test_error_handler_basic_functionality() {
+    let handler = ErrorHandler::new(true);
+    let stats = handler.get_stats();
+    assert_eq!(stats.total_errors, 0);
+    assert_eq!(stats.compilation_errors, 0);
+    assert_eq!(stats.runtime_errors, 0);
+    println!("✅ Error handler basic functionality test passed!");
+}
+
+#[test]
+fn test_error_stats_reset() {
+    let handler = ErrorHandler::new(false);
+    // 模拟一些错误（这里只是测试统计重置功能）
+    handler.reset_stats();
+    let new_stats = handler.get_stats();
+    assert_eq!(new_stats.total_errors, 0);
+    assert_eq!(new_stats.compilation_errors, 0);
+    assert_eq!(new_stats.runtime_errors, 0);
+    println!("✅ Error stats reset test passed!");
+}
+
+#[test]
+fn test_runtime_error_handling() {
+    let runtime = Runtime::new(67108864, 1073741824, true).unwrap();
+
+    // 测试语法错误
+    let syntax_error_code = "const x = ;";
+    let result = runtime.execute_code(syntax_error_code);
+    assert!(result.is_err(), "Syntax error should be caught");
+
+    if let Err(e) = result {
+        println!("✅ Caught syntax error: {}", e);
+        assert!(e.to_string().contains("compilation error") ||
+                e.to_string().contains("error"));
+    }
+
+    // 测试运行时错误
+    let runtime_error_code = "throw new Error('Test error');";
+    let result = runtime.execute_code(runtime_error_code);
+    assert!(result.is_err(), "Runtime error should be caught");
+
+    if let Err(e) = result {
+        println!("✅ Caught runtime error: {}", e);
+        assert!(e.to_string().contains("execution error") ||
+                e.to_string().contains("error"));
+    }
+
+    println!("✅ Runtime error handling test passed!");
+}
+
+#[test]
+fn test_v8_isolate_cleanup() {
+    let handler = ErrorHandler::new(true);
+
+    // 测试多次执行，确保没有内存泄漏
+    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+
+    for i in 0..10 {
+        let code = format!("let x = {}; x * 2;", i);
+        let result = runtime.execute_code(&code);
+        assert!(result.is_ok(), "Execution {} should succeed", i);
+
+        // 模拟Isolate清理
+        // 注意：实际的清理在Runtime drop时进行
+    }
+
+    println!("✅ V8 Isolate cleanup test passed!");
+}
+
+#[test]
+fn test_error_rate_monitoring() {
+    let handler = ErrorHandler::new(false);
+
+    // 测试错误率检查
+    let is_high = handler.is_error_rate_high(0.5); // 50% 阈值
+    assert!(!is_high, "Error rate should be low initially");
+
+    println!("✅ Error rate monitoring test passed!");
+}

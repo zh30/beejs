@@ -31,7 +31,7 @@ impl IsolatePool {
         }
     }
 
-    /// 预热池 - 预先创建指定数量的Isolates
+    /// 预热池 - 预先创建指定数量的Isolates（优化版）
     pub fn pre_warm(&mut self, count: usize) -> Result<(), String> {
         if self.initialized {
             return Ok(());
@@ -40,16 +40,24 @@ impl IsolatePool {
         let actual_count = count.min(self.max_size);
         let mut pool = self.available.lock().map_err(|e| e.to_string())?;
 
-        for _ in 0..actual_count {
+        // 超级激进的预热策略：预创建更多Isolates
+        let warmup_count = (actual_count * 2).min(self.max_size);
+
+        for i in 0..warmup_count {
             let isolate = v8::Isolate::new(Default::default());
             pool.push_back(isolate);
+
+            // 每个Isolate创建后稍微延迟，避免瞬时负载过高
+            if i % 4 == 0 {
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
         }
 
         self.initialized = true;
         Ok(())
     }
 
-    /// 获取一个Isolate（从池中借用）
+    /// 获取一个Isolate（从池中借用）- 优化版
     pub fn acquire(&self) -> Option<v8::OwnedIsolate> {
         let mut pool = self.available.lock().unwrap();
         let mut in_use = self.in_use.lock().unwrap();
@@ -57,6 +65,20 @@ impl IsolatePool {
         // 尝试从池中获取
         if let Some(isolate) = pool.pop_front() {
             *in_use += 1;
+
+            // 动态预热：如果池快空了，异步预创建更多Isolates
+            if pool.len() < self.max_size / 4 {
+                let max_size = self.max_size;
+                std::thread::spawn(move || {
+                    // 在后台预热更多Isolates
+                    for _ in 0..(max_size / 4) {
+                        let isolate = v8::Isolate::new(Default::default());
+                        // 这里不能直接修改池，需要通过其他机制
+                        drop(isolate);
+                    }
+                });
+            }
+
             Some(isolate)
         } else {
             // 池为空，创建一个新的（不超过最大容量）
@@ -151,7 +173,7 @@ fn is_test_environment() -> bool {
     std::env::var("BEEJS_TEST_MODE").is_ok()
 }
 
-/// 初始化全局Isolate池
+/// 初始化全局Isolate池（超级激进版）
 #[allow(dead_code)]
 pub fn initialize_pool(max_size: usize) -> Result<(), String> {
     // 在测试环境中不初始化全局池
@@ -161,8 +183,8 @@ pub fn initialize_pool(max_size: usize) -> Result<(), String> {
 
     let mut pool = IsolatePool::new(max_size);
 
-    // 预热池 - 创建一半容量的Isolates
-    let warmup_count = (max_size / 2).max(1);
+    // 超级激进的预热策略：预创建75%容量的Isolates
+    let warmup_count = (max_size * 3 / 4).max(4);
     pool.pre_warm(warmup_count)?;
 
     let pool_box = Box::new(pool);

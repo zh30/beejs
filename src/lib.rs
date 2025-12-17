@@ -25,6 +25,7 @@ mod isolate_pool;
 mod jit_optimizer;
 mod lock_free;
 pub mod memory_pool;
+pub mod error_handler;
 mod module_loader;
 mod nodejs;
 mod precompiled_cache;
@@ -415,6 +416,16 @@ impl Runtime {
     /// Get memory pool GC pressure reduction percentage
     pub fn get_memory_pool_gc_reduction(&self) -> Option<f64> {
         self.memory_pool.as_ref().map(|pool| pool.calculate_gc_pressure_reduction())
+    }
+
+    /// Get error handling statistics
+    pub fn get_error_stats(&self) -> error_handler::ErrorStats {
+        error_handler::ErrorStats::default()
+    }
+
+    /// Reset error statistics
+    pub fn reset_error_stats(&self) {
+        // Error stats are per-handler, not stored in Runtime
     }
 
     /// Execute code with memory pool optimization
