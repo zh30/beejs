@@ -435,10 +435,23 @@ fn setup_module_system(
     let require_func = v8::FunctionTemplate::new(scope, require_callback);
     let require_instance = require_func.get_function(scope).unwrap();
 
-    // Set require as a global function (but NOT module/exports to avoid pollution)
+    // Set require as a global function
     let global = context.global(scope);
     let require_key = v8::String::new(scope, "require").unwrap();
     global.set(scope, require_key.into(), require_instance.into());
+
+    // Set up module and exports globals for non-module code
+    // This allows execute_code to use module.exports directly
+    let module_obj = v8::Object::new(scope);
+    let exports_obj = v8::Object::new(scope);
+    let module_exports_key = v8::String::new(scope, "exports").unwrap();
+    module_obj.set(scope, module_exports_key.into(), exports_obj.into());
+
+    let module_key = v8::String::new(scope, "module").unwrap();
+    global.set(scope, module_key.into(), module_obj.into());
+
+    let exports_key = v8::String::new(scope, "exports").unwrap();
+    global.set(scope, exports_key.into(), exports_obj.into());
 
     // Set __dirname and __filename based on current file
     if let Some(file_path) = current_file {
@@ -509,6 +522,16 @@ fn require_callback(
         loading_lock.contains_key(&cache_key)
     });
 
+    // Check cache first using absolute path
+    let cached_result: Option<v8::Local<v8::Value>> = MODULE_CACHE.with(|cache| {
+        let cache_lock = cache.lock().unwrap();
+        if let Some(cached_module) = cache_lock.get(&cache_key) {
+            let cached_local = v8::Local::new(scope, cached_module);
+            return Some(cached_local.into());
+        }
+        None
+    });
+
     if is_loading {
         // Circular dependency detected - return empty object for now
         // This matches Node.js behavior where incomplete exports are returned
@@ -518,8 +541,10 @@ fn require_callback(
     }
 
     // Check cache first using absolute path
-    let cached_result = MODULE_CACHE.with(|cache| {
+    let cached_result: Option<v8::Local<v8::Value>> = MODULE_CACHE.with(|cache| {
         let cache_lock = cache.lock().unwrap();
+        let is_cached = cache_lock.contains_key(&cache_key);
+        eprintln!("DEBUG: Cache contains key '{}': {}", cache_key, is_cached);
         if let Some(cached_module) = cache_lock.get(&cache_key) {
             let cached_local = v8::Local::new(scope, cached_module);
             return Some(cached_local.into());
@@ -563,7 +588,7 @@ fn require_callback(
                 // Get require function from global
                 let global = context.global(scope);
                 let require_key = v8::String::new(scope, "require").unwrap();
-                let require_func = if let Some(require) = global.get(scope, require_key.into()) {
+                let _require_func = if let Some(require) = global.get(scope, require_key.into()) {
                     require
                 } else {
                     v8::null(scope).into()
@@ -611,6 +636,12 @@ fn require_callback(
                                     cache_lock.insert(cache_key.clone(), exports_global);
                                 });
                             }
+
+                            // Remove from loading set before returning
+                            LOADING_MODULES.with(|loading| {
+                                let mut loading_lock = loading.lock().unwrap();
+                                loading_lock.remove(&cache_key);
+                            });
 
                             retval.set(final_exports);
                             return;
