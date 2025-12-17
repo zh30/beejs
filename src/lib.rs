@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 use anyhow::{Result, Context, anyhow};
 use std::fs;
 use std::sync::Arc;
@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use rquickjs::{Value, function::{Function, Rest}, Ctx};
 
 mod typescript;
+mod module_loader;
 
 /// Beejs Runtime - High-performance JavaScript/TypeScript execution engine
 pub struct Runtime {
@@ -46,11 +47,15 @@ impl Runtime {
         let code = fs::read_to_string(path)
             .context(format!("Failed to read file: {}", path.display()))?;
 
-        self.execute_code(&code)
+        let base_dir = path.parent()
+            .unwrap_or_else(|| Path::new("."))
+            .to_path_buf();
+
+        self.execute_code_with_context(&code, base_dir)
     }
 
-    /// Execute JavaScript/TypeScript code
-    pub fn execute_code(&self, code: &str) -> Result<String> {
+    /// Execute JavaScript/TypeScript code with a specific base directory
+    fn execute_code_with_context(&self, code: &str, base_dir: PathBuf) -> Result<String> {
         if self.verbose {
             println!("Executing code: {} bytes", code.len());
         }
@@ -86,6 +91,11 @@ impl Runtime {
         // Create a new QuickJS runtime and context
         let rt = rquickjs::Runtime::new().map_err(|e| anyhow!("Failed to create QuickJS runtime: {}", e))?;
         let ctx = rquickjs::Context::full(&rt).map_err(|e| anyhow!("Failed to create QuickJS context: {}", e))?;
+
+        // TODO: Re-enable module system after fixing GC issues
+        // Set up module system
+        // let module_loader = module_loader::ModuleLoader::new(base_dir);
+        // module_loader.setup_module_system(&ctx)?;
 
         // Execute in the context
         ctx.with(|ctx| {
@@ -132,6 +142,12 @@ impl Runtime {
                 }
             }
         })
+    }
+
+    /// Execute JavaScript/TypeScript code
+    pub fn execute_code(&self, code: &str) -> Result<String> {
+        let base_dir = PathBuf::from(".");
+        self.execute_code_with_context(code, base_dir)
     }
 
     /// Get execution count

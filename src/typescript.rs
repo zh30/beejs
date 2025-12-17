@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use std::collections::HashMap;
 
 /// TypeScript to JavaScript compiler
