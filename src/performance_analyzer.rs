@@ -140,6 +140,16 @@ impl PerformanceAnalyzer {
         self.metrics.clear();
         self.start_time = Instant::now();
     }
+
+    /// Get the number of recorded metrics
+    pub fn metrics_count(&self) -> usize {
+        self.metrics.len()
+    }
+
+    /// Get a reference to the metrics (for testing purposes)
+    pub fn get_metrics(&self) -> &Vec<ExecutionMetrics> {
+        &self.metrics
+    }
 }
 
 impl Default for PerformanceAnalyzer {
