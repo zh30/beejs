@@ -113,19 +113,19 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 3. ✅ **添加 TypeScript 编译支持** - 基础实现完成，单元测试全部通过
 4. ✅ **实现包管理功能** - 基础实现完成（需要修复 GC 问题）
 5. ✅ **性能优化** - Runtime/Context 重用优化已完成
-6. ⏳ **实现 console API 完整支持** - console.error, console.warn 等
+6. ✅ **实现 console API 完整支持** - console.error, console.warn, console.info, console.debug 已全部实现并测试通过
 7. ⏳ **实现 Node.js 兼容 API** - fs, path, process 等基础模块
 
 ### 测试结果
 - 单元测试：9/9 通过 ✅
-- 集成测试：10/13 通过 ✅ (3个测试需要更新期望值)
+- 集成测试：14/14 通过 ✅ (新增 console API 完整测试)
 - CLI 功能：正常工作 ✅
 - 示例执行：成功运行 ✅
 
 ### 已实现功能
 - ✅ QuickJS 引擎集成 (rquickjs crate)
 - ✅ JavaScript 代码解析与执行
-- ✅ console.log 输出支持
+- ✅ 完整 console API 支持 (log, error, warn, info, debug)
 - ✅ 变量、函数、箭头函数
 - ✅ 对象、数组、基础类型
 - ✅ 算术运算和逻辑操作
