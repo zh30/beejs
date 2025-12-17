@@ -4,7 +4,7 @@
 //! 注意：由于V8 Isolate的线程亲和性限制，所有测试共享单个Runtime实例
 
 use beejs::Runtime;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// 性能目标常量
 const TARGET_EXECUTION_TIME_US: f64 = 10000.0;   // 单次执行 < 10ms

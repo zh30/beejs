@@ -1,6 +1,5 @@
 use beejs::Runtime;
 use std::time::{Duration, Instant};
-use std::fs;
 
 /// Memory statistics tracking
 #[derive(Debug, Clone)]

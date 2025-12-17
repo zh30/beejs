@@ -4,7 +4,7 @@
 //! 注意：此测试套件验证性能对比报告的生成和准确性
 
 use beejs::Runtime;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// 性能对比结果结构
 #[derive(Debug, Clone)]
@@ -20,8 +20,8 @@ pub struct ComparisonResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-    use std::path::PathBuf;
+    
+    
 
     /// 模拟的Bun性能数据（实际运行时会从Bun获取真实数据）
     fn get_mock_bun_benchmarks() -> Vec<ComparisonResult> {

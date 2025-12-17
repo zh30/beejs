@@ -2,13 +2,12 @@
 //! 验证性能对比报告的生成和准确性
 
 use beejs::Runtime;
-use beejs::performance_reporter::{PerformanceReporter, ReportConfig, PerformanceMetric, ComparisonResult};
-use std::collections::HashMap;
+use beejs::performance_reporter::{PerformanceReporter, ReportConfig, PerformanceMetric};
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
+    
 
     /// 测试报告生成器创建
     #[test]

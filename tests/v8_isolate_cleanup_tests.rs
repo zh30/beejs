@@ -2,7 +2,6 @@
 //! 验证 Isolate 在异常情况下的正确清理
 
 use beejs::Runtime;
-use std::path::PathBuf;
 
 #[cfg(test)]
 mod tests {
