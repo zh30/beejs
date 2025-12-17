@@ -22,11 +22,11 @@ pub struct JITThresholds {
 impl Default for JITThresholds {
     fn default() -> Self {
         Self {
-            simple_threshold: 5,
-            medium_threshold: 3,
-            complex_threshold: 2,
-            recompile_threshold: 10,
-            max_compile_time_ms: 100,
+            simple_threshold: 1,    // 降低阈值，立即编译简单代码
+            medium_threshold: 2,    // 降低阈值，快速编译中等代码
+            complex_threshold: 1,   // 降低阈值，立即编译复杂代码
+            recompile_threshold: 5, // 降低重新编译阈值
+            max_compile_time_ms: 50, // 减少最大编译时间
         }
     }
 }
@@ -214,25 +214,27 @@ impl JITOptimizer {
     fn determine_optimization_level(&self, complexity: &CodeComplexity, stat: &ExecutionStat) -> OptimizationLevel {
         match self.strategy {
             JITStrategy::Performance => {
+                // 性能优先策略：更激进的优化
                 match complexity {
-                    CodeComplexity::Simple => OptimizationLevel::Light,
-                    CodeComplexity::Medium => OptimizationLevel::Medium,
-                    CodeComplexity::Complex => OptimizationLevel::Aggressive,
+                    CodeComplexity::Simple => OptimizationLevel::Medium,      // 简单代码也使用中度优化
+                    CodeComplexity::Medium => OptimizationLevel::Aggressive,   // 中等代码使用激进优化
+                    CodeComplexity::Complex => OptimizationLevel::Aggressive,  // 复杂代码使用激进优化
                 }
             }
             JITStrategy::Size => OptimizationLevel::Light,
             JITStrategy::Balanced => {
-                if stat.execution_count > 20 {
-                    OptimizationLevel::Medium
+                // 平衡策略：更激进的优化
+                if stat.execution_count > 5 {  // 降低阈值
+                    OptimizationLevel::Aggressive  // 使用激进优化
                 } else {
-                    OptimizationLevel::Light
+                    OptimizationLevel::Medium  // 使用中度优化
                 }
             }
             JITStrategy::Adaptive => {
-                // 根据执行历史和复杂度自适应选择
-                if stat.execution_count > 50 && stat.avg_time > Duration::from_millis(1) {
+                // 自适应策略：更激进的优化
+                if stat.execution_count > 10 && stat.avg_time > Duration::from_millis(1) {
                     OptimizationLevel::Aggressive
-                } else if stat.execution_count > 10 {
+                } else if stat.execution_count > 3 {  // 降低阈值
                     OptimizationLevel::Medium
                 } else {
                     OptimizationLevel::Light
@@ -243,10 +245,10 @@ impl JITOptimizer {
 
     /// 计算优化收益
     fn calculate_benefit(&self, stat: &ExecutionStat, complexity: &CodeComplexity) -> f64 {
-        // 收益 = 执行次数 * 平均执行时间 * 复杂度因子
+        // 收益 = 执行次数 * 平均执行时间 * 复杂度因子 * 性能因子
         let complexity_factor = match complexity {
-            CodeComplexity::Simple => 1.0,
-            CodeComplexity::Medium => 1.5,
+            CodeComplexity::Simple => 2.0,   // 增加简单代码的收益权重
+            CodeComplexity::Medium => 3.0,   // 增加中等代码的收益权重
             CodeComplexity::Complex => 2.0,
         };
 

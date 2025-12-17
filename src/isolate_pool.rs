@@ -1,4 +1,4 @@
-use std::sync::Mutex;
+use std::sync::{Mutex, Once};
 use std::collections::VecDeque;
 use rusty_v8 as v8;
 
@@ -164,6 +164,59 @@ pub fn get_pool() -> Option<&'static IsolatePool> {
 #[allow(dead_code)]
 pub fn get_pool() -> Option<&'static IsolatePool> {
     None
+}
+
+/// 测试专用的 V8 Isolate 管理器
+/// 确保在测试环境中串行化管理 Isolate，避免并行创建导致的线程问题
+static TEST_ISOLATE_MANAGER: Once = Once::new();
+static mut TEST_ISOLATE: Option<v8::OwnedIsolate> = None;
+static TEST_ISOLATE_LOCK: Mutex<()> = Mutex::new(());
+
+/// 测试环境安全的 Isolate 获取
+/// 确保所有测试串行使用同一个 Isolate，避免线程问题
+pub fn get_test_isolate() -> Option<v8::OwnedIsolate> {
+    // 只在测试环境中提供功能
+    #[cfg(not(test))]
+    {
+        return None;
+    }
+
+    // 使用 Once 确保只初始化一次
+    TEST_ISOLATE_MANAGER.call_once(|| {
+        // 检查 V8 是否可用（通过 lib.rs 中的函数）
+        if crate::is_v8_available() {
+            unsafe {
+                TEST_ISOLATE = Some(v8::Isolate::new(Default::default()));
+            }
+        }
+    });
+
+    // 获取锁确保串行访问
+    let _lock = TEST_ISOLATE_LOCK.lock().unwrap();
+
+    // 安全地获取 Isolate
+    unsafe {
+        if let Some(isolate) = TEST_ISOLATE.take() {
+            Some(isolate)
+        } else {
+            None
+        }
+    }
+}
+
+/// 测试环境安全的 Isolate 归还
+pub fn return_test_isolate(isolate: v8::OwnedIsolate) {
+    // 只在测试环境中提供功能
+    #[cfg(not(test))]
+    {
+        drop(isolate);
+        return;
+    }
+
+    let _lock = TEST_ISOLATE_LOCK.lock().unwrap();
+    unsafe {
+        TEST_ISOLATE = Some(isolate);
+    }
 }
 
 /// 从池中获取Isolate

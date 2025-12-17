@@ -216,7 +216,7 @@ impl Runtime {
         }
 
         // 初始化 Isolate 池（大小为 CPU 核心数，最大不超过 8）
-        // 在测试环境中禁用自动初始化，避免 Once 实例污染
+        // 在测试环境中禁用全局池，避免 V8 Isolate 生命周期管理问题
         #[cfg(not(test))]
         {
             let pool_size = std::cmp::min(num_cpus::get(), 8);
@@ -226,6 +226,13 @@ impl Runtime {
                 }
             } else if verbose {
                 println!("Initialized Isolate pool with {} isolates", pool_size);
+            }
+        }
+
+        #[cfg(test)]
+        {
+            if verbose {
+                println!("Using test-safe Isolate management (no global pool)");
             }
         }
 
@@ -356,13 +363,18 @@ impl Runtime {
         }
 
         // 获取 V8 Isolate
-        // 在测试环境中，创建新的 Isolate 避免线程问题
+        // 在测试环境中，使用专用的测试 Isolate 管理器避免线程问题
         // 在生产环境中，使用池化 Isolate 提高性能
         let mut isolate = if cfg!(test) {
             if self.verbose {
-                println!("Creating new Isolate for test");
+                println!("Using test-managed Isolate");
             }
-            v8::Isolate::new(Default::default())
+            // 使用测试专用的 Isolate 管理器，确保串行访问
+            if let Some(test_isolate) = isolate_pool::get_test_isolate() {
+                test_isolate
+            } else {
+                return Err(anyhow!("V8 test Isolate not available"));
+            }
         } else {
             if let Some(pooled_isolate) = isolate_pool::acquire_isolate() {
                 if self.verbose {
@@ -455,10 +467,15 @@ impl Runtime {
             }
         }
 
-        // 归还 Isolate 到池中（仅在非测试环境中）
-        // 在测试环境中，Isolate 会在作用域结束时自动销毁
+        // 归还 Isolate 到相应的管理器
+        #[cfg(test)]
+        {
+            // 在测试环境中，归还 Isolate 到测试管理器
+            isolate_pool::return_test_isolate(isolate);
+        }
         #[cfg(not(test))]
         {
+            // 在生产环境中，归还 Isolate 到池中
             if isolate_pool::get_pool().is_some() {
                 isolate_pool::release_isolate(isolate);
             }

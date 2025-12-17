@@ -19,28 +19,37 @@ impl CodeAnalyzer {
         let lines: Vec<&str> = code.lines().collect();
         let line_count = lines.len();
 
-        // Count functions (simple heuristic)
+        // Count functions (enhanced heuristic)
         let function_count = code.matches("function").count()
             + code.matches("=>").count()
-            + code.matches("class ").count();
+            + code.matches("class ").count()
+            + code.matches("async function").count()
+            + code.matches("() =>").count();
 
-        // Count loops
+        // Count loops (including nested patterns)
         let loop_count = code.matches("for").count()
             + code.matches("while").count()
-            + code.matches("do").count();
+            + code.matches("do").count()
+            + code.matches("forEach").count()
+            + code.matches("map(").count()
+            + code.matches("filter(").count();
 
-        // Count conditions
+        // Count conditions (enhanced)
         let condition_count = code.matches("if").count()
             + code.matches("else").count()
             + code.matches("switch").count()
             + code.matches("case ").count()
-            + code.matches("?").count();
+            + code.matches("?").count()
+            + code.matches("&&").count()
+            + code.matches("||").count()
+            + code.matches("try").count()
+            + code.matches("catch").count();
 
-        // Calculate complexity score (simple metric)
-        let complexity_score = (line_count as f64 * 0.1)
-            + (function_count as f64 * 2.0)
-            + (loop_count as f64 * 3.0)
-            + (condition_count as f64 * 1.5);
+        // Calculate complexity score (enhanced metric for better JIT decisions)
+        let complexity_score = (line_count as f64 * 0.2)  // 增加行数权重
+            + (function_count as f64 * 5.0)   // 增加函数权重
+            + (loop_count as f64 * 8.0)      // 增加循环权重（循环是性能热点）
+            + (condition_count as f64 * 3.0); // 增加条件权重
 
         CodeComplexity {
             line_count,
@@ -60,15 +69,15 @@ impl CodeAnalyzer {
             OptimizeMode::Speed => OptimizeMode::Speed,
             OptimizeMode::Size => OptimizeMode::Size,
             OptimizeMode::Auto => {
-                // Auto mode: choose based on complexity
-                if complexity.complexity_score > 50.0 {
+                // Auto mode: choose based on complexity (more aggressive for performance)
+                if complexity.complexity_score > 30.0 {  // 降低阈值，更积极优化
                     // High complexity: optimize for speed
                     OptimizeMode::Speed
-                } else if complexity.line_count < 10 && complexity.function_count < 3 {
-                    // Simple script: optimize for size
+                } else if complexity.line_count < 5 && complexity.function_count < 2 && complexity.loop_count == 0 {
+                    // Very simple script: optimize for size
                     OptimizeMode::Size
                 } else {
-                    // Medium complexity: balance between speed and size
+                    // Medium complexity: always optimize for speed (performance priority)
                     OptimizeMode::Speed
                 }
             }
