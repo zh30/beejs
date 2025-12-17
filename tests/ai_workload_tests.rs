@@ -8,12 +8,14 @@ use tokio::runtime::Runtime as TokioRuntime;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use beejs::{AiMemoryPool, AiMemoryPoolConfig, PreallocationStrategy};
 
     /// AI推理任务数据结构
     #[derive(Debug, Clone)]
     pub struct AiTask {
         pub id: usize,
         pub input_data: String,
+        #[allow(dead_code)]
         pub expected_output: Option<String>,
     }
 
@@ -161,40 +163,96 @@ mod tests {
     }
 
     /// AI内存预分配测试
-    /// 目标：预分配内存减少分配开销
+    /// 目标：测试AiMemoryPool的预分配缓冲区功能正确性
+    /// 验证内存池能够正确分配、释放和重用内存块
     #[test]
     fn test_ai_memory_preallocation() {
-        let iterations = 1000;
-        let data_size = 1024; // 1KB per task
+        let iterations = 100;
+        let data_size = 64 * 1024; // 64KB per task
 
-        // 测试预分配内存
+        // 创建AiMemoryPool，预分配固定大小的块
+        let config = AiMemoryPoolConfig {
+            max_pool_size: 1024 * 1024 * 1024, // 1GB
+            max_block_size: 64 * 1024 * 1024,  // 64MB
+            preallocation_strategy: PreallocationStrategy::Fixed {
+                block_size: data_size,
+                block_count: iterations,
+            },
+            auto_cleanup_interval: 300,
+            defragmentation_threshold: 0.3,
+            memory_usage_warning_threshold: 0.8,
+        };
+
+        let memory_pool = AiMemoryPool::new(config);
+
+        // 测试分配内存块
+        let mut allocated_blocks = Vec::new();
+        for _ in 0..iterations {
+            if let Some(block) = memory_pool.allocate(data_size) {
+                allocated_blocks.push(block);
+            }
+        }
+
+        // 验证所有分配都成功
+        assert_eq!(allocated_blocks.len(), iterations);
+
+        // 验证内存块的大小和数据
+        for block in &allocated_blocks {
+            assert_eq!(block.size, data_size);
+            assert_eq!(block.data.len(), data_size);
+            assert_eq!(block.access_count, 1);
+        }
+
+        // 释放所有内存块
+        for block in &allocated_blocks {
+            memory_pool.deallocate(block.id);
+        }
+
+        // 再次分配，验证内存重用
         let start = Instant::now();
-        let preallocated_buffer = vec![0u8; data_size * iterations];
-        let prealloc_duration = start.elapsed();
+        let mut reallocated_blocks = Vec::new();
+        for _ in 0..iterations {
+            if let Some(block) = memory_pool.allocate(data_size) {
+                reallocated_blocks.push(block);
+            }
+        }
+        let reallocation_duration = start.elapsed();
 
-        // 测试动态分配
-        let start = Instant::now();
-        let dynamic_buffers: Vec<Vec<u8>> = (0..iterations)
-            .map(|_| vec![0u8; data_size])
-            .collect();
-        let dynamic_duration = start.elapsed();
+        // 验证重新分配成功
+        assert_eq!(reallocated_blocks.len(), iterations);
 
-        let improvement = (dynamic_duration.as_secs_f64() - prealloc_duration.as_secs_f64())
-            / dynamic_duration.as_secs_f64() * 100.0;
-
+        // 验证统计信息
+        let stats = memory_pool.get_stats();
         println!(
-            "预分配: {:.2}ms, 动态分配: {:.2}ms, 改进: {:.1}%",
-            prealloc_duration.as_secs_f64() * 1000.0,
-            dynamic_duration.as_secs_f64() * 1000.0,
-            improvement
+            "内存池功能测试: 总分配: {}, 缓存命中: {}, 缓存未命中: {}, 耗时: {:.2}ms",
+            stats.total_allocations,
+            stats.cache_hits,
+            stats.cache_misses,
+            reallocation_duration.as_secs_f64() * 1000.0
         );
 
-        // 预分配应该更快
-        assert!(prealloc_duration < dynamic_duration);
+        // 验证缓存命中率（应该很高，因为所有请求大小相同）
+        assert!(stats.cache_hit_rate() > 0.9, "缓存命中率应该 > 90%");
 
-        // 验证数据正确性
-        assert_eq!(preallocated_buffer.len(), data_size * iterations);
-        assert_eq!(dynamic_buffers.len(), iterations);
+        // 验证分配的内存块数量
+        assert_eq!(reallocated_blocks.len(), iterations);
+
+        // 释放重新分配的块
+        for block in &reallocated_blocks {
+            memory_pool.deallocate(block.id);
+        }
+
+        // 验证内存使用情况
+        let memory_usage = memory_pool.get_memory_usage();
+        println!(
+            "内存使用: 总分配: {} bytes, 峰值: {} bytes, 利用率: {:.2}%",
+            memory_usage.total_allocated,
+            memory_usage.peak_allocated,
+            memory_usage.utilization * 100.0
+        );
+
+        // 验证功能正确性
+        assert!(memory_usage.peak_allocated >= memory_usage.total_allocated);
     }
 
     /// AI模型接口兼容性测试

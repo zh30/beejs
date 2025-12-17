@@ -24,7 +24,7 @@ mod tests {
     #[test]
     fn test_code_quality_metrics() -> Result<()> {
         // 统计代码质量改进
-        let mut warnings_fixed = 0;
+        let warnings_fixed = 0;
 
         // 这里可以添加对特定改进的验证
         // 例如：验证某个函数是否正确修复了 clippy 警告

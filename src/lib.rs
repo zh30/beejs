@@ -8,7 +8,6 @@ use std::time::Instant;
 use rusty_v8 as v8;
 use crate::memory_pool::{SmartMemoryPool, PoolConfig};
 use crate::code_cache::{BytecodeCache, CacheConfig};
-use crate::ai_batch_processor::BatchConfig;
 
 mod typescript;
 mod nodejs;
@@ -29,6 +28,12 @@ mod ai_async_queue;
 mod ai_model_interface;
 mod module_loader;
 pub mod performance_reporter;
+
+// Re-export AI module types for easier testing
+pub use ai_memory_pool::{AiMemoryPool, AiMemoryPoolConfig, PreallocationStrategy};
+pub use ai_batch_processor::BatchConfig;
+pub use ai_async_queue::{AiAsyncQueue, TaskPriority};
+pub use ai_model_interface::{AiModelManager, ModelType};
 
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
