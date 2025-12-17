@@ -11,7 +11,6 @@ use std::sync::Arc;
 /// Only initializes essential components needed for basic JS execution
 pub struct RuntimeLite {
     execution_count: Arc<AtomicUsize>,
-    verbose: bool,
 }
 
 impl RuntimeLite {
@@ -31,8 +30,80 @@ impl RuntimeLite {
 
         Ok(Self {
             execution_count: Arc::new(AtomicUsize::new(0)),
-            verbose,
         })
+    }
+
+    /// Set up console API for V8 context
+    fn setup_console(
+        scope: &mut v8::HandleScope,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        use crate::console_log_callback;
+        use crate::console_error_callback;
+        use crate::console_warn_callback;
+        use crate::console_info_callback;
+        use crate::console_debug_callback;
+
+        let console = v8::Object::new(scope);
+
+        // console.log
+        let log_func = v8::FunctionTemplate::new(scope, console_log_callback);
+        let log_instance = log_func
+            .get_function(scope)
+            .ok_or_else(|| anyhow::anyhow!("Failed to get console.log function"))?;
+        let log_key = v8::String::new(scope, "log").unwrap();
+        console.set(scope, log_key.into(), log_instance.into());
+
+        // console.error
+        let error_func = v8::FunctionTemplate::new(scope, console_error_callback);
+        let error_instance = error_func
+            .get_function(scope)
+            .ok_or_else(|| anyhow::anyhow!("Failed to get console.error function"))?;
+        let error_key = v8::String::new(scope, "error").unwrap();
+        console.set(scope, error_key.into(), error_instance.into());
+
+        // console.warn
+        let warn_func = v8::FunctionTemplate::new(scope, console_warn_callback);
+        let warn_instance = warn_func
+            .get_function(scope)
+            .ok_or_else(|| anyhow::anyhow!("Failed to get console.warn function"))?;
+        let warn_key = v8::String::new(scope, "warn").unwrap();
+        console.set(scope, warn_key.into(), warn_instance.into());
+
+        // console.info
+        let info_func = v8::FunctionTemplate::new(scope, console_info_callback);
+        let info_instance = info_func
+            .get_function(scope)
+            .ok_or_else(|| anyhow::anyhow!("Failed to get console.info function"))?;
+        let info_key = v8::String::new(scope, "info").unwrap();
+        console.set(scope, info_key.into(), info_instance.into());
+
+        // console.debug
+        let debug_func = v8::FunctionTemplate::new(scope, console_debug_callback);
+        let debug_instance = debug_func
+            .get_function(scope)
+            .ok_or_else(|| anyhow::anyhow!("Failed to get console.debug function"))?;
+        let debug_key = v8::String::new(scope, "debug").unwrap();
+        console.set(scope, debug_key.into(), debug_instance.into());
+
+        // Set console on global
+        let global = context.global(scope);
+        let console_key = v8::String::new(scope, "console").unwrap();
+        global.set(scope, console_key.into(), console.into());
+
+        Ok(())
+    }
+
+    /// Set up basic Node.js APIs for compatibility
+    fn setup_nodejs_apis(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        use crate::nodejs;
+
+        // Set up process and path APIs
+        nodejs::setup_nodejs_apis(scope, None, context, None)?;
+        Ok(())
     }
 
     /// Execute JavaScript code with minimal overhead
@@ -47,6 +118,12 @@ impl RuntimeLite {
         let scope = &mut v8::HandleScope::new(&mut isolate);
         let context = v8::Context::new(scope);
         let scope = &mut v8::ContextScope::new(scope, context);
+
+        // Set up console API
+        Self::setup_console(scope, &context)?;
+
+        // Set up Node.js APIs for compatibility
+        Self::setup_nodejs_apis(scope, &context)?;
 
         // Create string from code
         let source = v8::String::new(scope, code).ok_or_else(|| anyhow::anyhow!("Failed to create string"))?;
