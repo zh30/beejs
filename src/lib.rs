@@ -27,6 +27,7 @@ mod ai_batch_processor;
 mod ai_memory_pool;
 mod ai_async_queue;
 mod ai_model_interface;
+mod module_loader;
 pub mod performance_reporter;
 
 /// Global V8 initialization
@@ -169,6 +170,8 @@ pub struct Runtime {
     ai_memory_pool: Option<Arc<ai_memory_pool::AiMemoryPool>>,
     ai_async_queue: Option<Arc<tokio::sync::Mutex<ai_async_queue::AiAsyncQueue>>>,
     ai_model_manager: Option<Arc<ai_model_interface::AiModelManager>>,
+    // 模块加载器
+    module_loader: Option<Arc<module_loader::ModuleLoader>>,
 }
 
 /// Compilation statistics for JIT optimization
@@ -275,7 +278,11 @@ impl Runtime {
             println!("  AI Memory Pool: enabled (pre-allocated AI memory)");
             println!("  AI Async Queue: enabled (concurrent task scheduling)");
             println!("  AI Model Manager: enabled (unified model interface)");
+            println!("  Module Loader: enabled (npm/package.json support)");
         }
+
+        // 初始化模块加载器
+        let module_loader = Some(Arc::new(module_loader::ModuleLoader::from_current_dir()?));
 
         Ok(Self {
             _stack_size: stack_size,
@@ -293,6 +300,7 @@ impl Runtime {
             ai_memory_pool,
             ai_async_queue,
             ai_model_manager,
+            module_loader,
         })
     }
 
@@ -398,7 +406,7 @@ impl Runtime {
             self.setup_console(scope, &context)?;
 
             // Set up Node.js compatibility APIs with current file path
-            nodejs::setup_nodejs_apis(scope, &context, file.map(|p| p.as_path()))?;
+            nodejs::setup_nodejs_apis(scope, self.module_loader.clone(), &context, file.map(|p| p.as_path()))?;
 
             // Expose the runtime to JavaScript for inline cache access
             self.setup_beejs_api(scope, &context)?;

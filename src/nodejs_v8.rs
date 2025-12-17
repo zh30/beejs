@@ -1,18 +1,20 @@
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::env;
+use std::sync::Arc;
 use anyhow::{Result, anyhow};
 use rusty_v8 as v8;
+use crate::module_loader::ModuleLoader;
 
 /// Node.js compatibility module for V8
 /// Provides fs, path, process and other Node.js core modules
 
 /// Set up all Node.js compatibility globals
-pub fn setup_nodejs_apis(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
+pub fn setup_nodejs_apis(scope: &mut v8::ContextScope<v8::HandleScope>, module_loader: Option<Arc<ModuleLoader>>) -> Result<()> {
     setup_process(scope)?;
     setup_path(scope)?;
     setup_fs(scope)?;
-    setup_module_system(scope)?;
+    setup_module_system(scope, module_loader)?;
     Ok(())
 }
 
@@ -311,20 +313,68 @@ fn setup_fs(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
 }
 
 /// Module system implementation
-fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
-    // Global require function - simplified implementation
+fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>, module_loader: Option<Arc<ModuleLoader>>) -> Result<()> {
+    // Global require function - now with real module loading
     let require_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
         let module_name = args.get(0);
         let module_name_str = module_name.to_string(scope)
             .unwrap_or_else(|| v8::String::new(scope, "<error>").unwrap())
             .to_rust_string_lossy(scope);
 
-        // Simple require implementation - return a mock module object
-        // TODO: 实现真正的模块加载系统，支持 npm 包和文件系统模块
-        // 当前: 返回模拟模块对象 (tests/ 模块系统测试 9/9 通过)
-        // 需要: 完整的 require() 实现，包括 package.json 解析、路径解析、缓存
-        let result = format!("[Module: {}]", module_name_str);
-        retval.set(v8::String::new(scope, &result).unwrap().into());
+        // Use module loader to load the module
+        if let Some(loader) = &module_loader {
+            match loader.load_module(&module_name_str) {
+                Ok(module) => {
+                    // Create a V8 object for the module exports
+                    let exports_obj = v8::Object::new(scope);
+                    for (key, value) in &module.exports {
+                        let v8_value = match value {
+                            serde_json::Value::String(s) => v8::String::new(scope, s).unwrap().into(),
+                            serde_json::Value::Number(n) => {
+                                if let Some(i) = n.as_i64() {
+                                    v8::Integer::new(scope, i as i32).into()
+                                } else {
+                                    v8::Number::new(scope, n.as_f64().unwrap_or(0.0)).into()
+                                }
+                            }
+                            serde_json::Value::Bool(b) => v8::Boolean::new(scope, *b).into(),
+                            serde_json::Value::Null => v8::null(scope).into(),
+                            serde_json::Value::Array(arr) => {
+                                let v8_arr = v8::Array::new(scope, arr.len() as i32);
+                                for (i, item) in arr.iter().enumerate() {
+                                    let v8_item = match item {
+                                        serde_json::Value::String(s) => v8::String::new(scope, s).unwrap().into(),
+                                        serde_json::Value::Number(n) => {
+                                            if let Some(i) = n.as_i64() {
+                                                v8::Integer::new(scope, i as i32).into()
+                                            } else {
+                                                v8::Number::new(scope, n.as_f64().unwrap_or(0.0)).into()
+                                            }
+                                        }
+                                        serde_json::Value::Bool(b) => v8::Boolean::new(scope, *b).into(),
+                                        _ => v8::undefined(scope).into(),
+                                    };
+                                    v8_arr.set_index(scope, i as u32, v8_item);
+                                }
+                                v8_arr.into()
+                            }
+                            _ => v8::undefined(scope).into(),
+                        };
+                        exports_obj.set(scope, v8::String::new(scope, key).unwrap().into(), v8_value).unwrap();
+                    }
+                    retval.set(exports_obj.into());
+                }
+                Err(e) => {
+                    // Return error object
+                    let error_msg = format!("Error loading module '{}': {}", module_name_str, e);
+                    retval.set(v8::String::new(scope, &error_msg).unwrap().into());
+                }
+            }
+        } else {
+            // Fallback to mock module if no loader available
+            let result = format!("[Module: {}]", module_name_str);
+            retval.set(v8::String::new(scope, &result).unwrap().into());
+        }
     });
     let require_func_instance = require_func.get_function(scope).unwrap();
 
