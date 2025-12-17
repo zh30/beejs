@@ -13,6 +13,7 @@ pub struct LockFreeCounter {
     count: CachePadded<AtomicUsize>,
 }
 
+#[allow(dead_code)]
 impl LockFreeCounter {
     /// 创建新的无锁计数器
     pub fn new(initial_value: usize) -> Self {
@@ -57,6 +58,7 @@ pub struct LockFreeTaskScheduler {
     shutdown: AtomicBool,
 }
 
+#[allow(dead_code)]
 impl LockFreeTaskScheduler {
     /// 创建新的任务调度器
     pub fn new() -> Self {
@@ -128,6 +130,7 @@ pub struct LockFreeQueue<T> {
     _phantom: std::marker::PhantomData<T>,
 }
 
+#[allow(dead_code)]
 impl<T> LockFreeQueue<T> {
     /// 创建新的无锁队列
     pub fn new() -> Self {
@@ -162,6 +165,7 @@ pub struct ShardedLock<T> {
     shard_count: usize,
 }
 
+#[allow(dead_code)]
 impl<T> ShardedLock<T> {
     /// 创建新的分片锁
     pub fn new(shard_count: usize, initial_value: T) -> Self
@@ -205,6 +209,7 @@ pub struct LockFreeBufferPool {
     active_buffers: LockFreeCounter,
 }
 
+#[allow(dead_code)]
 impl LockFreeBufferPool {
     /// 创建新的缓冲区池
     pub fn new() -> Self {
@@ -256,6 +261,7 @@ pub struct AtomicStats {
     pub false_sharing_detected: LockFreeCounter,
 }
 
+#[allow(dead_code)]
 impl AtomicStats {
     /// 创建新的统计结构
     pub fn new() -> Self {

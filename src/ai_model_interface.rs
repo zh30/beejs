@@ -215,6 +215,7 @@ impl Default for ModelRoutingStrategy {
     }
 }
 
+#[allow(dead_code)]
 impl AiModelManager {
     /// 创建新的模型管理器
     pub fn new() -> Self {

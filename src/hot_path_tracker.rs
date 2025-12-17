@@ -35,8 +35,10 @@ pub struct HotPathConfig {
     /// 执行时间阈值（纳秒）：超过此值的代码值得优化
     pub time_threshold_ns: u64,
     /// 监控窗口大小（最近N次执行）
+    #[allow(dead_code)]
     pub monitoring_window: usize,
     /// 自动优化是否启用
+    #[allow(dead_code)]
     pub auto_optimize: bool,
 }
 
@@ -179,6 +181,7 @@ impl HotPathTracker {
     }
 
     /// 获取特定代码的跟踪信息
+    #[allow(dead_code)]
     pub fn get_code_info(&self, code_id: &str) -> Option<HotPathInfo> {
         let paths = self.paths.lock().unwrap();
         paths.get(code_id).cloned()
@@ -280,6 +283,7 @@ impl HotPathTracker {
     }
 
     /// 清除过期或低频的跟踪数据
+    #[allow(dead_code)]
     pub fn cleanup(&self, max_age: Duration, min_executions: usize) {
         let mut paths = self.paths.lock().unwrap();
         let now = Instant::now();

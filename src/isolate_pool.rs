@@ -87,6 +87,7 @@ impl IsolatePool {
     }
 
     /// 获取池的统计信息
+    #[allow(dead_code)]
     pub fn stats(&self) -> PoolStats {
         let pool = self.available.lock().unwrap();
         let in_use = self.in_use.lock().unwrap();

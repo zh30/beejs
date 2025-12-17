@@ -76,6 +76,7 @@ pub struct AsyncScriptExecution {
     pub memory_used: usize,
 }
 
+#[allow(dead_code)]
 impl AsyncIoManager {
     /// 创建新的异步I/O管理器
     pub fn new(max_concurrent_tasks: usize) -> Self {

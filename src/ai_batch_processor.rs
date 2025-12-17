@@ -66,12 +66,15 @@ pub struct BatchConfig {
     /// 最大批处理大小
     pub max_batch_size: usize,
     /// 批处理超时时间（毫秒）
+    #[allow(dead_code)]
     pub batch_timeout_ms: u64,
     /// 最大并发批次数
     pub max_concurrent_batches: usize,
     /// 动态批处理调整是否启用
+    #[allow(dead_code)]
     pub enable_dynamic_batching: bool,
     /// 预热批处理大小
+    #[allow(dead_code)]
     pub warmup_batch_size: usize,
 }
 
@@ -105,7 +108,9 @@ pub struct BatchStats {
     pub total_processing_time: Duration,
     pub average_batch_size: f64,
     pub peak_memory_usage: usize,
+    #[allow(dead_code)]
     pub cache_hits: usize,
+    #[allow(dead_code)]
     pub cache_misses: usize,
 }
 
@@ -118,6 +123,7 @@ impl BatchStats {
         self.peak_memory_usage = self.peak_memory_usage.max(memory_used);
     }
 
+    #[allow(dead_code)]
     pub fn cache_hit_rate(&self) -> f64 {
         let total = self.cache_hits + self.cache_misses;
         if total > 0 {
@@ -128,6 +134,7 @@ impl BatchStats {
     }
 }
 
+#[allow(dead_code)]
 impl AiBatchProcessor {
     /// 创建新的AI批量处理器
     pub fn new(config: BatchConfig) -> Self {
@@ -353,6 +360,7 @@ impl AiBatchProcessor {
 }
 
 /// 便利函数：创建文本生成批量处理器
+#[allow(dead_code)]
 pub fn create_text_generation_processor(max_batch_size: usize) -> AiBatchProcessor {
     let config = BatchConfig {
         max_batch_size,
@@ -365,6 +373,7 @@ pub fn create_text_generation_processor(max_batch_size: usize) -> AiBatchProcess
 }
 
 /// 便利函数：创建图像分类批量处理器
+#[allow(dead_code)]
 pub fn create_image_classification_processor(max_batch_size: usize) -> AiBatchProcessor {
     let config = BatchConfig {
         max_batch_size,
@@ -377,6 +386,7 @@ pub fn create_image_classification_processor(max_batch_size: usize) -> AiBatchPr
 }
 
 /// 便利函数：创建嵌入向量批量处理器
+#[allow(dead_code)]
 pub fn create_embedding_processor(max_batch_size: usize) -> AiBatchProcessor {
     let config = BatchConfig {
         max_batch_size,

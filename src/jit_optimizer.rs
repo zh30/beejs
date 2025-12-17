@@ -12,8 +12,10 @@ pub struct JITThresholds {
     /// 复杂代码的编译阈值
     pub complex_threshold: usize,
     /// 重新编译阈值
+    #[allow(dead_code)]
     pub recompile_threshold: usize,
     /// 最大编译时间阈值（毫秒）
+    #[allow(dead_code)]
     pub max_compile_time_ms: u64,
 }
 
@@ -87,19 +89,24 @@ pub struct JITOptimizer {
 /// 代码执行统计
 #[derive(Debug, Clone)]
 pub struct ExecutionStat {
+    #[allow(dead_code)]
     pub code_hash: String,
     pub execution_count: usize,
     pub total_time: Duration,
     pub avg_time: Duration,
     pub last_execution: Instant,
+    #[allow(dead_code)]
     pub complexity: CodeComplexity,
 }
 
 /// 编译事件
 #[derive(Debug, Clone)]
 pub struct CompileEvent {
+    #[allow(dead_code)]
     pub code_hash: String,
+    #[allow(dead_code)]
     pub timestamp: Instant,
+    #[allow(dead_code)]
     pub optimization_level: OptimizationLevel,
     pub compile_time: Duration,
     pub success: bool,

@@ -184,6 +184,7 @@ impl QueueStats {
     }
 }
 
+#[allow(dead_code)]
 impl AiAsyncQueue {
     /// 创建新的异步任务队列
     pub fn new(config: QueueConfig) -> Self {

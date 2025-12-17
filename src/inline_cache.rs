@@ -28,6 +28,7 @@ pub struct CacheEntry {
     /// The cached value (property offset or function pointer)
     pub cached_value: String, // Simplified: storing as string for now
     /// The type version when this cache entry was created
+    #[allow(dead_code)]
     pub type_version: u64,
     /// Number of times this cache entry has been accessed
     pub access_count: usize,
@@ -45,6 +46,7 @@ pub struct CacheConfig {
     /// Minimum access count before a cache entry can be evicted
     pub min_access_count: usize,
     /// Interval for cleaning up stale entries
+    #[allow(dead_code)]
     pub cleanup_interval: Duration,
 }
 
@@ -75,6 +77,7 @@ pub struct InlineCache {
     stats: Arc<Mutex<CacheStats>>,
 }
 
+#[allow(dead_code)]
 impl InlineCache {
     /// Creates a new inline cache with default configuration
     pub fn new() -> Self {

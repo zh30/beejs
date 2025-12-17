@@ -16,6 +16,7 @@ pub struct CacheEntry {
     /// 访问次数
     pub access_count: usize,
     /// 文件修改时间（如果是文件）
+    #[allow(dead_code)]
     pub file_modified: Option<std::time::SystemTime>,
 }
 
@@ -34,12 +35,16 @@ pub struct BytecodeCache {
 #[derive(Debug, Clone)]
 pub struct CacheConfig {
     /// 最大缓存条目数
+    #[allow(dead_code)]
     pub max_entries: usize,
     /// 缓存条目最大生存时间（秒）
+    #[allow(dead_code)]
     pub max_age: Duration,
     /// 最小访问次数（低于此次数的条目可能被清除）
+    #[allow(dead_code)]
     pub min_access_count: usize,
     /// 缓存清理间隔（秒）
+    #[allow(dead_code)]
     pub cleanup_interval: Duration,
 }
 
@@ -57,12 +62,17 @@ impl Default for CacheConfig {
 /// 缓存统计信息
 #[derive(Debug, Clone, Default)]
 pub struct CacheStats {
+    #[allow(dead_code)]
     pub hits: usize,
+    #[allow(dead_code)]
     pub misses: usize,
+    #[allow(dead_code)]
     pub evictions: usize,
+    #[allow(dead_code)]
     pub total_cached: usize,
 }
 
+#[allow(dead_code)]
 impl BytecodeCache {
     /// 创建新的字节码缓存
     pub fn new(config: CacheConfig) -> Self {
