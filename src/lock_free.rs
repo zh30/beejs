@@ -24,7 +24,7 @@ impl LockFreeCounter {
 
     /// 原子递增
     pub fn increment(&self) -> usize {
-        self.count.fetch_add(1, Ordering::Relaxed)
+        self.count.fetch_add(1, Ordering::Relaxed) + 1
     }
 
     /// 原子递减
@@ -39,12 +39,12 @@ impl LockFreeCounter {
 
     /// 原子加法
     pub fn add(&self, value: usize) -> usize {
-        self.count.fetch_add(value, Ordering::Relaxed)
+        self.count.fetch_add(value, Ordering::Relaxed) + value
     }
 
     /// 原子减法
     pub fn sub(&self, value: usize) -> usize {
-        self.count.fetch_sub(value, Ordering::Relaxed)
+        self.count.fetch_sub(value, Ordering::Relaxed) - value
     }
 }
 

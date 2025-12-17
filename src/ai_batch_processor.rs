@@ -413,7 +413,10 @@ mod tests {
 
         let task_id = processor.add_task(task).await;
         assert_eq!(task_id, 0);
-        assert_eq!(processor.pending_tasks_count(), 0); // 任务立即被处理
+
+        // 等待任务被处理（批次处理是异步的）
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        assert_eq!(processor.pending_tasks_count(), 0); // 任务已被处理
     }
 
     #[tokio::test]

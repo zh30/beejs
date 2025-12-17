@@ -8,15 +8,15 @@ use std::time::{Duration, Instant};
 use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinHandle;
 
-/// 任务优先级
+/// 任务优先级（从低到高排序）
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(dead_code)]
 pub enum TaskPriority {
-    Critical = 0,
-    High = 1,
+    Background = 0,
+    Low = 1,
     Normal = 2,
-    Low = 3,
-    Background = 4,
+    High = 3,
+    Critical = 4,
 }
 
 /// AI任务状态

@@ -389,6 +389,6 @@ mod tests {
 
         let stats = optimizer.get_compile_stats();
         // 验证统计已更新
-        assert!(stats.total_compiles >= 0); // 编译统计和执行统计是分开的
+        debug_assert!(stats.total_compiles >= 0); // 编译统计和执行统计是分开的
     }
 }

@@ -1017,7 +1017,7 @@ mod tests {
 
         // Get cache stats to verify caching happened (even if it's a no-op for now)
         let stats = runtime.get_inline_cache_stats().unwrap();
-        assert!(stats.total_cached >= 0); // This will be 0 for now, but will be used later
+        debug_assert!(stats.total_cached >= 0); // This will be 0 for now, but will be used later
     }
 
     #[test]

@@ -160,6 +160,7 @@ pub fn get_pool() -> Option<&'static IsolatePool> {
 
 /// 在测试环境中返回 None
 #[cfg(test)]
+#[allow(dead_code)]
 pub fn get_pool() -> Option<&'static IsolatePool> {
     None
 }
