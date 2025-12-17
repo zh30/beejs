@@ -10,9 +10,10 @@ use rusty_v8 as v8;
 /// Provides fs, path, process and other Node.js core modules
 
 /// Module cache - stores loaded modules for current execution
-/// Note: This is a simple implementation and doesn't handle concurrent executions
+/// Note: thread_local means each V8 isolate has its own cache
 thread_local! {
     static MODULE_CACHE: Mutex<HashMap<String, v8::Global<v8::Object>>> = Mutex::new(HashMap::new());
+    static LOADING_MODULES: Mutex<HashMap<String, bool>> = Mutex::new(HashMap::new());
 }
 
 /// Set up all Node.js compatibility globals
@@ -502,6 +503,20 @@ fn require_callback(
         module_name_str.clone()
     };
 
+    // Check if module is currently being loaded (circular dependency detection)
+    let is_loading = LOADING_MODULES.with(|loading| {
+        let loading_lock = loading.lock().unwrap();
+        loading_lock.contains_key(&cache_key)
+    });
+
+    if is_loading {
+        // Circular dependency detected - return empty object for now
+        // This matches Node.js behavior where incomplete exports are returned
+        let empty = v8::Object::new(scope);
+        retval.set(empty.into());
+        return;
+    }
+
     // Check cache first using absolute path
     let cached_result = MODULE_CACHE.with(|cache| {
         let cache_lock = cache.lock().unwrap();
@@ -513,9 +528,17 @@ fn require_callback(
     });
 
     if let Some(exports) = cached_result {
+        // Module is cached - return the cached exports object
+        // This ensures mod1 and mod2 reference the same object
         retval.set(exports);
         return;
     }
+
+    // Mark module as being loaded
+    LOADING_MODULES.with(|loading| {
+        let mut loading_lock = loading.lock().unwrap();
+        loading_lock.insert(cache_key.clone(), true);
+    });
 
     // Check if file exists and load module
     if let Ok(path_str) = module_path {
@@ -546,22 +569,24 @@ fn require_callback(
                     v8::null(scope).into()
                 };
 
-                // Set module context variables directly on global scope
-                let module_key = v8::String::new(scope, "module").unwrap();
-                let exports_key = v8::String::new(scope, "exports").unwrap();
-                let dirname_key = v8::String::new(scope, "__dirname").unwrap();
-                let filename_key = v8::String::new(scope, "__filename").unwrap();
-                let require_key = v8::String::new(scope, "require").unwrap();
+                // Set module context variables using prefixed names to avoid conflicts
+                let module_var_key = v8::String::new(scope, "_module").unwrap();
+                let exports_var_key = v8::String::new(scope, "_exports").unwrap();
+                let dirname_var_key = v8::String::new(scope, "_dirname").unwrap();
+                let filename_var_key = v8::String::new(scope, "_filename").unwrap();
 
-                global.set(scope, module_key.into(), module_obj.into());
-                global.set(scope, exports_key.into(), exports_obj.into());
-                global.set(scope, dirname_key.into(), dirname_str.into());
-                global.set(scope, filename_key.into(), filename_str.into());
-                global.set(scope, require_key.into(), require_func.into());
+                global.set(scope, module_var_key.into(), module_obj.into());
+                global.set(scope, exports_var_key.into(), exports_obj.into());
+                global.set(scope, dirname_var_key.into(), dirname_str.into());
+                global.set(scope, filename_var_key.into(), filename_str.into());
 
-                // Wrap code in IIFE that uses the global module and exports
+                // Wrap code in IIFE that uses the prefixed global variables
                 let module_wrapper = format!(
                     r#"(function() {{
+                        var module = _module;
+                        var exports = _exports;
+                        var __dirname = _dirname;
+                        var __filename = _filename;
                         {code}
                         return module.exports;
                     }})()"#,
@@ -571,14 +596,13 @@ fn require_callback(
                 if let Some(source) = v8::String::new(scope, &module_wrapper) {
                     if let Some(script) = v8::Script::compile(scope, source, None) {
                         if let Some(final_exports) = script.run(scope) {
-                            // Clean up global variables
-                            global.delete(scope, module_key.into());
-                            global.delete(scope, exports_key.into());
-                            global.delete(scope, dirname_key.into());
-                            global.delete(scope, filename_key.into());
-                            global.delete(scope, require_key.into());
+                            // Clean up prefixed global variables (but NOT require, which is global)
+                            global.delete(scope, module_var_key.into());
+                            global.delete(scope, exports_var_key.into());
+                            global.delete(scope, dirname_var_key.into());
+                            global.delete(scope, filename_var_key.into());
 
-                            // Cache the module if it's an object
+                            // Cache the module exports object
                             if final_exports.is_object() {
                                 let exports_obj = final_exports.to_object(scope).unwrap();
                                 MODULE_CACHE.with(|cache| {
@@ -593,9 +617,21 @@ fn require_callback(
                         }
                     }
                 }
+
+                // Module loading failed - remove from loading set
+                LOADING_MODULES.with(|loading| {
+                    let mut loading_lock = loading.lock().unwrap();
+                    loading_lock.remove(&cache_key);
+                });
             }
         }
     }
+
+    // Module not found or failed to load - remove from loading set
+    LOADING_MODULES.with(|loading| {
+        let mut loading_lock = loading.lock().unwrap();
+        loading_lock.remove(&cache_key);
+    });
 
     // Module not found, return empty object
     let empty = v8::Object::new(scope);
