@@ -24,6 +24,7 @@ mod isolate_guard;
 mod isolate_pool;
 mod jit_optimizer;
 mod lock_free;
+mod runtime_lite;
 pub mod memory_pool;
 pub mod error_handler;
 mod module_loader;
@@ -45,6 +46,9 @@ pub use ai_model_interface::{AiModelManager, ModelType};
 
 // Re-export precompiled cache types
 pub use precompiled_cache::{PrecompiledCacheStats, PrecompiledModuleCache};
+
+// Re-export lightweight runtime types
+pub use runtime_lite::{RuntimeLite, get_global_lite_runtime};
 
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
@@ -224,6 +228,108 @@ pub fn get_global_runtime(
         }
 
         Ok(runtime_arc)
+    }
+}
+
+/// Smart runtime selector - automatically chooses between lite and full runtime
+/// based on code complexity for optimal performance
+pub fn get_smart_runtime(
+    code_or_file: Option<&str>,
+    stack_size: usize,
+    max_heap: usize,
+    verbose: bool,
+    optimize_mode: OptimizeMode,
+) -> Result<std::sync::Arc<dyn RuntimeTrait>> {
+    // Analyze code complexity to decide which runtime to use
+    let is_simple_code = if let Some(code) = code_or_file {
+        is_simple_script(code)
+    } else {
+        false
+    };
+
+    if is_simple_code {
+        // Use lightweight runtime for simple scripts (much faster startup)
+        if verbose {
+            println!("SmartRuntime: Using lightweight runtime for simple script");
+        }
+        let lite_runtime = get_global_lite_runtime(verbose)?;
+        Ok(lite_runtime as std::sync::Arc<dyn RuntimeTrait>)
+    } else {
+        // Use full runtime for complex scripts (needs all optimizations)
+        if verbose {
+            println!("SmartRuntime: Using full runtime for complex script");
+        }
+        let full_runtime = get_global_runtime(stack_size, max_heap, verbose, optimize_mode)?;
+        Ok(full_runtime as std::sync::Arc<dyn RuntimeTrait>)
+    }
+}
+
+/// Determine if code is simple enough for lightweight runtime
+fn is_simple_script(code: &str) -> bool {
+    // Simple heuristics to detect simple scripts
+    let complexity_indicators = [
+        ("for(", 1),      // loops
+        ("while(", 1),    // loops
+        ("function", 2),  // functions
+        ("=>", 1),        // arrow functions
+        ("class ", 3),    // classes
+        ("import ", 3),   // modules
+        ("export ", 3),   // modules
+        ("require(", 3),  // require
+        ("Promise", 2),   // async
+        ("async ", 2),    // async
+        ("await ", 2),    // async
+    ];
+
+    let mut complexity_score = 0;
+
+    for (pattern, weight) in &complexity_indicators {
+        if code.contains(pattern) {
+            complexity_score += weight;
+        }
+    }
+
+    // Also consider code length
+    let length_score = (code.len() / 100).min(5);
+
+    // Simple script if total score is low
+    complexity_score + length_score < 5
+}
+
+/// Runtime trait for polymorphism between lite and full runtime
+pub trait RuntimeTrait {
+    fn execute_code(&self, code: &str) -> Result<String>;
+    fn execute_file(&self, file_path: &std::path::Path) -> Result<String>;
+    fn execution_count(&self) -> usize;
+}
+
+impl RuntimeTrait for RuntimeLite {
+    fn execute_code(&self, code: &str) -> Result<String> {
+        self.execute_code(code)
+    }
+
+    fn execute_file(&self, file_path: &std::path::Path) -> Result<String> {
+        self.execute_file(file_path)
+    }
+
+    fn execution_count(&self) -> usize {
+        self.execution_count()
+    }
+}
+
+impl RuntimeTrait for Runtime {
+    fn execute_code(&self, code: &str) -> Result<String> {
+        self.execute_code(code)
+    }
+
+    fn execute_file(&self, file_path: &std::path::Path) -> Result<String> {
+        // Convert Path to PathBuf
+        let path_buf = std::path::PathBuf::from(file_path);
+        self.execute_file(&path_buf)
+    }
+
+    fn execution_count(&self) -> usize {
+        self.execution_count()
     }
 }
 

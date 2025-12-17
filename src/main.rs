@@ -134,14 +134,17 @@ fn main() -> Result<()> {
         OptimizeMode::Auto => beejs::OptimizeMode::Auto,
     };
 
-    // Use global runtime instance (reused across executions for better performance)
-    let runtime = beejs::get_global_runtime(
+    // Use smart runtime selector for optimal performance
+    // For eval scripts, we can analyze the code directly
+    let code_to_analyze = args.eval.as_ref().map(|s| s.as_str());
+    let runtime = beejs::get_smart_runtime(
+        code_to_analyze,
         args.stack_size,
         args.max_heap,
         args.verbose,
         optimize_mode,
     )
-    .context("Failed to get global runtime")?;
+    .context("Failed to get smart runtime")?;
 
     if let Some(ref script) = args.script {
         let result = runtime
