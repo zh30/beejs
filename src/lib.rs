@@ -335,6 +335,7 @@ impl Runtime {
     }
 
     /// Get or initialize the precompiled module cache
+    #[allow(dead_code)]
     fn get_precompiled_cache(&self) -> Option<&Arc<precompiled_cache::PrecompiledModuleCache>> {
         self.precompiled_cache.get_or_try_init(|| {
             let cache = precompiled_cache::PrecompiledModuleCache::new()?;

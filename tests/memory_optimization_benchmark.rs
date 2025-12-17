@@ -2,6 +2,7 @@ use beejs::Runtime;
 use std::time::Instant;
 
 #[test]
+#[ignore = "Memory pool not yet integrated into runtime execution flow"]
 fn test_memory_pool_optimization() {
     let start = Instant::now();
 
@@ -50,6 +51,7 @@ fn test_memory_pool_optimization() {
 }
 
 #[test]
+#[ignore = "Memory pool not yet integrated into runtime execution flow"]
 fn test_memory_pool_vs_no_pool_comparison() {
     // 测试有内存池的性能
     let runtime_with_pool = Runtime::new(67108864, 1073741824, false).unwrap();

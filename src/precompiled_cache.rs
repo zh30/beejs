@@ -40,6 +40,7 @@ pub struct PrecompiledModuleCache {
     /// 统计信息
     stats: Arc<Mutex<PrecompiledCacheStats>>,
     /// V8 字节码缓存
+    #[allow(dead_code)]
     bytecode_cache: Arc<BytecodeCache>,
 }
 
