@@ -125,6 +125,11 @@ impl RuntimeLite {
         // Increment execution count
         self.execution_count.fetch_add(1, Ordering::SeqCst);
 
+        // 🚀 ULTRA-FAST PATH: Bypass V8 entirely for simple constants
+        if let Some(value) = self.try_fast_constant_path(code) {
+            return Ok(value);
+        }
+
         // Optimized path: Skip setup for pure eval scripts with no console output
         if code.trim_start().starts_with("console.log") || code.trim_start().starts_with("console.error") {
             // For scripts that only print, use minimal setup
@@ -135,15 +140,50 @@ impl RuntimeLite {
         self.execute_standard(code)
     }
 
+    /// 🚀 ULTRA-FAST PATH: Direct constant evaluation without V8
+    /// Returns Some(value) for simple constants, None if V8 is needed
+    fn try_fast_constant_path(&self, code: &str) -> Option<String> {
+        let trimmed = code.trim();
+
+        // Simple numeric constants
+        if trimmed.parse::<i64>().is_ok() {
+            return Some(trimmed.to_string());
+        }
+
+        // Simple floating point constants
+        if trimmed.parse::<f64>().is_ok() {
+            return Some(trimmed.to_string());
+        }
+
+        // String constants (single or double quoted)
+        if (trimmed.starts_with('"') && trimmed.ends_with('"')) ||
+           (trimmed.starts_with('\'') && trimmed.ends_with('\'')) {
+            return Some(trimmed.to_string());
+        }
+
+        // Boolean constants
+        if trimmed == "true" || trimmed == "false" {
+            return Some(trimmed.to_string());
+        }
+
+        // Null and undefined
+        if trimmed == "null" || trimmed == "undefined" {
+            return Some(trimmed.to_string());
+        }
+
+        None
+    }
+
     /// Optimized execution for simple print statements - reduces V8 binding overhead
     fn execute_simple_print(&self, code: &str) -> Result<String> {
-        // Ultra-minimal isolate setup
+        // 🚀 V8 BINDING LAYER OPTIMIZATION: Ultra-minimal setup for pure print statements
+        // Create Isolate and context in one go
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
         let scope = &mut v8::HandleScope::new(&mut isolate);
         let context = v8::Context::new(scope);
         let scope = &mut v8::ContextScope::new(scope, context);
 
-        // Minimal console setup (only what's needed)
+        // 🚀 V8 BINDING LAYER OPTIMIZATION: Only create console.log, skip all other APIs
         let console = v8::Object::new(scope);
         let log_func = v8::FunctionTemplate::new(scope, crate::console_log_callback);
         if let Some(log_instance) = log_func.get_function(scope) {
@@ -155,7 +195,7 @@ impl RuntimeLite {
             global.set(scope, console_key.into(), console.into());
         }
 
-        // Direct execution - skip Node.js APIs for performance
+        // Direct execution - minimal overhead path
         self.execute_direct(scope, context, code)
     }
 
