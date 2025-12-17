@@ -25,7 +25,7 @@ mod ai_batch_processor;
 mod ai_memory_pool;
 mod ai_async_queue;
 mod ai_model_interface;
-mod performance_reporter;
+pub mod performance_reporter;
 
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
