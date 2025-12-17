@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use rusty_v8 as v8;
 
 mod typescript;
+mod nodejs;
 
 /// Initialize V8 engine
 fn initialize_v8() -> Result<()> {
@@ -76,6 +77,9 @@ impl Runtime {
 
         // Set up console API
         self.setup_console(scope, &context)?;
+
+        // Set up Node.js compatibility APIs
+        nodejs::setup_nodejs_apis(scope)?;
 
         // Compile and execute the script
         let source = v8::String::new(scope, code)
