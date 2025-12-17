@@ -8,6 +8,7 @@ use std::time::Instant;
 use rusty_v8 as v8;
 use crate::memory_pool::{SmartMemoryPool, PoolConfig};
 use crate::code_cache::{BytecodeCache, CacheConfig};
+use crate::ai_batch_processor::BatchConfig;
 
 mod typescript;
 mod nodejs;
@@ -20,6 +21,10 @@ mod inline_cache;
 mod jit_optimizer;
 mod async_io;
 mod lock_free;
+mod ai_batch_processor;
+mod ai_memory_pool;
+mod ai_async_queue;
+mod ai_model_interface;
 
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
@@ -155,6 +160,11 @@ pub struct Runtime {
     hot_path_tracker: Option<Arc<hot_path_tracker::HotPathTracker>>,
     inline_cache: Option<Arc<inline_cache::InlineCache>>,
     jit_optimizer: Option<Arc<jit_optimizer::JITOptimizer>>,
+    // AI工作负载优化模块
+    ai_batch_processor: Option<Arc<ai_batch_processor::AiBatchProcessor>>,
+    ai_memory_pool: Option<Arc<ai_memory_pool::AiMemoryPool>>,
+    ai_async_queue: Option<Arc<tokio::sync::Mutex<ai_async_queue::AiAsyncQueue>>>,
+    ai_model_manager: Option<Arc<ai_model_interface::AiModelManager>>,
 }
 
 /// Compilation statistics for JIT optimization
@@ -230,6 +240,14 @@ impl Runtime {
         // 初始化JIT优化器
         let jit_optimizer = Some(Arc::new(jit_optimizer::JITOptimizer::new_default()));
 
+        // 初始化AI工作负载优化模块
+        let ai_batch_processor = Some(Arc::new(ai_batch_processor::AiBatchProcessor::new(BatchConfig::default())));
+        let ai_memory_pool = Some(Arc::new(ai_memory_pool::create_general_ai_memory_pool()));
+        let ai_async_queue = Some(Arc::new(tokio::sync::Mutex::new(
+            ai_async_queue::AiAsyncQueue::new(ai_async_queue::QueueConfig::default())
+        )));
+        let ai_model_manager = Some(Arc::new(ai_model_interface::AiModelManager::new()));
+
         if verbose {
             let version = v8::V8::get_version();
             println!("Runtime created with:");
@@ -242,6 +260,10 @@ impl Runtime {
             println!("  Hot Path Tracker: enabled (identifies optimization opportunities)");
             println!("  Inline Cache: enabled (optimizes property access and function calls)");
             println!("  JIT Optimizer: enabled (dynamic threshold and custom strategy)");
+            println!("  AI Batch Processor: enabled (high-throughput batch processing)");
+            println!("  AI Memory Pool: enabled (pre-allocated AI memory)");
+            println!("  AI Async Queue: enabled (concurrent task scheduling)");
+            println!("  AI Model Manager: enabled (unified model interface)");
         }
 
         Ok(Self {
@@ -256,6 +278,10 @@ impl Runtime {
             hot_path_tracker,
             inline_cache,
             jit_optimizer,
+            ai_batch_processor,
+            ai_memory_pool,
+            ai_async_queue,
+            ai_model_manager,
         })
     }
 
