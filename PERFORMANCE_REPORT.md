@@ -1,90 +1,93 @@
-# Beejs vs Bun 性能对比报告
+Beejs Performance Benchmark Report
+Generated: 2025-12-18 07:45:33
+Iterations per test: 100
+Warmup iterations: 10
 
-## 测试环境
-- **Beejs**: 高性能 JavaScript/TypeScript 运行时 (Rust + V8)
-- **Bun**: 快速的 JavaScript 运行时
-- **测试日期**: 2025-12-18
-- **测试平台**: macOS Darwin 25.2.0
+Total Benchmark Time: 19.92ms
+Average Time per Operation: 19.92μs
 
-## 总体评估
-- **平均性能提升**: 29.10%
-- **总体评级**: A (良好)
-- **所有指标测试**: 6/6 通过
+Individual Benchmark Results:
+------------------------------
 
-## 详细性能指标
+Benchmark: startup_time
+Iterations: 100
+Total Time: 1.86ms
+Avg Time: 18.60μs
+Min Time: 16.50μs
+Max Time: 44.12μs
+Operations/sec: 53769
 
-### 启动时间
-| 指标 | Beejs | Bun | 改进 |
-|------|-------|-----|------|
-| 冷启动 | 45.00 ms | 72.00 ms | **37.50%** |
-| Runtime创建 | 84.79 µs | N/A | - |
-| 首次执行 | 10.90 ms | N/A | - |
+Benchmark: code_execution
+Iterations: 100
+Total Time: 2.02ms
+Avg Time: 20.23μs
+Min Time: 17.08μs
+Max Time: 36.25μs
+Operations/sec: 49436
 
-### 执行速度
-| 指标 | Beejs | Bun | 改进 |
-|------|-------|-----|------|
-| 简单执行 | 1250.00 ops/sec | 980.00 ops/sec | **27.60%** |
-| 复杂计算 | 2850.00 ops/sec | 2100.00 ops/sec | **35.70%** |
+Benchmark: code_execution
+Iterations: 100
+Total Time: 2.02ms
+Avg Time: 20.16μs
+Min Time: 16.88μs
+Max Time: 27.25μs
+Operations/sec: 49611
 
-### 资源效率
-| 指标 | Beejs | Bun | 改进 |
-|------|-------|-----|------|
-| 内存使用 | 85.00 MB | 102.00 MB | **16.70%** |
-| 并发脚本 | 10500 | 8200 | **28.00%** |
+Benchmark: code_execution
+Iterations: 100
+Total Time: 2.05ms
+Avg Time: 20.55μs
+Min Time: 16.75μs
+Max Time: 29.42μs
+Operations/sec: 48669
 
-## 核心优化技术
+Benchmark: code_execution
+Iterations: 100
+Total Time: 2.02ms
+Avg Time: 20.20μs
+Min Time: 17.04μs
+Max Time: 27.38μs
+Operations/sec: 49500
 
-### 1. 启动时间优化
-- **V8 Isolate 池化**: 复用预创建的 V8 实例，减少启动开销
-- **延迟加载**: AI 模块等非核心功能按需初始化
-- **预编译缓存**: 10 个常用 Node.js 模块预编译
+Benchmark: code_execution
+Iterations: 100
+Total Time: 2.02ms
+Avg Time: 20.23μs
+Min Time: 16.75μs
+Max Time: 29.25μs
+Operations/sec: 49432
 
-### 2. 执行速度优化
-- **JIT 编译优化**: 动态阈值调整，智能编译策略
-- **热路径检测**: 识别频繁执行代码进行特别优化
-- **内联缓存**: 优化属性访问和函数调用
-- **深度代码优化**: 逃逸分析、循环展开、内存布局优化
+Benchmark: code_execution
+Iterations: 100
+Total Time: 1.99ms
+Avg Time: 19.88μs
+Min Time: 17.29μs
+Max Time: 28.04μs
+Operations/sec: 50312
 
-### 3. 内存管理优化
-- **智能内存池**: 字符串和对象缓冲区预分配与复用
-- **GC 压力减少**: 减少垃圾回收频率
-- **内存碎片整理**: 自动清理和过期缓冲区回收
+Benchmark: code_execution
+Iterations: 100
+Total Time: 2.01ms
+Avg Time: 20.05μs
+Min Time: 16.83μs
+Max Time: 26.88μs
+Operations/sec: 49873
 
-### 4. 并发执行优化
-- **异步 I/O**: 零拷贝文件访问、缓冲写入
-- **无锁数据结构**: 减少锁竞争
-- **工作窃取调度**: 高效的任务分配
+Benchmark: code_execution
+Iterations: 100
+Total Time: 1.95ms
+Avg Time: 19.48μs
+Min Time: 16.92μs
+Max Time: 26.62μs
+Operations/sec: 51340
 
-### 5. AI 工作负载优化
-- **批量处理器**: 智能批次大小调整
-- **AI 内存池**: 模型权重、激活、梯度内存预分配
-- **异步队列**: 优先级任务调度
+Benchmark: code_execution
+Iterations: 100
+Total Time: 1.99ms
+Avg Time: 19.85μs
+Min Time: 16.88μs
+Max Time: 28.58μs
+Operations/sec: 50368
 
-## 测试结果统计
-
-### 单元测试
-- **库测试**: 114/114 通过 (100%)
-- **启动优化测试**: 6/6 通过 (100%)
-- **性能对比测试**: 6/6 通过 (100%)
-
-### 性能验证 (Phase 7)
-- **代码执行速度**: 1935µs (目标 <10000µs) ✅
-- **批量执行**: 532 脚本/秒 (目标 >100) ✅
-- **复杂代码**: 2.86ms (目标 <100ms) ✅
-- **Node.js 兼容**: 100% (目标 >80%) ✅
-- **压力测试**: 529 执行/秒 (目标 >100) ✅
-
-## 结论
-
-Beejs 在所有关键指标上都超越了 Bun，特别是在以下方面:
-
-1. **启动时间优化** - 37.5% 改进，Runtime 创建仅需 84.79µs
-2. **执行速度提升** - 复杂计算提升 35.7%
-3. **内存使用优化** - 节省 16.7% 内存
-4. **并发能力增强** - 支持 10500+ 并发脚本
-
-这使得 Beejs 成为 **AI 时代高性能 JavaScript/TypeScript 脚本执行的理想选择**。
-
----
-*报告生成日期: 2025-12-18*
-*Generated with Beejs Performance Reporter*
+Overall Performance Score: 5.02/100
+Status: 🔴 NEEDS IMPROVEMENT - Beejs requires optimization to meet targets
