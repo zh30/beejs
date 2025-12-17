@@ -110,8 +110,8 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 ### 下一步行动
 1. ✅ **集成真实 V8 引擎** - 使用 QuickJS 替换占位符实现
 2. ✅ **实现 JavaScript 执行** - 真正的 JS/TS 代码执行
-3. ⏳ **添加 TypeScript 编译支持** - 正在实现
-4. **实现包管理功能** - npm/yarn 兼容性
+3. ✅ **添加 TypeScript 编译支持** - 基础实现完成
+4. ⏳ **实现包管理功能** - 正在实现
 5. **性能优化** - JIT 编译、内存管理等
 
 ### 测试结果
