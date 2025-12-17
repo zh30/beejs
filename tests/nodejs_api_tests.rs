@@ -1,5 +1,4 @@
 use beejs::Runtime;
-use std::path::PathBuf;
 use tempfile::{NamedTempFile, TempDir};
 use std::io::Write;
 
@@ -34,7 +33,7 @@ fn test_process_cwd() {
 }
 
 #[test]
-fn test_process_nextTick() {
+fn test_process_next_tick() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
     let code = r#"
         let executed = false;
@@ -94,7 +93,7 @@ fn test_path_extname() {
 }
 
 #[test]
-fn test_fs_readFile_sync() {
+fn test_fs_read_file_sync() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
     // Create a temporary file with content
@@ -110,7 +109,7 @@ fn test_fs_readFile_sync() {
 }
 
 #[test]
-fn test_fs_writeFile_sync() {
+fn test_fs_write_file_sync() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
     // Create a temp directory
@@ -128,11 +127,11 @@ fn test_fs_writeFile_sync() {
 }
 
 #[test]
-fn test_fs_existsSync() {
+fn test_fs_exists_sync() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
     // Create a temporary file
-    let mut file = NamedTempFile::new().unwrap();
+    let file = NamedTempFile::new().unwrap();
     let path = file.path().to_str().unwrap().to_string();
 
     let code = format!(r#"fs.existsSync("{}")"#, path);
@@ -179,7 +178,7 @@ fn test_fs_stat_sync() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
     // Create a temporary file
-    let mut file = NamedTempFile::new().unwrap();
+    let file = NamedTempFile::new().unwrap();
     let path = file.path().to_str().unwrap().to_string();
 
     // fs.statSync now returns boolean directly

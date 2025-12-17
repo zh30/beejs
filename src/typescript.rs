@@ -149,7 +149,7 @@ impl TypeScriptCompiler {
         if line.trim_start().starts_with("function ") {
             // Find the parameter list
             if let Some(open_paren) = result.find('(') {
-                if let Some(close_paren) = result.find(')') {
+                if let Some(_close_paren) = result.find(')') {
                     let before_params = &result[..open_paren + 1];
                     let params_and_after = &result[open_paren + 1..];
 
@@ -283,12 +283,12 @@ impl TypeScriptCompiler {
         // Handle arrow functions with return types
         if trimmed.contains("=>") {
             let arrow_pos = trimmed.find("=>").unwrap();
-            let before_arrow = &trimmed[..arrow_pos];
+            let _before_arrow = &trimmed[..arrow_pos];
             let after_arrow = &trimmed[arrow_pos + 2..].trim_start();
 
             // Check if there's a return type after the arrow
             if let Some(open_brace) = after_arrow.find('{') {
-                let after_brace = &after_arrow[open_brace + 1..];
+                let _after_brace = &after_arrow[open_brace + 1..];
                 // This is a block arrow function, return type should be before the brace
                 let func_body = trimmed[arrow_pos + 2..].trim_start();
                 return format!("{}{}", &trimmed[..arrow_pos + 2], func_body);

@@ -1,7 +1,6 @@
 use beejs::Runtime;
 use tempfile::{NamedTempFile, TempDir};
 use std::io::Write;
-use std::fs;
 
 #[test]
 fn test_parse_package_json() {

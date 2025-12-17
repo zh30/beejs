@@ -1,5 +1,4 @@
 use beejs::Runtime;
-use std::path::PathBuf;
 use tempfile::NamedTempFile;
 use std::io::Write;
 

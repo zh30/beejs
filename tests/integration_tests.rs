@@ -1,5 +1,4 @@
 use beejs::Runtime;
-use std::path::PathBuf;
 use tempfile::NamedTempFile;
 use std::io::Write;
 
@@ -129,12 +128,12 @@ fn test_error_handling() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
     // Test undefined variable reference - placeholder implementation returns ok
-    let result = runtime.execute_code("undefined_variable");
+    let _result = runtime.execute_code("undefined_variable");
     // Since we don't have V8 yet, these tests are temporarily disabled
     // assert!(result.is_err());
 
     // Test syntax error - placeholder implementation returns ok
-    let result = runtime.execute_code("const x = ;");
+    let _result = runtime.execute_code("const x = ;");
     // assert!(result.is_err());
 }
 
