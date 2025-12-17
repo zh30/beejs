@@ -1,25 +1,18 @@
-use std::path::{PathBuf, Path};
+use std::path::PathBuf;
 use anyhow::{Result, Context, anyhow};
 use std::fs;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Mutex;
 use rusty_v8 as v8;
 
 mod typescript;
 
 /// Initialize V8 engine
 fn initialize_v8() -> Result<()> {
-    // Create platform
-    let platform = v8::new_default_platform();
-
-    // Initialize V8 - using unsafe cast for API compatibility
-    unsafe {
-        let platform_ref = &*(platform.as_ptr() as *const v8::Platform);
-        v8::V8::initialize_platform(platform_ref);
-    }
+    // Create platform with latest V8 API
+    let platform = v8::new_default_platform(0, true);
+    v8::V8::initialize_platform(platform);
     v8::V8::initialize();
-
     Ok(())
 }
 
@@ -77,11 +70,12 @@ impl Runtime {
         // Create a new isolate for each execution
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
         let scope = &mut v8::HandleScope::new(&mut isolate);
+
         let context = v8::Context::new(scope);
         let scope = &mut v8::ContextScope::new(scope, context);
 
         // Set up console API
-        self.setup_console(scope)?;
+        self.setup_console(scope, &context)?;
 
         // Compile and execute the script
         let source = v8::String::new(scope, code)
@@ -117,7 +111,7 @@ impl Runtime {
     }
 
     /// Set up console API for V8
-    fn setup_console(&self, scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
+    fn setup_console(&self, scope: &mut v8::ContextScope<v8::HandleScope>, context: &v8::Context) -> Result<()> {
         let console = v8::Object::new(scope);
 
         // console.log - simple implementation
@@ -139,11 +133,14 @@ impl Runtime {
         let console_log_fn = console_log.get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.log function"))?;
 
-        console.set(scope, v8::String::new(scope, "log").unwrap().into(), console_log_fn.into());
+        // Fix double borrow by using temporary variables
+        let log_key = v8::String::new(scope, "log").unwrap();
+        console.set(scope, log_key.into(), console_log_fn.into());
 
         // Get the global object and set console
-        let global = scope.global(scope);
-        global.set(scope, v8::String::new(scope, "console").unwrap().into(), console.into());
+        let global = context.global(scope);
+        let console_key = v8::String::new(scope, "console").unwrap();
+        global.set(scope, console_key.into(), console.into());
 
         Ok(())
     }
