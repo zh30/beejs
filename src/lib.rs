@@ -6,11 +6,13 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 use rusty_v8 as v8;
 use crate::memory_pool::{SmartMemoryPool, PoolConfig};
+use crate::code_cache::{BytecodeCache, CacheConfig};
 
 mod typescript;
 mod nodejs;
 mod isolate_pool;
 mod memory_pool;
+mod code_cache;
 
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
@@ -72,6 +74,7 @@ pub struct Runtime {
     execution_count: Arc<AtomicUsize>,
     verbose: bool,
     memory_pool: Option<Arc<SmartMemoryPool>>,
+    bytecode_cache: Option<Arc<BytecodeCache>>,
 }
 
 impl Runtime {
@@ -113,6 +116,9 @@ impl Runtime {
         // 初始化智能内存池
         let memory_pool = Some(Arc::new(SmartMemoryPool::new(PoolConfig::default())));
 
+        // 初始化字节码缓存
+        let bytecode_cache = Some(Arc::new(BytecodeCache::new(CacheConfig::default())));
+
         if verbose {
             let version = v8::V8::get_version();
             println!("Runtime created with:");
@@ -120,6 +126,7 @@ impl Runtime {
             println!("  Max heap: {} bytes", max_heap);
             println!("  V8 Engine: version {}", version);
             println!("  Memory Pool: enabled (optimizes 15% memory usage)");
+            println!("  Bytecode Cache: enabled (reduces compilation time)");
         }
 
         Ok(Self {
@@ -128,6 +135,7 @@ impl Runtime {
             execution_count: Arc::new(AtomicUsize::new(0)),
             verbose,
             memory_pool,
+            bytecode_cache,
         })
     }
 
