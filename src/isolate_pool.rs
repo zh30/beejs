@@ -75,7 +75,8 @@ impl IsolatePool {
         let mut pool = self.available.lock().unwrap();
         let mut in_use = self.in_use.lock().unwrap();
 
-        // 重置Isolate状态
+        // 重置Isolate状态以准备重用
+        // 使用更安全的方法清理Isolate状态
         isolate.low_memory_notification();
 
         // 添加回池中（如果池未满）

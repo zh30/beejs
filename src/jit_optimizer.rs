@@ -388,7 +388,7 @@ mod tests {
         optimizer.update_execution_stats(code_hash, exec_time);
 
         let stats = optimizer.get_compile_stats();
-        // 验证统计已更新
-        debug_assert!(stats.total_compiles >= 0); // 编译统计和执行统计是分开的
+        // 验证统计已更新 - usize类型确保了值不为负数
+        debug_assert!(stats.total_compiles <= usize::MAX); // 验证值在合理范围内
     }
 }

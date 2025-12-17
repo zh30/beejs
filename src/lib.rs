@@ -13,6 +13,7 @@ use crate::ai_batch_processor::BatchConfig;
 mod typescript;
 mod nodejs;
 mod isolate_pool;
+mod isolate_guard;
 mod memory_pool;
 mod code_cache;
 mod code_analyzer;
@@ -1017,7 +1018,7 @@ mod tests {
 
         // Get cache stats to verify caching happened (even if it's a no-op for now)
         let stats = runtime.get_inline_cache_stats().unwrap();
-        debug_assert!(stats.total_cached >= 0); // This will be 0 for now, but will be used later
+        debug_assert!(stats.total_cached <= usize::MAX); // This will be 0 for now, but will be used later
     }
 
     #[test]

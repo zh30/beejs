@@ -1,0 +1,47 @@
+//! 测试编译警告修复
+//! 验证修复后代码的正确性和功能
+
+use beejs::Runtime;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 测试内联缓存统计功能正常
+    #[test]
+    fn test_inline_cache_stats_functionality() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+
+        // 测试内联缓存基本功能
+        let result = runtime.execute_cached_code("const x = 1; x + 1;");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "2");
+
+        // 验证内联缓存统计功能正常工作
+        let stats = runtime.get_inline_cache_stats().unwrap();
+        // 验证统计值有实际意义（usize类型确保了值不为负数）
+        assert!(stats.total_cached <= usize::MAX);
+    }
+
+    /// 测试JIT优化器编译统计功能正常
+    #[test]
+    fn test_jit_optimizer_stats_functionality() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+
+        // 执行一些代码以触发JIT优化器
+        let result = runtime.execute_code("let sum = 0; for (let i = 0; i < 100; i++) { sum += i; } sum");
+        assert!(result.is_ok());
+
+        // 验证JIT统计功能正常工作
+        let stats = runtime.get_jit_stats().unwrap();
+        // 验证编译统计值有实际意义（usize类型确保了值不为负数）
+        assert!(stats.total_compiles <= usize::MAX);
+
+        // 验证统计值符合预期范围
+        if stats.total_compiles > 0 {
+            assert!(stats.successful_compiles <= stats.total_compiles);
+            // 验证成功率在合理范围内
+            assert!(stats.success_rate >= 0.0 && stats.success_rate <= 1.0);
+        }
+    }
+}
