@@ -325,7 +325,8 @@ mod tests {
     #[test]
     fn test_jit_optimizer_creation() {
         let optimizer = JITOptimizer::new_default();
-        assert_eq!(optimizer.thresholds.simple_threshold, 5);
+        // Optimized threshold: simple code compiles immediately (threshold=1)
+        assert_eq!(optimizer.thresholds.simple_threshold, 1);
     }
 
     #[test]

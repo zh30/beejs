@@ -154,12 +154,22 @@ mod tests {
 
     #[test]
     fn test_optimization_decision() {
-        let simple_code = CodeComplexity {
-            line_count: 5,
-            function_count: 0,
+        // Very simple code: line_count < 5, function_count < 2, loop_count == 0
+        let very_simple_code = CodeComplexity {
+            line_count: 3,
+            function_count: 1,
             loop_count: 0,
-            condition_count: 1,
-            complexity_score: 5.0,
+            condition_count: 0,
+            complexity_score: 2.0,
+        };
+
+        // Medium code: doesn't meet "very simple" criteria -> Speed (performance priority)
+        let medium_code = CodeComplexity {
+            line_count: 10,
+            function_count: 2,
+            loop_count: 1,
+            condition_count: 2,
+            complexity_score: 15.0,
         };
 
         let complex_code = CodeComplexity {
@@ -170,9 +180,13 @@ mod tests {
             complexity_score: 60.0,
         };
 
-        // Auto mode should choose Size for simple code
-        let decision = CodeAnalyzer::determine_optimization(&OptimizeMode::Auto, &simple_code);
+        // Auto mode should choose Size for very simple code
+        let decision = CodeAnalyzer::determine_optimization(&OptimizeMode::Auto, &very_simple_code);
         assert_eq!(decision, OptimizeMode::Size);
+
+        // Auto mode should choose Speed for medium code (performance priority)
+        let decision = CodeAnalyzer::determine_optimization(&OptimizeMode::Auto, &medium_code);
+        assert_eq!(decision, OptimizeMode::Speed);
 
         // Auto mode should choose Speed for complex code
         let decision = CodeAnalyzer::determine_optimization(&OptimizeMode::Auto, &complex_code);
