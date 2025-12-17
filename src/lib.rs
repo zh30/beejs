@@ -22,6 +22,7 @@ mod inline_cache;
 mod jit_optimizer;
 mod async_io;
 mod lock_free;
+mod event_loop;
 mod ai_batch_processor;
 mod ai_memory_pool;
 mod ai_async_queue;
