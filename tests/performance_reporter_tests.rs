@@ -1,0 +1,180 @@
+//! 性能报告生成器测试套件
+//! 验证性能对比报告的生成和准确性
+
+use beejs::Runtime;
+use beejs::performance_reporter::{PerformanceReporter, ReportConfig, PerformanceMetric, ComparisonResult};
+use std::collections::HashMap;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    /// 测试报告生成器创建
+    #[test]
+    fn test_reporter_creation() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let config = ReportConfig::default();
+
+        let _reporter = PerformanceReporter::new(runtime, config);
+        assert!(true); // 如果能创建成功就通过
+    }
+
+    /// 测试默认配置
+    #[test]
+    fn test_default_config() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let _reporter = PerformanceReporter::with_default_config(runtime);
+
+        // 验证默认配置 - 通过生成报告来间接验证
+        let report = _reporter.generate_comparison_report();
+        assert!(!report.is_empty());
+    }
+
+    /// 测试Beejs性能数据收集
+    #[test]
+    fn test_collect_beejs_metrics() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let reporter = PerformanceReporter::with_default_config(runtime);
+
+        let metrics = reporter.collect_beejs_metrics();
+
+        // 验证所有指标都被收集
+        assert!(metrics.contains_key("startup_time"));
+        assert!(metrics.contains_key("simple_execution"));
+        assert!(metrics.contains_key("complex_calculation"));
+        assert!(metrics.contains_key("memory_usage"));
+        assert!(metrics.contains_key("concurrent_capacity"));
+
+        // 验证指标类型
+        match metrics.get("startup_time").unwrap() {
+            PerformanceMetric::StartupTime(_) => {},
+            _ => panic!("Expected StartupTime metric"),
+        }
+
+        match metrics.get("simple_execution").unwrap() {
+            PerformanceMetric::ExecutionSpeed(_) => {},
+            _ => panic!("Expected ExecutionSpeed metric"),
+        }
+    }
+
+    /// 测试Bun模拟数据收集
+    #[test]
+    fn test_collect_bun_metrics() {
+        let metrics = PerformanceReporter::collect_bun_metrics();
+
+        // 验证所有指标都被收集
+        assert!(metrics.contains_key("startup_time"));
+        assert!(metrics.contains_key("simple_execution"));
+        assert!(metrics.contains_key("complex_calculation"));
+        assert!(metrics.contains_key("memory_usage"));
+        assert!(metrics.contains_key("concurrent_capacity"));
+    }
+
+    /// 测试Markdown报告生成
+    #[test]
+    fn test_markdown_report_generation() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let reporter = PerformanceReporter::with_default_config(runtime);
+
+        let report = reporter.generate_comparison_report();
+
+        // 验证报告包含必要的内容
+        assert!(report.contains("# Beejs vs Bun 性能对比报告"));
+        assert!(report.contains("## 测试环境"));
+        assert!(report.contains("## 总体评估"));
+        assert!(report.contains("## 详细指标"));
+
+        // 验证包含性能指标
+        assert!(report.contains("启动时间"));
+        assert!(report.contains("简单执行"));
+        assert!(report.contains("复杂计算"));
+        assert!(report.contains("内存使用"));
+        assert!(report.contains("并发执行"));
+    }
+
+    /// 测试JSON报告生成
+    #[test]
+    fn test_json_report_generation() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let reporter = PerformanceReporter::with_default_config(runtime);
+
+        let json_report = reporter.generate_json_report();
+
+        // 验证JSON格式正确
+        assert!(json_report.starts_with("{"));
+        assert!(json_report.ends_with("}"));
+        assert!(json_report.contains("\"test_date\""));
+        assert!(json_report.contains("\"comparisons\""));
+
+        // 验证包含必要字段
+        assert!(json_report.contains("\"metric\""));
+        assert!(json_report.contains("\"beejs\""));
+        assert!(json_report.contains("\"bun\""));
+        assert!(json_report.contains("\"improvement_percent\""));
+    }
+
+    /// 测试对比结果创建 - 通过报告验证
+    #[test]
+    fn test_comparison_via_report() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let reporter = PerformanceReporter::with_default_config(runtime);
+
+        // 生成报告来验证对比功能
+        let report = reporter.generate_comparison_report();
+
+        // 验证报告包含5个性能指标
+        assert!(report.contains("启动时间"));
+        assert!(report.contains("简单执行"));
+        assert!(report.contains("复杂计算"));
+        assert!(report.contains("内存使用"));
+        assert!(report.contains("并发执行"));
+
+        // 验证包含总体评估
+        assert!(report.contains("总体评估"));
+        assert!(report.contains("平均性能提升"));
+    }
+
+    /// 测试性能指标提取
+    #[test]
+    fn test_metric_extraction() {
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let reporter = PerformanceReporter::with_default_config(runtime);
+
+        let metrics = reporter.collect_beejs_metrics();
+
+        // 测试启动时间提取
+        if let Some(PerformanceMetric::StartupTime(duration)) = metrics.get("startup_time") {
+            assert!(duration.as_millis() > 0);
+        } else {
+            panic!("Failed to extract startup time");
+        }
+
+        // 测试执行速度提取
+        if let Some(PerformanceMetric::ExecutionSpeed(speed)) = metrics.get("simple_execution") {
+            assert!(*speed > 0.0);
+        } else {
+            panic!("Failed to extract execution speed");
+        }
+    }
+
+    /// 测试报告保存功能
+    #[test]
+    fn test_report_save() {
+        use std::fs;
+        use tempfile::NamedTempFile;
+
+        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let reporter = PerformanceReporter::with_default_config(runtime);
+
+        let temp_file = NamedTempFile::new().unwrap();
+        let result = reporter.save_report(temp_file.path().to_str().unwrap());
+
+        assert!(result.is_ok());
+
+        // 验证文件被创建且有内容
+        let content = fs::read_to_string(temp_file.path()).unwrap();
+        assert!(!content.is_empty());
+        assert!(content.contains("Beejs vs Bun"));
+    }
+}
