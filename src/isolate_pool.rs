@@ -152,6 +152,7 @@ fn is_test_environment() -> bool {
 }
 
 /// 初始化全局Isolate池
+#[allow(dead_code)]
 pub fn initialize_pool(max_size: usize) -> Result<(), String> {
     // 在测试环境中不初始化全局池
     if is_test_environment() {
@@ -170,6 +171,7 @@ pub fn initialize_pool(max_size: usize) -> Result<(), String> {
 }
 
 /// 获取全局Isolate池
+#[allow(dead_code)]
 pub fn get_pool() -> Option<&'static IsolatePool> {
     // 在测试环境中返回 None
     if is_test_environment() {

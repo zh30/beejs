@@ -108,6 +108,7 @@ impl DeepOptimizer {
         }
     }
 
+    #[allow(dead_code)]
     pub fn new_default() -> Self {
         Self::new(DeepOptimizationConfig::default(), false)
     }

@@ -11,12 +11,14 @@ pub struct ModuleLoader {
     /// Cache of loaded modules
     module_cache: Arc<Mutex<HashMap<String, Arc<Module>>>>,
     /// Base directory for resolving relative paths
+    #[allow(dead_code)]
     base_dir: PathBuf,
 }
 
 #[derive(Debug, Clone)]
 pub struct Module {
     /// Module exports
+    #[allow(dead_code)]
     pub exports: HashMap<String, serde_json::Value>,
     /// Module path
     #[allow(dead_code)]
@@ -40,6 +42,7 @@ impl ModuleLoader {
     }
 
     /// Resolve a module name to an absolute file path
+    #[allow(dead_code)]
     pub fn resolve_module(&self, module_name: &str) -> Result<PathBuf> {
         // Handle relative paths
         if module_name.starts_with("./") || module_name.starts_with("../") {
@@ -61,6 +64,7 @@ impl ModuleLoader {
     }
 
     /// Resolve a relative module path
+    #[allow(dead_code)]
     fn resolve_relative_module(&self, module_name: &str) -> Result<PathBuf> {
         let mut path = self.base_dir.clone();
 
@@ -96,11 +100,13 @@ impl ModuleLoader {
     }
 
     /// Resolve built-in modules
+    #[allow(dead_code)]
     fn is_builtin_module(&self, module_name: &str) -> bool {
         matches!(module_name, "path" | "fs" | "os" | "crypto" | "buffer")
     }
 
     /// Resolve a built-in module
+    #[allow(dead_code)]
     fn resolve_builtin_module(&self, module_name: &str) -> Result<PathBuf> {
         // For now, return a special path for built-in modules
         // In a real implementation, this would load the built-in module
@@ -108,6 +114,7 @@ impl ModuleLoader {
     }
 
     /// Resolve node_modules
+    #[allow(dead_code)]
     fn resolve_node_modules(&self, module_name: &str) -> Result<PathBuf> {
         let mut current_dir = self.base_dir.clone();
 
@@ -171,6 +178,7 @@ impl ModuleLoader {
     }
 
     /// Load a module by name
+    #[allow(dead_code)]
     pub fn load_module(&self, module_name: &str) -> Result<Arc<Module>> {
         // Check cache first
         {
@@ -212,6 +220,7 @@ impl ModuleLoader {
     }
 
     /// Create a built-in path module
+    #[allow(dead_code)]
     fn create_builtin_path_module(&self) -> Arc<Module> {
         let mut exports = HashMap::new();
         exports.insert(
@@ -242,6 +251,7 @@ impl ModuleLoader {
     }
 
     /// Parse module content to extract exports
+    #[allow(dead_code)]
     fn parse_module_content(&self, content: &str, _path: &Path) -> Result<Module> {
         // Simple parser to extract exports
         // This is a basic implementation - a full parser would use a proper JS parser
