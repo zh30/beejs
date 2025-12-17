@@ -15,6 +15,7 @@ mod isolate_pool;
 mod memory_pool;
 mod code_cache;
 mod code_analyzer;
+mod hot_path_tracker;
 
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
@@ -117,7 +118,7 @@ pub fn skip_test_if_v8_unavailable() {
 #[macro_export]
 macro_rules! require_v8 {
     () => {
-        use beejs::{is_v8_available, skip_test_if_v8_unavailable};
+        use crate::{is_v8_available, skip_test_if_v8_unavailable};
 
         if !is_v8_available() {
             skip_test_if_v8_unavailable();
@@ -147,6 +148,7 @@ pub struct Runtime {
     bytecode_cache: Option<Arc<BytecodeCache>>,
     optimize_mode: OptimizeMode,
     compilation_stats: Arc<Mutex<CompilationStats>>,
+    hot_path_tracker: Option<Arc<hot_path_tracker::HotPathTracker>>,
 }
 
 /// Compilation statistics for JIT optimization
@@ -213,6 +215,9 @@ impl Runtime {
         // 初始化字节码缓存
         let bytecode_cache = Some(Arc::new(BytecodeCache::new(CacheConfig::default())));
 
+        // 初始化热路径跟踪器
+        let hot_path_tracker = Some(Arc::new(hot_path_tracker::HotPathTracker::new_default()));
+
         if verbose {
             let version = v8::V8::get_version();
             println!("Runtime created with:");
@@ -222,6 +227,7 @@ impl Runtime {
             println!("  Optimization mode: {:?}", optimize_mode);
             println!("  Memory Pool: enabled (optimizes 15% memory usage)");
             println!("  Bytecode Cache: enabled (reduces compilation time)");
+            println!("  Hot Path Tracker: enabled (identifies optimization opportunities)");
         }
 
         Ok(Self {
@@ -233,6 +239,7 @@ impl Runtime {
             bytecode_cache,
             optimize_mode,
             compilation_stats: Arc::new(Mutex::new(CompilationStats::default())),
+            hot_path_tracker,
         })
     }
 
@@ -258,6 +265,9 @@ impl Runtime {
         if self.verbose {
             println!("Executing code: {} bytes", code.len());
         }
+
+        // 记录执行开始时间
+        let start_time = Instant::now();
 
         // 分析代码复杂度
         let complexity = code_analyzer::CodeAnalyzer::analyze_complexity(code);
@@ -350,6 +360,27 @@ impl Runtime {
             result_str
         }; // HandleScope 在这里被 drop
 
+        // 计算执行时间
+        let execution_time = start_time.elapsed();
+
+        // 热路径跟踪（如果有跟踪器）
+        if let Some(ref tracker) = self.hot_path_tracker {
+            let file_path_str = file.map(|p| p.to_string_lossy().to_string());
+            let suggestions = tracker.track_execution(
+                code,
+                file_path_str.as_deref(),
+                execution_time,
+            );
+
+            // 输出优化建议（如果verbose）
+            if self.verbose && !suggestions.is_empty() {
+                println!("\n🔥 Hot Path Optimization Suggestions:");
+                for (i, suggestion) in suggestions.iter().enumerate() {
+                    println!("  {}. {}", i + 1, suggestion);
+                }
+            }
+        }
+
         // 在非测试环境中，归还 Isolate 到池中（如果是从池中获取的）
         #[cfg(not(test))]
         {
@@ -370,6 +401,26 @@ impl Runtime {
     pub fn reset_compilation_stats(&self) {
         let mut stats = self.compilation_stats.lock().unwrap();
         *stats = CompilationStats::default();
+    }
+
+    /// Get hot path tracking statistics
+    pub fn get_hot_path_stats(&self) -> Option<hot_path_tracker::HotPathStats> {
+        self.hot_path_tracker.as_ref().map(|tracker| tracker.get_stats())
+    }
+
+    /// Get identified hot paths
+    pub fn get_hot_paths(&self) -> Vec<hot_path_tracker::HotPathInfo> {
+        self.hot_path_tracker
+            .as_ref()
+            .map(|tracker| tracker.get_hot_paths())
+            .unwrap_or_default()
+    }
+
+    /// Reset hot path tracking data
+    pub fn reset_hot_path_tracking(&self) {
+        if let Some(ref tracker) = self.hot_path_tracker {
+            tracker.reset();
+        }
     }
 
     /// Set up console API for V8
@@ -522,6 +573,7 @@ mod tests {
 
     #[test]
     fn test_runtime_creation() {
+        require_v8!();
         // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false);
         assert!(runtime.is_ok());
@@ -530,6 +582,7 @@ mod tests {
 
     #[test]
     fn test_simple_code_execution() {
+        require_v8!();
         // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("1 + 1");
@@ -539,6 +592,7 @@ mod tests {
 
     #[test]
     fn test_file_execution() {
+        require_v8!();
         // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
@@ -553,6 +607,7 @@ mod tests {
 
     #[test]
     fn test_execution_count() {
+        require_v8!();
         // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         assert_eq!(runtime.execution_count(), 0);
@@ -563,6 +618,7 @@ mod tests {
 
     #[test]
     fn test_console_log() {
+        require_v8!();
         // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("console.log('hello'); 'done'");
@@ -572,6 +628,7 @@ mod tests {
 
     #[test]
     fn test_process_version() {
+        require_v8!();
         // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("process.version");
@@ -581,6 +638,7 @@ mod tests {
 
     #[test]
     fn test_path_join() {
+        require_v8!();
         // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("path.join('a', 'b', 'c')");
@@ -590,6 +648,7 @@ mod tests {
 
     #[test]
     fn test_require_builtin() {
+        require_v8!();
         // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("const p = require('path'); p.join('x', 'y')");

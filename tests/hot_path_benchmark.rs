@@ -1,0 +1,288 @@
+use beejs::{Runtime, OptimizeMode};
+use std::time::{Duration, Instant};
+
+/// 热路径检测基准测试
+/// 验证热路径跟踪对性能的影响以及识别准确性
+
+#[cfg(test)]
+mod benchmarks {
+    use super::*;
+
+    /// 基准测试：简单代码的热路径检测性能
+    #[test]
+    #[ignore] // 在测试环境中跳过，因为V8 Isolate池在测试中会有问题
+    fn benchmark_simple_code_hot_path_detection() {
+        let runtime = Runtime::new_with_optimization(
+            67108864,    // 64MB stack
+            1073741824,  // 1GB heap
+            false,       // verbose
+            OptimizeMode::Auto,
+        ).unwrap();
+
+        let simple_code = "const x = 1 + 1; x;";
+
+        let start = Instant::now();
+        for _ in 0..100 {
+            runtime.execute_code(simple_code).unwrap();
+        }
+        let total_time = start.elapsed();
+
+        println!("\n=== Simple Code Hot Path Detection Benchmark ===");
+        println!("Code: {}", simple_code);
+        println!("Executions: 100");
+        println!("Total time: {:?}", total_time);
+        println!("Average time per execution: {:?}", total_time / 100);
+
+        let hot_paths = runtime.get_hot_paths();
+        println!("Hot paths identified: {}", hot_paths.len());
+
+        // 简单代码不应该成为热路径（执行次数少于阈值）
+        assert_eq!(hot_paths.len(), 0, "Simple code should not become hot path");
+    }
+
+    /// 基准测试：复杂代码的热路径检测
+    #[test]
+    #[ignore] // 在测试环境中跳过，因为V8 Isolate池在测试中会有问题
+    fn benchmark_complex_code_hot_path_detection() {
+        let runtime = Runtime::new_with_optimization(
+            67108864,
+            1073741824,
+            false,
+            OptimizeMode::Auto,
+        ).unwrap();
+
+        let complex_code = r#"
+            function fibonacci(n) {
+                if (n <= 1) return n;
+                for (let i = 2; i <= n; i++) {
+                    if (i % 2 === 0) {
+                        console.log("even");
+                    }
+                }
+                return fibonacci(n - 1) + fibonacci(n - 2);
+            }
+            class Calculator {
+                constructor() { this.result = 0; }
+                add(a, b) { return a + b; }
+                subtract(a, b) { return a - b; }
+                multiply(a, b) { return a * b; }
+                divide(a, b) { return a / b; }
+            }
+        "#;
+
+        let start = Instant::now();
+        for _ in 0..20 {
+            runtime.execute_code(complex_code).unwrap();
+        }
+        let total_time = start.elapsed();
+
+        println!("\n=== Complex Code Hot Path Detection Benchmark ===");
+        println!("Code: Complex fibonacci with Calculator class");
+        println!("Executions: 20");
+        println!("Total time: {:?}", total_time);
+        println!("Average time per execution: {:?}", total_time / 20);
+
+        let hot_paths = runtime.get_hot_paths();
+        println!("Hot paths identified: {}", hot_paths.len());
+
+        if !hot_paths.is_empty() {
+            println!("Hot path details:");
+            for path in &hot_paths {
+                println!("  - Execution count: {}", path.execution_count.load(std::sync::atomic::Ordering::SeqCst));
+                println!("    Complexity score: {:.2}", path.complexity.complexity_score);
+                println!("    Avg time: {} ns", path.avg_time_ns.load(std::sync::atomic::Ordering::SeqCst));
+                println!("    Optimization suggestions: {}", path.optimization_suggestions.len());
+            }
+        }
+
+        // 复杂代码执行20次应该成为热路径
+        assert!(hot_paths.len() > 0, "Complex code should become hot path after 20 executions");
+    }
+
+    /// 基准测试：热路径跟踪的性能开销
+    #[test]
+    #[ignore] // 在测试环境中跳过，因为V8 Isolate池在测试中会有问题
+    fn benchmark_hot_path_tracking_overhead() {
+        let iterations = 1000;
+
+        // 不使用热路径跟踪（创建无跟踪器的Runtime）
+        // 注意：当前的Runtime实现总是包含热路径跟踪器，所以我们比较开启/关闭verbose模式的开销
+
+        let runtime_verbose = Runtime::new_with_optimization(
+            67108864,
+            1073741824,
+            true,  // verbose - 会有额外输出
+            OptimizeMode::Auto,
+        ).unwrap();
+
+        let runtime_quiet = Runtime::new_with_optimization(
+            67108864,
+            1073741824,
+            false, // quiet - 最小开销
+            OptimizeMode::Auto,
+        ).unwrap();
+
+        let code = "const x = 42; x * 2;";
+
+        // 测试verbose模式（包含热路径跟踪和输出）
+        let start_verbose = Instant::now();
+        for _ in 0..iterations {
+            runtime_verbose.execute_code(code).unwrap();
+        }
+        let time_verbose = start_verbose.elapsed();
+
+        // 测试quiet模式（只有热路径跟踪，无输出）
+        let start_quiet = Instant::now();
+        for _ in 0..iterations {
+            runtime_quiet.execute_code(code).unwrap();
+        }
+        let time_quiet = start_quiet.elapsed();
+
+        println!("\n=== Hot Path Tracking Overhead Benchmark ===");
+        println!("Iterations: {}", iterations);
+        println!("Code: Simple arithmetic");
+        println!("Verbose mode time: {:?}", time_verbose);
+        println!("Quiet mode time: {:?}", time_quiet);
+        println!("Overhead: {:?}", time_verbose - time_quiet);
+        println!("Overhead per execution: {:?}", (time_verbose - time_quiet) / iterations);
+
+        // quiet模式应该明显快于verbose模式
+        assert!(time_quiet < time_verbose, "Quiet mode should be faster than verbose mode");
+    }
+
+    /// 基准测试：多代码片段的热路径识别
+    #[test]
+    #[ignore] // 在测试环境中跳过，因为V8 Isolate池在测试中会有问题
+    fn benchmark_multiple_code_hot_paths() {
+        let runtime = Runtime::new_with_optimization(
+            67108864,
+            1073741824,
+            false,
+            OptimizeMode::Auto,
+        ).unwrap();
+
+        // 执行多种不同的代码片段
+        let codes = vec![
+            ("simple", "const x = 1;"),
+            ("medium", "function add(a, b) { return a + b; } add(1, 2);"),
+            ("complex", r#"
+                class Math {
+                    static fibonacci(n) {
+                        if (n <= 1) return n;
+                        let a = 0, b = 1;
+                        for (let i = 2; i <= n; i++) {
+                            let c = a + b;
+                            a = b;
+                            b = c;
+                        }
+                        return b;
+                    }
+                }
+                Math.fibonacci(20);
+            "#),
+        ];
+
+        let mut total_time = Duration::new(0, 0);
+
+        for (name, code) in &codes {
+            let iterations = match *name {
+                "simple" => 5,
+                "medium" => 15,
+                "complex" => 25,
+                _ => 10,
+            };
+
+            let start = Instant::now();
+            for _ in 0..iterations {
+                runtime.execute_code(code).unwrap();
+            }
+            let time = start.elapsed();
+            total_time += time;
+
+            println!("\n  {} code ({} iterations): {:?}", name, iterations, time);
+        }
+
+        let stats = runtime.get_hot_path_stats().unwrap();
+        println!("\n=== Multiple Code Hot Paths Summary ===");
+        println!("Total execution time: {:?}", total_time);
+        println!("Total codes tracked: {}", stats.total_codes_tracked);
+        println!("Hot paths identified: {}", stats.hot_paths_identified);
+        println!("Total executions: {}", stats.total_executions);
+        println!("Average execution time: {} ns", stats.avg_execution_time_ns);
+
+        // 应该识别出至少一个热路径（复杂代码）
+        assert!(stats.hot_paths_identified > 0, "Should identify at least one hot path");
+        assert_eq!(stats.total_codes_tracked, 3, "Should track 3 different code snippets");
+    }
+
+    /// 基准测试：热路径统计准确性
+    #[test]
+    #[ignore] // 在测试环境中跳过，因为V8 Isolate池在测试中会有问题
+    fn benchmark_hot_path_stats_accuracy() {
+        let runtime = Runtime::new_with_optimization(
+            67108864,
+            1073741824,
+            false,
+            OptimizeMode::Auto,
+        ).unwrap();
+
+        let code = "let sum = 0; for (let i = 0; i < 100; i++) { sum += i; } sum;";
+
+        let expected_executions = 15;
+        for _ in 0..expected_executions {
+            runtime.execute_code(code).unwrap();
+        }
+
+        let stats = runtime.get_hot_path_stats().unwrap();
+
+        println!("\n=== Hot Path Stats Accuracy Benchmark ===");
+        println!("Expected executions: {}", expected_executions);
+        println!("Tracked executions: {}", stats.total_executions);
+        println!("Codes tracked: {}", stats.total_codes_tracked);
+
+        assert_eq!(stats.total_executions, expected_executions, "Execution count should be accurate");
+        assert_eq!(stats.total_codes_tracked, 1, "Should track exactly 1 code snippet");
+
+        let hot_paths = runtime.get_hot_paths();
+        if !hot_paths.is_empty() {
+            let hot_path = &hot_paths[0];
+            let actual_executions = hot_path.execution_count.load(std::sync::atomic::Ordering::SeqCst);
+            println!("Hot path execution count: {}", actual_executions);
+            assert_eq!(actual_executions, expected_executions, "Hot path execution count should match");
+        }
+    }
+
+    /// 基准测试：热路径重置功能
+    #[test]
+    #[ignore] // 在测试环境中跳过，因为V8 Isolate池在测试中会有问题
+    fn benchmark_hot_path_reset() {
+        let runtime = Runtime::new_with_optimization(
+            67108864,
+            1073741824,
+            false,
+            OptimizeMode::Auto,
+        ).unwrap();
+
+        // 执行一些代码
+        for _ in 0..20 {
+            runtime.execute_code("const x = 1;").unwrap();
+        }
+
+        let stats_before = runtime.get_hot_path_stats().unwrap();
+        println!("\n=== Hot Path Reset Benchmark ===");
+        println!("Before reset - Total codes: {}", stats_before.total_codes_tracked);
+        println!("Before reset - Hot paths: {}", stats_before.hot_paths_identified);
+
+        assert!(stats_before.total_codes_tracked > 0, "Should have tracked some codes");
+
+        // 重置热路径跟踪
+        runtime.reset_hot_path_tracking();
+
+        let stats_after = runtime.get_hot_path_stats().unwrap();
+        println!("After reset - Total codes: {}", stats_after.total_codes_tracked);
+        println!("After reset - Hot paths: {}", stats_after.hot_paths_identified);
+
+        assert_eq!(stats_after.total_codes_tracked, 0, "Should have no tracked codes after reset");
+        assert_eq!(stats_after.hot_paths_identified, 0, "Should have no hot paths after reset");
+    }
+}

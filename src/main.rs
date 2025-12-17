@@ -62,11 +62,18 @@ fn main() -> Result<()> {
         println!("V8 optimization mode: {:?}", args.optimize);
     }
 
+    // 将命令行优化模式转换为beejs优化模式
+    let optimize_mode = match args.optimize {
+        OptimizeMode::Speed => beejs::OptimizeMode::Speed,
+        OptimizeMode::Size => beejs::OptimizeMode::Size,
+        OptimizeMode::Auto => beejs::OptimizeMode::Auto,
+    };
+
     let runtime = beejs::Runtime::new_with_optimization(
         args.stack_size,
         args.max_heap,
         args.verbose,
-        args.optimize,
+        optimize_mode,
     ).context("Failed to create runtime")?;
 
     if let Some(ref script) = args.script {

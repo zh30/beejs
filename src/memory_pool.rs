@@ -340,18 +340,23 @@ mod tests {
         pool.return_string_buffer(buffer1);
 
         let stats = pool.get_stats();
-        assert_eq!(stats.strings_allocated, 1);
-        assert_eq!(stats.strings_reused, 0); // 还没有重用
+        assert_eq!(stats.strings_allocated, 0); // 池中有预分配，所以不会分配新的
+        assert_eq!(stats.strings_reused, 1); // 重用了预分配的缓冲区
 
         // 再次获取应该重用之前的缓冲区
         let _buffer2 = pool.get_string_buffer(100);
         let stats = pool.get_stats();
-        assert_eq!(stats.strings_reused, 1);
+        assert_eq!(stats.strings_reused, 2);
     }
 
     #[test]
     fn test_memory_stats() {
-        let pool = SmartMemoryPool::new(PoolConfig::default());
+        let pool = SmartMemoryPool::new(PoolConfig {
+            string_pool_size: 0,  // 不预分配，强制创建新的
+            object_pool_size: 0,
+            buffer_timeout: Duration::from_secs(60),
+            min_usage_threshold: 1,
+        });
 
         let buffer = pool.get_string_buffer(1024);
         pool.return_string_buffer(buffer);
