@@ -76,6 +76,14 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 **状态**: ✅ Completed (2025-12-18) 🎯
 
 ### 最新提交 (2025-12-18)
+**bafd574** - feat: 实现 Runtime 实例复用优化测试套件 🎯
+  - ✅ 创建 runtime_reuse_integration_tests.rs 集成测试套件
+  - ✅ 11/11 测试全部通过 (100% 通过率)
+  - ✅ 验证全局 Runtime 实例复用功能和性能提升
+  - ✅ 测试覆盖：基础复用、性能提升、错误处理、API兼容性等
+  - ✅ 使用 CLI 集成测试避免 OnceLock 并发问题
+  - ✅ 通过子进程验证 Runtime 复用实际效果
+
 **3d80669** - feat: Runtime实例复用优化完成，性能提升4.8倍 🚀
   - ✅ 实现全局Runtime实例复用 (get_global_runtime)
   - ✅ 启动时间优化: 72ms → 15ms (4.8x提升)
