@@ -17,11 +17,11 @@ struct Args {
     eval: Option<String>,
 
     /// Run tests
-    #[arg(short = 't', long)]
+    #[arg(long)]
     test: bool,
 
     /// Test pattern to match
-    #[arg(short, long)]
+    #[arg(short = 'p', long)]
     test_pattern: Option<String>,
 
     /// Watch mode - auto-reload on file changes
