@@ -115,7 +115,7 @@ mod tests {
         let iterations = 100;
         let mut success_count = 0;
 
-        for i in 0..iterations {
+        for _i in 0..iterations {
             // 创建 Runtime
             let rt = Runtime::new(
                 8 * 1024 * 1024,
