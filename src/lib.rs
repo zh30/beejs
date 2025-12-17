@@ -10,8 +10,8 @@ mod nodejs;
 
 /// Initialize V8 engine
 fn initialize_v8() -> Result<()> {
-    // Create platform with latest V8 API
-    let platform = v8::new_default_platform(0, true);
+    // Create platform with V8 0.20 API
+    let platform = v8::new_default_platform().make_shared();
     v8::V8::initialize_platform(platform);
     v8::V8::initialize();
     Ok(())
@@ -79,7 +79,7 @@ impl Runtime {
         self.setup_console(scope, &context)?;
 
         // Set up Node.js compatibility APIs
-        nodejs::setup_nodejs_apis(scope)?;
+        nodejs::setup_nodejs_apis(scope, &context)?;
 
         // Compile and execute the script
         let source = v8::String::new(scope, code)
