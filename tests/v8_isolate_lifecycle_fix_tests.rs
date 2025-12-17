@@ -1,6 +1,5 @@
 /// V8 Isolate 生命周期修复验证测试
 /// 测试新的安全 Isolate 管理器是否解决了并发测试问题
-
 use beejs::Runtime;
 // use std::sync::{Arc, Mutex};
 use std::thread;
@@ -10,7 +9,10 @@ use std::time::Duration;
 fn test_isolate_lifecycle_in_single_thread() {
     // 验证在单线程环境下 Isolate 可以正常创建和销毁
     let runtime = Runtime::new(67108864, 1073741824, false);
-    assert!(runtime.is_ok(), "Runtime creation should succeed in single thread");
+    assert!(
+        runtime.is_ok(),
+        "Runtime creation should succeed in single thread"
+    );
 
     let runtime = runtime.unwrap();
     let result = runtime.execute_code("1 + 1");
@@ -57,7 +59,10 @@ fn test_runtime_drop_safety() {
 
     // 再次创建 Runtime 应该还能工作
     let runtime = Runtime::new(67108864, 1073741824, false);
-    assert!(runtime.is_ok(), "New runtime creation after drop should succeed");
+    assert!(
+        runtime.is_ok(),
+        "New runtime creation after drop should succeed"
+    );
 }
 
 #[test]
@@ -95,12 +100,20 @@ fn test_sequential_runtime_creation() {
 
     println!("Sequential creation results:");
     for (i, success, result) in &results {
-        println!("  Thread {}: {} - {}", i, if *success { "SUCCESS" } else { "FAILED" }, result);
+        println!(
+            "  Thread {}: {} - {}",
+            i,
+            if *success { "SUCCESS" } else { "FAILED" },
+            result
+        );
     }
 
     // 串行执行应该都能成功
     println!("Successful creations: {}/5", success_count);
-    assert_eq!(success_count, 5, "All sequential runtimes should be created successfully");
+    assert_eq!(
+        success_count, 5,
+        "All sequential runtimes should be created successfully"
+    );
 }
 
 #[test]
@@ -118,7 +131,10 @@ fn test_v8_initialization_safety() {
 
     // 验证 V8 仍然可用
     let runtime = Runtime::new(67108864, 1073741824, false);
-    assert!(runtime.is_ok(), "V8 should still be available after multiple creations");
+    assert!(
+        runtime.is_ok(),
+        "V8 should still be available after multiple creations"
+    );
 }
 
 #[test]
@@ -165,5 +181,8 @@ fn test_nodejs_api_sequential_execution() {
 
     // 串行执行应该都能成功
     println!("All Node.js API tests passed: {}", all_success);
-    assert!(all_success, "All Node.js API tests should pass in sequential execution");
+    assert!(
+        all_success,
+        "All Node.js API tests should pass in sequential execution"
+    );
 }

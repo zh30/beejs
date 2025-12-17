@@ -1,9 +1,9 @@
-use std::path::{Path, PathBuf};
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::fs;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use serde_json;
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 /// Module loader for handling require() and module system
 #[derive(Debug, Clone)]
@@ -214,11 +214,26 @@ impl ModuleLoader {
     /// Create a built-in path module
     fn create_builtin_path_module(&self) -> Arc<Module> {
         let mut exports = HashMap::new();
-        exports.insert("join".to_string(), serde_json::Value::String("function".to_string()));
-        exports.insert("resolve".to_string(), serde_json::Value::String("function".to_string()));
-        exports.insert("dirname".to_string(), serde_json::Value::String("function".to_string()));
-        exports.insert("basename".to_string(), serde_json::Value::String("function".to_string()));
-        exports.insert("extname".to_string(), serde_json::Value::String("function".to_string()));
+        exports.insert(
+            "join".to_string(),
+            serde_json::Value::String("function".to_string()),
+        );
+        exports.insert(
+            "resolve".to_string(),
+            serde_json::Value::String("function".to_string()),
+        );
+        exports.insert(
+            "dirname".to_string(),
+            serde_json::Value::String("function".to_string()),
+        );
+        exports.insert(
+            "basename".to_string(),
+            serde_json::Value::String("function".to_string()),
+        );
+        exports.insert(
+            "extname".to_string(),
+            serde_json::Value::String("function".to_string()),
+        );
 
         Arc::new(Module {
             exports,
@@ -238,7 +253,10 @@ impl ModuleLoader {
             let rest = &content[pos + "module.exports".len()..];
             if let Some(_equals_pos) = rest.find('=') {
                 // For now, just mark it as an object
-                exports.insert("default".to_string(), serde_json::Value::Object(serde_json::Map::new()));
+                exports.insert(
+                    "default".to_string(),
+                    serde_json::Value::Object(serde_json::Map::new()),
+                );
             }
         }
 
@@ -312,10 +330,14 @@ mod tests {
 
         // Create a test module
         let module_file = temp_dir.path().join("math.js");
-        std::fs::write(&module_file, "
+        std::fs::write(
+            &module_file,
+            "
             exports.add = (a, b) => a + b;
             exports.PI = 3.14159;
-        ").unwrap();
+        ",
+        )
+        .unwrap();
 
         let module = loader.load_module("./math.js").unwrap();
         assert!(module.exports.contains_key("add"));

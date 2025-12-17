@@ -122,10 +122,16 @@ impl DeepOptimizer {
         let lines: Vec<&str> = code.lines().collect();
         for (i, line) in lines.iter().enumerate() {
             // 检测对象创建
-            if line.contains("const obj = {") || line.contains("let obj = {") || line.contains("var obj = {") {
+            if line.contains("const obj = {")
+                || line.contains("let obj = {")
+                || line.contains("var obj = {")
+            {
                 // 检测是否在循环中使用（可能逃逸）
-                let in_loop = lines.iter().any(|l| l.contains("for (") || l.contains("while ("));
-                let returned = line.contains("return") || lines[i..].iter().any(|l| l.contains("return obj"));
+                let in_loop = lines
+                    .iter()
+                    .any(|l| l.contains("for (") || l.contains("while ("));
+                let returned =
+                    line.contains("return") || lines[i..].iter().any(|l| l.contains("return obj"));
 
                 if in_loop || returned {
                     has_escapes = true;
@@ -237,17 +243,17 @@ impl DeepOptimizer {
         }
 
         // 计算函数调用频率
-        let call_count = code.matches("function_call(").count() +
-                        code.matches("someFunction(").count() +
-                        code.matches("add(").count() +
-                        code.matches("calc(").count();
+        let call_count = code.matches("function_call(").count()
+            + code.matches("someFunction(").count()
+            + code.matches("add(").count()
+            + code.matches("calc(").count();
         let call_frequency = call_count;
 
         // 如果有小型函数且调用频繁，则可以内联
         if has_small_function && call_frequency >= 5 {
             can_inline = true;
             inline_cost = call_frequency * 5; // 假设每次调用成本为5
-            // optimization_benefit 将在下面计算
+                                              // optimization_benefit 将在下面计算
         }
 
         // 更新统计
@@ -343,10 +349,18 @@ impl DeepOptimizer {
         let memory_layout = self.analyze_memory_layout(code);
 
         // 计算总体优化收益
-        let total_benefit = loop_unroll.optimization_benefit +
-                           inline_analysis.optimization_benefit +
-                           (if escape_analysis.allocation_elimination_possible { 15.0 } else { 0.0 }) +
-                           (if memory_layout.cache_friendly { 10.0 } else { 0.0 });
+        let total_benefit = loop_unroll.optimization_benefit
+            + inline_analysis.optimization_benefit
+            + (if escape_analysis.allocation_elimination_possible {
+                15.0
+            } else {
+                0.0
+            })
+            + (if memory_layout.cache_friendly {
+                10.0
+            } else {
+                0.0
+            });
 
         let optimized_code = self.generate_optimized_code(
             code,
@@ -385,7 +399,10 @@ impl DeepOptimizer {
 
         // 应用循环展开
         if loop_unroll.can_unroll && self.config.enable_loop_unrolling {
-            println!("  🔄 应用循环展开优化 (展开因子: {})", loop_unroll.unroll_factor);
+            println!(
+                "  🔄 应用循环展开优化 (展开因子: {})",
+                loop_unroll.unroll_factor
+            );
             // 这里应该实施实际的循环展开
             // 由于复杂的代码转换，这里只是示例
         }
@@ -458,10 +475,26 @@ impl OptimizationResult {
             self.optimized_code.len(),
             self.total_optimization_benefit,
             self.optimization_time.as_secs_f64() * 1000.0,
-            if self.escape_analysis.allocation_elimination_possible { "✅ 可优化" } else { "⚠️  无优化" },
-            if self.loop_unroll_analysis.can_unroll { "✅ 可展开" } else { "⚠️  无展开" },
-            if self.inline_analysis.can_inline { "✅ 可内联" } else { "⚠️  无内联" },
-            if self.memory_layout_analysis.cache_friendly { "✅ 缓存友好" } else { "⚠️  需要优化" }
+            if self.escape_analysis.allocation_elimination_possible {
+                "✅ 可优化"
+            } else {
+                "⚠️  无优化"
+            },
+            if self.loop_unroll_analysis.can_unroll {
+                "✅ 可展开"
+            } else {
+                "⚠️  无展开"
+            },
+            if self.inline_analysis.can_inline {
+                "✅ 可内联"
+            } else {
+                "⚠️  无内联"
+            },
+            if self.memory_layout_analysis.cache_friendly {
+                "✅ 缓存友好"
+            } else {
+                "⚠️  需要优化"
+            }
         )
     }
 }

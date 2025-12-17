@@ -1,6 +1,6 @@
 use beejs::Runtime;
-use tempfile::NamedTempFile;
 use std::io::Write;
+use tempfile::NamedTempFile;
 
 #[test]
 fn test_typescript_basic_types() {
@@ -185,7 +185,9 @@ fn test_typescript_file_execution() {
 
     // Create a temporary TypeScript file
     let mut file = NamedTempFile::new().unwrap();
-    writeln!(file, r#"
+    writeln!(
+        file,
+        r#"
         // TypeScript-style code
         let message: string = "TypeScript works!";
         let count: number = 100;
@@ -193,7 +195,9 @@ fn test_typescript_file_execution() {
         console.log(message);
         const result = count * 2;
         result;
-    "#).unwrap();
+    "#
+    )
+    .unwrap();
 
     let path = file.path().to_path_buf();
     let result = runtime.execute_file(&path);

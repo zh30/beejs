@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
-use std::time::{Instant, Duration};
 use crate::code_analyzer::{CodeAnalyzer, CodeComplexity};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 /// 热路径代码信息
 #[derive(Debug, Clone)]
@@ -107,33 +107,34 @@ impl HotPathTracker {
         {
             let mut paths = self.paths.lock().unwrap();
 
-            let path_info = paths
-                .entry(code_id.clone())
-                .or_insert_with(|| {
-                    // 更新统计
-                    {
-                        let mut stats = self.stats.lock().unwrap();
-                        stats.total_codes_tracked += 1;
-                    }
+            let path_info = paths.entry(code_id.clone()).or_insert_with(|| {
+                // 更新统计
+                {
+                    let mut stats = self.stats.lock().unwrap();
+                    stats.total_codes_tracked += 1;
+                }
 
-                    HotPathInfo {
-                        code_id: code_id.clone(),
-                        execution_count: Arc::new(AtomicUsize::new(0)),
-                        total_time_ns: Arc::new(AtomicU64::new(0)),
-                        avg_time_ns: Arc::new(AtomicU64::new(0)),
-                        first_execution: Instant::now(),
-                        last_execution: Instant::now(),
-                        complexity,
-                        is_hot_path: false,
-                        optimization_suggestions: Vec::new(),
-                    }
-                });
+                HotPathInfo {
+                    code_id: code_id.clone(),
+                    execution_count: Arc::new(AtomicUsize::new(0)),
+                    total_time_ns: Arc::new(AtomicU64::new(0)),
+                    avg_time_ns: Arc::new(AtomicU64::new(0)),
+                    first_execution: Instant::now(),
+                    last_execution: Instant::now(),
+                    complexity,
+                    is_hot_path: false,
+                    optimization_suggestions: Vec::new(),
+                }
+            });
 
             // 更新执行计数
             let count = path_info.execution_count.fetch_add(1, Ordering::SeqCst) + 1;
 
             // 更新执行时间统计
-            let total_time = path_info.total_time_ns.fetch_add(execution_time.as_nanos() as u64, Ordering::SeqCst) + execution_time.as_nanos() as u64;
+            let total_time = path_info
+                .total_time_ns
+                .fetch_add(execution_time.as_nanos() as u64, Ordering::SeqCst)
+                + execution_time.as_nanos() as u64;
             let avg_time = total_time / count as u64;
             path_info.avg_time_ns.store(avg_time, Ordering::SeqCst);
 
@@ -142,7 +143,8 @@ impl HotPathTracker {
 
             // 检查是否成为热路径
             let was_hot = path_info.is_hot_path;
-            let should_be_hot = self.should_mark_as_hot_path(count, execution_time, &path_info.complexity);
+            let should_be_hot =
+                self.should_mark_as_hot_path(count, execution_time, &path_info.complexity);
 
             if should_be_hot && !was_hot {
                 path_info.is_hot_path = true;
@@ -162,8 +164,10 @@ impl HotPathTracker {
             {
                 let mut stats = self.stats.lock().unwrap();
                 stats.total_executions += 1;
-                stats.avg_execution_time_ns = (stats.avg_execution_time_ns * (stats.total_executions - 1) as u64
-                    + execution_time.as_nanos() as u64) / stats.total_executions as u64;
+                stats.avg_execution_time_ns = (stats.avg_execution_time_ns
+                    * (stats.total_executions - 1) as u64
+                    + execution_time.as_nanos() as u64)
+                    / stats.total_executions as u64;
             }
         }
 
@@ -206,7 +210,8 @@ impl HotPathTracker {
 
         // 条件2：执行时间超过阈值且代码复杂
         if execution_time.as_nanos() as u64 >= self.config.time_threshold_ns
-            && complexity.complexity_score > 10.0 {
+            && complexity.complexity_score > 10.0
+        {
             return true;
         }
 
@@ -235,7 +240,8 @@ impl HotPathTracker {
 
         // 基于执行时间的建议
         let avg_time = info.avg_time_ns.load(Ordering::SeqCst);
-        if avg_time > 5_000_000 { // 5ms
+        if avg_time > 5_000_000 {
+            // 5ms
             suggestions.push("执行时间较长，建议优化算法或数据结构".to_string());
         }
 
@@ -327,7 +333,10 @@ mod tests {
         }
 
         let hot_paths = tracker.get_hot_paths();
-        assert!(!hot_paths.is_empty(), "Should identify hot path after threshold");
+        assert!(
+            !hot_paths.is_empty(),
+            "Should identify hot path after threshold"
+        );
     }
 
     #[test]
@@ -356,14 +365,20 @@ mod tests {
 
         // 先分析复杂度
         let complexity = crate::code_analyzer::CodeAnalyzer::analyze_complexity(complex_code);
-        println!("Complex code complexity score: {}", complexity.complexity_score);
+        println!(
+            "Complex code complexity score: {}",
+            complexity.complexity_score
+        );
 
         for _ in 0..5 {
             tracker.track_execution(complex_code, None, Duration::from_millis(2));
         }
 
         let hot_paths = tracker.get_hot_paths();
-        assert!(!hot_paths.is_empty(), "Complex code should become hot path quickly");
+        assert!(
+            !hot_paths.is_empty(),
+            "Complex code should become hot path quickly"
+        );
     }
 
     #[test]
@@ -395,17 +410,29 @@ mod tests {
 
         let hot_path = &hot_paths[0];
         assert!(!hot_path.optimization_suggestions.is_empty());
-        println!("Optimization suggestions: {:?}", hot_path.optimization_suggestions);
+        println!(
+            "Optimization suggestions: {:?}",
+            hot_path.optimization_suggestions
+        );
     }
 
     #[test]
     fn test_code_tracking_with_file_path() {
         let tracker = HotPathTracker::new_default();
 
-        tracker.track_execution("const x = 1;", Some("/test/file.js"), Duration::from_millis(1));
-        tracker.track_execution("const x = 1;", Some("/test/file.js"), Duration::from_millis(1));
+        tracker.track_execution(
+            "const x = 1;",
+            Some("/test/file.js"),
+            Duration::from_millis(1),
+        );
+        tracker.track_execution(
+            "const x = 1;",
+            Some("/test/file.js"),
+            Duration::from_millis(1),
+        );
 
-        let info = tracker.get_code_info(&tracker.generate_code_id("const x = 1;", Some("/test/file.js")));
+        let info =
+            tracker.get_code_info(&tracker.generate_code_id("const x = 1;", Some("/test/file.js")));
         assert!(info.is_some());
 
         let hot_paths = tracker.get_hot_paths();

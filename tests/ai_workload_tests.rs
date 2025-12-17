@@ -57,14 +57,13 @@ mod tests {
 
             // 测试单独处理（多次函数调用）
             let start = Instant::now();
-            let individual_results: Vec<String> = tasks
-                .iter()
-                .map(|task| task.simulate_inference())
-                .collect();
+            let individual_results: Vec<String> =
+                tasks.iter().map(|task| task.simulate_inference()).collect();
             let individual_duration = start.elapsed();
 
             let improvement = (individual_duration.as_secs_f64() - batch_duration.as_secs_f64())
-                / individual_duration.as_secs_f64() * 100.0;
+                / individual_duration.as_secs_f64()
+                * 100.0;
 
             println!(
                 "Batch size: {}, Batch: {:.2}ms, Individual: {:.2}ms, Improvement: {:.1}%",
@@ -86,7 +85,11 @@ mod tests {
         for (batch_size, improvement) in results {
             if batch_size >= 100 {
                 // 大批次应该有更好的性能或至少不差
-                assert!(improvement >= -5.0, "Batch size {} should not be significantly slower", batch_size);
+                assert!(
+                    improvement >= -5.0,
+                    "Batch size {} should not be significantly slower",
+                    batch_size
+                );
             }
         }
     }
@@ -100,7 +103,11 @@ mod tests {
         for chunk in tasks.chunks(10) {
             for task in chunk {
                 // 模拟批量处理的优势：共享计算、减少开销
-                let result = format!("Batch AI Result for task {}: {}", task.id, task.input_data.len());
+                let result = format!(
+                    "Batch AI Result for task {}: {}",
+                    task.id,
+                    task.input_data.len()
+                );
                 results.push(result);
             }
         }
@@ -147,7 +154,8 @@ mod tests {
                 })
                 .collect();
 
-            let results: Vec<Result<String, tokio::task::JoinError>> = futures::future::join_all(tasks).await;
+            let results: Vec<Result<String, tokio::task::JoinError>> =
+                futures::future::join_all(tasks).await;
             let elapsed = start.elapsed();
 
             let completed = results.iter().filter(|r| r.is_ok()).count();
@@ -314,17 +322,16 @@ mod tests {
                 .map(|batch| {
                     tokio::spawn(async move {
                         let batch_start = Instant::now();
-                        let results: Vec<String> = batch
-                            .iter()
-                            .map(|task| task.simulate_inference())
-                            .collect();
+                        let results: Vec<String> =
+                            batch.iter().map(|task| task.simulate_inference()).collect();
                         let batch_duration = batch_start.elapsed();
                         (results, batch_duration)
                     })
                 })
                 .collect();
 
-            let batch_results: Vec<Result<(Vec<String>, Duration), tokio::task::JoinError>> = futures::future::join_all(batch_handles).await;
+            let batch_results: Vec<Result<(Vec<String>, Duration), tokio::task::JoinError>> =
+                futures::future::join_all(batch_handles).await;
             let total_duration = start.elapsed();
 
             let total_results: Vec<String> = batch_results
@@ -404,7 +411,9 @@ mod tests {
                 let offset = i * data_per_task;
                 if offset + data_per_task <= memory_pool.len() {
                     // 模拟数据处理
-                    sum += memory_pool[offset..offset + data_per_task].iter().sum::<u8>() as usize;
+                    sum += memory_pool[offset..offset + data_per_task]
+                        .iter()
+                        .sum::<u8>() as usize;
                 }
             }
             sum
@@ -424,7 +433,8 @@ mod tests {
         let dynamic_duration = start.elapsed();
 
         let improvement = (dynamic_duration.as_secs_f64() - pool_duration.as_secs_f64())
-            / dynamic_duration.as_secs_f64() * 100.0;
+            / dynamic_duration.as_secs_f64()
+            * 100.0;
 
         println!(
             "AI内存效率测试:\n\

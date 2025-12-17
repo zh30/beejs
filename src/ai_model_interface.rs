@@ -159,7 +159,7 @@ impl ModelMetrics {
         let current_avg = self.average_latency;
         let count = self.successful_requests as u64;
         self.average_latency = Duration::from_nanos(
-            (current_avg.as_nanos() as u64 * (count - 1) + latency.as_nanos() as u64) / count
+            (current_avg.as_nanos() as u64 * (count - 1) + latency.as_nanos() as u64) / count,
         );
 
         self.error_rate = self.failed_requests as f64 / self.total_requests as f64;
@@ -223,7 +223,10 @@ impl AiModelManager {
     }
 
     /// 注册模型
-    pub fn register_model(&self, model: AiModel) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn register_model(
+        &self,
+        model: AiModel,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut models = self.models.lock().unwrap();
         if models.contains_key(&model.id) {
             return Err("模型已存在".into());
@@ -241,7 +244,10 @@ impl AiModelManager {
     }
 
     /// 加载模型
-    pub async fn load_model(&self, model_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn load_model(
+        &self,
+        model_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let start_time = Instant::now();
 
         let need_load = {
@@ -263,7 +269,8 @@ impl AiModelManager {
                 model.load_time = Some(start_time);
             }
 
-            println!("模型 {} 加载完成，耗时: {:.2}ms",
+            println!(
+                "模型 {} 加载完成，耗时: {:.2}ms",
                 model_id,
                 start_time.elapsed().as_secs_f64() * 1000.0
             );
@@ -273,7 +280,10 @@ impl AiModelManager {
     }
 
     /// 卸载模型
-    pub async fn unload_model(&self, model_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn unload_model(
+        &self,
+        model_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let need_unload = {
             let models = self.models.lock().unwrap();
             if let Some(model) = models.get(model_id) {
@@ -349,7 +359,14 @@ impl AiModelManager {
         input: ModelInput,
     ) -> Result<ModelOutput, Box<dyn std::error::Error + Send + Sync>> {
         match (model_type, input) {
-            (ModelType::LanguageModel { .. }, ModelInput::Text { content, max_tokens: _, temperature: _ }) => {
+            (
+                ModelType::LanguageModel { .. },
+                ModelInput::Text {
+                    content,
+                    max_tokens: _,
+                    temperature: _,
+                },
+            ) => {
                 // 模拟文本生成
                 tokio::time::sleep(Duration::from_millis(50)).await;
                 Ok(ModelOutput::Text {
@@ -387,7 +404,12 @@ impl AiModelManager {
                     duration: Duration::from_secs(1),
                 })
             }
-            (ModelType::SpeechToText { .. }, ModelInput::Audio { data: _, format: _, .. }) => {
+            (
+                ModelType::SpeechToText { .. },
+                ModelInput::Audio {
+                    data: _, format: _, ..
+                },
+            ) => {
                 // 模拟语音识别
                 tokio::time::sleep(Duration::from_millis(150)).await;
                 Ok(ModelOutput::Text {
@@ -396,7 +418,14 @@ impl AiModelManager {
                     finish_reason: "stop".to_string(),
                 })
             }
-            (ModelType::TranslationModel { .. }, ModelInput::Translation { text, source_lang, target_lang }) => {
+            (
+                ModelType::TranslationModel { .. },
+                ModelInput::Translation {
+                    text,
+                    source_lang,
+                    target_lang,
+                },
+            ) => {
                 // 模拟翻译
                 tokio::time::sleep(Duration::from_millis(80)).await;
                 Ok(ModelOutput::Translation {
@@ -429,7 +458,9 @@ impl AiModelManager {
     /// 获取模型指标
     pub fn get_model_metrics(&self, model_id: &str) -> Option<ModelMetrics> {
         let models = self.models.lock().unwrap();
-        models.get(model_id).map(|m| m.metrics.lock().unwrap().clone())
+        models
+            .get(model_id)
+            .map(|m| m.metrics.lock().unwrap().clone())
     }
 
     /// 获取所有模型的汇总指标
@@ -445,7 +476,10 @@ impl AiModelManager {
     }
 
     /// 设置默认模型
-    pub fn set_default_model(&self, model_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn set_default_model(
+        &self,
+        model_id: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let models = self.models.lock().unwrap();
         if models.contains_key(model_id) {
             *self.default_model_id.lock().unwrap() = Some(model_id.to_string());

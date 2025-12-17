@@ -1,6 +1,6 @@
-use std::sync::Mutex;
-use std::collections::VecDeque;
 use rusty_v8 as v8;
+use std::collections::VecDeque;
+use std::sync::Mutex;
 
 /// V8 Isolate Pool - 高性能Isolate复用池
 /// 通过复用预创建的V8 Isolates来减少启动时间
@@ -143,7 +143,8 @@ pub fn initialize_pool(max_size: usize) -> Result<(), String> {
     pool.pre_warm(warmup_count)?;
 
     let pool_box = Box::new(pool);
-    POOL.set(pool_box).map_err(|_| "Pool already initialized".to_string())
+    POOL.set(pool_box)
+        .map_err(|_| "Pool already initialized".to_string())
 }
 
 /// 初始化全局Isolate池（测试版本）

@@ -1,7 +1,7 @@
+use anyhow::{Context, Result};
 use clap::Parser;
-use std::path::PathBuf;
 use std::fs;
-use anyhow::{Result, Context};
+use std::path::PathBuf;
 
 /// Beejs - High-performance JavaScript/TypeScript runtime
 #[derive(Parser, Debug)]
@@ -139,16 +139,21 @@ fn main() -> Result<()> {
         args.max_heap,
         args.verbose,
         optimize_mode,
-    ).context("Failed to create runtime")?;
+    )
+    .context("Failed to create runtime")?;
 
     if let Some(ref script) = args.script {
-        let result = runtime.execute_file(script).context("Failed to execute script")?;
+        let result = runtime
+            .execute_file(script)
+            .context("Failed to execute script")?;
         if args.verbose {
             println!("Result: {}", result);
         }
         Ok(())
     } else if let Some(ref eval_script) = args.eval {
-        let result = runtime.execute_code(eval_script).context("Failed to execute code")?;
+        let result = runtime
+            .execute_code(eval_script)
+            .context("Failed to execute code")?;
         if args.verbose {
             println!("Result: {}", result);
         }
@@ -172,23 +177,20 @@ fn run_tests(args: &Args) -> Result<()> {
         max_workers: num_cpus::get(),
     };
 
-    let runner = TestRunner::new(config)
-        .context("Failed to create test runner")?;
+    let runner = TestRunner::new(config).context("Failed to create test runner")?;
 
     let start = std::time::Instant::now();
 
     if let Some(ref pattern) = args.test_pattern {
         println!("Running tests matching pattern: {}", pattern);
-        let suites = runner.run_pattern(pattern)
-            .context("Failed to run tests")?;
+        let suites = runner.run_pattern(pattern).context("Failed to run tests")?;
 
         print_test_results(suites, start.elapsed());
     } else {
         // Run all tests in current directory
         let pattern = "**/*.test.js";
         println!("Running all tests matching: {}", pattern);
-        let suites = runner.run_pattern(pattern)
-            .context("Failed to run tests")?;
+        let suites = runner.run_pattern(pattern).context("Failed to run tests")?;
 
         print_test_results(suites, start.elapsed());
     }
@@ -201,8 +203,7 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
     use beejs::package_manager::{PackageManager, PackageManagerConfig};
 
     let config = PackageManagerConfig::default();
-    let pm = PackageManager::new(config)
-        .context("Failed to create package manager")?;
+    let pm = PackageManager::new(config).context("Failed to create package manager")?;
 
     match command {
         SubCommand::Init { name, version } => {
@@ -229,10 +230,12 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
                 return Ok(());
             }
 
-            let package = pm.parse_package_json(&package_json_path)
+            let package = pm
+                .parse_package_json(&package_json_path)
                 .context("Failed to parse package.json")?;
 
-            let results = pm.install_dependencies(&package)
+            let results = pm
+                .install_dependencies(&package)
                 .context("Failed to install dependencies")?;
 
             println!("Installed {} dependencies", results.len());
@@ -249,7 +252,8 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
                 return Ok(());
             }
 
-            let mut package_json = pm.parse_package_json(&package_json_path)
+            let mut package_json = pm
+                .parse_package_json(&package_json_path)
                 .context("Failed to parse package.json")?;
 
             pm.add_dependency(&mut package_json, package, version)?;
@@ -258,8 +262,7 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
             let content = serde_json::to_string_pretty(&package_json)
                 .context("Failed to serialize package.json")?;
 
-            fs::write(&package_json_path, content)
-                .context("Failed to write package.json")?;
+            fs::write(&package_json_path, content).context("Failed to write package.json")?;
 
             println!("Added {}@{}", package, version);
             Ok(())
@@ -275,7 +278,8 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
                 return Ok(());
             }
 
-            let mut package_json = pm.parse_package_json(&package_json_path)
+            let mut package_json = pm
+                .parse_package_json(&package_json_path)
                 .context("Failed to parse package.json")?;
 
             pm.remove_dependency(&mut package_json, package)?;
@@ -284,8 +288,7 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
             let content = serde_json::to_string_pretty(&package_json)
                 .context("Failed to serialize package.json")?;
 
-            fs::write(&package_json_path, content)
-                .context("Failed to write package.json")?;
+            fs::write(&package_json_path, content).context("Failed to write package.json")?;
 
             println!("Removed {}", package);
             Ok(())
@@ -295,7 +298,8 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
                 println!("Listing installed packages...");
             }
 
-            let packages = pm.get_installed_packages()
+            let packages = pm
+                .get_installed_packages()
                 .context("Failed to get installed packages")?;
 
             if packages.is_empty() {
@@ -313,8 +317,7 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
                 println!("Cleaning package cache...");
             }
 
-            pm.clean_cache()
-                .context("Failed to clean cache")?;
+            pm.clean_cache().context("Failed to clean cache")?;
 
             println!("Cache cleaned successfully.");
             Ok(())
@@ -343,13 +346,19 @@ fn print_test_results(suites: Vec<beejs::TestSuite>, total_duration: std::time::
         if suite.skipped > 0 {
             println!("  ⏭️  Skipped: {}", suite.skipped);
         }
-        println!("  ⏱️  Duration: {:.2}ms", suite.total_duration.as_secs_f64() * 1000.0);
+        println!(
+            "  ⏱️  Duration: {:.2}ms",
+            suite.total_duration.as_secs_f64() * 1000.0
+        );
     }
 
     println!("\n{}", "=".repeat(60));
     println!("\n📊 Test Summary:");
     println!("  Total suites: {}", suites.len());
-    println!("  Total tests: {}", total_passed + total_failed + total_skipped);
+    println!(
+        "  Total tests: {}",
+        total_passed + total_failed + total_skipped
+    );
     println!("  ✅ Passed: {}", total_passed);
     if total_failed > 0 {
         println!("  ❌ Failed: {}", total_failed);
@@ -399,10 +408,17 @@ fn run_watch_mode(args: &Args) -> Result<()> {
 
     // Execute script initially
     println!("\x1b[36m[beejs]\x1b[0m 🎬 Initial execution: {:?}", script);
-    execute_script_for_watch(script, args.stack_size, args.max_heap, args.verbose, optimize_mode.clone());
+    execute_script_for_watch(
+        script,
+        args.stack_size,
+        args.max_heap,
+        args.verbose,
+        optimize_mode.clone(),
+    );
 
     // Start watching
-    let mut rx = reloader.watch(watch_dir)
+    let mut rx = reloader
+        .watch(watch_dir)
         .context("Failed to start file watcher")?;
 
     println!("\x1b[36m[beejs]\x1b[0m Press Ctrl+C to stop watching\n");
@@ -416,7 +432,10 @@ fn run_watch_mode(args: &Args) -> Result<()> {
             // Clear console for clean output
             reloader.clear_console();
 
-            println!("\n\x1b[36m[beejs]\x1b[0m 🔄 File changed: {:?}", change.path.file_name().unwrap_or_default());
+            println!(
+                "\n\x1b[36m[beejs]\x1b[0m 🔄 File changed: {:?}",
+                change.path.file_name().unwrap_or_default()
+            );
 
             // Re-execute the script
             let success = execute_script_for_watch(

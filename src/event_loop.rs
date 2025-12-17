@@ -174,7 +174,7 @@ impl V8EventLoop {
                 Ok(_) => {
                     // 任务完成
                     completed.push(task);
-                },
+                }
                 Err(_) => {
                     // 超时，继续处理下一个任务
                     completed.push(task);
@@ -247,26 +247,38 @@ impl V8EventLoop {
         let promise_handler = v8::Object::new(scope);
 
         // 添加 resolve 方法
-        let resolve_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
-            // 这里会添加实际的 Promise 解析逻辑
-            let result = v8::String::new(_scope, "resolved").unwrap();
-            _rv.set(result.into());
-        });
+        let resolve_func = v8::FunctionTemplate::new(
+            scope,
+            |_scope: &mut v8::HandleScope,
+             _args: v8::FunctionCallbackArguments,
+             mut _rv: v8::ReturnValue| {
+                // 这里会添加实际的 Promise 解析逻辑
+                let result = v8::String::new(_scope, "resolved").unwrap();
+                _rv.set(result.into());
+            },
+        );
 
-        let resolve_instance = resolve_func.get_function(scope)
+        let resolve_instance = resolve_func
+            .get_function(scope)
             .ok_or("Failed to create resolve function")?;
 
         let resolve_key = v8::String::new(scope, "resolve").unwrap();
         promise_handler.set(scope, resolve_key.into(), resolve_instance.into());
 
         // 添加 reject 方法
-        let reject_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
-            // 这里会添加实际的 Promise 拒绝逻辑
-            let result = v8::String::new(_scope, "rejected").unwrap();
-            _rv.set(result.into());
-        });
+        let reject_func = v8::FunctionTemplate::new(
+            scope,
+            |_scope: &mut v8::HandleScope,
+             _args: v8::FunctionCallbackArguments,
+             mut _rv: v8::ReturnValue| {
+                // 这里会添加实际的 Promise 拒绝逻辑
+                let result = v8::String::new(_scope, "rejected").unwrap();
+                _rv.set(result.into());
+            },
+        );
 
-        let reject_instance = reject_func.get_function(scope)
+        let reject_instance = reject_func
+            .get_function(scope)
             .ok_or("Failed to create reject function")?;
 
         let reject_key = v8::String::new(scope, "reject").unwrap();
@@ -403,7 +415,10 @@ mod tests {
         }
 
         // 等待所有任务完成
-        let completed = loop_obj.wait_for_completion(Duration::from_secs(5)).await.unwrap();
+        let completed = loop_obj
+            .wait_for_completion(Duration::from_secs(5))
+            .await
+            .unwrap();
         assert_eq!(completed, 5);
     }
 }

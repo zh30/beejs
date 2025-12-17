@@ -70,10 +70,14 @@ impl CodeAnalyzer {
             OptimizeMode::Size => OptimizeMode::Size,
             OptimizeMode::Auto => {
                 // Auto mode: choose based on complexity (more aggressive for performance)
-                if complexity.complexity_score > 30.0 {  // 降低阈值，更积极优化
+                if complexity.complexity_score > 30.0 {
+                    // 降低阈值，更积极优化
                     // High complexity: optimize for speed
                     OptimizeMode::Speed
-                } else if complexity.line_count < 5 && complexity.function_count < 2 && complexity.loop_count == 0 {
+                } else if complexity.line_count < 5
+                    && complexity.function_count < 2
+                    && complexity.loop_count == 0
+                {
                     // Very simple script: optimize for size
                     OptimizeMode::Size
                 } else {
@@ -147,9 +151,15 @@ mod tests {
         "#;
         let complexity = CodeAnalyzer::analyze_complexity(code);
         // Adjusted expectations based on the simple heuristic
-        assert!(complexity.function_count >= 1, "Should detect at least the fibonacci function");
+        assert!(
+            complexity.function_count >= 1,
+            "Should detect at least the fibonacci function"
+        );
         assert!(complexity.loop_count >= 1, "Should detect the for loop");
-        assert!(complexity.complexity_score > 10.0, "Complex code should have high complexity score");
+        assert!(
+            complexity.complexity_score > 10.0,
+            "Complex code should have high complexity score"
+        );
     }
 
     #[test]

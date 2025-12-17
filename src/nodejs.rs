@@ -1,11 +1,11 @@
-use std::path::{Path, PathBuf};
-use std::fs;
-use std::env;
-use std::collections::HashMap;
-use anyhow::Result;
-use std::sync::{Mutex, Arc};
-use rusty_v8 as v8;
 use crate::module_loader::ModuleLoader;
+use anyhow::Result;
+use rusty_v8 as v8;
+use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 // Module cache - stores loaded modules for current execution
 // Note: thread_local means each V8 isolate has its own cache
@@ -210,11 +210,13 @@ fn path_dirname_callback(
     mut retval: v8::ReturnValue,
 ) {
     let arg = args.get(0);
-    let arg_str = arg.to_string(scope)
+    let arg_str = arg
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
     let path = Path::new(&arg_str);
-    let result = path.parent()
+    let result = path
+        .parent()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|| ".".to_string());
     let result_str = v8::String::new(scope, &result).unwrap();
@@ -227,11 +229,13 @@ fn path_basename_callback(
     mut retval: v8::ReturnValue,
 ) {
     let arg = args.get(0);
-    let arg_str = arg.to_string(scope)
+    let arg_str = arg
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
     let path = Path::new(&arg_str);
-    let result = path.file_name()
+    let result = path
+        .file_name()
         .and_then(|s| s.to_str())
         .unwrap_or(&arg_str)
         .to_string();
@@ -245,11 +249,13 @@ fn path_extname_callback(
     mut retval: v8::ReturnValue,
 ) {
     let arg = args.get(0);
-    let arg_str = arg.to_string(scope)
+    let arg_str = arg
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
     let path = Path::new(&arg_str);
-    let result = path.extension()
+    let result = path
+        .extension()
         .and_then(|s| s.to_str())
         .map(|ext| format!(".{}", ext))
         .unwrap_or_default();
@@ -314,7 +320,8 @@ fn fs_read_file_sync_callback(
     mut retval: v8::ReturnValue,
 ) {
     let path = args.get(0);
-    let path_str = path.to_string(scope)
+    let path_str = path
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
@@ -331,10 +338,12 @@ fn fs_write_file_sync_callback(
     let path = args.get(0);
     let data = args.get(1);
 
-    let path_str = path.to_string(scope)
+    let path_str = path
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
-    let data_str = data.to_string(scope)
+    let data_str = data
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
@@ -348,7 +357,8 @@ fn fs_exists_sync_callback(
     mut retval: v8::ReturnValue,
 ) {
     let path = args.get(0);
-    let path_str = path.to_string(scope)
+    let path_str = path
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
@@ -362,7 +372,8 @@ fn fs_mkdir_sync_callback(
     _retval: v8::ReturnValue,
 ) {
     let path = args.get(0);
-    let path_str = path.to_string(scope)
+    let path_str = path
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
@@ -376,7 +387,8 @@ fn fs_readdir_sync_callback(
     mut retval: v8::ReturnValue,
 ) {
     let path = args.get(0);
-    let path_str = path.to_string(scope)
+    let path_str = path
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
@@ -403,7 +415,8 @@ fn fs_stat_sync_callback(
     mut retval: v8::ReturnValue,
 ) {
     let path = args.get(0);
-    let path_str = path.to_string(scope)
+    let path_str = path
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
@@ -440,80 +453,98 @@ fn setup_module_system(
     }
 
     // Create a callback that uses global storage
-    let require_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
-        // Get module loader from global
-        // Safe because we only access this during V8 execution in single-threaded context
-        #[allow(static_mut_refs)]
-        let module_loader = unsafe {
-            MODULE_LOADER_GLOBAL.clone()
-        };
+    let require_func = v8::FunctionTemplate::new(
+        scope,
+        |scope: &mut v8::HandleScope,
+         args: v8::FunctionCallbackArguments,
+         mut retval: v8::ReturnValue| {
+            // Get module loader from global
+            // Safe because we only access this during V8 execution in single-threaded context
+            #[allow(static_mut_refs)]
+            let module_loader = unsafe { MODULE_LOADER_GLOBAL.clone() };
 
-        if let Some(module_name) = args.get(0).to_string(scope) {
-            let module_name_str = module_name.to_rust_string_lossy(scope);
+            if let Some(module_name) = args.get(0).to_string(scope) {
+                let module_name_str = module_name.to_rust_string_lossy(scope);
 
-            // Use the module loader if available
-            if let Some(loader) = &module_loader {
-                match loader.load_module(&module_name_str) {
-                    Ok(module) => {
-                        // Create a V8 object for the module exports
-                        let exports_obj = v8::Object::new(scope);
-                        for (key, value) in &module.exports {
-                            let key_v8 = v8::String::new(scope, key).unwrap();
-                            let v8_value = match value {
-                                serde_json::Value::String(s) => v8::String::new(scope, &s).unwrap().into(),
-                                serde_json::Value::Number(n) => {
-                                    if let Some(i) = n.as_i64() {
-                                        v8::Integer::new(scope, i as i32).into()
-                                    } else {
-                                        v8::Number::new(scope, n.as_f64().unwrap_or(0.0)).into()
+                // Use the module loader if available
+                if let Some(loader) = &module_loader {
+                    match loader.load_module(&module_name_str) {
+                        Ok(module) => {
+                            // Create a V8 object for the module exports
+                            let exports_obj = v8::Object::new(scope);
+                            for (key, value) in &module.exports {
+                                let key_v8 = v8::String::new(scope, key).unwrap();
+                                let v8_value = match value {
+                                    serde_json::Value::String(s) => {
+                                        v8::String::new(scope, &s).unwrap().into()
                                     }
-                                }
-                                serde_json::Value::Bool(b) => v8::Boolean::new(scope, *b).into(),
-                                serde_json::Value::Null => v8::null(scope).into(),
-                                serde_json::Value::Array(arr) => {
-                                    let v8_arr = v8::Array::new(scope, arr.len() as i32);
-                                    for (i, item) in arr.iter().enumerate() {
-                                        let v8_item = match item {
-                                            serde_json::Value::String(s) => v8::String::new(scope, &s).unwrap().into(),
-                                            serde_json::Value::Number(n) => {
-                                                if let Some(i) = n.as_i64() {
-                                                    v8::Integer::new(scope, i as i32).into()
-                                                } else {
-                                                    v8::Number::new(scope, n.as_f64().unwrap_or(0.0)).into()
+                                    serde_json::Value::Number(n) => {
+                                        if let Some(i) = n.as_i64() {
+                                            v8::Integer::new(scope, i as i32).into()
+                                        } else {
+                                            v8::Number::new(scope, n.as_f64().unwrap_or(0.0)).into()
+                                        }
+                                    }
+                                    serde_json::Value::Bool(b) => {
+                                        v8::Boolean::new(scope, *b).into()
+                                    }
+                                    serde_json::Value::Null => v8::null(scope).into(),
+                                    serde_json::Value::Array(arr) => {
+                                        let v8_arr = v8::Array::new(scope, arr.len() as i32);
+                                        for (i, item) in arr.iter().enumerate() {
+                                            let v8_item = match item {
+                                                serde_json::Value::String(s) => {
+                                                    v8::String::new(scope, &s).unwrap().into()
                                                 }
-                                            }
-                                            serde_json::Value::Bool(b) => v8::Boolean::new(scope, *b).into(),
-                                            _ => v8::undefined(scope).into(),
-                                        };
-                                        v8_arr.set_index(scope, i as u32, v8_item);
+                                                serde_json::Value::Number(n) => {
+                                                    if let Some(i) = n.as_i64() {
+                                                        v8::Integer::new(scope, i as i32).into()
+                                                    } else {
+                                                        v8::Number::new(
+                                                            scope,
+                                                            n.as_f64().unwrap_or(0.0),
+                                                        )
+                                                        .into()
+                                                    }
+                                                }
+                                                serde_json::Value::Bool(b) => {
+                                                    v8::Boolean::new(scope, *b).into()
+                                                }
+                                                _ => v8::undefined(scope).into(),
+                                            };
+                                            v8_arr.set_index(scope, i as u32, v8_item);
+                                        }
+                                        v8_arr.into()
                                     }
-                                    v8_arr.into()
-                                }
-                                _ => v8::undefined(scope).into(),
-                            };
-                            exports_obj.set(scope, key_v8.into(), v8_value).unwrap();
+                                    _ => v8::undefined(scope).into(),
+                                };
+                                exports_obj.set(scope, key_v8.into(), v8_value).unwrap();
+                            }
+                            retval.set(exports_obj.into());
+                            return;
                         }
-                        retval.set(exports_obj.into());
-                        return;
-                    }
-                    Err(e) => {
-                        let error_msg = format!("Error loading module '{}': {}", module_name_str, e);
-                        retval.set(v8::String::new(scope, &error_msg).unwrap().into());
-                        return;
+                        Err(e) => {
+                            let error_msg =
+                                format!("Error loading module '{}': {}", module_name_str, e);
+                            retval.set(v8::String::new(scope, &error_msg).unwrap().into());
+                            return;
+                        }
                     }
                 }
-            }
 
-            // Fallback: return a simple mock module
-            let mock_exports = v8::Object::new(scope);
-            let key = v8::String::new(scope, "default").unwrap();
-            let value = v8::String::new(scope, &format!("[Module: {}]", module_name_str)).unwrap().into();
-            mock_exports.set(scope, key.into(), value).unwrap();
-            retval.set(mock_exports.into());
-        } else {
-            retval.set(v8::undefined(scope).into());
-        }
-    });
+                // Fallback: return a simple mock module
+                let mock_exports = v8::Object::new(scope);
+                let key = v8::String::new(scope, "default").unwrap();
+                let value = v8::String::new(scope, &format!("[Module: {}]", module_name_str))
+                    .unwrap()
+                    .into();
+                mock_exports.set(scope, key.into(), value).unwrap();
+                retval.set(mock_exports.into());
+            } else {
+                retval.set(v8::undefined(scope).into());
+            }
+        },
+    );
     let require_instance = require_func.get_function(scope).unwrap();
 
     // Set require as a global function
@@ -536,8 +567,7 @@ fn setup_module_system(
 
     // Set __dirname and __filename based on current file
     if let Some(file_path) = current_file {
-        let dirname = file_path.parent()
-            .unwrap_or_else(|| Path::new("."));
+        let dirname = file_path.parent().unwrap_or_else(|| Path::new("."));
         let dirname_key = v8::String::new(scope, "__dirname").unwrap();
         let dirname_val = v8::String::new(scope, &dirname.to_string_lossy()).unwrap();
         global.set(scope, dirname_key.into(), dirname_val.into());
@@ -566,7 +596,8 @@ fn require_callback(
     mut retval: v8::ReturnValue,
 ) {
     let module_name = args.get(0);
-    let module_name_str = module_name.to_string(scope)
+    let module_name_str = module_name
+        .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
@@ -591,7 +622,8 @@ fn require_callback(
     let module_path = resolve_module_path(scope, &module_name_str);
     let cache_key = if let Ok(ref path) = module_path {
         // Use absolute path as cache key
-        Path::new(path).canonicalize()
+        Path::new(path)
+            .canonicalize()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|_| module_name_str.clone())
     } else {
@@ -662,8 +694,10 @@ fn require_callback(
                 module_obj.set(scope, module_exports_key.into(), exports_obj.into());
 
                 // Get current __dirname and __filename for this module
-                let module_dir = Path::new(&path_str).parent()
-                    .unwrap_or_else(|| Path::new(".")).to_string_lossy();
+                let module_dir = Path::new(&path_str)
+                    .parent()
+                    .unwrap_or_else(|| Path::new("."))
+                    .to_string_lossy();
                 let dirname_str = v8::String::new(scope, &module_dir).unwrap();
                 let filename_str = v8::String::new(scope, &path_str).unwrap();
 
@@ -753,17 +787,15 @@ fn require_callback(
 
 /// Resolve module path from module name
 #[allow(dead_code)]
-fn resolve_module_path(
-    scope: &mut v8::HandleScope,
-    module_name: &str,
-) -> Result<String> {
+fn resolve_module_path(scope: &mut v8::HandleScope, module_name: &str) -> Result<String> {
     let context = scope.get_current_context();
     let global = context.global(scope);
 
     // Get current file's directory from __filename
     let filename_key = v8::String::new(scope, "__filename").unwrap();
     let current_file = if let Some(filename) = global.get(scope, filename_key.into()) {
-        filename.to_string(scope)
+        filename
+            .to_string(scope)
             .map(|s| s.to_rust_string_lossy(scope))
             .unwrap_or_default()
     } else {
@@ -779,7 +811,8 @@ fn resolve_module_path(
         // Fallback to __dirname
         let dirname_key = v8::String::new(scope, "__dirname").unwrap();
         if let Some(dirname) = global.get(scope, dirname_key.into()) {
-            let dirname_str = dirname.to_string(scope)
+            let dirname_str = dirname
+                .to_string(scope)
                 .map(|s| s.to_rust_string_lossy(scope))
                 .unwrap_or_default();
             if !dirname_str.is_empty() {

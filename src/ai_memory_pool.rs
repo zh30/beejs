@@ -54,7 +54,10 @@ impl ModelMemoryConfig {
     /// 计算总内存需求
     #[allow(dead_code)]
     pub fn total_memory(&self) -> usize {
-        self.weights_memory + self.activations_memory + self.gradients_memory + self.temp_buffer_size
+        self.weights_memory
+            + self.activations_memory
+            + self.gradients_memory
+            + self.temp_buffer_size
     }
 }
 
@@ -81,7 +84,7 @@ impl Default for AiMemoryPoolConfig {
     fn default() -> Self {
         Self {
             max_pool_size: 1024 * 1024 * 1024, // 1GB
-            max_block_size: 64 * 1024 * 1024, // 64MB
+            max_block_size: 64 * 1024 * 1024,  // 64MB
             preallocation_strategy: PreallocationStrategy::Adaptive,
             auto_cleanup_interval: 300, // 5分钟
             defragmentation_threshold: 0.3,
@@ -152,7 +155,7 @@ impl MemoryPoolStats {
         let current_avg = self.average_allocation_time;
         let count = self.total_allocations as u64;
         self.average_allocation_time = Duration::from_nanos(
-            (current_avg.as_nanos() as u64 * (count - 1) + time.as_nanos() as u64) / count
+            (current_avg.as_nanos() as u64 * (count - 1) + time.as_nanos() as u64) / count,
         );
     }
 
@@ -162,7 +165,7 @@ impl MemoryPoolStats {
         let current_avg = self.average_deallocation_time;
         let count = self.total_deallocations as u64;
         self.average_deallocation_time = Duration::from_nanos(
-            (current_avg.as_nanos() as u64 * (count - 1) + time.as_nanos() as u64) / count
+            (current_avg.as_nanos() as u64 * (count - 1) + time.as_nanos() as u64) / count,
         );
     }
 }
@@ -190,7 +193,10 @@ impl AiMemoryPool {
     /// 预分配内存
     fn preallocate_memory(&self) {
         match &self.config.preallocation_strategy {
-            PreallocationStrategy::Fixed { block_size, block_count } => {
+            PreallocationStrategy::Fixed {
+                block_size,
+                block_count,
+            } => {
                 for i in 0..*block_count {
                     let block = self.create_block(i, *block_size);
                     self.add_block(block);
@@ -199,8 +205,10 @@ impl AiMemoryPool {
             PreallocationStrategy::ModelBased { common_models } => {
                 for (i, model_config) in common_models.iter().enumerate() {
                     let weights_block = self.create_block(i * 4, model_config.weights_memory);
-                    let activations_block = self.create_block(i * 4 + 1, model_config.activations_memory);
-                    let gradients_block = self.create_block(i * 4 + 2, model_config.gradients_memory);
+                    let activations_block =
+                        self.create_block(i * 4 + 1, model_config.activations_memory);
+                    let gradients_block =
+                        self.create_block(i * 4 + 2, model_config.gradients_memory);
                     let temp_block = self.create_block(i * 4 + 3, model_config.temp_buffer_size);
 
                     self.add_block(weights_block);
@@ -212,12 +220,12 @@ impl AiMemoryPool {
             PreallocationStrategy::Adaptive => {
                 // 自适应预分配：预分配一些常用大小的块
                 let common_sizes = [
-                    1024,      // 1KB - 小文本
-                    4096,      // 4KB - 中文本
-                    16384,     // 16KB - 大文本
-                    65536,     // 64KB - 图像块
-                    262144,    // 256KB - 小模型
-                    1048576,   // 1MB - 中模型
+                    1024,    // 1KB - 小文本
+                    4096,    // 4KB - 中文本
+                    16384,   // 16KB - 大文本
+                    65536,   // 64KB - 图像块
+                    262144,  // 256KB - 小模型
+                    1048576, // 1MB - 中模型
                 ];
 
                 for (i, &size) in common_sizes.iter().enumerate() {
@@ -459,7 +467,7 @@ impl MemoryUsage {
 pub fn create_llm_memory_pool() -> AiMemoryPool {
     let config = AiMemoryPoolConfig {
         max_pool_size: 2 * 1024 * 1024 * 1024, // 2GB
-        max_block_size: 128 * 1024 * 1024, // 128MB
+        max_block_size: 128 * 1024 * 1024,     // 128MB
         preallocation_strategy: PreallocationStrategy::ModelBased {
             common_models: vec![
                 ModelMemoryConfig::new("gpt-3.5", 500_000_000, 100_000_000),
@@ -479,7 +487,7 @@ pub fn create_llm_memory_pool() -> AiMemoryPool {
 pub fn create_cv_memory_pool() -> AiMemoryPool {
     let config = AiMemoryPoolConfig {
         max_pool_size: 4 * 1024 * 1024 * 1024, // 4GB
-        max_block_size: 256 * 1024 * 1024, // 256MB
+        max_block_size: 256 * 1024 * 1024,     // 256MB
         preallocation_strategy: PreallocationStrategy::Fixed {
             block_size: 64 * 1024 * 1024, // 64MB
             block_count: 20,

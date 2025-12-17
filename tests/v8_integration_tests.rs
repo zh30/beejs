@@ -1,6 +1,6 @@
 use beejs::Runtime;
-use tempfile::NamedTempFile;
 use std::io::Write;
+use tempfile::NamedTempFile;
 
 #[test]
 fn test_v8_hello_world() {

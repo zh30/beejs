@@ -94,7 +94,8 @@ impl WatcherStats {
         } else {
             self.failed_reloads.fetch_add(1, Ordering::SeqCst);
         }
-        self.last_reload_time_ms.store(duration_ms, Ordering::SeqCst);
+        self.last_reload_time_ms
+            .store(duration_ms, Ordering::SeqCst);
     }
 
     pub fn get_summary(&self) -> WatcherStatsSummary {
@@ -167,10 +168,7 @@ impl HotReloader {
 
     /// Start watching a directory for changes
     /// Returns a channel receiver for file change events
-    pub fn watch(
-        &mut self,
-        path: impl AsRef<Path>,
-    ) -> anyhow::Result<mpsc::Receiver<FileChange>> {
+    pub fn watch(&mut self, path: impl AsRef<Path>) -> anyhow::Result<mpsc::Receiver<FileChange>> {
         let path = path.as_ref().to_path_buf();
         let (tx, rx) = mpsc::channel(100);
         let config = self.config.clone();
@@ -224,10 +222,7 @@ impl HotReloader {
                     "\n\x1b[36m[beejs]\x1b[0m 👀 Watching for changes in {:?}",
                     path
                 );
-                println!(
-                    "\x1b[36m[beejs]\x1b[0m 📁 Watching {} files",
-                    file_count
-                );
+                println!("\x1b[36m[beejs]\x1b[0m 📁 Watching {} files", file_count);
             }
 
             while running.load(Ordering::SeqCst) {
@@ -237,8 +232,12 @@ impl HotReloader {
                             let event_path = event.path;
 
                             // Check if we should watch this file
-                            let ext = event_path.extension().map(|e| e.to_string_lossy().to_lowercase());
-                            let should_process = ext.map(|e| config.extensions.iter().any(|x| x == &*e)).unwrap_or(false);
+                            let ext = event_path
+                                .extension()
+                                .map(|e| e.to_string_lossy().to_lowercase());
+                            let should_process = ext
+                                .map(|e| config.extensions.iter().any(|x| x == &*e))
+                                .unwrap_or(false);
 
                             if !should_process {
                                 continue;

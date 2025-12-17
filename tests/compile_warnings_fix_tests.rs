@@ -30,7 +30,8 @@ mod tests {
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
         // 执行一些代码以触发JIT优化器
-        let result = runtime.execute_code("let sum = 0; for (let i = 0; i < 100; i++) { sum += i; } sum");
+        let result =
+            runtime.execute_code("let sum = 0; for (let i = 0; i < 100; i++) { sum += i; } sum");
         assert!(result.is_ok());
 
         // 验证JIT统计功能正常工作

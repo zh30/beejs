@@ -1,10 +1,10 @@
 //! 锁竞争减少优化模块
 //! 使用无锁数据结构和原子操作减少并发场景下的锁竞争
 
-use std::sync::atomic::{AtomicUsize, AtomicU64, AtomicBool, Ordering};
-use std::sync::Arc;
-use tokio::sync::{RwLock, Mutex};
 use crossbeam::utils::CachePadded;
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
 
 /// 无锁计数器 - 使用原子操作实现高性能计数
 #[derive(Debug)]

@@ -1,7 +1,6 @@
 use beejs::Runtime;
-use tempfile::NamedTempFile;
 use std::io::Write;
-
+use tempfile::NamedTempFile;
 
 #[test]
 fn test_hello_world() {
@@ -12,7 +11,6 @@ fn test_hello_world() {
     let result_str = result.unwrap();
     assert!(result_str.contains("undefined"));
 }
-
 
 #[test]
 fn test_type_execution() {
@@ -39,7 +37,6 @@ fn test_type_execution() {
     assert!(result.is_ok());
 }
 
-
 #[test]
 fn test_arithmetic_operations() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -65,7 +62,6 @@ fn test_arithmetic_operations() {
     assert!(result.is_ok());
 }
 
-
 #[test]
 fn test_function_execution() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -81,7 +77,6 @@ fn test_function_execution() {
     assert!(result.is_ok());
 }
 
-
 #[test]
 fn test_arrow_function() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -94,7 +89,6 @@ fn test_arrow_function() {
     let result = runtime.execute_code(code);
     assert!(result.is_ok());
 }
-
 
 #[test]
 fn test_class_definition() {
@@ -129,7 +123,6 @@ fn test_class_definition() {
     assert!(result.is_ok());
 }
 
-
 #[test]
 #[ignore = "需要修复V8 Isolate在异常情况下的清理问题"]
 fn test_error_handling() {
@@ -137,13 +130,15 @@ fn test_error_handling() {
 
     // Test undefined variable reference
     let result = runtime.execute_code("undefined_variable");
-    assert!(result.is_err(), "Should return error for undefined variable");
+    assert!(
+        result.is_err(),
+        "Should return error for undefined variable"
+    );
 
     // Test syntax error
     let result = runtime.execute_code("const x = ;");
     assert!(result.is_err(), "Should return error for syntax error");
 }
-
 
 #[test]
 #[ignore = "需要实现V8事件循环支持以处理Promise异步执行"]
@@ -164,7 +159,6 @@ fn test_async_execution() {
     assert!(result.is_ok());
 }
 
-
 #[test]
 fn test_module_exports() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -183,7 +177,6 @@ fn test_module_exports() {
     assert!(result.is_ok());
 }
 
-
 #[test]
 fn test_file_execution() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -198,7 +191,6 @@ fn test_file_execution() {
     let result = runtime.execute_file(&path);
     assert!(result.is_ok());
 }
-
 
 #[test]
 fn test_performance_sequential_execution() {
@@ -222,7 +214,6 @@ fn test_performance_sequential_execution() {
     assert_eq!(runtime.execution_count(), 10);
 }
 
-
 #[test]
 fn test_memory_efficient_execution() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -239,7 +230,6 @@ fn test_memory_efficient_execution() {
     // Verify execution count increased
     assert_eq!(runtime.execution_count(), 1);
 }
-
 
 #[test]
 fn test_console_api_complete() {
@@ -286,7 +276,6 @@ fn test_console_api_complete() {
     assert!(result.is_ok());
     assert!(result.unwrap().contains("function"));
 }
-
 
 #[test]
 fn test_initialization_with_custom_params() {

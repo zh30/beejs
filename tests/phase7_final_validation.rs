@@ -7,7 +7,7 @@ use beejs::Runtime;
 use std::time::Instant;
 
 /// 性能目标常量
-const TARGET_EXECUTION_TIME_US: f64 = 10000.0;   // 单次执行 < 10ms
+const TARGET_EXECUTION_TIME_US: f64 = 10000.0; // 单次执行 < 10ms
 
 /// 基准测试结果
 #[derive(Debug, Clone)]
@@ -82,12 +82,16 @@ mod tests {
                 durations.push(start.elapsed());
             }
 
-            let avg_us = durations.iter()
+            let avg_us = durations
+                .iter()
                 .map(|d| d.as_secs_f64() * 1_000_000.0)
-                .sum::<f64>() / iterations as f64;
+                .sum::<f64>()
+                / iterations as f64;
 
             let passed = avg_us < TARGET_EXECUTION_TIME_US;
-            if !passed { all_passed = false; }
+            if !passed {
+                all_passed = false;
+            }
 
             let result = ValidationResult {
                 test_name: "代码执行速度".to_string(),
@@ -120,7 +124,9 @@ mod tests {
             let scripts_per_sec = success_count as f64 / elapsed.as_secs_f64();
 
             let passed = success_count == script_count && scripts_per_sec > 100.0;
-            if !passed { all_passed = false; }
+            if !passed {
+                all_passed = false;
+            }
 
             let result = ValidationResult {
                 test_name: "批量执行".to_string(),
@@ -128,7 +134,12 @@ mod tests {
                 metric: scripts_per_sec,
                 target: 100.0,
                 unit: "脚本/秒".to_string(),
-                details: format!("{}/{} 成功，耗时 {:.2}ms", success_count, script_count, elapsed.as_secs_f64() * 1000.0),
+                details: format!(
+                    "{}/{} 成功，耗时 {:.2}ms",
+                    success_count,
+                    script_count,
+                    elapsed.as_secs_f64() * 1000.0
+                ),
             };
             println!("║ {}", result.format());
             results.push(result);
@@ -160,12 +171,16 @@ mod tests {
                 durations.push(start.elapsed());
             }
 
-            let avg_ms = durations.iter()
+            let avg_ms = durations
+                .iter()
                 .map(|d| d.as_secs_f64() * 1000.0)
-                .sum::<f64>() / iterations as f64;
+                .sum::<f64>()
+                / iterations as f64;
 
             let passed = avg_ms < 100.0;
-            if !passed { all_passed = false; }
+            if !passed {
+                all_passed = false;
+            }
 
             let result = ValidationResult {
                 test_name: "复杂代码".to_string(),
@@ -205,7 +220,9 @@ mod tests {
 
             let compatibility = (api_passed as f64 / total as f64) * 100.0;
             let passed = compatibility >= 80.0;
-            if !passed { all_passed = false; }
+            if !passed {
+                all_passed = false;
+            }
 
             let result = ValidationResult {
                 test_name: "Node.js兼容".to_string(),
@@ -237,7 +254,9 @@ mod tests {
             let exec_per_sec = successful as f64 / elapsed.as_secs_f64();
 
             let passed = successful == iterations && exec_per_sec > 100.0;
-            if !passed { all_passed = false; }
+            if !passed {
+                all_passed = false;
+            }
 
             let result = ValidationResult {
                 test_name: "压力测试".to_string(),
@@ -245,7 +264,12 @@ mod tests {
                 metric: exec_per_sec,
                 target: 100.0,
                 unit: "执行/秒".to_string(),
-                details: format!("{}/{} 成功，耗时 {:.2}ms", successful, iterations, elapsed.as_secs_f64() * 1000.0),
+                details: format!(
+                    "{}/{} 成功，耗时 {:.2}ms",
+                    successful,
+                    iterations,
+                    elapsed.as_secs_f64() * 1000.0
+                ),
             };
             println!("║ {}", result.format());
             results.push(result);
@@ -277,12 +301,19 @@ mod tests {
 
             let final_score = total_score / tests.len() as f64;
             let passed = final_score > 20.0;
-            if !passed { all_passed = false; }
+            if !passed {
+                all_passed = false;
+            }
 
-            let grade = if final_score >= 80.0 { "A" }
-                else if final_score >= 60.0 { "B" }
-                else if final_score >= 40.0 { "C" }
-                else { "D" };
+            let grade = if final_score >= 80.0 {
+                "A"
+            } else if final_score >= 60.0 {
+                "B"
+            } else if final_score >= 40.0 {
+                "C"
+            } else {
+                "D"
+            };
 
             let result = ValidationResult {
                 test_name: "综合评分".to_string(),
@@ -300,7 +331,12 @@ mod tests {
         println!("╠══════════════════════════════════════════════════════════════╣");
         let passed_count = results.iter().filter(|r| r.passed).count();
         let total_count = results.len();
-        println!("║ 总测试: {} | 通过: {} | 失败: {}", total_count, passed_count, total_count - passed_count);
+        println!(
+            "║ 总测试: {} | 通过: {} | 失败: {}",
+            total_count,
+            passed_count,
+            total_count - passed_count
+        );
 
         let status = if all_passed {
             "✅ 所有验证通过！Beejs性能目标达成！"
@@ -312,8 +348,11 @@ mod tests {
         println!();
 
         // 断言所有测试通过
-        assert!(passed_count >= total_count * 4 / 5,
+        assert!(
+            passed_count >= total_count * 4 / 5,
             "至少80%的测试应该通过，实际通过率: {}/{}",
-            passed_count, total_count);
+            passed_count,
+            total_count
+        );
     }
 }

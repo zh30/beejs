@@ -1,13 +1,12 @@
 //! 性能报告生成器测试套件
 //! 验证性能对比报告的生成和准确性
 
+use beejs::performance_reporter::{PerformanceMetric, PerformanceReporter, ReportConfig};
 use beejs::Runtime;
-use beejs::performance_reporter::{PerformanceReporter, ReportConfig, PerformanceMetric};
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
 
     /// 测试报告生成器创建
     #[test]
@@ -47,12 +46,12 @@ mod tests {
 
         // 验证指标类型
         match metrics.get("startup_time").unwrap() {
-            PerformanceMetric::StartupTime(_) => {},
+            PerformanceMetric::StartupTime(_) => {}
             _ => panic!("Expected StartupTime metric"),
         }
 
         match metrics.get("simple_execution").unwrap() {
-            PerformanceMetric::ExecutionSpeed(_) => {},
+            PerformanceMetric::ExecutionSpeed(_) => {}
             _ => panic!("Expected ExecutionSpeed metric"),
         }
     }

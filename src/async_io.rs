@@ -88,10 +88,7 @@ impl AsyncIoManager {
     }
 
     /// 异步读取多个文件
-    pub async fn read_files_concurrent(
-        &self,
-        mut paths: Vec<String>,
-    ) -> Vec<AsyncFileRead> {
+    pub async fn read_files_concurrent(&self, mut paths: Vec<String>) -> Vec<AsyncFileRead> {
         let semaphore = Arc::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks));
         let start = Instant::now();
         let path_count = paths.len();
@@ -116,7 +113,8 @@ impl AsyncIoManager {
                     stats_guard.total_operations += 1;
                     if result.content.is_ok() {
                         stats_guard.successful_operations += 1;
-                        stats_guard.total_bytes_read += result.content.as_ref().unwrap().len() as u64;
+                        stats_guard.total_bytes_read +=
+                            result.content.as_ref().unwrap().len() as u64;
                     } else {
                         stats_guard.failed_operations += 1;
                     }
@@ -227,18 +225,17 @@ impl AsyncIoManager {
     }
 
     /// 异步写入文件（使用缓冲）
-    pub async fn write_file_buffered(
-        &self,
-        path: &str,
-        content: &[u8],
-    ) -> Result<(), IoError> {
+    pub async fn write_file_buffered(&self, path: &str, content: &[u8]) -> Result<(), IoError> {
         let path = Path::new(path);
         let start = Instant::now();
 
         let file = File::create(path).await.map_err(IoError::ReadError)?;
         let mut writer = BufWriter::new(file);
 
-        writer.write_all(content).await.map_err(IoError::ReadError)?;
+        writer
+            .write_all(content)
+            .await
+            .map_err(IoError::ReadError)?;
         writer.flush().await.map_err(IoError::ReadError)?;
 
         let duration = start.elapsed();
@@ -251,7 +248,12 @@ impl AsyncIoManager {
             stats.total_bytes_written += content.len() as u64;
         }
 
-        println!("缓冲写入文件: {:?}, 耗时: {:?}, 大小: {} bytes", path, duration, content.len());
+        println!(
+            "缓冲写入文件: {:?}, 耗时: {:?}, 大小: {} bytes",
+            path,
+            duration,
+            content.len()
+        );
         Ok(())
     }
 
@@ -289,10 +291,22 @@ impl AsyncIoManager {
                     let processed = processor(&content);
 
                     // 写入输出文件
-                    let output_path = format!("{}/{}", output_dir, Path::new(&path_clone).file_name().unwrap().to_string_lossy());
-                    let file = File::create(&output_path).await.map_err(IoError::ReadError)?;
+                    let output_path = format!(
+                        "{}/{}",
+                        output_dir,
+                        Path::new(&path_clone)
+                            .file_name()
+                            .unwrap()
+                            .to_string_lossy()
+                    );
+                    let file = File::create(&output_path)
+                        .await
+                        .map_err(IoError::ReadError)?;
                     let mut writer = BufWriter::new(file);
-                    writer.write_all(processed.as_bytes()).await.map_err(IoError::ReadError)?;
+                    writer
+                        .write_all(processed.as_bytes())
+                        .await
+                        .map_err(IoError::ReadError)?;
                     writer.flush().await.map_err(IoError::ReadError)?;
 
                     Ok(output_path)
@@ -310,7 +324,11 @@ impl AsyncIoManager {
         }
 
         let total_time = start.elapsed();
-        println!("流水线处理 {} 个文件，耗时: {:?}", results.len(), total_time);
+        println!(
+            "流水线处理 {} 个文件，耗时: {:?}",
+            results.len(),
+            total_time
+        );
 
         Ok(results)
     }
@@ -356,8 +374,8 @@ async fn async_read_single_file(path: &str) -> AsyncFileRead {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::fs;
+    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_async_file_read() {
@@ -369,7 +387,9 @@ mod tests {
         fs::write(&file_path, "Hello, World!").unwrap();
 
         // 读取文件
-        let result = manager.read_file_zero_copy(file_path.to_str().unwrap()).await;
+        let result = manager
+            .read_file_zero_copy(file_path.to_str().unwrap())
+            .await;
         assert!(result.is_ok());
     }
 
@@ -431,10 +451,9 @@ mod tests {
         let content = b"Hello, Buffered World!";
 
         // 写入文件
-        let result = manager.write_file_buffered(
-            file_path.to_str().unwrap(),
-            content,
-        ).await;
+        let result = manager
+            .write_file_buffered(file_path.to_str().unwrap(), content)
+            .await;
 
         assert!(result.is_ok());
 
@@ -452,11 +471,12 @@ mod tests {
         fs::write(&file_path, "Test content").unwrap();
 
         // 执行一些操作
-        let _ = manager.read_file_zero_copy(file_path.to_str().unwrap()).await;
-        let _ = manager.write_file_buffered(
-            file_path.to_str().unwrap(),
-            b"New content",
-        ).await;
+        let _ = manager
+            .read_file_zero_copy(file_path.to_str().unwrap())
+            .await;
+        let _ = manager
+            .write_file_buffered(file_path.to_str().unwrap(), b"New content")
+            .await;
 
         // 检查统计
         let stats = manager.get_stats().await;

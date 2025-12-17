@@ -1,7 +1,6 @@
 use beejs::Runtime;
-use tempfile::{NamedTempFile, TempDir};
 use std::io::Write;
-
+use tempfile::{NamedTempFile, TempDir};
 
 #[test]
 fn test_process_argv() {
@@ -13,7 +12,6 @@ fn test_process_argv() {
     assert!(result_str.contains("true"));
 }
 
-
 #[test]
 fn test_process_version() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -24,7 +22,6 @@ fn test_process_version() {
     assert!(!result_str.is_empty());
 }
 
-
 #[test]
 fn test_process_cwd() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -34,7 +31,6 @@ fn test_process_cwd() {
     // Should return a path
     assert!(!result_str.is_empty());
 }
-
 
 #[test]
 fn test_process_next_tick() {
@@ -50,7 +46,6 @@ fn test_process_next_tick() {
     assert!(result.is_ok());
 }
 
-
 #[test]
 fn test_path_join() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -59,7 +54,6 @@ fn test_path_join() {
     let result_str = result.unwrap();
     assert!(result_str.contains("foo/bar/baz") || result_str.contains("foo\\\\bar\\\\baz"));
 }
-
 
 #[test]
 fn test_path_resolve() {
@@ -71,7 +65,6 @@ fn test_path_resolve() {
     assert!(!result_str.is_empty());
 }
 
-
 #[test]
 fn test_path_dirname() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -80,7 +73,6 @@ fn test_path_dirname() {
     let result_str = result.unwrap();
     assert!(result_str.contains("/foo/bar"));
 }
-
 
 #[test]
 fn test_path_basename() {
@@ -91,7 +83,6 @@ fn test_path_basename() {
     assert!(result_str.contains("baz.txt"));
 }
 
-
 #[test]
 fn test_path_extname() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -100,7 +91,6 @@ fn test_path_extname() {
     let result_str = result.unwrap();
     assert!(result_str.contains(".txt"));
 }
-
 
 #[test]
 fn test_fs_read_file_sync() {
@@ -117,7 +107,6 @@ fn test_fs_read_file_sync() {
     let result_str = result.unwrap();
     assert!(result_str.contains("Hello from Beejs"));
 }
-
 
 #[test]
 fn test_fs_write_file_sync() {
@@ -137,7 +126,6 @@ fn test_fs_write_file_sync() {
     assert!(content.contains("test content"));
 }
 
-
 #[test]
 fn test_fs_exists_sync() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -152,7 +140,6 @@ fn test_fs_exists_sync() {
     let result_str = result.unwrap();
     assert!(result_str.contains("true"));
 }
-
 
 #[test]
 fn test_fs_mkdir_sync() {
@@ -171,7 +158,6 @@ fn test_fs_mkdir_sync() {
     assert!(new_dir.is_dir());
 }
 
-
 #[test]
 fn test_fs_readdir_sync() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
@@ -186,7 +172,6 @@ fn test_fs_readdir_sync() {
     let result = runtime.execute_code(&code);
     assert!(result.is_ok());
 }
-
 
 #[test]
 fn test_fs_stat_sync() {
@@ -203,7 +188,6 @@ fn test_fs_stat_sync() {
     let result_str = result.unwrap();
     assert!(result_str.contains("true"));
 }
-
 
 #[test]
 fn test_require_module() {
@@ -223,7 +207,6 @@ fn test_require_module() {
     // let result_str = result.unwrap();
     // assert!(result_str.contains("baz.txt"));
 }
-
 
 #[test]
 fn test_module_exports() {

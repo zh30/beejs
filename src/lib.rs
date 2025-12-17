@@ -1,57 +1,59 @@
-use std::path::PathBuf;
-use anyhow::{Result, Context, anyhow};
+use crate::code_cache::{BytecodeCache, CacheConfig};
+use crate::memory_pool::{PoolConfig, SmartMemoryPool};
+use anyhow::{anyhow, Context, Result};
+use rusty_v8 as v8;
 use std::fs;
-use std::sync::Arc;
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Instant;
-use rusty_v8 as v8;
-use crate::memory_pool::{SmartMemoryPool, PoolConfig};
-use crate::code_cache::{BytecodeCache, CacheConfig};
 
-mod typescript;
-mod nodejs;
-mod isolate_pool;
-mod isolate_guard;
-mod memory_pool;
-mod code_cache;
-mod code_analyzer;
-mod hot_path_tracker;
-mod inline_cache;
-mod jit_optimizer;
-mod async_io;
-mod lock_free;
-mod event_loop;
+mod ai_async_queue;
 mod ai_batch_processor;
 mod ai_memory_pool;
-mod ai_async_queue;
 mod ai_model_interface;
-mod module_loader;
-mod test_runner;
-pub mod package_manager;
+mod async_io;
+mod code_analyzer;
+mod code_cache;
 mod deep_optimization;
+mod event_loop;
+mod hot_path_tracker;
+mod inline_cache;
+mod isolate_guard;
+mod isolate_pool;
+mod jit_optimizer;
+mod lock_free;
+mod memory_pool;
+mod module_loader;
+mod nodejs;
+pub mod package_manager;
 pub mod performance_reporter;
+mod test_runner;
+mod typescript;
 pub mod watcher;
 
-pub use test_runner::{TestRunner, TestRunnerConfig, TestSuite, TestCase, TestStatus, TestStats};
+pub use test_runner::{TestCase, TestRunner, TestRunnerConfig, TestStats, TestStatus, TestSuite};
 
 // Re-export AI module types for easier testing
-pub use ai_memory_pool::{AiMemoryPool, AiMemoryPoolConfig, PreallocationStrategy};
-pub use ai_batch_processor::BatchConfig;
 pub use ai_async_queue::{AiAsyncQueue, TaskPriority};
+pub use ai_batch_processor::BatchConfig;
+pub use ai_memory_pool::{AiMemoryPool, AiMemoryPoolConfig, PreallocationStrategy};
 pub use ai_model_interface::{AiModelManager, ModelType};
 
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
 static V8_INITIALIZED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-static V8_INIT_IN_PROGRESS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static V8_INIT_IN_PROGRESS: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
 static V8_AVAILABLE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
 /// Test if V8 engine is available (not poisoned)
 pub fn test_v8_availability() -> bool {
     // 如果已经测试过且不可用，直接返回
-    if !V8_AVAILABLE.load(std::sync::atomic::Ordering::SeqCst) &&
-       !V8_INITIALIZED.load(std::sync::atomic::Ordering::SeqCst) {
+    if !V8_AVAILABLE.load(std::sync::atomic::Ordering::SeqCst)
+        && !V8_INITIALIZED.load(std::sync::atomic::Ordering::SeqCst)
+    {
         return false;
     }
 
@@ -104,8 +106,7 @@ pub fn initialize_v8() {
 
     // 正常初始化（生产环境或测试环境但 V8 可用）
     V8_INIT.call_once(|| {
-        let platform = v8::new_default_platform()
-            .unwrap();
+        let platform = v8::new_default_platform().unwrap();
         v8::V8::initialize_platform(platform);
         v8::V8::initialize();
         V8_INITIALIZED.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -133,7 +134,8 @@ pub fn skip_test_if_v8_unavailable() {
         println!("⚠️  Skipping test: V8 engine is not available (Once instance is poisoned)");
         std::panic::catch_unwind(|| {
             panic!("Test skipped due to V8 unavailability");
-        }).ok();
+        })
+        .ok();
     }
 }
 
@@ -207,11 +209,7 @@ pub struct CompilationStats {
 
 impl Runtime {
     /// Create a new Beejs runtime instance with default optimization (speed)
-    pub fn new(
-        stack_size: usize,
-        max_heap: usize,
-        verbose: bool,
-    ) -> Result<Self> {
+    pub fn new(stack_size: usize, max_heap: usize, verbose: bool) -> Result<Self> {
         Self::new_with_optimization(stack_size, max_heap, verbose, OptimizeMode::Speed)
     }
 
@@ -276,10 +274,12 @@ impl Runtime {
         let jit_optimizer = Some(Arc::new(jit_optimizer::JITOptimizer::new_default()));
 
         // 初始化AI工作负载优化模块
-        let ai_batch_processor = Some(Arc::new(ai_batch_processor::AiBatchProcessor::new(BatchConfig::default())));
+        let ai_batch_processor = Some(Arc::new(ai_batch_processor::AiBatchProcessor::new(
+            BatchConfig::default(),
+        )));
         let ai_memory_pool = Some(Arc::new(ai_memory_pool::create_general_ai_memory_pool()));
         let ai_async_queue = Some(Arc::new(tokio::sync::Mutex::new(
-            ai_async_queue::AiAsyncQueue::new(ai_async_queue::QueueConfig::default())
+            ai_async_queue::AiAsyncQueue::new(ai_async_queue::QueueConfig::default()),
         )));
         let ai_model_manager = Some(Arc::new(ai_model_interface::AiModelManager::new()));
 
@@ -300,7 +300,9 @@ impl Runtime {
             println!("  AI Async Queue: enabled (concurrent task scheduling)");
             println!("  AI Model Manager: enabled (unified model interface)");
             println!("  Module Loader: enabled (npm/package.json support)");
-            println!("  Deep Optimizer: enabled (escape analysis, loop unrolling, inline optimization)");
+            println!(
+                "  Deep Optimizer: enabled (escape analysis, loop unrolling, inline optimization)"
+            );
         }
 
         // 初始化模块加载器
@@ -336,8 +338,8 @@ impl Runtime {
             println!("Executing file: {}", path.display());
         }
 
-        let code = fs::read_to_string(path)
-            .context(format!("Failed to read file: {}", path.display()))?;
+        let code =
+            fs::read_to_string(path).context(format!("Failed to read file: {}", path.display()))?;
 
         self.execute_code_with_file(&code, Some(path))
     }
@@ -369,10 +371,8 @@ impl Runtime {
 
         // 分析代码复杂度
         let complexity = code_analyzer::CodeAnalyzer::analyze_complexity(code);
-        let optimization_mode = code_analyzer::CodeAnalyzer::determine_optimization(
-            &self.optimize_mode,
-            &complexity,
-        );
+        let optimization_mode =
+            code_analyzer::CodeAnalyzer::determine_optimization(&self.optimize_mode, &complexity);
 
         if self.verbose {
             println!("Code complexity score: {:.2}", complexity.complexity_score);
@@ -428,7 +428,12 @@ impl Runtime {
             self.setup_console(scope, &context)?;
 
             // Set up Node.js compatibility APIs with current file path
-            nodejs::setup_nodejs_apis(scope, self.module_loader.clone(), &context, file.map(|p| p.as_path()))?;
+            nodejs::setup_nodejs_apis(
+                scope,
+                self.module_loader.clone(),
+                &context,
+                file.map(|p| p.as_path()),
+            )?;
 
             // Expose the runtime to JavaScript for inline cache access
             self.setup_beejs_api(scope, &context)?;
@@ -451,7 +456,8 @@ impl Runtime {
                 None => {
                     // 检查是否有异常
                     if let Some(exception) = scope.exception() {
-                        let error_msg = exception.to_string(scope)
+                        let error_msg = exception
+                            .to_string(scope)
                             .map(|s| s.to_rust_string_lossy(scope))
                             .unwrap_or_else(|| "Unknown error".to_string());
                         return Err(anyhow!("JavaScript execution error: {}", error_msg));
@@ -469,7 +475,8 @@ impl Runtime {
             }
 
             // Convert result to string
-            let result_str = result.to_string(scope)
+            let result_str = result
+                .to_string(scope)
                 .map(|s| s.to_rust_string_lossy(scope))
                 .unwrap_or_else(|| "<error>".to_string());
 
@@ -482,11 +489,8 @@ impl Runtime {
         // 热路径跟踪（如果有跟踪器）
         if let Some(ref tracker) = self.hot_path_tracker {
             let file_path_str = file.map(|p| p.to_string_lossy().to_string());
-            let suggestions = tracker.track_execution(
-                code,
-                file_path_str.as_deref(),
-                execution_time,
-            );
+            let suggestions =
+                tracker.track_execution(code, file_path_str.as_deref(), execution_time);
 
             // 输出优化建议（如果verbose）
             if self.verbose && !suggestions.is_empty() {
@@ -527,7 +531,9 @@ impl Runtime {
 
     /// Get hot path tracking statistics
     pub fn get_hot_path_stats(&self) -> Option<hot_path_tracker::HotPathStats> {
-        self.hot_path_tracker.as_ref().map(|tracker| tracker.get_stats())
+        self.hot_path_tracker
+            .as_ref()
+            .map(|tracker| tracker.get_stats())
     }
 
     /// Get identified hot paths
@@ -559,7 +565,9 @@ impl Runtime {
 
     /// Get JIT optimizer statistics
     pub fn get_jit_stats(&self) -> Option<jit_optimizer::CompileStats> {
-        self.jit_optimizer.as_ref().map(|optimizer| optimizer.get_compile_stats())
+        self.jit_optimizer
+            .as_ref()
+            .map(|optimizer| optimizer.get_compile_stats())
     }
 
     /// Reset JIT optimizer statistics
@@ -653,11 +661,14 @@ impl Runtime {
     ) -> Option<v8::Local<'a, v8::Value>> {
         if let Some(cache) = &self.inline_cache {
             // Get the receiver hash from the function
-            let receiver_str = receiver.to_string(scope).unwrap().to_rust_string_lossy(scope);
+            let receiver_str = receiver
+                .to_string(scope)
+                .unwrap()
+                .to_rust_string_lossy(scope);
             let receiver_hash = inline_cache::InlineCache::calculate_receiver_hash(&receiver_str);
 
             let cache_type = inline_cache::CacheType::Function {
-                function_name: "call".to_string(), // Simplified
+                function_name: "call".to_string(),   // Simplified
                 receiver_type: "Object".to_string(), // Simplified
             };
 
@@ -694,35 +705,40 @@ impl Runtime {
 
         // console.log
         let log_func = v8::FunctionTemplate::new(scope, console_log_callback);
-        let log_instance = log_func.get_function(scope)
+        let log_instance = log_func
+            .get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.log function"))?;
         let log_key = v8::String::new(scope, "log").unwrap();
         console.set(scope, log_key.into(), log_instance.into());
 
         // console.error
         let error_func = v8::FunctionTemplate::new(scope, console_error_callback);
-        let error_instance = error_func.get_function(scope)
+        let error_instance = error_func
+            .get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.error function"))?;
         let error_key = v8::String::new(scope, "error").unwrap();
         console.set(scope, error_key.into(), error_instance.into());
 
         // console.warn
         let warn_func = v8::FunctionTemplate::new(scope, console_warn_callback);
-        let warn_instance = warn_func.get_function(scope)
+        let warn_instance = warn_func
+            .get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.warn function"))?;
         let warn_key = v8::String::new(scope, "warn").unwrap();
         console.set(scope, warn_key.into(), warn_instance.into());
 
         // console.info
         let info_func = v8::FunctionTemplate::new(scope, console_info_callback);
-        let info_instance = info_func.get_function(scope)
+        let info_instance = info_func
+            .get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.info function"))?;
         let info_key = v8::String::new(scope, "info").unwrap();
         console.set(scope, info_key.into(), info_instance.into());
 
         // console.debug
         let debug_func = v8::FunctionTemplate::new(scope, console_debug_callback);
-        let debug_instance = debug_func.get_function(scope)
+        let debug_instance = debug_func
+            .get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get console.debug function"))?;
         let debug_key = v8::String::new(scope, "debug").unwrap();
         console.set(scope, debug_key.into(), debug_instance.into());
@@ -754,14 +770,20 @@ impl Runtime {
         let beejs = v8::Object::new(scope);
 
         // Create a function template for getProperty
-        let get_property_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
-            // This is a simplified example. In a real implementation, we would need to handle the receiver object.
-            // For now, we just return a string to indicate that the function was called.
-            let result = v8::String::new(_scope, "cached_value").unwrap();
-            _rv.set(result.into());
-        });
+        let get_property_func = v8::FunctionTemplate::new(
+            scope,
+            |_scope: &mut v8::HandleScope,
+             _args: v8::FunctionCallbackArguments,
+             mut _rv: v8::ReturnValue| {
+                // This is a simplified example. In a real implementation, we would need to handle the receiver object.
+                // For now, we just return a string to indicate that the function was called.
+                let result = v8::String::new(_scope, "cached_value").unwrap();
+                _rv.set(result.into());
+            },
+        );
 
-        let get_property_instance = get_property_func.get_function(scope)
+        let get_property_instance = get_property_func
+            .get_function(scope)
             .ok_or_else(|| anyhow!("Failed to get beejs.getProperty function"))?;
 
         let get_property_key = v8::String::new(scope, "getProperty").unwrap();
@@ -782,7 +804,9 @@ impl Runtime {
 
     /// Get GC pressure reduction percentage
     pub fn gc_pressure_reduction(&self) -> Option<f64> {
-        self.memory_pool.as_ref().map(|pool| pool.calculate_gc_pressure_reduction())
+        self.memory_pool
+            .as_ref()
+            .map(|pool| pool.calculate_gc_pressure_reduction())
     }
 
     /// Force cleanup of memory pool
@@ -798,7 +822,10 @@ impl Runtime {
             let result = optimizer.optimize_code(code);
             if result.total_optimization_benefit > 0.0 {
                 if self.verbose {
-                    println!("Applied deep optimization: benefit {:.1}", result.total_optimization_benefit);
+                    println!(
+                        "Applied deep optimization: benefit {:.1}",
+                        result.total_optimization_benefit
+                    );
                 }
                 Some(result.optimized_code)
             } else {
@@ -811,7 +838,9 @@ impl Runtime {
 
     /// Get deep optimization statistics
     pub fn get_deep_optimization_stats(&self) -> Option<deep_optimization::OptimizationStats> {
-        self.deep_optimizer.as_ref().map(|opt| opt.get_stats().clone())
+        self.deep_optimizer
+            .as_ref()
+            .map(|opt| opt.get_stats().clone())
     }
 
     /// Reset deep optimization statistics
@@ -890,9 +919,9 @@ impl Drop for Runtime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
-    use std::io::Write;
     use rusty_v8 as v8;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_runtime_creation() {
@@ -986,7 +1015,7 @@ mod tests {
 
         // 测试启动时间优化
         #[cfg(not(test))]
-        use crate::isolate_pool::{initialize_pool, acquire_isolate, release_isolate};
+        use crate::isolate_pool::{acquire_isolate, initialize_pool, release_isolate};
 
         #[cfg(not(test))]
         {
@@ -1024,11 +1053,18 @@ mod tests {
             let avg_time_per_iteration = elapsed.as_millis() as f64 / iterations as f64;
 
             // 验证性能提升 - 使用池化应该显著快于每次创建新 Isolate
-            println!("Pooled operations: {} iterations in {:.2}ms (avg: {:.2}ms per iteration)",
-                     iterations, elapsed.as_millis(), avg_time_per_iteration);
+            println!(
+                "Pooled operations: {} iterations in {:.2}ms (avg: {:.2}ms per iteration)",
+                iterations,
+                elapsed.as_millis(),
+                avg_time_per_iteration
+            );
 
             // 池化应该快于每次创建新 Isolate（理想情况下 < 1ms per iteration）
-            assert!(avg_time_per_iteration < 5.0, "Pooled isolate reuse should be faster than creating new isolates");
+            assert!(
+                avg_time_per_iteration < 5.0,
+                "Pooled isolate reuse should be faster than creating new isolates"
+            );
         }
     }
 
@@ -1038,7 +1074,7 @@ mod tests {
         // Runtime::new 会自动处理 V8 初始化
 
         #[cfg(not(test))]
-        use crate::isolate_pool::{initialize_pool, acquire_isolate, release_isolate};
+        use crate::isolate_pool::{acquire_isolate, initialize_pool, release_isolate};
 
         #[cfg(not(test))]
         {
@@ -1082,14 +1118,22 @@ mod tests {
             }
             let fresh_time = fresh_start.elapsed();
 
-            println!("Pooled time: {:?}, Fresh creation time: {:?}", pool_time, fresh_time);
+            println!(
+                "Pooled time: {:?}, Fresh creation time: {:?}",
+                pool_time, fresh_time
+            );
 
             // 池化应该比每次创建新 Isolate 更快（至少快 20%）
-            let improvement = (fresh_time.as_millis() - pool_time.as_millis()) as f64 / fresh_time.as_millis() as f64 * 100.0;
+            let improvement = (fresh_time.as_millis() - pool_time.as_millis()) as f64
+                / fresh_time.as_millis() as f64
+                * 100.0;
             println!("Performance improvement: {:.1}%", improvement);
 
             // 允许测试有一定波动，但池化应该不慢于新鲜创建
-            assert!(pool_time <= fresh_time, "Pool reuse should be faster or equal to fresh creation");
+            assert!(
+                pool_time <= fresh_time,
+                "Pool reuse should be faster or equal to fresh creation"
+            );
         }
     }
 

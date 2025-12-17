@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license
 // that can be found in the LICENSE file.
 
-use std::time::{Duration, Instant};
+use chrono::Local;
 use std::fs::File;
 use std::io::Write;
-use chrono::Local;
+use std::time::{Duration, Instant};
 
 // Simplified Runtime wrapper for benchmarking
 struct Runtime {
@@ -50,7 +50,7 @@ impl BenchmarkSuite {
             Ok(r) => {
                 println!("✅ Runtime initialized successfully");
                 r
-            },
+            }
             Err(e) => {
                 eprintln!("❌ Failed to initialize runtime: {}", e);
                 std::process::exit(1);
@@ -104,7 +104,8 @@ impl BenchmarkSuite {
         // 6. Module require benchmark
         println!("\n📊 Benchmark 6: Module System (require)");
         println!("---------------------------------------");
-        let require_result = self.benchmark_code_execution("const p = require('path'); p.join('x', 'y')", &runtime);
+        let require_result =
+            self.benchmark_code_execution("const p = require('path'); p.join('x', 'y')", &runtime);
         results.push(require_result.clone());
         println!("{}", require_result.format_summary());
 
@@ -177,11 +178,7 @@ impl BenchmarkSuite {
             durations.push(start.elapsed());
         }
 
-        BenchmarkResult::new(
-            "startup_time".to_string(),
-            self.iterations,
-            durations,
-        )
+        BenchmarkResult::new("startup_time".to_string(), self.iterations, durations)
     }
 
     fn benchmark_code_execution(&self, code: &str, runtime: &Runtime) -> BenchmarkResult {
@@ -197,11 +194,7 @@ impl BenchmarkSuite {
             durations.push(start.elapsed());
         }
 
-        BenchmarkResult::new(
-            "code_execution".to_string(),
-            self.iterations,
-            durations,
-        )
+        BenchmarkResult::new("code_execution".to_string(), self.iterations, durations)
     }
 
     /// Generate performance report
@@ -211,16 +204,28 @@ impl BenchmarkSuite {
 
         let mut report = String::new();
         report.push_str(&format!("Beejs Performance Benchmark Report\n"));
-        report.push_str(&format!("Generated: {}\n", Local::now().format("%Y-%m-%d %H:%M:%S")));
+        report.push_str(&format!(
+            "Generated: {}\n",
+            Local::now().format("%Y-%m-%d %H:%M:%S")
+        ));
         report.push_str(&format!("Iterations per test: {}\n", self.iterations));
-        report.push_str(&format!("Warmup iterations: {}\n\n", self.warmup_iterations));
+        report.push_str(&format!(
+            "Warmup iterations: {}\n\n",
+            self.warmup_iterations
+        ));
 
         // Calculate aggregate statistics
         let total_time: Duration = results.iter().map(|r| r.total_duration).sum();
         let avg_time_per_op = total_time / (results.len() as u32 * self.iterations as u32);
 
-        report.push_str(&format!("Total Benchmark Time: {:.2}ms\n", total_time.as_secs_f64() * 1000.0));
-        report.push_str(&format!("Average Time per Operation: {:.2}μs\n\n", avg_time_per_op.as_secs_f64() * 1_000_000.0));
+        report.push_str(&format!(
+            "Total Benchmark Time: {:.2}ms\n",
+            total_time.as_secs_f64() * 1000.0
+        ));
+        report.push_str(&format!(
+            "Average Time per Operation: {:.2}μs\n\n",
+            avg_time_per_op.as_secs_f64() * 1_000_000.0
+        ));
 
         // Individual benchmark results
         report.push_str("Individual Benchmark Results:\n");
@@ -232,21 +237,28 @@ impl BenchmarkSuite {
 
         // Performance score calculation
         let performance_score = self.calculate_performance_score(&results);
-        report.push_str(&format!("Overall Performance Score: {:.2}/100\n", performance_score));
+        report.push_str(&format!(
+            "Overall Performance Score: {:.2}/100\n",
+            performance_score
+        ));
 
         if performance_score >= 80.0 {
             report.push_str("Status: 🟢 EXCELLENT - Beejs is performing exceptionally well!\n");
         } else if performance_score >= 60.0 {
-            report.push_str("Status: 🟡 GOOD - Beejs performance is good, with room for optimization\n");
+            report.push_str(
+                "Status: 🟡 GOOD - Beejs performance is good, with room for optimization\n",
+            );
         } else {
-            report.push_str("Status: 🔴 NEEDS IMPROVEMENT - Beejs requires optimization to meet targets\n");
+            report.push_str(
+                "Status: 🔴 NEEDS IMPROVEMENT - Beejs requires optimization to meet targets\n",
+            );
         }
 
         // Write to file
         if !self.output_file.is_empty() {
-            if let Err(e) = File::create(&self.output_file).and_then(|mut file| {
-                file.write_all(report.as_bytes())
-            }) {
+            if let Err(e) = File::create(&self.output_file)
+                .and_then(|mut file| file.write_all(report.as_bytes()))
+            {
                 eprintln!("Warning: Failed to write report to file: {}", e);
             } else {
                 println!("\n📄 Report saved to: {}", self.output_file);
@@ -260,9 +272,8 @@ impl BenchmarkSuite {
         // Simple performance scoring based on operations per second
         // Target: 1 million ops/sec for simple operations
         let target_ops_per_sec = 1_000_000.0;
-        let actual_avg_ops = results.iter()
-            .map(|r| r.operations_per_second)
-            .sum::<f64>() / results.len() as f64;
+        let actual_avg_ops =
+            results.iter().map(|r| r.operations_per_second).sum::<f64>() / results.len() as f64;
 
         (actual_avg_ops / target_ops_per_sec * 100.0).min(100.0)
     }
@@ -281,11 +292,7 @@ pub struct BenchmarkResult {
 }
 
 impl BenchmarkResult {
-    pub fn new(
-        name: String,
-        iterations: usize,
-        durations: Vec<Duration>,
-    ) -> Self {
+    pub fn new(name: String, iterations: usize, durations: Vec<Duration>) -> Self {
         let total_duration: Duration = durations.iter().sum();
         let avg_duration = total_duration / iterations as u32;
         let min_duration = durations.iter().min().copied().unwrap_or_default();

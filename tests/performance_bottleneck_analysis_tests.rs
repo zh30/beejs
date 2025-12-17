@@ -77,8 +77,7 @@ pub struct PerformanceBottleneckAnalyzer {
 impl PerformanceBottleneckAnalyzer {
     pub fn new() -> Self {
         // 使用单例 Runtime，避免 V8 生命周期问题
-        let runtime = Runtime::new(67108864, 1073741824, false)
-            .expect("Failed to create runtime");
+        let runtime = Runtime::new(67108864, 1073741824, false).expect("Failed to create runtime");
         Self { runtime }
     }
 
@@ -104,7 +103,7 @@ impl PerformanceBottleneckAnalyzer {
         let mut analysis = BottleneckAnalysis::new(
             "复杂计算".to_string(),
             "递归、循环、函数调用等复杂逻辑".to_string(),
-            650.0, // 当前性能：ops/sec（来自性能报告）
+            650.0,  // 当前性能：ops/sec（来自性能报告）
             2100.0, // 目标性能：Bun 的性能
             "Critical".to_string(),
         );
@@ -142,7 +141,7 @@ impl PerformanceBottleneckAnalyzer {
             "启动时间".to_string(),
             "Runtime 初始化和第一个脚本执行".to_string(),
             11.0, // 当前性能：ms（已经比 Bun 快）
-            8.0, // 目标性能：进一步优化
+            8.0,  // 目标性能：进一步优化
             "Low".to_string(),
         );
 
@@ -203,7 +202,12 @@ impl PerformanceBottleneckAnalyzer {
 
         println!("\n=== 优化优先级排序 ===");
         for (i, analysis) in sorted_analyses.iter().enumerate() {
-            println!("{}. {} (优先级: {})", i + 1, analysis.category, analysis.priority);
+            println!(
+                "{}. {} (优先级: {})",
+                i + 1,
+                analysis.category,
+                analysis.priority
+            );
         }
 
         analyses
@@ -230,7 +234,9 @@ impl PerformanceBottleneckAnalyzer {
         println!("测试复杂计算...");
         let start = Instant::now();
         for _ in 0..100 {
-            let _ = self.runtime.execute_code("let sum = 0; for (let i = 0; i < 1000; i++) sum += i; sum;");
+            let _ = self
+                .runtime
+                .execute_code("let sum = 0; for (let i = 0; i < 1000; i++) sum += i; sum;");
         }
         let duration = start.elapsed();
         let ops_per_sec = 100.0 / duration.as_secs_f64();

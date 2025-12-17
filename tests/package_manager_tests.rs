@@ -1,6 +1,6 @@
 use beejs::Runtime;
-use tempfile::{NamedTempFile, TempDir};
 use std::io::Write;
+use tempfile::{NamedTempFile, TempDir};
 
 #[test]
 fn test_parse_package_json() {
@@ -8,14 +8,18 @@ fn test_parse_package_json() {
 
     // Create a temporary package.json
     let mut package_json = NamedTempFile::new().unwrap();
-    writeln!(package_json, r#"{{
+    writeln!(
+        package_json,
+        r#"{{
         "name": "test-package",
         "version": "1.0.0",
         "main": "index.js",
         "dependencies": {{
             "lodash": "^4.17.0"
         }}
-    }}"#).unwrap();
+    }}"#
+    )
+    .unwrap();
 
     let result = runtime.execute_file(&package_json.path().to_path_buf());
     // Package.json is not executable JavaScript, should error
@@ -31,21 +35,29 @@ fn test_require_basic_module() {
 
     // Create module file in the temp directory
     let module_file = temp_dir.path().join("math.js");
-    std::fs::write(&module_file, "
+    std::fs::write(
+        &module_file,
+        "
         module.exports = {
             add: (a, b) => a + b,
             multiply: (a, b) => a * b
         };
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
     // Create main file in the same directory
     let main_file = temp_dir.path().join("main.js");
-    std::fs::write(&main_file, "
+    std::fs::write(
+        &main_file,
+        "
         const math = require('./math.js');
         console.log(math.add(5, 3));
         console.log(math.multiply(4, 7));
         math.add(5, 3)
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
     let result = runtime.execute_file(&main_file);
     assert!(result.is_ok());
@@ -65,18 +77,26 @@ fn test_require_relative_path() {
     std::fs::create_dir_all(&module_dir).unwrap();
 
     let module_file = module_dir.join("utils.js");
-    std::fs::write(&module_file, "
+    std::fs::write(
+        &module_file,
+        "
         exports.greet = (name) => 'Hello, ' + name + '!';
         exports.PI = 3.14159;
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
     // Create main file - return the value directly instead of using console.log
     let main_file = temp_dir.path().join("main.js");
-    std::fs::write(&main_file, "
+    std::fs::write(
+        &main_file,
+        "
         const utils = require('./lib/utils.js');
         utils.greet('World');
         utils.PI
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
     let result = runtime.execute_file(&main_file);
     assert!(result.is_ok());
@@ -92,7 +112,9 @@ fn test_module_exports_object() {
     let temp_dir = TempDir::new().unwrap();
 
     let module_file = temp_dir.path().join("config.js");
-    std::fs::write(&module_file, "
+    std::fs::write(
+        &module_file,
+        "
         const config = {
             apiUrl: 'https://api.example.com',
             timeout: 5000,
@@ -100,15 +122,21 @@ fn test_module_exports_object() {
         };
 
         module.exports = config;
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
     let main_file = temp_dir.path().join("main.js");
-    std::fs::write(&main_file, "
+    std::fs::write(
+        &main_file,
+        "
         const config = require('./config.js');
         config.apiUrl;
         config.timeout;
         config
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
     let result = runtime.execute_file(&main_file);
     assert!(result.is_ok());
@@ -131,13 +159,17 @@ fn test_multiple_requires() {
     std::fs::write(&module2, "module.exports = 'module2';").unwrap();
 
     let main_file = temp_dir.path().join("main.js");
-    std::fs::write(&main_file, "
+    std::fs::write(
+        &main_file,
+        "
         const mod1 = require('./module1.js');
         const mod2 = require('./module2.js');
         mod1;
         mod2;
         mod2
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
     let result = runtime.execute_file(&main_file);
     assert!(result.is_ok());
@@ -159,11 +191,15 @@ fn test_nested_require() {
 
     // Main file that requires nested module
     let main_file = temp_dir.path().join("main.js");
-    std::fs::write(&main_file, r#"
+    std::fs::write(
+        &main_file,
+        r#"
         const nested = require('./deep/nested.js');
         console.log(nested.value);
         nested.value
-    "#).unwrap();
+    "#,
+    )
+    .unwrap();
 
     let result = runtime.execute_file(&main_file);
     assert!(result.is_ok());
@@ -199,29 +235,41 @@ fn test_circular_dependency() {
     let module_a = temp_dir.path().join("moduleA.js");
     let module_b = temp_dir.path().join("moduleB.js");
 
-    std::fs::write(&module_a, "
+    std::fs::write(
+        &module_a,
+        "
         const moduleB = require('./moduleB.js');
         module.exports = {
             name: 'A',
             fromB: moduleB.name
         };
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
-    std::fs::write(&module_b, "
+    std::fs::write(
+        &module_b,
+        "
         const moduleA = require('./moduleA.js');
         module.exports = {
             name: 'B',
             fromA: moduleA.name
         };
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
     let main_file = temp_dir.path().join("main.js");
-    std::fs::write(&main_file, "
+    std::fs::write(
+        &main_file,
+        "
         const moduleA = require('./moduleA.js');
         console.log(moduleA.name);
         console.log(moduleA.fromB);
         moduleA.name
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
     let result = runtime.execute_file(&main_file);
     // Circular dependencies should work (module.exports is set before require executes)
@@ -235,7 +283,9 @@ fn test_module_caching() {
     let temp_dir = TempDir::new().unwrap();
 
     let module_file = temp_dir.path().join("counter.js");
-    std::fs::write(&module_file, "
+    std::fs::write(
+        &module_file,
+        "
         let count = 0;
         module.exports = {
             getCount: () => {
@@ -243,17 +293,23 @@ fn test_module_caching() {
                 return count;
             }
         };
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
     let main_file = temp_dir.path().join("main.js");
-    std::fs::write(&main_file, "
+    std::fs::write(
+        &main_file,
+        "
         const mod1 = require('./counter.js');
         const mod2 = require('./counter.js');  // Should get same module instance
         const result1 = mod1.getCount();
         const result2 = mod2.getCount();
         const result3 = mod1.getCount();
         result3
-    ").unwrap();
+    ",
+    )
+    .unwrap();
 
     let result = runtime.execute_file(&main_file);
     assert!(result.is_ok());

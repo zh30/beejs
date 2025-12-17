@@ -22,10 +22,7 @@ pub enum AiTaskType {
         top_k: Option<usize>,
     },
     /// 嵌入向量生成
-    Embedding {
-        text: String,
-        model_name: String,
-    },
+    Embedding { text: String, model_name: String },
     /// 翻译任务
     Translation {
         text: String,
@@ -115,11 +112,17 @@ pub struct BatchStats {
 }
 
 impl BatchStats {
-    pub fn record_batch(&mut self, batch_size: usize, processing_time: Duration, memory_used: usize) {
+    pub fn record_batch(
+        &mut self,
+        batch_size: usize,
+        processing_time: Duration,
+        memory_used: usize,
+    ) {
         self.total_tasks_processed += batch_size;
         self.total_batches_processed += 1;
         self.total_processing_time += processing_time;
-        self.average_batch_size = self.total_tasks_processed as f64 / self.total_batches_processed as f64;
+        self.average_batch_size =
+            self.total_tasks_processed as f64 / self.total_batches_processed as f64;
         self.peak_memory_usage = self.peak_memory_usage.max(memory_used);
     }
 
@@ -267,7 +270,11 @@ impl AiBatchProcessor {
         let start_time = Instant::now();
 
         let result = match task {
-            AiTaskType::TextGeneration { prompt, max_tokens: _, temperature: _ } => {
+            AiTaskType::TextGeneration {
+                prompt,
+                max_tokens: _,
+                temperature: _,
+            } => {
                 // 模拟文本生成
                 tokio::time::sleep(Duration::from_millis(50)).await;
                 AiTaskResult::TextGeneration {
@@ -276,7 +283,10 @@ impl AiBatchProcessor {
                     processing_time: start_time.elapsed(),
                 }
             }
-            AiTaskType::ImageClassification { image_data: _, top_k } => {
+            AiTaskType::ImageClassification {
+                image_data: _,
+                top_k,
+            } => {
                 // 模拟图像分类
                 tokio::time::sleep(Duration::from_millis(100)).await;
                 let predictions = vec![
@@ -294,7 +304,10 @@ impl AiBatchProcessor {
                     processing_time: start_time.elapsed(),
                 }
             }
-            AiTaskType::Embedding { text: _, model_name: _ } => {
+            AiTaskType::Embedding {
+                text: _,
+                model_name: _,
+            } => {
                 // 模拟嵌入向量生成
                 tokio::time::sleep(Duration::from_millis(30)).await;
                 let dimensions = 384;
@@ -305,10 +318,17 @@ impl AiBatchProcessor {
                     processing_time: start_time.elapsed(),
                 }
             }
-            AiTaskType::Translation { text, source_lang, target_lang } => {
+            AiTaskType::Translation {
+                text,
+                source_lang,
+                target_lang,
+            } => {
                 // 模拟翻译
                 tokio::time::sleep(Duration::from_millis(80)).await;
-                let translated = format!("Translated: {} from {} to {}", text, source_lang, target_lang);
+                let translated = format!(
+                    "Translated: {} from {} to {}",
+                    text, source_lang, target_lang
+                );
                 AiTaskResult::Translation {
                     translated_text: translated,
                     source_lang: source_lang.clone(),

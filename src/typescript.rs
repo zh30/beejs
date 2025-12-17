@@ -37,7 +37,11 @@ impl TypeScriptCompiler {
 
     /// Compile a single line of TypeScript
     #[allow(dead_code)]
-    fn compile_line(&mut self, line: &str, lines: &mut std::iter::Peekable<std::str::Lines>) -> Result<String> {
+    fn compile_line(
+        &mut self,
+        line: &str,
+        lines: &mut std::iter::Peekable<std::str::Lines>,
+    ) -> Result<String> {
         // Skip empty lines and comments
         if line.is_empty() || line.starts_with("//") {
             return Ok(line.to_string());
@@ -88,7 +92,11 @@ impl TypeScriptCompiler {
 
     /// Compile multi-line comments
     #[allow(dead_code)]
-    fn compile_multiline_comment(&mut self, line: &str, lines: &mut std::iter::Peekable<std::str::Lines>) -> Result<String> {
+    fn compile_multiline_comment(
+        &mut self,
+        line: &str,
+        lines: &mut std::iter::Peekable<std::str::Lines>,
+    ) -> Result<String> {
         let mut result = line.to_string();
 
         // Find the end of the multi-line comment
@@ -115,9 +123,10 @@ impl TypeScriptCompiler {
         let leading_ws = line.len() - line.trim_start().len();
         let trimmed = line.trim_start();
 
-        if let Some(prefix) = ["let ", "const ", "var "].iter().find(|prefix| {
-            trimmed.starts_with(*prefix)
-        }) {
+        if let Some(prefix) = ["let ", "const ", "var "]
+            .iter()
+            .find(|prefix| trimmed.starts_with(*prefix))
+        {
             let prefix_len = prefix.len();
             let after_prefix = &trimmed[prefix_len..];
 
@@ -133,13 +142,25 @@ impl TypeScriptCompiler {
 
                 // Store type information
                 let type_annotation = after_colon[..type_end].trim();
-                self.type_map.insert(var_name.to_string(), type_annotation.to_string());
+                self.type_map
+                    .insert(var_name.to_string(), type_annotation.to_string());
 
                 // Reconstruct without type, preserving leading whitespace
                 let ws = &line[..leading_ws];
                 // remaining starts with '=' or ';', need space before it
-                let sep = if remaining.trim_start().starts_with('=') { " " } else { "" };
-                result = format!("{}{}{}{}{}", ws, prefix, var_name, sep, remaining.trim_start());
+                let sep = if remaining.trim_start().starts_with('=') {
+                    " "
+                } else {
+                    ""
+                };
+                result = format!(
+                    "{}{}{}{}{}",
+                    ws,
+                    prefix,
+                    var_name,
+                    sep,
+                    remaining.trim_start()
+                );
             }
         }
 
@@ -181,7 +202,13 @@ impl TypeScriptCompiler {
                 if let Some(close_paren) = result[open_paren..].find(')') {
                     let params = &result[open_paren + 1..open_paren + close_paren];
                     let cleaned_params = self.clean_parameter_list(params);
-                    result = format!("{}{}{} => {}", &result[..open_paren + 1], cleaned_params, ")", after_arrow);
+                    result = format!(
+                        "{}{}{} => {}",
+                        &result[..open_paren + 1],
+                        cleaned_params,
+                        ")",
+                        after_arrow
+                    );
                 }
             }
         }
@@ -456,7 +483,10 @@ mod tests {
         // Test function with return type
         let input = "function add(a: number, b: number): number { return a + b; }";
         let output = compiler.remove_return_type(input);
-        assert_eq!(output, "function add(a: number, b: number) { return a + b; }");
+        assert_eq!(
+            output,
+            "function add(a: number, b: number) { return a + b; }"
+        );
     }
 
     #[test]

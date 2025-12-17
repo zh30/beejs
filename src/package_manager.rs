@@ -8,13 +8,13 @@
 //! - 包下载和缓存
 //! - node_modules 结构管理
 
+use anyhow::{anyhow, Result};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 use std::fs;
 #[allow(unused_imports)]
 use std::io::Write;
-use serde::{Deserialize, Serialize};
-use anyhow::{Result, anyhow};
+use std::path::{Path, PathBuf};
 
 /// Package manager configuration
 #[derive(Debug, Clone)]
@@ -114,8 +114,8 @@ impl PackageManager {
 
     /// Parse package.json file
     pub fn parse_package_json(&self, path: &Path) -> Result<PackageJson> {
-        let content = fs::read_to_string(path)
-            .map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
+        let content =
+            fs::read_to_string(path).map_err(|e| anyhow!("Failed to read package.json: {}", e))?;
 
         let package: PackageJson = serde_json::from_str(&content)
             .map_err(|e| anyhow!("Failed to parse package.json: {}", e))?;
@@ -144,14 +144,16 @@ impl PackageManager {
         let content = serde_json::to_string_pretty(&package)
             .map_err(|e| anyhow!("Failed to serialize package.json: {}", e))?;
 
-        fs::write(&path, content)
-            .map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
+        fs::write(&path, content).map_err(|e| anyhow!("Failed to write package.json: {}", e))?;
 
         Ok(package)
     }
 
     /// Install dependencies from package.json
-    pub fn install_dependencies(&self, package_json: &PackageJson) -> Result<Vec<ResolutionResult>> {
+    pub fn install_dependencies(
+        &self,
+        package_json: &PackageJson,
+    ) -> Result<Vec<ResolutionResult>> {
         let mut results = Vec::new();
 
         // Install regular dependencies
@@ -197,7 +199,12 @@ impl PackageManager {
     }
 
     /// Add a dependency
-    pub fn add_dependency(&self, package_json: &mut PackageJson, name: &str, version: &str) -> Result<()> {
+    pub fn add_dependency(
+        &self,
+        package_json: &mut PackageJson,
+        name: &str,
+        version: &str,
+    ) -> Result<()> {
         if package_json.dependencies.is_none() {
             package_json.dependencies = Some(HashMap::new());
         }
@@ -224,14 +231,14 @@ impl PackageManager {
 
         if self.config.node_modules_dir.exists() {
             for entry in fs::read_dir(&self.config.node_modules_dir)
-                .map_err(|e| anyhow!("Failed to read node_modules: {}", e))? {
-
-                let entry = entry
-                    .map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
+                .map_err(|e| anyhow!("Failed to read node_modules: {}", e))?
+            {
+                let entry = entry.map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
 
                 let path = entry.path();
                 if path.is_dir() {
-                    let _name = path.file_name()
+                    let _name = path
+                        .file_name()
                         .and_then(|s| s.to_str())
                         .map(|s| s.to_string())
                         .unwrap_or_default();
@@ -303,14 +310,18 @@ mod tests {
 
         // Create a test package.json
         let mut package_json = NamedTempFile::new_in(temp_dir.path()).unwrap();
-        writeln!(package_json, r#"{{
+        writeln!(
+            package_json,
+            r#"{{
             "name": "test-package",
             "version": "1.0.0",
             "main": "index.js",
             "dependencies": {{
                 "lodash": "^4.17.0"
             }}
-        }}"#).unwrap();
+        }}"#
+        )
+        .unwrap();
 
         let package = pm.parse_package_json(package_json.path()).unwrap();
         assert_eq!(package.name, "test-package");
@@ -362,7 +373,8 @@ mod tests {
             repository: None,
         };
 
-        pm.add_dependency(&mut package, "lodash", "^4.17.0").unwrap();
+        pm.add_dependency(&mut package, "lodash", "^4.17.0")
+            .unwrap();
         assert!(package.dependencies.is_some());
 
         if let Some(deps) = &package.dependencies {

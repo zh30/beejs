@@ -1,6 +1,6 @@
 //! Hot Reload Tests for Beejs Runtime
 
-use beejs::watcher::{HotReloader, WatcherConfig, WatcherConfigBuilder, FileChangeType};
+use beejs::watcher::{FileChangeType, HotReloader, WatcherConfig, WatcherConfigBuilder};
 use std::path::Path;
 use std::time::Duration;
 

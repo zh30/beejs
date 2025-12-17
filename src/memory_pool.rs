@@ -359,7 +359,7 @@ mod tests {
     #[test]
     fn test_memory_stats() {
         let pool = SmartMemoryPool::new(PoolConfig {
-            string_pool_size: 0,  // 不预分配，强制创建新的
+            string_pool_size: 0, // 不预分配，强制创建新的
             object_pool_size: 0,
             buffer_timeout: Duration::from_secs(60),
             min_usage_threshold: 1,

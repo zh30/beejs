@@ -1,9 +1,12 @@
 //! AI异步任务队列
 //! 高性能异步任务调度和队列管理系统
 
-use std::collections::{BinaryHeap, HashMap};
 use std::cmp::{Ordering, Reverse};
-use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering as AtomicOrdering}};
+use std::collections::{BinaryHeap, HashMap};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering as AtomicOrdering},
+    Arc, Mutex,
+};
 use std::time::{Duration, Instant};
 use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinHandle;
@@ -56,8 +59,7 @@ struct QueueTask {
 
 impl PartialEq for QueueTask {
     fn eq(&self, other: &Self) -> bool {
-        self.task.priority == other.task.priority
-            && self.enqueue_time == other.enqueue_time
+        self.task.priority == other.task.priority && self.enqueue_time == other.enqueue_time
     }
 }
 
@@ -175,7 +177,8 @@ impl QueueStats {
     #[allow(dead_code)]
     pub fn update_throughput(&mut self, elapsed: Duration) {
         if elapsed.as_secs_f64() > 0.0 {
-            self.throughput_tasks_per_second = self.total_tasks_completed as f64 / elapsed.as_secs_f64();
+            self.throughput_tasks_per_second =
+                self.total_tasks_completed as f64 / elapsed.as_secs_f64();
         }
     }
 }
@@ -209,7 +212,16 @@ impl AiAsyncQueue {
             let config = self.config.clone();
 
             let handle = tokio::spawn(async move {
-                worker_loop(worker_id, tasks, running_tasks, task_results, queue_semaphore, stats, config).await;
+                worker_loop(
+                    worker_id,
+                    tasks,
+                    running_tasks,
+                    task_results,
+                    queue_semaphore,
+                    stats,
+                    config,
+                )
+                .await;
             });
 
             handles.push(handle);
@@ -241,7 +253,10 @@ impl AiAsyncQueue {
     }
 
     /// 入队任务
-    pub async fn enqueue(&self, task: AiTask) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn enqueue(
+        &self,
+        task: AiTask,
+    ) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
         // 检查队列容量
         {
             let stats = self.stats.lock().unwrap();
@@ -307,7 +322,10 @@ impl AiAsyncQueue {
     }
 
     /// 取消任务
-    pub async fn cancel(&self, task_id: usize) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn cancel(
+        &self,
+        task_id: usize,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // 标记任务为已取消
         let result = TaskResult {
             task_id,
@@ -391,15 +409,20 @@ async fn worker_loop(
             let task = queue_task.task;
             {
                 let mut running = running_tasks.lock().unwrap();
-                running.insert(task.id, RunningTaskInfo {
-                    task: task.clone(),
-                    start_time: Instant::now(),
-                    worker_id,
-                });
+                running.insert(
+                    task.id,
+                    RunningTaskInfo {
+                        task: task.clone(),
+                        start_time: Instant::now(),
+                        worker_id,
+                    },
+                );
 
                 let mut stats_guard = stats.lock().unwrap();
                 stats_guard.current_running_tasks += 1;
-                stats_guard.peak_running_tasks = stats_guard.peak_running_tasks.max(stats_guard.current_running_tasks);
+                stats_guard.peak_running_tasks = stats_guard
+                    .peak_running_tasks
+                    .max(stats_guard.current_running_tasks);
             }
 
             // 执行任务
@@ -432,24 +455,25 @@ async fn execute_task(task: &AiTask) -> TaskResult {
     let start_time = Instant::now();
 
     // 模拟任务执行
-    let execution_result: Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> = match task.task_type.as_str() {
-        "text_generation" => {
-            tokio::time::sleep(Duration::from_millis(50)).await;
-            Ok(vec![0; 1024])
-        }
-        "image_classification" => {
-            tokio::time::sleep(Duration::from_millis(100)).await;
-            Ok(vec![0; 2048])
-        }
-        "embedding" => {
-            tokio::time::sleep(Duration::from_millis(30)).await;
-            Ok(vec![0; 512])
-        }
-        _ => {
-            tokio::time::sleep(Duration::from_millis(10)).await;
-            Ok(vec![0; 256])
-        }
-    };
+    let execution_result: Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> =
+        match task.task_type.as_str() {
+            "text_generation" => {
+                tokio::time::sleep(Duration::from_millis(50)).await;
+                Ok(vec![0; 1024])
+            }
+            "image_classification" => {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                Ok(vec![0; 2048])
+            }
+            "embedding" => {
+                tokio::time::sleep(Duration::from_millis(30)).await;
+                Ok(vec![0; 512])
+            }
+            _ => {
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                Ok(vec![0; 256])
+            }
+        };
 
     let execution_time = start_time.elapsed();
 

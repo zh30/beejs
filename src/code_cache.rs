@@ -1,8 +1,8 @@
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
 
 /// 字节码缓存条目
 #[derive(Debug, Clone)]
@@ -114,7 +114,10 @@ impl BytecodeCache {
             entry.access_count += 1;
             stats.hits += 1;
 
-            println!("[CACHE HIT] Key: {}, Access count: {}", key, entry.access_count);
+            println!(
+                "[CACHE HIT] Key: {}, Access count: {}",
+                key, entry.access_count
+            );
             Some(entry.script.clone())
         } else {
             stats.misses += 1;
@@ -132,17 +135,23 @@ impl BytecodeCache {
         let mut stats = self.stats.lock().unwrap();
 
         // 插入新条目
-        entries.insert(key.clone(), CacheEntry {
-            script,
-            created_at: now,
-            last_accessed: now,
-            access_count: 1,
-            file_modified: None,
-        });
+        entries.insert(
+            key.clone(),
+            CacheEntry {
+                script,
+                created_at: now,
+                last_accessed: now,
+                access_count: 1,
+                file_modified: None,
+            },
+        );
 
         stats.total_cached += 1;
 
-        println!("[CACHE STORE] Key: {}, Total cached: {}", key, stats.total_cached);
+        println!(
+            "[CACHE STORE] Key: {}, Total cached: {}",
+            key, stats.total_cached
+        );
 
         // 检查是否需要清理
         if entries.len() > self.config.max_entries {
@@ -179,7 +188,11 @@ impl BytecodeCache {
         }
 
         if stats.evictions > 0 {
-            println!("[CACHE CLEANUP] Evicted {} entries, {} remaining", stats.evictions, entries.len());
+            println!(
+                "[CACHE CLEANUP] Evicted {} entries, {} remaining",
+                stats.evictions,
+                entries.len()
+            );
         }
     }
 

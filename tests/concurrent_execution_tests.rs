@@ -1,10 +1,10 @@
 //! 并发执行测试
 //! 测试 Beejs 在并发场景下的性能表现
 
+use beejs::Runtime;
 use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::{Duration, Instant};
-use beejs::Runtime;
 use tokio::runtime::Runtime as TokioRuntime;
 
 #[cfg(test)]
@@ -52,7 +52,10 @@ mod tests {
         let elapsed = start.elapsed();
         let success_count = results.load(std::sync::atomic::Ordering::SeqCst);
 
-        println!("并发执行 {} 个脚本，耗时: {:?}, 成功: {}", concurrent_count, elapsed, success_count);
+        println!(
+            "并发执行 {} 个脚本，耗时: {:?}, 成功: {}",
+            concurrent_count, elapsed, success_count
+        );
         assert_eq!(success_count, concurrent_count);
         assert!(elapsed < Duration::from_secs(30)); // 应该在30秒内完成
     }
@@ -77,11 +80,15 @@ mod tests {
                 })
                 .collect();
 
-            let results: Vec<Result<String, tokio::task::JoinError>> = futures::future::join_all(tasks).await;
+            let results: Vec<Result<String, tokio::task::JoinError>> =
+                futures::future::join_all(tasks).await;
 
             let elapsed = start.elapsed();
 
-            println!("异步I/O测试：{} 个任务，耗时: {:?}", concurrent_tasks, elapsed);
+            println!(
+                "异步I/O测试：{} 个任务，耗时: {:?}",
+                concurrent_tasks, elapsed
+            );
             assert_eq!(results.len(), concurrent_tasks);
             assert!(elapsed < Duration::from_secs(10));
         });
@@ -134,8 +141,10 @@ mod tests {
         let elapsed = start.elapsed();
         let final_count = counter.load(std::sync::atomic::Ordering::SeqCst);
 
-        println!("锁竞争测试：{} 线程，每线程 {} 次操作，总计: {}, 耗时: {:?}",
-                 thread_count, iterations_per_thread, final_count, elapsed);
+        println!(
+            "锁竞争测试：{} 线程，每线程 {} 次操作，总计: {}, 耗时: {:?}",
+            thread_count, iterations_per_thread, final_count, elapsed
+        );
 
         assert_eq!(final_count, thread_count * iterations_per_thread);
         assert!(elapsed < Duration::from_millis(100));
@@ -158,7 +167,10 @@ mod tests {
 
         let elapsed = start.elapsed();
 
-        println!("零拷贝测试：传输 {} bytes，{} 次，耗时: {:?}", data_size, iterations, elapsed);
+        println!(
+            "零拷贝测试：传输 {} bytes，{} 次，耗时: {:?}",
+            data_size, iterations, elapsed
+        );
 
         // 零拷贝应该非常快
         assert!(elapsed < Duration::from_millis(10));
@@ -186,8 +198,10 @@ mod tests {
 
         let elapsed = start.elapsed();
 
-        println!("内存池并发测试：{} 线程，每线程 {} 操作，耗时: {:?}",
-                 thread_count, operations_per_thread, elapsed);
+        println!(
+            "内存池并发测试：{} 线程，每线程 {} 操作，耗时: {:?}",
+            thread_count, operations_per_thread, elapsed
+        );
 
         assert!(elapsed < Duration::from_secs(5));
     }
@@ -219,8 +233,10 @@ mod tests {
         let elapsed = start.elapsed();
         let success_count = results.load(std::sync::atomic::Ordering::SeqCst);
 
-        println!("Isolate池并发测试：{} 任务，耗时: {:?}, 成功: {}",
-                 concurrent_tasks, elapsed, success_count);
+        println!(
+            "Isolate池并发测试：{} 任务，耗时: {:?}, 成功: {}",
+            concurrent_tasks, elapsed, success_count
+        );
 
         assert_eq!(success_count, concurrent_tasks);
         assert!(elapsed < Duration::from_secs(20));
@@ -236,7 +252,8 @@ mod tests {
             println!("⚠️  Skipping test: V8 engine is not available (Once instance is poisoned)");
             std::panic::catch_unwind(|| {
                 panic!("Test skipped due to V8 unavailability");
-            }).ok();
+            })
+            .ok();
             return;
         }
 
@@ -268,7 +285,8 @@ mod tests {
             println!("⚠️  Skipping test: V8 engine is not available (Once instance is poisoned)");
             std::panic::catch_unwind(|| {
                 panic!("Test skipped due to V8 unavailability");
-            }).ok();
+            })
+            .ok();
             return;
         }
 
@@ -335,6 +353,9 @@ mod tests {
         println!("✅ Isolate池并发使用测试跳过，耗时: {:?}\n", test6_elapsed);
 
         println!("=== 并发性能基准测试完成 ===\n");
-        println!("总耗时: {:?}\n", test1_elapsed + test3_elapsed + test4_elapsed + test5_elapsed + test6_elapsed);
+        println!(
+            "总耗时: {:?}\n",
+            test1_elapsed + test3_elapsed + test4_elapsed + test5_elapsed + test6_elapsed
+        );
     }
 }

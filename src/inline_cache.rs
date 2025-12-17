@@ -1,22 +1,27 @@
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+use std::string::String;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use std::collections::hash_map::DefaultHasher;
-use std::string::String;
 
 /// Represents the type of cache entry (property access or function call)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CacheType {
     /// Cache for object property access
-    Property { object_type: String, property_name: String },
+    Property {
+        object_type: String,
+        property_name: String,
+    },
     /// Cache for function calls
-    Function { function_name: String, receiver_type: String },
+    Function {
+        function_name: String,
+        receiver_type: String,
+    },
 }
 
 /// Key for cache entries
-#[derive(Eq, Hash, PartialEq)]
-#[derive(Debug, Clone)]
+#[derive(Eq, Hash, PartialEq, Debug, Clone)]
 pub struct CacheKey {
     pub cache_type: CacheType,
     pub receiver_hash: u64,
@@ -123,7 +128,13 @@ impl InlineCache {
     }
 
     /// Puts a value into the cache
-    pub fn put(&self, cache_type: CacheType, receiver_hash: u64, cached_value: String, type_version: u64) {
+    pub fn put(
+        &self,
+        cache_type: CacheType,
+        receiver_hash: u64,
+        cached_value: String,
+        type_version: u64,
+    ) {
         let key = CacheKey {
             cache_type: cache_type.clone(),
             receiver_hash,
@@ -132,12 +143,15 @@ impl InlineCache {
         let mut entries = self.entries.lock().unwrap();
         let mut stats = self.stats.lock().unwrap();
 
-        entries.insert(key, CacheEntry {
-            cached_value,
-            type_version,
-            access_count: 1,
-            last_accessed: Instant::now(),
-        });
+        entries.insert(
+            key,
+            CacheEntry {
+                cached_value,
+                type_version,
+                access_count: 1,
+                last_accessed: Instant::now(),
+            },
+        );
 
         stats.total_cached += 1;
 
@@ -148,7 +162,11 @@ impl InlineCache {
     }
 
     /// Evicts old or infrequently used entries
-    fn evict_old_entries(&self, entries: &mut HashMap<CacheKey, CacheEntry>, stats: &mut CacheStats) {
+    fn evict_old_entries(
+        &self,
+        entries: &mut HashMap<CacheKey, CacheEntry>,
+        stats: &mut CacheStats,
+    ) {
         let now = Instant::now();
         let max_age = self.config.max_age;
         let min_access = self.config.min_access_count;
@@ -247,7 +265,12 @@ mod tests {
         };
         let receiver_hash = InlineCache::calculate_receiver_hash("obj");
 
-        cache.put(cache_type.clone(), receiver_hash, "cached_value".to_string(), 1);
+        cache.put(
+            cache_type.clone(),
+            receiver_hash,
+            "cached_value".to_string(),
+            1,
+        );
 
         let result = cache.get(&cache_type, receiver_hash);
         assert_eq!(result, Some("cached_value".to_string()));
@@ -283,7 +306,12 @@ mod tests {
         };
         let receiver_hash = InlineCache::calculate_receiver_hash("obj");
 
-        cache.put(cache_type.clone(), receiver_hash, "cached_value".to_string(), 1);
+        cache.put(
+            cache_type.clone(),
+            receiver_hash,
+            "cached_value".to_string(),
+            1,
+        );
 
         cache.invalidate_receiver(receiver_hash);
 

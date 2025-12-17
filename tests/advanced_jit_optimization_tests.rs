@@ -106,9 +106,11 @@ pub struct AdvancedJITOptimizer {
 
 impl AdvancedJITOptimizer {
     pub fn new(iterations: usize) -> Self {
-        let runtime = Runtime::new(67108864, 1073741824, false)
-            .expect("Failed to create runtime");
-        Self { runtime, iterations }
+        let runtime = Runtime::new(67108864, 1073741824, false).expect("Failed to create runtime");
+        Self {
+            runtime,
+            iterations,
+        }
     }
 
     /// 测试逃逸分析优化
@@ -281,7 +283,12 @@ impl AdvancedJITOptimizer {
     }
 
     /// 通用性能比较方法
-    fn benchmark_and_compare(&self, name: &str, baseline_code: &str, optimized_code: &str) -> AdvancedOptimizationResult {
+    fn benchmark_and_compare(
+        &self,
+        name: &str,
+        baseline_code: &str,
+        optimized_code: &str,
+    ) -> AdvancedOptimizationResult {
         // 预热
         for _ in 0..10 {
             let _ = self.runtime.execute_code(baseline_code);
@@ -323,7 +330,9 @@ mod tests {
     macro_rules! require_v8 {
         () => {
             if !is_v8_available() {
-                println!("⚠️  Skipping test: V8 engine is not available (Once instance is poisoned)");
+                println!(
+                    "⚠️  Skipping test: V8 engine is not available (Once instance is poisoned)"
+                );
                 return;
             }
         };

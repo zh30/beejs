@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// JIT编译阈值配置
 #[derive(Debug, Clone)]
@@ -22,10 +22,10 @@ pub struct JITThresholds {
 impl Default for JITThresholds {
     fn default() -> Self {
         Self {
-            simple_threshold: 1,    // 立即编译简单代码
-            medium_threshold: 1,    // 立即编译中等代码
-            complex_threshold: 1,   // 立即编译复杂代码
-            recompile_threshold: 3, // 更积极的重新编译
+            simple_threshold: 1,     // 立即编译简单代码
+            medium_threshold: 1,     // 立即编译中等代码
+            complex_threshold: 1,    // 立即编译复杂代码
+            recompile_threshold: 3,  // 更积极的重新编译
             max_compile_time_ms: 30, // 减少最大编译时间
         }
     }
@@ -141,7 +141,8 @@ impl JITOptimizer {
         let condition_count = code.matches("if").count() + code.matches("?").count();
 
         // 计算复杂度分数
-        let complexity_score = (fn_count * 3) + (loop_count * 5) + (condition_count * 2) + (line_count / 10);
+        let complexity_score =
+            (fn_count * 3) + (loop_count * 5) + (condition_count * 2) + (line_count / 10);
 
         if complexity_score < 10 {
             CodeComplexity::Simple
@@ -163,14 +164,17 @@ impl JITOptimizer {
             stat.last_execution = Instant::now();
         } else {
             let complexity = Self::analyze_code_complexity(""); // 需要实际代码
-            stats.insert(code_hash.to_string(), ExecutionStat {
-                code_hash: code_hash.to_string(),
-                execution_count: 1,
-                total_time: execution_time,
-                avg_time: execution_time,
-                last_execution: Instant::now(),
-                complexity,
-            });
+            stats.insert(
+                code_hash.to_string(),
+                ExecutionStat {
+                    code_hash: code_hash.to_string(),
+                    execution_count: 1,
+                    total_time: execution_time,
+                    avg_time: execution_time,
+                    last_execution: Instant::now(),
+                    complexity,
+                },
+            );
         }
     }
 
@@ -211,7 +215,11 @@ impl JITOptimizer {
     }
 
     /// 确定优化级别
-    fn determine_optimization_level(&self, _complexity: &CodeComplexity, stat: &ExecutionStat) -> OptimizationLevel {
+    fn determine_optimization_level(
+        &self,
+        _complexity: &CodeComplexity,
+        stat: &ExecutionStat,
+    ) -> OptimizationLevel {
         match self.strategy {
             JITStrategy::Performance => {
                 // 性能优先策略：所有代码都使用激进优化
@@ -239,13 +247,16 @@ impl JITOptimizer {
     fn calculate_benefit(&self, stat: &ExecutionStat, complexity: &CodeComplexity) -> f64 {
         // 收益 = 执行次数 * 平均执行时间 * 复杂度因子 * 性能因子
         let complexity_factor = match complexity {
-            CodeComplexity::Simple => 4.0,   // 大幅增加简单代码的收益权重
-            CodeComplexity::Medium => 3.5,   // 增加中等代码的收益权重
-            CodeComplexity::Complex => 3.0,  // 增加复杂代码的收益权重
+            CodeComplexity::Simple => 4.0,  // 大幅增加简单代码的收益权重
+            CodeComplexity::Medium => 3.5,  // 增加中等代码的收益权重
+            CodeComplexity::Complex => 3.0, // 增加复杂代码的收益权重
         };
 
         let performance_factor = 2.0; // 增加性能因子
-        stat.execution_count as f64 * stat.avg_time.as_secs_f64() * complexity_factor * performance_factor
+        stat.execution_count as f64
+            * stat.avg_time.as_secs_f64()
+            * complexity_factor
+            * performance_factor
     }
 
     /// 记录编译事件
@@ -325,11 +336,18 @@ mod tests {
     #[test]
     fn test_code_complexity_analysis() {
         let simple_code = "let x = 1; let y = 2;";
-        let complex_code = "function fib(n) { for(let i=0; i<n; i++) { if(i > 10) { while(true) {}}} }";
+        let complex_code =
+            "function fib(n) { for(let i=0; i<n; i++) { if(i > 10) { while(true) {}}} }";
 
-        assert_eq!(JITOptimizer::analyze_code_complexity(simple_code), CodeComplexity::Simple);
+        assert_eq!(
+            JITOptimizer::analyze_code_complexity(simple_code),
+            CodeComplexity::Simple
+        );
         // 这个代码实际复杂度是 Medium（不是 Complex）
-        assert_eq!(JITOptimizer::analyze_code_complexity(complex_code), CodeComplexity::Medium);
+        assert_eq!(
+            JITOptimizer::analyze_code_complexity(complex_code),
+            CodeComplexity::Medium
+        );
     }
 
     #[test]
@@ -365,9 +383,24 @@ mod tests {
         let optimizer = JITOptimizer::new_default();
 
         // 记录一些编译事件
-        optimizer.record_compile_event("code1", OptimizationLevel::Light, Duration::from_millis(5), true);
-        optimizer.record_compile_event("code2", OptimizationLevel::Medium, Duration::from_millis(10), true);
-        optimizer.record_compile_event("code3", OptimizationLevel::Aggressive, Duration::from_millis(20), false);
+        optimizer.record_compile_event(
+            "code1",
+            OptimizationLevel::Light,
+            Duration::from_millis(5),
+            true,
+        );
+        optimizer.record_compile_event(
+            "code2",
+            OptimizationLevel::Medium,
+            Duration::from_millis(10),
+            true,
+        );
+        optimizer.record_compile_event(
+            "code3",
+            OptimizationLevel::Aggressive,
+            Duration::from_millis(20),
+            false,
+        );
 
         let stats = optimizer.get_compile_stats();
         assert_eq!(stats.total_compiles, 3);

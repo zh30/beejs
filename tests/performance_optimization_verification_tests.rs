@@ -16,12 +16,7 @@ pub struct OptimizationVerification {
 }
 
 impl OptimizationVerification {
-    pub fn new(
-        name: String,
-        before: f64,
-        after: f64,
-        target: f64,
-    ) -> Self {
+    pub fn new(name: String, before: f64, after: f64, target: f64) -> Self {
         let improvement_percent = if before > 0.0 {
             ((after - before) / before) * 100.0
         } else {
@@ -71,8 +66,7 @@ pub struct OptimizationVerifier {
 
 impl OptimizationVerifier {
     pub fn new() -> Self {
-        let runtime = Runtime::new(67108864, 1073741824, false)
-            .expect("Failed to create runtime");
+        let runtime = Runtime::new(67108864, 1073741824, false).expect("Failed to create runtime");
         Self { runtime }
     }
 
@@ -113,9 +107,9 @@ impl OptimizationVerifier {
         let iterations = 500;
         let start = Instant::now();
         for _ in 0..iterations {
-            let _ = self.runtime.execute_code(
-                "const obj = { x: 1, y: 2, z: 3 }; obj.x + obj.y + obj.z;"
-            );
+            let _ = self
+                .runtime
+                .execute_code("const obj = { x: 1, y: 2, z: 3 }; obj.x + obj.y + obj.z;");
         }
         let before_duration = start.elapsed();
         let before_ops = iterations as f64 / before_duration.as_secs_f64();
@@ -143,9 +137,9 @@ impl OptimizationVerifier {
         let iterations = 100;
         let start = Instant::now();
         for _ in 0..iterations {
-            let _ = self.runtime.execute_code(
-                "let sum = 0; for (let i = 0; i < 1000; i++) sum += i; sum;"
-            );
+            let _ = self
+                .runtime
+                .execute_code("let sum = 0; for (let i = 0; i < 1000; i++) sum += i; sum;");
         }
         let before_duration = start.elapsed();
         let before_ops = iterations as f64 / before_duration.as_secs_f64();
@@ -243,9 +237,18 @@ impl OptimizationVerifier {
         }
 
         // 统计结果
-        let success_count = verifications.iter().filter(|v| v.status == "Success").count();
-        let partial_count = verifications.iter().filter(|v| v.status == "Partial").count();
-        let failed_count = verifications.iter().filter(|v| v.status == "Failed").count();
+        let success_count = verifications
+            .iter()
+            .filter(|v| v.status == "Success")
+            .count();
+        let partial_count = verifications
+            .iter()
+            .filter(|v| v.status == "Partial")
+            .count();
+        let failed_count = verifications
+            .iter()
+            .filter(|v| v.status == "Failed")
+            .count();
 
         println!("\n=== 验证统计 ===");
         println!("✅ 成功: {}", success_count);

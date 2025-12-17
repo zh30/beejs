@@ -6,8 +6,8 @@ use beejs::Runtime;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
     use std::io::Write;
+    use tempfile::NamedTempFile;
 
     /// 测试正常情况下的 Isolate 清理
     #[test]

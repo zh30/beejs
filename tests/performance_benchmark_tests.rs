@@ -4,10 +4,10 @@ use std::time::{Duration, Instant};
 /// Memory statistics tracking
 #[derive(Debug, Clone)]
 pub struct MemoryStats {
-    pub current_rss: usize,      // Resident Set Size in bytes
-    pub peak_rss: usize,         // Peak RSS in bytes
-    pub heap_allocated: usize,   // Heap allocated bytes
-    pub heap_used: usize,        // Heap used bytes
+    pub current_rss: usize,    // Resident Set Size in bytes
+    pub peak_rss: usize,       // Peak RSS in bytes
+    pub heap_allocated: usize, // Heap allocated bytes
+    pub heap_used: usize,      // Heap used bytes
 }
 
 /// Performance benchmark result
@@ -24,7 +24,12 @@ pub struct BenchmarkResult {
 }
 
 impl BenchmarkResult {
-    pub fn new(name: String, iterations: usize, durations: Vec<Duration>, memory_stats: Option<MemoryStats>) -> Self {
+    pub fn new(
+        name: String,
+        iterations: usize,
+        durations: Vec<Duration>,
+        memory_stats: Option<MemoryStats>,
+    ) -> Self {
         let total_duration: Duration = durations.iter().sum();
         let avg_duration = total_duration / iterations as u32;
         let min_duration = durations.iter().min().copied().unwrap_or_default();
@@ -140,7 +145,11 @@ impl BenchmarkRunner {
     }
 
     /// Benchmark file execution
-    pub fn benchmark_file_execution(&self, file_path: &std::path::Path, runtime: &Runtime) -> BenchmarkResult {
+    pub fn benchmark_file_execution(
+        &self,
+        file_path: &std::path::Path,
+        runtime: &Runtime,
+    ) -> BenchmarkResult {
         // Warmup
         for _ in 0..self.warmup_iterations {
             let _ = runtime.execute_file(&file_path.to_path_buf());
@@ -196,10 +205,16 @@ impl PerformanceComparison {
     pub fn format_report(&self) -> String {
         let mut report = String::new();
         report.push_str("=== Performance Comparison Report ===\n\n");
-        report.push_str(&format!("Beejs Results:\n{}\n\n", self.beejs_result.format_summary()));
+        report.push_str(&format!(
+            "Beejs Results:\n{}\n\n",
+            self.beejs_result.format_summary()
+        ));
 
         if let Some(bun_result) = &self.bun_result {
-            report.push_str(&format!("Bun Results:\n{}\n\n", bun_result.format_summary()));
+            report.push_str(&format!(
+                "Bun Results:\n{}\n\n",
+                bun_result.format_summary()
+            ));
             report.push_str(&format!(
                 "Performance Comparison:\n\
                  Speedup Ratio: {:.2}x\n\
@@ -295,19 +310,9 @@ mod tests {
         let durations1 = vec![Duration::from_micros(100); 10];
         let durations2 = vec![Duration::from_micros(120); 10];
 
-        let beejs_result = BenchmarkResult::new(
-            "beejs".to_string(),
-            10,
-            durations1,
-            None,
-        );
+        let beejs_result = BenchmarkResult::new("beejs".to_string(), 10, durations1, None);
 
-        let bun_result = BenchmarkResult::new(
-            "bun".to_string(),
-            10,
-            durations2,
-            None,
-        );
+        let bun_result = BenchmarkResult::new("bun".to_string(), 10, durations2, None);
 
         let comparison = PerformanceComparison::new(beejs_result, Some(bun_result));
 

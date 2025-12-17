@@ -20,46 +20,44 @@ pub struct ComparisonResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    
 
     /// 模拟的Bun性能数据（实际运行时会从Bun获取真实数据）
     fn get_mock_bun_benchmarks() -> Vec<ComparisonResult> {
         vec![
             ComparisonResult {
                 metric_name: "启动时间".to_string(),
-                beejs_value: 45.0,  // ms
-                bun_value: 72.0,    // ms
+                beejs_value: 45.0, // ms
+                bun_value: 72.0,   // ms
                 unit: "ms".to_string(),
-                improvement: 37.5,  // 37.5% faster
+                improvement: 37.5, // 37.5% faster
             },
             ComparisonResult {
                 metric_name: "简单执行".to_string(),
-                beejs_value: 1250.0,  // ops/sec
-                bun_value: 980.0,     // ops/sec
+                beejs_value: 1250.0, // ops/sec
+                bun_value: 980.0,    // ops/sec
                 unit: "ops/sec".to_string(),
-                improvement: 27.6,  // 27.6% faster
+                improvement: 27.6, // 27.6% faster
             },
             ComparisonResult {
                 metric_name: "复杂计算".to_string(),
-                beejs_value: 2850.0,  // ops/sec
-                bun_value: 2100.0,    // ops/sec
+                beejs_value: 2850.0, // ops/sec
+                bun_value: 2100.0,   // ops/sec
                 unit: "ops/sec".to_string(),
-                improvement: 35.7,  // 35.7% faster
+                improvement: 35.7, // 35.7% faster
             },
             ComparisonResult {
                 metric_name: "内存使用".to_string(),
-                beejs_value: 85.0,   // MB
-                bun_value: 102.0,    // MB
+                beejs_value: 85.0, // MB
+                bun_value: 102.0,  // MB
                 unit: "MB".to_string(),
-                improvement: 16.7,  // 16.7% less memory
+                improvement: 16.7, // 16.7% less memory
             },
             ComparisonResult {
                 metric_name: "并发执行".to_string(),
-                beejs_value: 10500.0,  // concurrent scripts
-                bun_value: 8200.0,     // concurrent scripts
+                beejs_value: 10500.0, // concurrent scripts
+                bun_value: 8200.0,    // concurrent scripts
                 unit: "scripts".to_string(),
-                improvement: 28.0,  // 28.0% more concurrent
+                improvement: 28.0, // 28.0% more concurrent
             },
         ]
     }
@@ -76,9 +74,11 @@ mod tests {
         let elapsed = start.elapsed();
 
         // 验证启动时间在合理范围内
-        assert!(elapsed.as_millis() < 1000,
+        assert!(
+            elapsed.as_millis() < 1000,
             "启动时间应该小于1000ms，实际: {}ms",
-            elapsed.as_millis());
+            elapsed.as_millis()
+        );
 
         println!("✅ 启动时间测量: {}ms", elapsed.as_millis());
 
@@ -94,9 +94,11 @@ mod tests {
         let ops_per_sec = iterations as f64 / elapsed.as_secs_f64();
 
         // 验证执行速度
-        assert!(ops_per_sec > 100.0,
+        assert!(
+            ops_per_sec > 100.0,
             "执行速度应该大于100 ops/sec，实际: {:.2} ops/sec",
-            ops_per_sec);
+            ops_per_sec
+        );
 
         println!("✅ 执行速度测量: {:.2} ops/sec", ops_per_sec);
     }
@@ -107,32 +109,43 @@ mod tests {
         let mock_results = get_mock_bun_benchmarks();
 
         // 计算总体改进
-        let total_improvement: f64 = mock_results.iter()
-            .map(|r| r.improvement)
-            .sum::<f64>() / mock_results.len() as f64;
+        let total_improvement: f64 =
+            mock_results.iter().map(|r| r.improvement).sum::<f64>() / mock_results.len() as f64;
 
         // 验证平均改进超过20%
-        assert!(total_improvement > 20.0,
+        assert!(
+            total_improvement > 20.0,
             "平均性能改进应该超过20%，实际: {:.2}%",
-            total_improvement);
+            total_improvement
+        );
 
         println!("✅ 总体性能改进: {:.2}%", total_improvement);
 
         // 验证各项指标
         for result in &mock_results {
-            let status = if result.improvement > 0.0 { "✅" } else { "❌" };
-            println!("{} {}: Beejs {:.2}{} vs Bun {:.2}{} (改进: {:.2}%)",
+            let status = if result.improvement > 0.0 {
+                "✅"
+            } else {
+                "❌"
+            };
+            println!(
+                "{} {}: Beejs {:.2}{} vs Bun {:.2}{} (改进: {:.2}%)",
                 status,
                 result.metric_name,
-                result.beejs_value, result.unit,
-                result.bun_value, result.unit,
-                result.improvement);
+                result.beejs_value,
+                result.unit,
+                result.bun_value,
+                result.unit,
+                result.improvement
+            );
 
             // 所有指标都应该有改进（除了内存使用应该是负值表示更少）
-            assert!(result.improvement > -10.0,
+            assert!(
+                result.improvement > -10.0,
                 "{} 的改进应该在合理范围内，实际: {:.2}%",
                 result.metric_name,
-                result.improvement);
+                result.improvement
+            );
         }
     }
 
@@ -145,14 +158,13 @@ mod tests {
         let report = generate_performance_report(&mock_results);
 
         // 验证报告包含必要部分
-        assert!(report.contains("Beejs vs Bun 性能对比报告"),
-            "报告应该包含标题");
-        assert!(report.contains("总体评估"),
-            "报告应该包含总体评估");
-        assert!(report.contains("详细指标"),
-            "报告应该包含详细指标");
-        assert!(report.contains("结论"),
-            "报告应该包含结论");
+        assert!(
+            report.contains("Beejs vs Bun 性能对比报告"),
+            "报告应该包含标题"
+        );
+        assert!(report.contains("总体评估"), "报告应该包含总体评估");
+        assert!(report.contains("详细指标"), "报告应该包含详细指标");
+        assert!(report.contains("结论"), "报告应该包含结论");
 
         println!("✅ 报告格式验证通过");
         println!("\n{}", report);
@@ -176,28 +188,34 @@ mod tests {
         }
 
         // 验证大部分指标都有显著改进
-        assert!(fast_metrics >= results.len() / 2,
-            "至少一半的指标应该有超过20%的改进");
-        assert_eq!(slow_metrics, 0,
-            "不应该有指标比Bun更慢");
+        assert!(
+            fast_metrics >= results.len() / 2,
+            "至少一半的指标应该有超过20%的改进"
+        );
+        assert_eq!(slow_metrics, 0, "不应该有指标比Bun更慢");
 
-        println!("✅ 性能趋势分析: {}/{} 指标显著改进",
-            fast_metrics, results.len());
+        println!(
+            "✅ 性能趋势分析: {}/{} 指标显著改进",
+            fast_metrics,
+            results.len()
+        );
     }
 
     /// 测试内存效率对比
     #[test]
     fn test_memory_efficiency_comparison() {
         // 模拟内存使用测试
-        let beejs_memory = 85.0;  // MB
-        let bun_memory = 102.0;   // MB
+        let beejs_memory = 85.0; // MB
+        let bun_memory = 102.0; // MB
 
         let memory_savings = (bun_memory - beejs_memory) / bun_memory * 100.0;
 
         // 验证内存使用优化
-        assert!(memory_savings > 10.0,
+        assert!(
+            memory_savings > 10.0,
             "内存使用应该优化超过10%，实际: {:.2}%",
-            memory_savings);
+            memory_savings
+        );
 
         println!("✅ 内存效率: 节省 {:.2}% 内存", memory_savings);
     }
@@ -208,12 +226,15 @@ mod tests {
         let beejs_concurrent = 10500;
         let bun_concurrent = 8200;
 
-        let improvement = (beejs_concurrent - bun_concurrent) as f64 / bun_concurrent as f64 * 100.0;
+        let improvement =
+            (beejs_concurrent - bun_concurrent) as f64 / bun_concurrent as f64 * 100.0;
 
         // 验证并发能力改进
-        assert!(improvement > 20.0,
+        assert!(
+            improvement > 20.0,
             "并发能力应该改进超过20%，实际: {:.2}%",
-            improvement);
+            improvement
+        );
 
         println!("✅ 并发能力: 提升 {:.2}%", improvement);
     }
@@ -229,22 +250,30 @@ mod tests {
         report.push_str("- 测试日期: 2025-12-18\n\n");
 
         report.push_str("## 总体评估\n");
-        let avg_improvement: f64 = results.iter()
-            .map(|r| r.improvement)
-            .sum::<f64>() / results.len() as f64;
+        let avg_improvement: f64 =
+            results.iter().map(|r| r.improvement).sum::<f64>() / results.len() as f64;
 
         report.push_str(&format!("- 平均性能提升: {:.2}%\n", avg_improvement));
-        report.push_str(&format!("- 总体评级: {}\n\n",
-            if avg_improvement >= 30.0 { "A+ (优秀)" }
-            else if avg_improvement >= 20.0 { "A (良好)" }
-            else if avg_improvement >= 10.0 { "B (一般)" }
-            else { "C (需改进)" }
+        report.push_str(&format!(
+            "- 总体评级: {}\n\n",
+            if avg_improvement >= 30.0 {
+                "A+ (优秀)"
+            } else if avg_improvement >= 20.0 {
+                "A (良好)"
+            } else if avg_improvement >= 10.0 {
+                "B (一般)"
+            } else {
+                "C (需改进)"
+            }
         ));
 
         report.push_str("## 详细指标\n");
         for result in results {
             report.push_str(&format!("### {}\n", result.metric_name));
-            report.push_str(&format!("- Beejs: {:.2} {}\n", result.beejs_value, result.unit));
+            report.push_str(&format!(
+                "- Beejs: {:.2} {}\n",
+                result.beejs_value, result.unit
+            ));
             report.push_str(&format!("- Bun: {:.2} {}\n", result.bun_value, result.unit));
             report.push_str(&format!("- 改进: {:.2}%\n\n", result.improvement));
         }
@@ -255,7 +284,9 @@ mod tests {
         report.push_str("- 执行速度提升\n");
         report.push_str("- 内存使用优化\n");
         report.push_str("- 并发能力增强\n\n");
-        report.push_str("这使得 Beejs 成为 AI 时代高性能 JavaScript/TypeScript 脚本执行的理想选择。\n");
+        report.push_str(
+            "这使得 Beejs 成为 AI 时代高性能 JavaScript/TypeScript 脚本执行的理想选择。\n",
+        );
 
         report
     }

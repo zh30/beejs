@@ -1,9 +1,9 @@
 //! Beejs Test Runner
 //! 高性能测试运行器，支持 Jest 风格的测试
 
+use anyhow::{anyhow, Result};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
-use anyhow::{Result, anyhow};
 
 /// Test status
 #[derive(Debug, Clone, PartialEq)]
@@ -74,15 +74,12 @@ impl TestRunner {
         }
 
         let runtime = crate::Runtime::new(
-            67108864, // 64MB stack
+            67108864,   // 64MB stack
             1073741824, // 1GB heap
             config.verbose,
         )?;
 
-        Ok(Self {
-            config,
-            runtime,
-        })
+        Ok(Self { config, runtime })
     }
 
     /// Run tests in a file
@@ -99,9 +96,18 @@ impl TestRunner {
         // Parse test results
         let tests = self.parse_test_results(&result)?;
 
-        let passed = tests.iter().filter(|t| matches!(t.status, TestStatus::Passed)).count();
-        let failed = tests.iter().filter(|t| matches!(t.status, TestStatus::Failed(_))).count();
-        let skipped = tests.iter().filter(|t| matches!(t.status, TestStatus::Skipped(_))).count();
+        let passed = tests
+            .iter()
+            .filter(|t| matches!(t.status, TestStatus::Passed))
+            .count();
+        let failed = tests
+            .iter()
+            .filter(|t| matches!(t.status, TestStatus::Failed(_)))
+            .count();
+        let skipped = tests
+            .iter()
+            .filter(|t| matches!(t.status, TestStatus::Skipped(_)))
+            .count();
 
         let suite = TestSuite {
             file: file.to_path_buf(),
@@ -113,8 +119,10 @@ impl TestRunner {
         };
 
         if self.config.verbose {
-            println!("Tests completed: {} passed, {} failed, {} skipped",
-                     suite.passed, suite.failed, suite.skipped);
+            println!(
+                "Tests completed: {} passed, {} failed, {} skipped",
+                suite.passed, suite.failed, suite.skipped
+            );
         }
 
         Ok(suite)
@@ -161,9 +169,7 @@ impl TestRunner {
                     if let Ok(entry) = entry {
                         let path = entry.path();
                         if path.is_file() {
-                            let file_name = path.file_name()
-                                .and_then(|n| n.to_str())
-                                .unwrap_or("");
+                            let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
                             if file_name.contains("test") || file_name.contains("spec") {
                                 if file_name.ends_with(".js") {
@@ -233,8 +239,8 @@ impl TestStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
     use std::io::Write;
+    use tempfile::NamedTempFile;
 
     // Import the V8 requirement macro
     use crate::require_v8;
