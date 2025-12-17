@@ -1,5 +1,5 @@
 use beejs::Runtime;
-use beejs::memory_pool::{PoolConfig, SmartMemoryPool};
+use beejs::memory_pool::PoolConfig;
 
 #[test]
 fn test_memory_pool_integration() {

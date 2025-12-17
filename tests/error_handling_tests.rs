@@ -54,7 +54,7 @@ fn test_runtime_error_handling() {
 
 #[test]
 fn test_v8_isolate_cleanup() {
-    let handler = ErrorHandler::new(true);
+    let _handler = ErrorHandler::new(true);
 
     // 测试多次执行，确保没有内存泄漏
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();

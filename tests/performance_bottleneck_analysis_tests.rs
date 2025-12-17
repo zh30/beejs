@@ -265,7 +265,7 @@ mod tests {
     #[test]
     #[ignore = "需要V8隔离修复 - 避免Runtime创建/销毁崩溃"]
     fn test_bottleneck_analyzer_creation() {
-        let analyzer = PerformanceBottleneckAnalyzer::new();
+        let _analyzer = PerformanceBottleneckAnalyzer::new();
         /* Remove useless comparison */ assert!(true);
     }
 
