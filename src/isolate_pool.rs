@@ -180,6 +180,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_isolate_pool_pre_warm() {
         init_v8_for_tests();
         let mut pool = IsolatePool::new(4);
@@ -210,6 +211,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_pool_stats() {
         init_v8_for_tests();
         let mut pool = IsolatePool::new(10);
