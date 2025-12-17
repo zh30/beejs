@@ -27,6 +27,7 @@ mod lock_free;
 mod memory_pool;
 mod module_loader;
 mod nodejs;
+mod precompiled_cache;
 pub mod package_manager;
 pub mod performance_reporter;
 mod test_runner;
@@ -40,6 +41,9 @@ pub use ai_async_queue::{AiAsyncQueue, TaskPriority};
 pub use ai_batch_processor::BatchConfig;
 pub use ai_memory_pool::{AiMemoryPool, AiMemoryPoolConfig, PreallocationStrategy};
 pub use ai_model_interface::{AiModelManager, ModelType};
+
+// Re-export precompiled cache types
+pub use precompiled_cache::{PrecompiledCacheStats, PrecompiledModuleCache};
 
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
@@ -194,6 +198,8 @@ pub struct Runtime {
     module_loader: Option<Arc<module_loader::ModuleLoader>>,
     // 深度优化器
     deep_optimizer: Option<Arc<deep_optimization::DeepOptimizer>>,
+    // 预编译模块缓存
+    precompiled_cache: Option<Arc<precompiled_cache::PrecompiledModuleCache>>,
 }
 
 /// Compilation statistics for JIT optimization
@@ -311,6 +317,26 @@ impl Runtime {
         // 初始化深度优化器
         let deep_optimizer = Some(Arc::new(deep_optimization::DeepOptimizer::new_default()));
 
+        // 初始化预编译模块缓存
+        let precompiled_cache = match precompiled_cache::PrecompiledModuleCache::new() {
+            Ok(cache) => Some(Arc::new(cache)),
+            Err(e) => {
+                if verbose {
+                    println!("Warning: Failed to initialize precompiled cache: {}", e);
+                }
+                None
+            }
+        };
+
+        // 预编译内置模块
+        if let Some(ref cache) = precompiled_cache {
+            if let Err(e) = cache.precompile_builtin_modules() {
+                if verbose {
+                    println!("Warning: Failed to precompile builtin modules: {}", e);
+                }
+            }
+        }
+
         Ok(Self {
             _stack_size: stack_size,
             _max_heap: max_heap,
@@ -329,6 +355,7 @@ impl Runtime {
             ai_model_manager,
             module_loader,
             deep_optimizer,
+            precompiled_cache,
         })
     }
 

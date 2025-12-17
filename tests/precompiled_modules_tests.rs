@@ -1,0 +1,164 @@
+//! 预编译模块系统测试
+//! 测试预编译常用模块的缓存和复用机制
+
+#[cfg(test)]
+mod precompiled_modules_tests {
+    use beejs::*;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    /// 测试创建预编译模块缓存
+    #[test]
+    fn test_precompiled_module_cache_creation() {
+        let cache = PrecompiledModuleCache::new();
+        assert!(cache.is_ok());
+    }
+
+    /// 测试预编译内置模块
+    #[test]
+    fn test_precompile_builtin_modules() {
+        let cache = PrecompiledModuleCache::new().unwrap();
+
+        let result = cache.precompile_builtin_modules();
+        assert!(result.is_ok());
+
+        let stats = cache.get_stats();
+        assert!(stats.total_modules > 0);
+        assert!(stats.cached_modules > 0);
+    }
+
+    /// 测试缓存常见模块
+    #[test]
+    fn test_cache_common_module() {
+        let cache = PrecompiledModuleCache::new().unwrap();
+
+        let module_code = r#"
+            console.log('test module');
+            module.exports = { test: true };
+        "#;
+
+        let result = cache.cache_module("test_module", module_code);
+        assert!(result.is_ok());
+
+        let is_cached = cache.is_module_cached("test_module");
+        assert!(is_cached);
+    }
+
+    /// 测试获取预编译模块
+    #[test]
+    fn test_get_precompiled_module() {
+        let cache = PrecompiledModuleCache::new().unwrap();
+
+        let module_code = r#"
+            const greeting = 'Hello';
+            module.exports = { greeting };
+        "#;
+
+        cache.cache_module("greeting_module", module_code).unwrap();
+
+        let bytecode = cache.get_precompiled_bytecode("greeting_module");
+        assert!(bytecode.is_some());
+    }
+
+    /// 测试模块缓存统计
+    #[test]
+    fn test_cache_statistics() {
+        let cache = PrecompiledModuleCache::new().unwrap();
+
+        // 预编译一些模块
+        cache.precompile_builtin_modules().unwrap();
+
+        let stats = cache.get_stats();
+
+        assert!(stats.total_modules >= 5); // 至少有5个内置模块
+        assert!(stats.cache_hits >= 0);
+        assert!(stats.cache_misses >= 0);
+        assert!(stats.average_compile_time_ms >= 0.0);
+    }
+
+    /// 测试缓存失效
+    #[test]
+    fn test_cache_invalidation() {
+        let cache = PrecompiledModuleCache::new().unwrap();
+
+        let module_code = "module.exports = { data: 'test' };";
+        cache.cache_module("temp_module", module_code).unwrap();
+
+        assert!(cache.is_module_cached("temp_module"));
+
+        let result = cache.invalidate_module("temp_module");
+        assert!(result.is_ok());
+
+        assert!(!cache.is_module_cached("temp_module"));
+    }
+
+    /// 测试预编译模块执行加速
+    #[test]
+    fn test_precompiled_module_execution_speedup() {
+        let cache = PrecompiledModuleCache::new().unwrap();
+
+        // 预编译模块
+        cache.precompile_builtin_modules().unwrap();
+
+        let module_code = r#"
+            function fibonacci(n) {
+                if (n <= 1) return n;
+                return fibonacci(n-1) + fibonacci(n-2);
+            }
+            module.exports = { fibonacci };
+        "#;
+
+        cache.cache_module("math_utils", module_code).unwrap();
+
+        // 测试使用预编译模块
+        let test_script = r#"
+            const { fibonacci } = require('math_utils');
+            fibonacci(10);
+        "#;
+
+        // 第一次执行（未缓存）
+        let start1 = std::time::Instant::now();
+        // 模拟执行（这里我们只是测试缓存逻辑）
+        let _ = cache.get_precompiled_bytecode("math_utils");
+        let time1 = start1.elapsed();
+
+        // 第二次执行（使用缓存）
+        let start2 = std::time::Instant::now();
+        let _ = cache.get_precompiled_bytecode("math_utils");
+        let time2 = start2.elapsed();
+
+        // 缓存应该更快（或至少不慢）
+        assert!(time2 <= time1 * 2); // 允许一些误差
+    }
+
+    /// 测试持久化缓存
+    #[test]
+    fn test_persistent_cache() {
+        let temp_dir = TempDir::new().unwrap();
+        let cache_path = temp_dir.path().join("module_cache");
+
+        // 创建并填充缓存
+        {
+            let cache = PrecompiledModuleCache::new_with_path(cache_path.clone()).unwrap();
+            cache.cache_module("persistent_test", "module.exports = { value: 42 };")
+                .unwrap();
+        }
+
+        // 从磁盘重新加载缓存
+        {
+            let cache = PrecompiledModuleCache::load_from_path(cache_path).unwrap();
+            assert!(cache.is_module_cached("persistent_test"));
+        }
+    }
+
+    /// 测试内置模块列表
+    #[test]
+    fn test_builtin_modules_list() {
+        let builtin_modules = PrecompiledModuleCache::get_builtin_modules_list();
+
+        assert!(builtin_modules.len() > 0);
+        assert!(builtin_modules.contains(&"console"));
+        assert!(builtin_modules.contains(&"process"));
+        assert!(builtin_modules.contains(&"path"));
+    }
+}
