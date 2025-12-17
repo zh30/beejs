@@ -17,7 +17,7 @@ pub struct SmartMemoryPool {
 
 /// 字符串缓冲区池
 #[derive(Debug)]
-pub(crate) struct StringBuffer {
+pub struct StringBuffer {
     #[allow(dead_code)]
     buffer: String,
     last_used: Instant,
@@ -26,7 +26,7 @@ pub(crate) struct StringBuffer {
 
 /// 对象缓冲区池
 #[derive(Debug)]
-pub(crate) struct ObjectBuffer {
+pub struct ObjectBuffer {
     #[allow(dead_code)]
     buffer: Vec<u8>,
     last_used: Instant,
