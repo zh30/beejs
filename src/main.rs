@@ -84,6 +84,8 @@ enum SubCommand {
     List,
     /// Clean package cache
     Clean,
+    /// Start interactive REPL
+    Repl,
 }
 
 /// V8 optimization modes
@@ -163,8 +165,8 @@ fn main() -> Result<()> {
         }
         Ok(())
     } else {
-        println!("No script provided. Use --help for usage information.");
-        Ok(())
+        // No script provided - start REPL
+        run_repl(args.verbose)
     }
 }
 
@@ -325,6 +327,10 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
 
             println!("Cache cleaned successfully.");
             Ok(())
+        }
+        SubCommand::Repl => {
+            // Run REPL mode via subcommand
+            run_repl(verbose)
         }
     }
 }
@@ -493,4 +499,12 @@ fn execute_script_for_watch(
             false
         }
     }
+}
+
+/// Run interactive REPL mode
+fn run_repl(verbose: bool) -> Result<()> {
+    use beejs::Repl;
+
+    let mut repl = Repl::with_defaults();
+    repl.run(verbose).context("REPL session failed")
 }

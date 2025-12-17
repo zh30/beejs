@@ -25,6 +25,7 @@ mod isolate_pool;
 mod jit_optimizer;
 mod lock_free;
 mod runtime_lite;
+pub mod repl;
 pub mod memory_pool;
 pub mod error_handler;
 mod module_loader;
@@ -50,6 +51,9 @@ pub use precompiled_cache::{PrecompiledCacheStats, PrecompiledModuleCache};
 
 // Re-export lightweight runtime types
 pub use runtime_lite::{RuntimeLite, get_global_lite_runtime};
+
+// Re-export REPL types
+pub use repl::{Repl, ReplConfig};
 
 // Re-export lock-free concurrency types
 pub use lock_free::{
