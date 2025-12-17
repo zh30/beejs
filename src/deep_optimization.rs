@@ -1,8 +1,6 @@
 //! 深度性能优化模块
 //! 实现逃逸分析、循环展开、函数内联等高级优化技术
 
-use anyhow::{Result, Context};
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 /// 深度优化配置
@@ -11,10 +9,14 @@ pub struct DeepOptimizationConfig {
     pub enable_escape_analysis: bool,
     pub enable_loop_unrolling: bool,
     pub enable_inline_optimization: bool,
+    #[allow(dead_code)]
     pub enable_aggressive_jit: bool,
     pub enable_memory_layout_optimization: bool,
+    #[allow(dead_code)]
     pub max_unroll_count: usize,
+    #[allow(dead_code)]
     pub max_inline_size: usize,
+    #[allow(dead_code)]
     pub escape_analysis_threshold: usize,
 }
 
@@ -36,8 +38,11 @@ impl Default for DeepOptimizationConfig {
 /// 逃逸分析结果
 #[derive(Debug, Clone)]
 pub struct EscapeAnalysisResult {
+    #[allow(dead_code)]
     pub has_escapes: bool,
+    #[allow(dead_code)]
     pub escape_sites: Vec<usize>,
+    #[allow(dead_code)]
     pub non_escape_objects: Vec<String>,
     pub allocation_elimination_possible: bool,
 }
@@ -47,6 +52,7 @@ pub struct EscapeAnalysisResult {
 pub struct LoopUnrollAnalysis {
     pub can_unroll: bool,
     pub unroll_factor: usize,
+    #[allow(dead_code)]
     pub iteration_count: usize,
     pub optimization_benefit: f64,
 }
@@ -55,7 +61,9 @@ pub struct LoopUnrollAnalysis {
 #[derive(Debug, Clone)]
 pub struct InlineAnalysis {
     pub can_inline: bool,
+    #[allow(dead_code)]
     pub inline_cost: usize,
+    #[allow(dead_code)]
     pub call_frequency: usize,
     pub optimization_benefit: f64,
 }
@@ -64,8 +72,11 @@ pub struct InlineAnalysis {
 #[derive(Debug, Clone)]
 pub struct MemoryLayoutAnalysis {
     pub cache_friendly: bool,
+    #[allow(dead_code)]
     pub access_pattern: String,
+    #[allow(dead_code)]
     pub alignment_score: f64,
+    #[allow(dead_code)]
     pub optimization_suggestions: Vec<String>,
 }
 
@@ -405,6 +416,7 @@ impl DeepOptimizer {
     }
 
     /// 重置统计
+    #[allow(dead_code)]
     pub fn reset_stats(&mut self) {
         self.stats = OptimizationStats::default();
     }
@@ -413,17 +425,24 @@ impl DeepOptimizer {
 /// 优化结果
 #[derive(Debug, Clone)]
 pub struct OptimizationResult {
+    #[allow(dead_code)]
     pub original_code: String,
     pub optimized_code: String,
+    #[allow(dead_code)]
     pub escape_analysis: EscapeAnalysisResult,
+    #[allow(dead_code)]
     pub loop_unroll_analysis: LoopUnrollAnalysis,
+    #[allow(dead_code)]
     pub inline_analysis: InlineAnalysis,
+    #[allow(dead_code)]
     pub memory_layout_analysis: MemoryLayoutAnalysis,
     pub total_optimization_benefit: f64,
+    #[allow(dead_code)]
     pub optimization_time: Duration,
 }
 
 impl OptimizationResult {
+    #[allow(dead_code)]
     pub fn format_report(&self) -> String {
         format!(
             "深度优化结果:\n\

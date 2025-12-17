@@ -2,10 +2,8 @@
 //! 高性能测试运行器，支持 Jest 风格的测试
 
 use std::path::{Path, PathBuf};
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use anyhow::{Result, anyhow};
-use serde_json;
 
 /// Test status
 #[derive(Debug, Clone, PartialEq)]
@@ -95,10 +93,6 @@ impl TestRunner {
             println!("Running tests in: {}", file.display());
         }
 
-        // Load and parse test file
-        let code = std::fs::read_to_string(file)
-            .map_err(|e| anyhow!("Failed to read test file: {}", e))?;
-
         // Execute tests
         let result = self.runtime.execute_file(&file.to_path_buf())?;
 
@@ -148,7 +142,7 @@ impl TestRunner {
     }
 
     /// Find test files matching a pattern
-    fn find_test_files(&self, pattern: &str) -> Result<Vec<PathBuf>> {
+    fn find_test_files(&self, _pattern: &str) -> Result<Vec<PathBuf>> {
         let mut files = Vec::new();
 
         // Simple pattern matching - look for *.test.js or *.spec.js
@@ -159,7 +153,7 @@ impl TestRunner {
             "**/tests/**/*.js",
         ];
 
-        for pattern in patterns {
+        for _pattern in patterns {
             // In a real implementation, we'd use glob or similar
             // For now, just look in current directory
             if let Ok(entries) = std::fs::read_dir(".") {
@@ -186,7 +180,7 @@ impl TestRunner {
     }
 
     /// Parse test execution results
-    fn parse_test_results(&self, output: &str) -> Result<Vec<TestCase>> {
+    fn parse_test_results(&self, _output: &str) -> Result<Vec<TestCase>> {
         // In a real implementation, we'd parse JSON output or structured logs
         // For now, return a simple test case
         Ok(vec![TestCase {
