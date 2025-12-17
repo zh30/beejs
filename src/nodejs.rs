@@ -1,21 +1,30 @@
 use std::path::{Path, PathBuf};
 use std::fs;
 use std::env;
+use std::collections::HashMap;
 use anyhow::Result;
+use std::sync::Mutex;
 use rusty_v8 as v8;
 
 /// Node.js compatibility module for V8
 /// Provides fs, path, process and other Node.js core modules
 
+/// Module cache - stores loaded modules for current execution
+/// Note: This is a simple implementation and doesn't handle concurrent executions
+thread_local! {
+    static MODULE_CACHE: Mutex<HashMap<String, v8::Global<v8::Object>>> = Mutex::new(HashMap::new());
+}
+
 /// Set up all Node.js compatibility globals
 pub fn setup_nodejs_apis(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
+    current_file: Option<&Path>,
 ) -> Result<()> {
     setup_process(scope, context)?;
     setup_path(scope, context)?;
     setup_fs(scope, context)?;
-    setup_module_system(scope, context)?;
+    setup_module_system(scope, context, current_file)?;
     Ok(())
 }
 
@@ -419,6 +428,7 @@ fn fs_stat_sync_callback(
 fn setup_module_system(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
+    current_file: Option<&Path>,
 ) -> Result<()> {
     // Global require function
     let require_func = v8::FunctionTemplate::new(scope, require_callback);
@@ -428,18 +438,37 @@ fn setup_module_system(
     let require_key = v8::String::new(scope, "require").unwrap();
     global.set(scope, require_key.into(), require_instance.into());
 
-    // Module object
+    // Module object (will be overridden per-file)
     let module = v8::Object::new(scope);
-    let exports = v8::Object::new(scope);
-    let exports_key = v8::String::new(scope, "exports").unwrap();
-    module.set(scope, exports_key.into(), exports.into());
-
     let module_key = v8::String::new(scope, "module").unwrap();
     global.set(scope, module_key.into(), module.into());
 
-    // Global exports
-    let exports_global = v8::Object::new(scope);
-    global.set(scope, exports_key.into(), exports_global.into());
+    // Global exports (will be overridden per-file)
+    let exports = v8::Object::new(scope);
+    let exports_key = v8::String::new(scope, "exports").unwrap();
+    global.set(scope, exports_key.into(), exports.into());
+
+    // Set __dirname and __filename based on current file
+    if let Some(file_path) = current_file {
+        let dirname = file_path.parent()
+            .unwrap_or_else(|| Path::new("."));
+        let dirname_key = v8::String::new(scope, "__dirname").unwrap();
+        let dirname_val = v8::String::new(scope, &dirname.to_string_lossy()).unwrap();
+        global.set(scope, dirname_key.into(), dirname_val.into());
+
+        let filename_key = v8::String::new(scope, "__filename").unwrap();
+        let filename_val = v8::String::new(scope, &file_path.to_string_lossy()).unwrap();
+        global.set(scope, filename_key.into(), filename_val.into());
+    } else {
+        // Default values for eval mode
+        let dirname_key = v8::String::new(scope, "__dirname").unwrap();
+        let dirname_val = v8::String::new(scope, ".").unwrap();
+        global.set(scope, dirname_key.into(), dirname_val.into());
+
+        let filename_key = v8::String::new(scope, "__filename").unwrap();
+        let filename_val = v8::String::new(scope, "").unwrap();
+        global.set(scope, filename_key.into(), filename_val.into());
+    }
 
     Ok(())
 }
@@ -469,9 +498,122 @@ fn require_callback(
         _ => {}
     }
 
-    // For other modules, return empty object
+    // Check cache first
+    let context = scope.get_current_context();
+    let cached_result = MODULE_CACHE.with(|cache| {
+        let cache_lock = cache.lock().unwrap();
+        if let Some(cached_module) = cache_lock.get(&module_name_str) {
+            let cached_local = v8::Local::new(scope, cached_module);
+            return Some(cached_local.into());
+        }
+        None
+    });
+
+    if let Some(exports) = cached_result {
+        retval.set(exports);
+        return;
+    }
+
+    // Resolve module path
+    let module_path = resolve_module_path(scope, &module_name_str);
+
+    // Check if file exists and load module
+    if let Ok(path_str) = module_path {
+        if Path::new(&path_str).exists() {
+            // Read module code
+            if let Ok(code) = fs::read_to_string(&path_str) {
+                // Create exports object
+                let exports_obj = v8::Object::new(scope);
+                let exports_key = v8::String::new(scope, "exports").unwrap();
+
+                // Set module.exports to exports object
+                let module_obj = v8::Object::new(scope);
+                module_obj.set(scope, exports_key.into(), exports_obj.into());
+                let module_key = v8::String::new(scope, "module").unwrap();
+
+                let global = context.global(scope);
+                global.set(scope, module_key.into(), module_obj.into());
+
+                // Set exports on global
+                global.set(scope, exports_key.into(), exports_obj.into());
+
+                // Set __dirname and __filename for the module
+                let module_dir = Path::new(&path_str).parent()
+                    .unwrap_or_else(|| Path::new("."));
+                let dirname_key = v8::String::new(scope, "__dirname").unwrap();
+                let dirname_val = v8::String::new(scope, &module_dir.to_string_lossy()).unwrap();
+                global.set(scope, dirname_key.into(), dirname_val.into());
+
+                let filename_key = v8::String::new(scope, "__filename").unwrap();
+                let filename_val = v8::String::new(scope, &path_str).unwrap();
+                global.set(scope, filename_key.into(), filename_val.into());
+
+                // Compile and execute the module code
+                if let Some(source) = v8::String::new(scope, &code) {
+                    if let Some(script) = v8::Script::compile(scope, source, None) {
+                        let _result = script.run(scope);
+
+                        // Get the final exports from module.exports (this is the canonical source)
+                        let final_exports = module_obj.get(scope, exports_key.into())
+                            .unwrap_or_else(|| v8::null(scope).into());
+
+                        // Cache the module (only if it's an object)
+                        if final_exports.is_object() {
+                            MODULE_CACHE.with(|cache| {
+                                let mut cache_lock = cache.lock().unwrap();
+                                let exports_obj = v8::Local::new(scope, &final_exports).to_object(scope).unwrap();
+                                let exports_global = v8::Global::new(scope, &exports_obj);
+                                cache_lock.insert(module_name_str.clone(), exports_global);
+                            });
+                        }
+
+                        retval.set(final_exports);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    // Module not found, return empty object
     let empty = v8::Object::new(scope);
     retval.set(empty.into());
+}
+
+/// Resolve module path from module name
+fn resolve_module_path(
+    scope: &mut v8::HandleScope,
+    module_name: &str,
+) -> Result<String> {
+    let context = scope.get_current_context();
+    let global = context.global(scope);
+
+    // Try to get __dirname from global (if set)
+    let dirname_key = v8::String::new(scope, "__dirname").unwrap();
+    if let Some(dirname) = global.get(scope, dirname_key.into()) {
+        let dirname_str = dirname.to_string(scope)
+            .map(|s| s.to_rust_string_lossy(scope))
+            .unwrap_or_default();
+        if !dirname_str.is_empty() {
+            let mut path = PathBuf::from(dirname_str);
+            path.push(module_name.trim_start_matches("./"));
+            if !path.extension().is_some() {
+                path.set_extension("js");
+            }
+            return Ok(path.to_string_lossy().to_string());
+        }
+    }
+
+    // Default to current directory
+    let mut path = PathBuf::from(".");
+    path.push(module_name);
+
+    // Add .js extension if not present
+    if !path.extension().is_some() {
+        path.set_extension("js");
+    }
+
+    Ok(path.to_string_lossy().to_string())
 }
 
 #[cfg(test)]
@@ -488,7 +630,7 @@ mod tests {
         let context = v8::Context::new(handle_scope);
         let scope = &mut v8::ContextScope::new(handle_scope, context);
 
-        let result = setup_nodejs_apis(scope, &context);
+        let result = setup_nodejs_apis(scope, &context, None);
         assert!(result.is_ok());
 
         // Verify process exists

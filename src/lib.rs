@@ -62,11 +62,16 @@ impl Runtime {
         let code = fs::read_to_string(path)
             .context(format!("Failed to read file: {}", path.display()))?;
 
-        self.execute_code(&code)
+        self.execute_code_with_file(&code, Some(path))
     }
 
     /// Execute JavaScript/TypeScript code
     pub fn execute_code(&self, code: &str) -> Result<String> {
+        self.execute_code_with_file(code, None)
+    }
+
+    /// Execute JavaScript/TypeScript code with optional file path
+    pub fn execute_code_with_file(&self, code: &str, file: Option<&PathBuf>) -> Result<String> {
         if self.verbose {
             println!("Executing code: {} bytes", code.len());
         }
@@ -80,8 +85,8 @@ impl Runtime {
         // Set up console API
         self.setup_console(scope, &context)?;
 
-        // Set up Node.js compatibility APIs
-        nodejs::setup_nodejs_apis(scope, &context)?;
+        // Set up Node.js compatibility APIs with current file path
+        nodejs::setup_nodejs_apis(scope, &context, file.map(|p| p.as_path()))?;
 
         // Compile and execute the script
         let source = v8::String::new(scope, code)
