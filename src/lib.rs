@@ -369,8 +369,27 @@ impl Runtime {
         // 记录执行开始时间
         let start_time = Instant::now();
 
-        // 分析代码复杂度
-        let complexity = code_analyzer::CodeAnalyzer::analyze_complexity(code);
+        // 应用深度优化（超激进优化策略）
+        let optimized_code = if let Some(deep_opt) = &self.deep_optimizer {
+            if self.verbose {
+                println!("🔍 Applying deep code optimization...");
+            }
+            let optimization_result = deep_opt.optimize_code(code);
+            if optimization_result.total_optimization_benefit > 0.0 {
+                if self.verbose {
+                    println!("✅ Deep optimization applied, benefit: {:.1}",
+                             optimization_result.total_optimization_benefit);
+                }
+                optimization_result.optimized_code
+            } else {
+                code.to_string()
+            }
+        } else {
+            code.to_string()
+        };
+
+        // 分析代码复杂度（使用优化后的代码）
+        let complexity = code_analyzer::CodeAnalyzer::analyze_complexity(&optimized_code);
         let optimization_mode =
             code_analyzer::CodeAnalyzer::determine_optimization(&self.optimize_mode, &complexity);
 
@@ -438,8 +457,8 @@ impl Runtime {
             // Expose the runtime to JavaScript for inline cache access
             self.setup_beejs_api(scope, &context)?;
 
-            // 编译并执行脚本
-            let source = v8::String::new(scope, code)
+            // 编译并执行脚本（使用优化后的代码）
+            let source = v8::String::new(scope, &optimized_code)
                 .ok_or_else(|| anyhow!("Failed to create V8 string"))?;
 
             let script = match v8::Script::compile(scope, source, None) {

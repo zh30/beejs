@@ -128,25 +128,46 @@ impl JITOptimizer {
         Self::new(JITThresholds::default(), JITStrategy::Adaptive)
     }
 
-    /// 分析代码复杂度
+    /// 分析代码复杂度（改进版）
     pub fn analyze_code_complexity(code: &str) -> CodeComplexity {
         let lines: Vec<&str> = code.lines().collect();
         let line_count = lines.len();
 
-        // 统计函数定义数量
-        let fn_count = code.matches("function").count() + code.matches("=>").count();
-        // 统计循环数量
-        let loop_count = code.matches("for").count() + code.matches("while").count();
-        // 统计条件语句数量
-        let condition_count = code.matches("if").count() + code.matches("?").count();
+        // 更准确的函数定义统计
+        let fn_count = code.matches("function").count()
+            + code.matches("=>").count()
+            + code.matches("async function").count()
+            + code.matches("() =>").count();
 
-        // 计算复杂度分数
-        let complexity_score =
-            (fn_count * 3) + (loop_count * 5) + (condition_count * 2) + (line_count / 10);
+        // 更全面的循环统计
+        let loop_count = code.matches("for").count()
+            + code.matches("while").count()
+            + code.matches("forEach").count()
+            + code.matches("map(").count()
+            + code.matches("filter(").count()
+            + code.matches("reduce(").count()
+            + code.matches("for...of").count()
+            + code.matches("for...in").count();
 
-        if complexity_score < 10 {
+        // 更全面的条件语句统计
+        let condition_count = code.matches("if").count()
+            + code.matches("?").count()
+            + code.matches("switch").count()
+            + code.matches("case ").count()
+            + code.matches("&&").count()
+            + code.matches("||").count()
+            + code.matches("try {").count();
+
+        // 计算复杂度分数（更激进的权重）
+        let complexity_score = (fn_count * 5)        // 函数权重提升
+            + (loop_count * 10)      // 循环权重大幅提升
+            + (condition_count * 3)  // 条件语句权重提升
+            + (line_count / 5);      // 行数权重提升
+
+        // 更激进的阈值
+        if complexity_score < 15 {
             CodeComplexity::Simple
-        } else if complexity_score < 30 {
+        } else if complexity_score < 50 {
             CodeComplexity::Medium
         } else {
             CodeComplexity::Complex
@@ -243,20 +264,24 @@ impl JITOptimizer {
         }
     }
 
-    /// 计算优化收益
+    /// 计算优化收益（超激进版）
     fn calculate_benefit(&self, stat: &ExecutionStat, complexity: &CodeComplexity) -> f64 {
         // 收益 = 执行次数 * 平均执行时间 * 复杂度因子 * 性能因子
         let complexity_factor = match complexity {
-            CodeComplexity::Simple => 4.0,  // 大幅增加简单代码的收益权重
-            CodeComplexity::Medium => 3.5,  // 增加中等代码的收益权重
-            CodeComplexity::Complex => 3.0, // 增加复杂代码的收益权重
+            CodeComplexity::Simple => 8.0,  // 超激进的简单代码收益权重
+            CodeComplexity::Medium => 6.0,  // 超激进的中等代码收益权重
+            CodeComplexity::Complex => 4.0, // 超激进的复杂代码收益权重
         };
 
-        let performance_factor = 2.0; // 增加性能因子
+        let performance_factor = 5.0; // 超激进的性能因子
+        let time_factor = stat.avg_time.as_secs_f64().max(0.001); // 避免除零，最小0.001ms
+
+        // 更激进的收益计算，确保更多代码被优化
         stat.execution_count as f64
-            * stat.avg_time.as_secs_f64()
+            * time_factor
             * complexity_factor
             * performance_factor
+            + (stat.execution_count as f64 * 10.0) // 额外奖励频繁执行的代码
     }
 
     /// 记录编译事件
