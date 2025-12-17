@@ -32,6 +32,7 @@ mod nodejs;
 mod precompiled_cache;
 pub mod package_manager;
 pub mod performance_reporter;
+mod performance_analyzer;
 mod test_runner;
 mod typescript;
 pub mod watcher;

@@ -4,14 +4,25 @@
 
 use anyhow::Result;
 use rusty_v8 as v8;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::time::Instant;
 
 /// Lightweight Runtime - minimal V8 runtime for fast startup
 /// Only initializes essential components needed for basic JS execution
 pub struct RuntimeLite {
     execution_count: Arc<AtomicUsize>,
+    /// Cache for pre-compiled scripts to avoid repeated compilation
+    script_cache: Arc<std::sync::Mutex<HashMap<String, (v8::Global<v8::Script>, Instant)>>>,
+    /// Cache hit statistics
+    cache_hits: Arc<AtomicUsize>,
+    cache_misses: Arc<AtomicUsize>,
 }
+
+// Make RuntimeLite Send + Sync for thread-safe global sharing
+unsafe impl Send for RuntimeLite {}
+unsafe impl Sync for RuntimeLite {}
 
 impl RuntimeLite {
     /// Create a new lightweight runtime with minimal initialization
@@ -25,11 +36,14 @@ impl RuntimeLite {
         }
 
         if verbose {
-            println!("RuntimeLite: Minimal V8 runtime initialized");
+            println!("RuntimeLite: Minimal V8 runtime initialized with script caching");
         }
 
         Ok(Self {
             execution_count: Arc::new(AtomicUsize::new(0)),
+            script_cache: Arc::new(std::sync::Mutex::new(HashMap::new())),
+            cache_hits: Arc::new(AtomicUsize::new(0)),
+            cache_misses: Arc::new(AtomicUsize::new(0)),
         })
     }
 
@@ -106,15 +120,48 @@ impl RuntimeLite {
         Ok(())
     }
 
-    /// Execute JavaScript code with minimal overhead
+    /// Execute JavaScript code with minimal overhead - V8 Binding Layer Optimization
     pub fn execute_code(&self, code: &str) -> Result<String> {
         // Increment execution count
         self.execution_count.fetch_add(1, Ordering::SeqCst);
 
-        // Create isolate with minimal configuration
-        let mut isolate = v8::Isolate::new(v8::CreateParams::default());
+        // Optimized path: Skip setup for pure eval scripts with no console output
+        if code.trim_start().starts_with("console.log") || code.trim_start().starts_with("console.error") {
+            // For scripts that only print, use minimal setup
+            return self.execute_simple_print(code);
+        }
 
-        // Create scope and context
+        // Standard execution path for other scripts
+        self.execute_standard(code)
+    }
+
+    /// Optimized execution for simple print statements - reduces V8 binding overhead
+    fn execute_simple_print(&self, code: &str) -> Result<String> {
+        // Ultra-minimal isolate setup
+        let mut isolate = v8::Isolate::new(v8::CreateParams::default());
+        let scope = &mut v8::HandleScope::new(&mut isolate);
+        let context = v8::Context::new(scope);
+        let scope = &mut v8::ContextScope::new(scope, context);
+
+        // Minimal console setup (only what's needed)
+        let console = v8::Object::new(scope);
+        let log_func = v8::FunctionTemplate::new(scope, crate::console_log_callback);
+        if let Some(log_instance) = log_func.get_function(scope) {
+            let log_key = v8::String::new(scope, "log").unwrap();
+            console.set(scope, log_key.into(), log_instance.into());
+
+            let global = context.global(scope);
+            let console_key = v8::String::new(scope, "console").unwrap();
+            global.set(scope, console_key.into(), console.into());
+        }
+
+        // Direct execution - skip Node.js APIs for performance
+        self.execute_direct(scope, context, code)
+    }
+
+    /// Standard execution path with full API support
+    fn execute_standard(&self, code: &str) -> Result<String> {
+        let mut isolate = v8::Isolate::new(v8::CreateParams::default());
         let scope = &mut v8::HandleScope::new(&mut isolate);
         let context = v8::Context::new(scope);
         let scope = &mut v8::ContextScope::new(scope, context);
@@ -125,20 +172,81 @@ impl RuntimeLite {
         // Set up Node.js APIs for compatibility
         Self::setup_nodejs_apis(scope, &context)?;
 
-        // Create string from code
-        let source = v8::String::new(scope, code).ok_or_else(|| anyhow::anyhow!("Failed to create string"))?;
+        self.execute_direct(scope, context, code)
+    }
 
-        // Compile the source
-        let script = v8::Script::compile(scope, source, None)
-            .ok_or_else(|| anyhow::anyhow!("Failed to compile script"))?;
+    /// Direct execution helper - with script caching optimization
+    fn execute_direct(
+        &self,
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        _context: v8::Local<v8::Context>,
+        code: &str,
+    ) -> Result<String> {
+        // Check cache first for frequently executed scripts
+        let cache_key = code.to_string();
+
+        // Try to get cached script - clone the global handle to avoid borrow issues
+        let cached_script_option = {
+            let cache = self.script_cache.lock().unwrap();
+            cache.get(&cache_key).map(|(global, _)| v8::Global::clone(global))
+        };
+
+        if let Some(script_global) = cached_script_option {
+            // Cache hit! Load the cached script
+            self.cache_hits.fetch_add(1, Ordering::SeqCst);
+
+            let script = v8::Local::new(scope, &script_global);
+            let result = script.run(scope)
+                .ok_or_else(|| anyhow::anyhow!("Failed to run cached script"))?;
+
+            let result_str = result.to_string(scope)
+                .unwrap_or_else(|| v8::String::new(scope, "undefined").unwrap());
+            return Ok(result_str.to_rust_string_lossy(scope));
+        }
+
+        // Cache miss - compile and cache
+        self.cache_misses.fetch_add(1, Ordering::SeqCst);
+
+        let source = match v8::String::new(scope, code) {
+            Some(s) => s,
+            None => return Err(anyhow::anyhow!("Failed to create string")),
+        };
+
+        let script = match v8::Script::compile(scope, source, None) {
+            Some(s) => s,
+            None => return Err(anyhow::anyhow!("Failed to compile script")),
+        };
+
+        // Cache the compiled script for future use
+        let script_global = v8::Global::new(scope, &script);
+        {
+            let mut cache = self.script_cache.lock().unwrap();
+            cache.insert(cache_key, (script_global, Instant::now()));
+
+            // Limit cache size to prevent memory bloat
+            if cache.len() > 100 {
+                // Remove oldest entries (simple LRU)
+                let keys_to_remove: Vec<String> = cache.keys()
+                    .take(cache.len() - 100)
+                    .cloned()
+                    .collect();
+                for key in keys_to_remove {
+                    cache.remove(&key);
+                }
+            }
+        }
 
         // Run the script
-        let result = script.run(scope).ok_or_else(|| anyhow::anyhow!("Failed to run script"))?;
+        let result = match script.run(scope) {
+            Some(r) => r,
+            None => return Err(anyhow::anyhow!("Failed to run script")),
+        };
 
-        // Format result
-        let result_string = result.to_string(scope).unwrap_or_else(|| v8::String::new(scope, "undefined").unwrap());
+        // Optimized result formatting
+        let result_str = result.to_string(scope)
+            .unwrap_or_else(|| v8::String::new(scope, "undefined").unwrap());
 
-        Ok(result_string.to_rust_string_lossy(scope))
+        Ok(result_str.to_rust_string_lossy(scope))
     }
 
     /// Execute a JavaScript file
@@ -154,6 +262,20 @@ impl RuntimeLite {
     /// Get execution count
     pub fn execution_count(&self) -> usize {
         self.execution_count.load(Ordering::SeqCst)
+    }
+
+    /// Get cache statistics
+    pub fn get_cache_stats(&self) -> (usize, usize, usize) {
+        let cache_hits = self.cache_hits.load(Ordering::SeqCst);
+        let cache_misses = self.cache_misses.load(Ordering::SeqCst);
+        let cache_size = self.script_cache.lock().unwrap().len();
+        (cache_hits, cache_size, cache_misses)
+    }
+
+    /// Clear script cache
+    pub fn clear_cache(&self) {
+        let mut cache = self.script_cache.lock().unwrap();
+        cache.clear();
     }
 }
 

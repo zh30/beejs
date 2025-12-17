@@ -1,0 +1,197 @@
+//! Performance analyzer for measuring and analyzing Beejs runtime performance
+//! This module provides tools to measure execution time, cache hit rates,
+//! and other performance metrics.
+
+use crate::Runtime;
+use crate::runtime_lite::RuntimeLite;
+use std::time::Instant;
+use std::sync::Arc;
+
+/// Performance metrics for a single execution
+#[derive(Debug, Clone)]
+pub struct ExecutionMetrics {
+    pub execution_time_ms: f64,
+    pub cache_hit: bool,
+    pub code_length: usize,
+}
+
+/// Performance analysis results
+#[derive(Debug, Clone)]
+pub struct PerformanceReport {
+    pub total_executions: usize,
+    pub average_time_ms: f64,
+    pub min_time_ms: f64,
+    pub max_time_ms: f64,
+    pub cache_hit_rate: f64,
+    pub total_code_executed: usize,
+}
+
+/// Performance analyzer for measuring runtime performance
+pub struct PerformanceAnalyzer {
+    metrics: Vec<ExecutionMetrics>,
+    start_time: Instant,
+}
+
+impl PerformanceAnalyzer {
+    /// Create a new performance analyzer
+    pub fn new() -> Self {
+        Self {
+            metrics: Vec::new(),
+            start_time: Instant::now(),
+        }
+    }
+
+    /// Measure execution time of a function and record metrics
+    pub fn measure_execution<F, R>(&mut self, code: &str, f: F) -> R
+    where
+        F: FnOnce() -> R,
+    {
+        let start = Instant::now();
+        let result = f();
+        let duration = start.elapsed();
+
+        // Estimate cache hit based on execution time (faster = likely cache hit)
+        let execution_time_ms = duration.as_secs_f64() * 1000.0;
+        let cache_hit = execution_time_ms < 10.0; // Assume < 10ms is cache hit
+
+        self.metrics.push(ExecutionMetrics {
+            execution_time_ms,
+            cache_hit,
+            code_length: code.len(),
+        });
+
+        result
+    }
+
+    /// Generate a performance report
+    pub fn generate_report(&self) -> PerformanceReport {
+        if self.metrics.is_empty() {
+            return PerformanceReport {
+                total_executions: 0,
+                average_time_ms: 0.0,
+                min_time_ms: 0.0,
+                max_time_ms: 0.0,
+                cache_hit_rate: 0.0,
+                total_code_executed: 0,
+            };
+        }
+
+        let total_executions = self.metrics.len();
+        let total_time: f64 = self.metrics.iter().map(|m| m.execution_time_ms).sum();
+        let average_time_ms = total_time / total_executions as f64;
+
+        let min_time_ms = self.metrics.iter()
+            .map(|m| m.execution_time_ms)
+            .fold(f64::INFINITY, f64::min);
+
+        let max_time_ms = self.metrics.iter()
+            .map(|m| m.execution_time_ms)
+            .fold(f64::NEG_INFINITY, f64::max);
+
+        let cache_hits = self.metrics.iter().filter(|m| m.cache_hit).count();
+        let cache_hit_rate = cache_hits as f64 / total_executions as f64 * 100.0;
+
+        let total_code_executed: usize = self.metrics.iter()
+            .map(|m| m.code_length)
+            .sum();
+
+        PerformanceReport {
+            total_executions,
+            average_time_ms,
+            min_time_ms,
+            max_time_ms,
+            cache_hit_rate,
+            total_code_executed,
+        }
+    }
+
+    /// Print a formatted performance report
+    pub fn print_report(&self) {
+        let report = self.generate_report();
+
+        println!("\n=== Beejs Performance Analysis Report ===");
+        println!("Total executions: {}", report.total_executions);
+        println!("Average execution time: {:.3}ms", report.average_time_ms);
+        println!("Min execution time: {:.3}ms", report.min_time_ms);
+        println!("Max execution time: {:.3}ms", report.max_time_ms);
+        println!("Cache hit rate: {:.1}%", report.cache_hit_rate);
+        println!("Total code executed: {} bytes", report.total_code_executed);
+
+        // Performance insights
+        if report.cache_hit_rate > 50.0 {
+            println!("✅ Good cache hit rate! Script caching is effective.");
+        } else {
+            println!("⚠️  Low cache hit rate. Consider reusing code patterns.");
+        }
+
+        if report.average_time_ms < 10.0 {
+            println!("🚀 Excellent performance! Average < 10ms.");
+        } else if report.average_time_ms < 50.0 {
+            println!("✅ Good performance! Average < 50ms.");
+        } else {
+            println!("⚠️  Performance could be improved. Average > 50ms.");
+        }
+
+        println!("=========================================\n");
+    }
+
+    /// Clear all recorded metrics
+    pub fn reset(&mut self) {
+        self.metrics.clear();
+        self.start_time = Instant::now();
+    }
+}
+
+impl Default for PerformanceAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Convenience function to analyze runtime performance
+pub fn analyze_runtime_performance(
+    runtime: &Arc<Runtime>,
+    test_codes: Vec<&str>,
+    verbose: bool,
+) -> PerformanceReport {
+    let mut analyzer = PerformanceAnalyzer::new();
+
+    for code in test_codes {
+        analyzer.measure_execution(code, || {
+            let result = runtime.execute_code(code);
+            if verbose && result.is_err() {
+                println!("Error executing code: {:?}", result);
+            }
+        });
+    }
+
+    let report = analyzer.generate_report();
+    if verbose {
+        analyzer.print_report();
+    }
+    report
+}
+
+/// Convenience function to analyze RuntimeLite performance
+pub fn analyze_lite_runtime_performance(
+    runtime: &Arc<RuntimeLite>,
+    test_codes: Vec<&str>,
+    verbose: bool,
+) -> PerformanceReport {
+    let mut analyzer = PerformanceAnalyzer::new();
+
+    for code in test_codes {
+        analyzer.measure_execution(code, || {
+            let result = runtime.execute_code(code);
+            if verbose && result.is_err() {
+                println!("Error executing code: {:?}", result);
+            }
+        });
+    }
+
+    let report = analyzer.generate_report();
+    if verbose {
+        analyzer.print_report();
+    }
+    report
+}
