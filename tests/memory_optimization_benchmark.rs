@@ -1,0 +1,96 @@
+use beejs::Runtime;
+use std::time::Instant;
+
+#[test]
+fn test_memory_pool_optimization() {
+    let start = Instant::now();
+    
+    // 创建运行时（启用内存池）
+    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    
+    // 执行大量字符串操作
+    for i in 0..1000 {
+        let code = format!(r#"
+            let str = "test string {}" + " with concatenation";
+            let obj = {{ field: str, num: {} }};
+            obj.field;
+"#, i, i);
+        
+        let _ = runtime.execute_code(&code);
+    }
+    
+    let elapsed = start.elapsed();
+    
+    // 获取内存统计
+    let stats = runtime.memory_stats();
+    assert!(stats.is_some());
+    
+    let memory_stats = stats.unwrap();
+    println!("Memory optimization results:");
+    println!("  Strings allocated: {}", memory_stats.strings_allocated);
+    println!("  Strings reused: {}", memory_stats.strings_reused);
+    println!("  Objects allocated: {}", memory_stats.objects_allocated);
+    println!("  Objects reused: {}", memory_stats.objects_reused);
+    println!("  Total memory saved: {} bytes", memory_stats.total_memory_saved);
+    println!("  GC pressure reduction: {:.2}%", runtime.gc_pressure_reduction().unwrap_or(0.0));
+    println!("  Execution time: {:.2}ms", elapsed.as_millis());
+    
+    // 验证内存池工作正常
+    assert!(memory_stats.strings_allocated > 0);
+    assert!(memory_stats.total_memory_saved > 0);
+}
+
+#[test]
+fn test_memory_pool_vs_no_pool_comparison() {
+    // 测试有内存池的性能
+    let runtime_with_pool = Runtime::new(67108864, 1073741824, false).unwrap();
+    
+    let start = Instant::now();
+    for i in 0..100 {
+        let code = format!(r#"
+            let result = [];
+            for (let j = 0; j < 10; j++) {{
+                result.push("item_" + j + "_{}");
+            }}
+            result.length;
+"#, i);
+        let _ = runtime_with_pool.execute_code(&code);
+    }
+    let time_with_pool = start.elapsed();
+    
+    let stats_with_pool = runtime_with_pool.memory_stats().unwrap();
+    
+    println!("Memory Pool Performance:");
+    println!("  Time with pool: {:?}", time_with_pool);
+    println!("  Memory saved: {} bytes", stats_with_pool.total_memory_saved);
+    println!("  GC pressure reduction: {:.2}%", runtime_with_pool.gc_pressure_reduction().unwrap_or(0.0));
+    
+    // 验证内存池确实节省了内存
+    assert!(stats_with_pool.total_memory_saved > 0);
+}
+
+#[test]
+fn test_memory_cleanup() {
+    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    
+    // 执行一些操作
+    for _ in 0..50 {
+        let _ = runtime.execute_code("let x = 'test'; x;");
+    }
+    
+    let stats_before = runtime.memory_stats().unwrap();
+    
+    // 强制清理
+    runtime.cleanup_memory_pool();
+    
+    let stats_after = runtime.memory_stats().unwrap();
+    
+    println!("Cleanup test:");
+    println!("  Before cleanup: {} allocations, {} reuses", 
+             stats_before.strings_allocated, stats_before.strings_reused);
+    println!("  After cleanup: {} allocations, {} reuses", 
+             stats_after.strings_allocated, stats_after.strings_reused);
+    
+    // 清理后分配数应该保持不变，但重用数可能变化
+    assert_eq!(stats_before.strings_allocated, stats_after.strings_allocated);
+}

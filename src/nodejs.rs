@@ -6,11 +6,8 @@ use anyhow::Result;
 use std::sync::Mutex;
 use rusty_v8 as v8;
 
-/// Node.js compatibility module for V8
-/// Provides fs, path, process and other Node.js core modules
-
-/// Module cache - stores loaded modules for current execution
-/// Note: thread_local means each V8 isolate has its own cache
+// Module cache - stores loaded modules for current execution
+// Note: thread_local means each V8 isolate has its own cache
 thread_local! {
     static MODULE_CACHE: Mutex<HashMap<String, v8::Global<v8::Object>>> = Mutex::new(HashMap::new());
     static LOADING_MODULES: Mutex<HashMap<String, bool>> = Mutex::new(HashMap::new());
@@ -523,13 +520,14 @@ fn require_callback(
     });
 
     // Check cache first using absolute path
-    let cached_result: Option<v8::Local<v8::Value>> = MODULE_CACHE.with(|cache| {
+    MODULE_CACHE.with(|cache| {
         let cache_lock = cache.lock().unwrap();
         if let Some(cached_module) = cache_lock.get(&cache_key) {
             let cached_local = v8::Local::new(scope, cached_module);
-            return Some(cached_local.into());
+            let exports = cached_local.into();
+            retval.set(exports);
+            return;
         }
-        None
     });
 
     if is_loading {

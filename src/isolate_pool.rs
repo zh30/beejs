@@ -95,7 +95,6 @@ impl IsolatePool {
             available: pool.len(),
             in_use: *in_use,
             max_size: self.max_size,
-            total: pool.len() + *in_use,
         }
     }
 }
@@ -106,7 +105,6 @@ pub struct PoolStats {
     pub available: usize,
     pub in_use: usize,
     pub max_size: usize,
-    pub total: usize,
 }
 
 impl PoolStats {
