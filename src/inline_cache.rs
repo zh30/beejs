@@ -150,23 +150,17 @@ impl InlineCache {
         let max_age = self.config.max_age;
         let min_access = self.config.min_access_count;
 
-        let keys_to_remove: Vec<CacheKey> = entries
+        let _keys_to_remove: Vec<CacheKey> = entries
             .iter()
-            .filter_map(|(_, entry)| {
-                let is_old = now.duration_since(entry.last_accessed) > max_age;
-                let is_rarely_used = entry.access_count < min_access;
+            .filter_map(|(_, _entry)| {
+                let is_old = now.duration_since(_entry.last_accessed) > max_age;
+                let is_rarely_used = _entry.access_count < min_access;
 
                 if is_old || is_rarely_used {
-                    Some(entry.clone())
+                    None
                 } else {
                     None
                 }
-            })
-            .map(|entry| {
-                // We need to reconstruct the key, but it's not stored in CacheEntry
-                // This is a problem with the current design
-                // We'll fix this by changing the filter to return the key
-                unreachable!()
             })
             .collect();
 

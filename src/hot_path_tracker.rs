@@ -312,7 +312,6 @@ impl HotPathTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::thread;
 
     #[test]
     fn test_hot_path_identification() {

@@ -17,6 +17,7 @@ mod code_cache;
 mod code_analyzer;
 mod hot_path_tracker;
 mod inline_cache;
+mod jit_optimizer;
 
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
@@ -151,6 +152,7 @@ pub struct Runtime {
     compilation_stats: Arc<Mutex<CompilationStats>>,
     hot_path_tracker: Option<Arc<hot_path_tracker::HotPathTracker>>,
     inline_cache: Option<Arc<inline_cache::InlineCache>>,
+    jit_optimizer: Option<Arc<jit_optimizer::JITOptimizer>>,
 }
 
 /// Compilation statistics for JIT optimization
@@ -223,6 +225,9 @@ impl Runtime {
         // 初始化内联缓存
         let inline_cache = Some(Arc::new(inline_cache::InlineCache::new()));
 
+        // 初始化JIT优化器
+        let jit_optimizer = Some(Arc::new(jit_optimizer::JITOptimizer::new_default()));
+
         if verbose {
             let version = v8::V8::get_version();
             println!("Runtime created with:");
@@ -234,6 +239,7 @@ impl Runtime {
             println!("  Bytecode Cache: enabled (reduces compilation time)");
             println!("  Hot Path Tracker: enabled (identifies optimization opportunities)");
             println!("  Inline Cache: enabled (optimizes property access and function calls)");
+            println!("  JIT Optimizer: enabled (dynamic threshold and custom strategy)");
         }
 
         Ok(Self {
@@ -247,6 +253,7 @@ impl Runtime {
             compilation_stats: Arc::new(Mutex::new(CompilationStats::default())),
             hot_path_tracker,
             inline_cache,
+            jit_optimizer,
         })
     }
 
@@ -471,13 +478,59 @@ impl Runtime {
         }
     }
 
-    /// Gets a property from a V8 object with inline caching
-    pub fn get_cached_property(
+    /// Get JIT optimizer statistics
+    pub fn get_jit_stats(&self) -> Option<jit_optimizer::CompileStats> {
+        self.jit_optimizer.as_ref().map(|optimizer| optimizer.get_compile_stats())
+    }
+
+    /// Reset JIT optimizer statistics
+    pub fn reset_jit_stats(&self) {
+        if let Some(optimizer) = &self.jit_optimizer {
+            optimizer.reset_stats();
+        }
+    }
+
+    /// Make JIT compilation decision for code
+    pub fn should_jit_compile(&self, code_hash: &str, code: &str) -> jit_optimizer::JITDecision {
+        if let Some(optimizer) = &self.jit_optimizer {
+            optimizer.make_jit_decision(code_hash, code)
+        } else {
+            jit_optimizer::JITDecision {
+                should_compile: false,
+                optimization_level: jit_optimizer::OptimizationLevel::None,
+                estimated_benefit: 0.0,
+                reason: "JIT optimizer not enabled".to_string(),
+            }
+        }
+    }
+
+    /// Record a code execution for JIT optimization
+    pub fn record_execution(&self, code_hash: &str, execution_time: std::time::Duration) {
+        if let Some(optimizer) = &self.jit_optimizer {
+            optimizer.update_execution_stats(code_hash, execution_time);
+        }
+    }
+
+    /// Record a compile event
+    pub fn record_compile_event(
         &self,
-        scope: &mut v8::ContextScope<v8::HandleScope>,
+        code_hash: &str,
+        optimization_level: jit_optimizer::OptimizationLevel,
+        compile_time: std::time::Duration,
+        success: bool,
+    ) {
+        if let Some(optimizer) = &self.jit_optimizer {
+            optimizer.record_compile_event(code_hash, optimization_level, compile_time, success);
+        }
+    }
+
+    /// Gets a property from a V8 object with inline caching
+    pub fn get_cached_property<'a>(
+        &self,
+        scope: &'a mut v8::ContextScope<v8::HandleScope>,
         object: v8::Local<v8::Object>,
         property_name: &str,
-    ) -> Option<v8::Local<v8::Value>> {
+    ) -> Option<v8::Local<'a, v8::Value>> {
         if let Some(cache) = &self.inline_cache {
             // Get the receiver hash from the object
             let receiver_str = object.to_string(scope).unwrap().to_rust_string_lossy(scope);
@@ -512,13 +565,13 @@ impl Runtime {
     }
 
     /// Calls a V8 function with inline caching
-    pub fn call_cached_function(
+    pub fn call_cached_function<'a>(
         &self,
-        scope: &mut v8::ContextScope<v8::HandleScope>,
+        scope: &'a mut v8::ContextScope<v8::HandleScope>,
         function: v8::Local<v8::Function>,
         receiver: v8::Local<v8::Value>,
         args: &[v8::Local<v8::Value>],
-    ) -> Option<v8::Local<v8::Value>> {
+    ) -> Option<v8::Local<'a, v8::Value>> {
         if let Some(cache) = &self.inline_cache {
             // Get the receiver hash from the function
             let receiver_str = receiver.to_string(scope).unwrap().to_rust_string_lossy(scope);
@@ -622,7 +675,7 @@ impl Runtime {
         let beejs = v8::Object::new(scope);
 
         // Create a function template for getProperty
-        let get_property_func = v8::FunctionTemplate::new(scope, |_scope, args, _rv| {
+        let get_property_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
             // This is a simplified example. In a real implementation, we would need to handle the receiver object.
             // For now, we just return a string to indicate that the function was called.
             let result = v8::String::new(_scope, "cached_value").unwrap();

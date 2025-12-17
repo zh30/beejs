@@ -129,6 +129,7 @@ impl PoolStats {
 static POOL: once_cell::sync::OnceCell<Box<IsolatePool>> = once_cell::sync::OnceCell::new();
 
 /// 初始化全局Isolate池
+#[cfg(not(test))]
 pub fn initialize_pool(max_size: usize) -> Result<(), String> {
     let mut pool = IsolatePool::new(max_size);
 
@@ -138,6 +139,13 @@ pub fn initialize_pool(max_size: usize) -> Result<(), String> {
 
     let pool_box = Box::new(pool);
     POOL.set(pool_box).map_err(|_| "Pool already initialized".to_string())
+}
+
+/// 初始化全局Isolate池（测试版本）
+#[cfg(test)]
+pub fn initialize_pool(_max_size: usize) -> Result<(), String> {
+    // 在测试环境中不初始化全局池
+    Ok(())
 }
 
 /// 获取全局Isolate池

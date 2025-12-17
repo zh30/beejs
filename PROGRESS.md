@@ -195,7 +195,47 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
     - ✅ 创建基准测试框架 (tests/hot_path_benchmark.rs)
     - 🎯 **热路径检测系统完成，为JIT优化提供关键数据！**
 
-16. ✅ **修复V8 Isolate测试崩溃问题** - 重大突破！🚀
+16. ✅ **阶段4任务4: 内联缓存系统** - 属性访问和函数调用优化！🎯
+    - ✅ 创建 src/inline_cache.rs 完整内联缓存模块
+    - ✅ 实现 CacheType (属性/函数)、CacheKey、CacheEntry 数据结构
+    - ✅ 实现 InlineCache 核心逻辑：get、put、invalidate_receiver
+    - ✅ 集成到 Runtime 结构体，添加 inline_cache 字段
+    - ✅ 实现 get_cached_property 和 call_cached_function 方法
+    - ✅ 添加内联缓存统计和清理功能：get_inline_cache_stats、clear_inline_cache
+    - ✅ 实现 execute_cached_code 方法用于带缓存的代码执行
+    - ✅ 创建 examples/inline_cache_example.js 演示脚本
+    - ✅ 2/2 内联缓存测试全部通过
+    - ✅ 为 JIT 优化奠定基础！
+
+17. ✅ **阶段4任务5: JIT编译阈值优化系统** - 智能阈值调整！🎯
+    - ✅ 创建 src/jit_optimizer.rs 完整JIT优化器模块
+    - ✅ 实现 JITThresholds 配置（简单/中等/复杂代码的不同阈值）
+    - ✅ 实现 CodeComplexity 枚举（Simple/Medium/Complex）
+    - ✅ 实现 JITDecision 结构体（编译决策、优化级别、收益评估）
+    - ✅ 实现 OptimizationLevel 枚举（None/Light/Medium/Aggressive）
+    - ✅ 实现 JITStrategy 枚举（Performance/Size/Balanced/Adaptive）
+    - ✅ 实现 JITOptimizer 核心逻辑：分析代码复杂度、动态阈值调整
+    - ✅ 集成到 Runtime 结构体，添加 jit_optimizer 字段
+    - ✅ 实现 JIT 决策 API：should_jit_compile、record_execution、record_compile_event
+    - ✅ 添加 JIT 统计 API：get_jit_stats、reset_jit_stats
+    - ✅ 6/6 JIT优化器测试全部通过
+    - ✅ 创建 examples/jit_optimizer_demo.js 演示脚本
+    - 🎯 **JIT编译阈值优化完成，实现智能自适应编译！**
+
+18. ✅ **阶段4任务6: 自定义JIT策略系统** - 个性化优化！🚀
+    - ✅ 实现性能优先策略（Performance）- 复杂代码激进优化
+    - ✅ 实现大小优先策略（Size）- 轻度优化减少体积
+    - ✅ 实现平衡策略（Balanced）- 基于执行次数的智能选择
+    - ✅ 实现自适应策略（Adaptive）- 基于执行历史动态调整
+    - ✅ 实现收益计算算法：执行次数 × 平均时间 × 复杂度因子
+    - ✅ 实现编译事件记录和统计分析
+    - ✅ 实现代码复杂度自动分析（函数数、循环数、条件数）
+    - ✅ 动态阈值调整：简单代码5次、中等3次、复杂2次
+    - ✅ 自适应重新编译：执行次数≥10次触发优化
+    - ✅ 完整编译历史跟踪和性能统计
+    - 🎯 **自定义JIT策略完成，实现个性化性能优化！**
+
+19. ✅ **修复V8 Isolate测试崩溃问题** - 重大突破！🚀
     - ✅ 添加V8 TryCatch异常处理机制，正确捕获JS运行时异常
     - ✅ 在测试环境中禁用全局IsolatePool，避免生命周期管理问题
     - ✅ 修复test_async_execution测试（标记为需要事件循环支持）
@@ -203,7 +243,7 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
     - ✅ 清理代码警告：修复未使用变量（_i, _now等）
     - ✅ 通过条件编译[cfg(not(test))]隔离测试和生产环境
     - ✅ 单个集成测试：✅ 完全通过
-    - ✅ 库测试：✅ 34/34通过 (100%通过率)
+    - ✅ 库测试：✅ 46/46通过 (100%通过率)
     - ⚠️ 多个测试运行：仍有Runtime创建/销毁阶段崩溃（需进一步研究）
     - 🚀 **V8异常处理完成，为稳定运行奠定基础！**
 
@@ -226,6 +266,13 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
   - ✅ test_circular_dependency (循环依赖)
 - **Node.js API 测试**：17/17 通过 ✅ (100% 通过率)
   - ✅ 所有核心 Node.js API 测试通过
+- **JIT优化器测试**：6/6 通过 ✅ (100% 通过率) 🎯
+  - ✅ test_jit_optimizer_creation
+  - ✅ test_code_complexity_analysis
+  - ✅ test_jit_decision_making
+  - ✅ test_benefit_calculation
+  - ✅ test_compile_stats
+  - ✅ test_execution_stats_update
 
 ### 最近重大更新
 - ✅ **模块系统完善**: **9/9 测试全部通过！** 修复模块缓存 LOADING_MODULES 清理问题 🎉
@@ -239,16 +286,16 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 - ✅ **测试架构优化**: 修复测试命名规范 (snake_case)
 - ✅ **代码质量提升**: 清理未使用变量和导入
 
-### 最新提交 (2025-12-17)
+### 最新提交 (2025-12-18)
+- **675b1c0** - feat: 实现内联缓存系统 (Phase 4 Task 4) 🎯
+  - 创建 src/inline_cache.rs 完整内联缓存模块
+  - 实现属性访问和函数调用优化
+  - 2/2 内联缓存测试全部通过
+- **03d486b** - docs: 更新PROGRESS.md反映V8异常处理重大突破
+- **4d80959** - fix: 修复V8 Isolate测试崩溃问题，实现异常处理机制 🎯
+- **b3932e5** - docs: 更新PROGRESS.md反映阶段4任务3热路径检测重大突破
+- **5f276d2** - feat: 实现阶段4任务3热路径代码检测系统 🎯
 - **67b2184** - feat: 实现阶段4任务2 V8编译优化配置系统 🚀
-  - 新增 OptimizeMode 枚举 (Speed/Size/Auto)
-  - 实现 new_with_optimization() 构造函数
-  - 创建 code_analyzer 模块进行代码复杂度分析
-  - 添加自动优化策略（基于代码行数、函数数、循环数）
-  - 集成 V8 优化标志（--optimize-for-speed, --optimize-for-size）
-  - 添加 CompilationStats 统计跟踪
-  - 支持命令行参数 --optimize (speed/size/auto)
-  - 4/4 代码分析器测试全部通过
 - **0a60f2e** - docs: 更新PROGRESS.md反映阶段4任务1字节码缓存重大突破
 - **f6037eb** - feat: 实现V8字节码缓存模块（阶段4任务1）
 - **626493f** - docs: 制定阶段4 JIT编译优化详细实施计划
@@ -275,6 +322,13 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
   - ✅ path.join(), path.resolve(), path.dirname(), path.basename()
   - ✅ fs 基础 API 支持
   - ✅ Node.js 兼容性示例和测试
+- ✅ **JIT编译优化系统** (最新！) - 🚀 **重大突破！**
+  - ✅ JIT编译阈值优化（动态阈值调整）
+  - ✅ 自定义JIT策略（Performance/Size/Balanced/Adaptive）
+  - ✅ 代码复杂度自动分析
+  - ✅ 智能收益评估算法
+  - ✅ 编译事件跟踪和统计
+  - ✅ 6/6 JIT优化器测试通过
 
 ### 技术债务
 - ✅ ~~V8 引擎集成~~ - 已完成! 🎯

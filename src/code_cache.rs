@@ -241,7 +241,7 @@ mod tests {
 
     #[test]
     fn test_cache_key_generation() {
-        let cache = BytecodeCache::new(CacheConfig::default());
+        let _cache = BytecodeCache::new(CacheConfig::default());
 
         // 测试相同代码生成相同哈希
         let key1 = BytecodeCache::get_cache_key("const x = 1;", None);

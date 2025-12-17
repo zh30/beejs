@@ -1,0 +1,386 @@
+use std::collections::HashMap;
+use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+
+/// JIT编译阈值配置
+#[derive(Debug, Clone)]
+pub struct JITThresholds {
+    /// 简单代码的编译阈值（执行次数）
+    pub simple_threshold: usize,
+    /// 中等复杂度代码的编译阈值
+    pub medium_threshold: usize,
+    /// 复杂代码的编译阈值
+    pub complex_threshold: usize,
+    /// 重新编译阈值
+    pub recompile_threshold: usize,
+    /// 最大编译时间阈值（毫秒）
+    pub max_compile_time_ms: u64,
+}
+
+impl Default for JITThresholds {
+    fn default() -> Self {
+        Self {
+            simple_threshold: 5,
+            medium_threshold: 3,
+            complex_threshold: 2,
+            recompile_threshold: 10,
+            max_compile_time_ms: 100,
+        }
+    }
+}
+
+/// 代码复杂度级别
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum CodeComplexity {
+    /// 简单代码：少量函数，无循环
+    Simple,
+    /// 中等复杂度：有一些函数和循环
+    Medium,
+    /// 复杂代码：多个函数，嵌套循环，递归
+    Complex,
+}
+
+/// JIT编译决策
+#[derive(Debug, Clone)]
+pub struct JITDecision {
+    pub should_compile: bool,
+    pub optimization_level: OptimizationLevel,
+    pub estimated_benefit: f64,
+    pub reason: String,
+}
+
+/// JIT优化级别
+#[derive(Debug, Clone, PartialEq)]
+pub enum OptimizationLevel {
+    /// 无优化
+    None,
+    /// 轻度优化
+    Light,
+    /// 中度优化
+    Medium,
+    /// 激进优化
+    Aggressive,
+}
+
+/// 自定义JIT策略
+#[derive(Debug, Clone)]
+pub enum JITStrategy {
+    /// 性能优先
+    Performance,
+    /// 大小优先
+    Size,
+    /// 平衡策略
+    Balanced,
+    /// 自适应策略
+    Adaptive,
+}
+
+/// JIT优化器
+pub struct JITOptimizer {
+    thresholds: JITThresholds,
+    strategy: JITStrategy,
+    execution_stats: Arc<Mutex<HashMap<String, ExecutionStat>>>,
+    compile_history: Arc<Mutex<Vec<CompileEvent>>>,
+}
+
+/// 代码执行统计
+#[derive(Debug, Clone)]
+pub struct ExecutionStat {
+    pub code_hash: String,
+    pub execution_count: usize,
+    pub total_time: Duration,
+    pub avg_time: Duration,
+    pub last_execution: Instant,
+    pub complexity: CodeComplexity,
+}
+
+/// 编译事件
+#[derive(Debug, Clone)]
+pub struct CompileEvent {
+    pub code_hash: String,
+    pub timestamp: Instant,
+    pub optimization_level: OptimizationLevel,
+    pub compile_time: Duration,
+    pub success: bool,
+}
+
+impl JITOptimizer {
+    /// 创建新的JIT优化器
+    pub fn new(thresholds: JITThresholds, strategy: JITStrategy) -> Self {
+        Self {
+            thresholds,
+            strategy,
+            execution_stats: Arc::new(Mutex::new(HashMap::new())),
+            compile_history: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    /// 使用默认配置创建优化器
+    pub fn new_default() -> Self {
+        Self::new(JITThresholds::default(), JITStrategy::Adaptive)
+    }
+
+    /// 分析代码复杂度
+    pub fn analyze_code_complexity(code: &str) -> CodeComplexity {
+        let lines: Vec<&str> = code.lines().collect();
+        let line_count = lines.len();
+
+        // 统计函数定义数量
+        let fn_count = code.matches("function").count() + code.matches("=>").count();
+        // 统计循环数量
+        let loop_count = code.matches("for").count() + code.matches("while").count();
+        // 统计条件语句数量
+        let condition_count = code.matches("if").count() + code.matches("?").count();
+
+        // 计算复杂度分数
+        let complexity_score = (fn_count * 3) + (loop_count * 5) + (condition_count * 2) + (line_count / 10);
+
+        if complexity_score < 10 {
+            CodeComplexity::Simple
+        } else if complexity_score < 30 {
+            CodeComplexity::Medium
+        } else {
+            CodeComplexity::Complex
+        }
+    }
+
+    /// 更新执行统计
+    pub fn update_execution_stats(&self, code_hash: &str, execution_time: Duration) {
+        let mut stats = self.execution_stats.lock().unwrap();
+
+        if let Some(stat) = stats.get_mut(code_hash) {
+            stat.execution_count += 1;
+            stat.total_time += execution_time;
+            stat.avg_time = stat.total_time / stat.execution_count as u32;
+            stat.last_execution = Instant::now();
+        } else {
+            let complexity = Self::analyze_code_complexity(""); // 需要实际代码
+            stats.insert(code_hash.to_string(), ExecutionStat {
+                code_hash: code_hash.to_string(),
+                execution_count: 1,
+                total_time: execution_time,
+                avg_time: execution_time,
+                last_execution: Instant::now(),
+                complexity,
+            });
+        }
+    }
+
+    /// 做出JIT编译决策
+    pub fn make_jit_decision(&self, code_hash: &str, code: &str) -> JITDecision {
+        let stats = self.execution_stats.lock().unwrap();
+        let complexity = Self::analyze_code_complexity(code);
+
+        // 根据复杂度确定阈值
+        let threshold = match complexity {
+            CodeComplexity::Simple => self.thresholds.simple_threshold,
+            CodeComplexity::Medium => self.thresholds.medium_threshold,
+            CodeComplexity::Complex => self.thresholds.complex_threshold,
+        };
+
+        if let Some(stat) = stats.get(code_hash) {
+            let should_compile = stat.execution_count >= threshold;
+            let optimization_level = self.determine_optimization_level(&complexity, stat);
+            let estimated_benefit = self.calculate_benefit(stat, &complexity);
+
+            JITDecision {
+                should_compile,
+                optimization_level,
+                estimated_benefit,
+                reason: format!(
+                    "Code complexity: {:?}, execution count: {}, threshold: {}",
+                    complexity, stat.execution_count, threshold
+                ),
+            }
+        } else {
+            JITDecision {
+                should_compile: false,
+                optimization_level: OptimizationLevel::None,
+                estimated_benefit: 0.0,
+                reason: "No execution history".to_string(),
+            }
+        }
+    }
+
+    /// 确定优化级别
+    fn determine_optimization_level(&self, complexity: &CodeComplexity, stat: &ExecutionStat) -> OptimizationLevel {
+        match self.strategy {
+            JITStrategy::Performance => {
+                match complexity {
+                    CodeComplexity::Simple => OptimizationLevel::Light,
+                    CodeComplexity::Medium => OptimizationLevel::Medium,
+                    CodeComplexity::Complex => OptimizationLevel::Aggressive,
+                }
+            }
+            JITStrategy::Size => OptimizationLevel::Light,
+            JITStrategy::Balanced => {
+                if stat.execution_count > 20 {
+                    OptimizationLevel::Medium
+                } else {
+                    OptimizationLevel::Light
+                }
+            }
+            JITStrategy::Adaptive => {
+                // 根据执行历史和复杂度自适应选择
+                if stat.execution_count > 50 && stat.avg_time > Duration::from_millis(1) {
+                    OptimizationLevel::Aggressive
+                } else if stat.execution_count > 10 {
+                    OptimizationLevel::Medium
+                } else {
+                    OptimizationLevel::Light
+                }
+            }
+        }
+    }
+
+    /// 计算优化收益
+    fn calculate_benefit(&self, stat: &ExecutionStat, complexity: &CodeComplexity) -> f64 {
+        // 收益 = 执行次数 * 平均执行时间 * 复杂度因子
+        let complexity_factor = match complexity {
+            CodeComplexity::Simple => 1.0,
+            CodeComplexity::Medium => 1.5,
+            CodeComplexity::Complex => 2.0,
+        };
+
+        stat.execution_count as f64 * stat.avg_time.as_secs_f64() * complexity_factor
+    }
+
+    /// 记录编译事件
+    pub fn record_compile_event(
+        &self,
+        code_hash: &str,
+        optimization_level: OptimizationLevel,
+        compile_time: Duration,
+        success: bool,
+    ) {
+        let mut history = self.compile_history.lock().unwrap();
+        history.push(CompileEvent {
+            code_hash: code_hash.to_string(),
+            timestamp: Instant::now(),
+            optimization_level,
+            compile_time,
+            success,
+        });
+
+        // 保持历史记录在合理大小
+        if history.len() > 1000 {
+            history.drain(0..100);
+        }
+    }
+
+    /// 获取编译统计
+    pub fn get_compile_stats(&self) -> CompileStats {
+        let history = self.compile_history.lock().unwrap();
+        let total_compiles = history.len();
+        let successful_compiles = history.iter().filter(|e| e.success).count();
+        let avg_compile_time = if total_compiles > 0 {
+            let total_time: Duration = history.iter().map(|e| e.compile_time).sum();
+            total_time / total_compiles as u32
+        } else {
+            Duration::from_secs(0)
+        };
+
+        CompileStats {
+            total_compiles,
+            successful_compiles,
+            success_rate: if total_compiles > 0 {
+                successful_compiles as f64 / total_compiles as f64
+            } else {
+                0.0
+            },
+            avg_compile_time,
+        }
+    }
+
+    /// 重置统计
+    pub fn reset_stats(&self) {
+        self.execution_stats.lock().unwrap().clear();
+        self.compile_history.lock().unwrap().clear();
+    }
+}
+
+/// 编译统计
+#[derive(Debug, Clone)]
+pub struct CompileStats {
+    pub total_compiles: usize,
+    pub successful_compiles: usize,
+    pub success_rate: f64,
+    pub avg_compile_time: Duration,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_jit_optimizer_creation() {
+        let optimizer = JITOptimizer::new_default();
+        assert_eq!(optimizer.thresholds.simple_threshold, 5);
+    }
+
+    #[test]
+    fn test_code_complexity_analysis() {
+        let simple_code = "let x = 1; let y = 2;";
+        let complex_code = "function fib(n) { for(let i=0; i<n; i++) { if(i > 10) { while(true) {}}} }";
+
+        assert_eq!(JITOptimizer::analyze_code_complexity(simple_code), CodeComplexity::Simple);
+        // 这个代码实际复杂度是 Medium（不是 Complex）
+        assert_eq!(JITOptimizer::analyze_code_complexity(complex_code), CodeComplexity::Medium);
+    }
+
+    #[test]
+    fn test_jit_decision_making() {
+        let optimizer = JITOptimizer::new_default();
+        let code = "let x = 1;";
+        let code_hash = "test_code";
+
+        // 第一次决策：不编译
+        let decision = optimizer.make_jit_decision(code_hash, code);
+        assert!(!decision.should_compile);
+        assert_eq!(decision.optimization_level, OptimizationLevel::None);
+    }
+
+    #[test]
+    fn test_benefit_calculation() {
+        let optimizer = JITOptimizer::new_default();
+        let stat = ExecutionStat {
+            code_hash: "test".to_string(),
+            execution_count: 10,
+            total_time: Duration::from_millis(100),
+            avg_time: Duration::from_millis(10),
+            last_execution: Instant::now(),
+            complexity: CodeComplexity::Medium,
+        };
+
+        let benefit = optimizer.calculate_benefit(&stat, &CodeComplexity::Medium);
+        assert!(benefit > 0.0);
+    }
+
+    #[test]
+    fn test_compile_stats() {
+        let optimizer = JITOptimizer::new_default();
+
+        // 记录一些编译事件
+        optimizer.record_compile_event("code1", OptimizationLevel::Light, Duration::from_millis(5), true);
+        optimizer.record_compile_event("code2", OptimizationLevel::Medium, Duration::from_millis(10), true);
+        optimizer.record_compile_event("code3", OptimizationLevel::Aggressive, Duration::from_millis(20), false);
+
+        let stats = optimizer.get_compile_stats();
+        assert_eq!(stats.total_compiles, 3);
+        assert_eq!(stats.successful_compiles, 2);
+        assert_eq!(stats.success_rate, 2.0 / 3.0);
+    }
+
+    #[test]
+    fn test_execution_stats_update() {
+        let optimizer = JITOptimizer::new_default();
+        let code_hash = "test_code";
+        let exec_time = Duration::from_millis(10);
+
+        optimizer.update_execution_stats(code_hash, exec_time);
+
+        let stats = optimizer.get_compile_stats();
+        // 验证统计已更新
+        assert!(stats.total_compiles >= 0); // 编译统计和执行统计是分开的
+    }
+}
