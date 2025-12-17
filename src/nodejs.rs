@@ -522,14 +522,14 @@ fn require_callback(
         if Path::new(&path_str).exists() {
             // Read module code
             if let Ok(code) = fs::read_to_string(&path_str) {
-                // Create module scope objects (do NOT set on global to avoid pollution)
+                // Create module and exports objects
+                // exports is an alias for module.exports, so they should reference the same object
                 let exports_obj = v8::Object::new(scope);
-                let exports_key = v8::String::new(scope, "exports").unwrap();
-
-                // Create module object
                 let module_obj = v8::Object::new(scope);
-                module_obj.set(scope, exports_key.into(), exports_obj.into());
-                let module_key = v8::String::new(scope, "module").unwrap();
+
+                // Set module.exports to exports_obj (they should be the same object)
+                let module_exports_key = v8::String::new(scope, "exports").unwrap();
+                module_obj.set(scope, module_exports_key.into(), exports_obj.into());
 
                 // Get current __dirname and __filename for this module
                 let module_dir = Path::new(&path_str).parent()
@@ -546,53 +546,50 @@ fn require_callback(
                     v8::null(scope).into()
                 };
 
-                // Compile and execute the module code in an IIFE to avoid scope pollution
-                // The IIFE returns module.exports so the require call gets the exports
+                // Set module context variables directly on global scope
+                let module_key = v8::String::new(scope, "module").unwrap();
+                let exports_key = v8::String::new(scope, "exports").unwrap();
+                let dirname_key = v8::String::new(scope, "__dirname").unwrap();
+                let filename_key = v8::String::new(scope, "__filename").unwrap();
+                let require_key = v8::String::new(scope, "require").unwrap();
+
+                global.set(scope, module_key.into(), module_obj.into());
+                global.set(scope, exports_key.into(), exports_obj.into());
+                global.set(scope, dirname_key.into(), dirname_str.into());
+                global.set(scope, filename_key.into(), filename_str.into());
+                global.set(scope, require_key.into(), require_func.into());
+
+                // Wrap code in IIFE that uses the global module and exports
                 let module_wrapper = format!(
-                    r#"(function(module, exports, __dirname, __filename, require) {{
+                    r#"(function() {{
                         {code}
                         return module.exports;
-                    }})"#,
+                    }})()"#,
                     code = code
                 );
 
                 if let Some(source) = v8::String::new(scope, &module_wrapper) {
                     if let Some(script) = v8::Script::compile(scope, source, None) {
-                        if let Some(func_result) = script.run(scope) {
-                            // func_result is now the IIFE function itself (not the return value yet)
-                            if func_result.is_function() {
-                                let func = v8::Local::<v8::Function>::try_from(func_result).unwrap();
+                        if let Some(final_exports) = script.run(scope) {
+                            // Clean up global variables
+                            global.delete(scope, module_key.into());
+                            global.delete(scope, exports_key.into());
+                            global.delete(scope, dirname_key.into());
+                            global.delete(scope, filename_key.into());
+                            global.delete(scope, require_key.into());
 
-                                // Prepare arguments before calling
-                                let undefined = v8::undefined(scope);
-                                let call_args = vec![
-                                    module_obj.into(),
-                                    exports_obj.into(),
-                                    dirname_str.into(),
-                                    filename_str.into(),
-                                    require_func,  // Pass the require function for nested requires
-                                ];
-
-                                // Call the function and get its return value (which is module.exports)
-                                let final_exports = if let Some(result) = func.call(scope, undefined.into(), &call_args) {
-                                    result
-                                } else {
-                                    v8::null(scope).into()
-                                };
-
-                                // Cache the module (only if it's an object)
-                                if final_exports.is_object() {
-                                    MODULE_CACHE.with(|cache| {
-                                        let mut cache_lock = cache.lock().unwrap();
-                                        let exports_obj = v8::Local::new(scope, &final_exports).to_object(scope).unwrap();
-                                        let exports_global = v8::Global::new(scope, &exports_obj);
-                                        cache_lock.insert(cache_key.clone(), exports_global);
-                                    });
-                                }
-
-                                retval.set(final_exports);
-                                return;
+                            // Cache the module if it's an object
+                            if final_exports.is_object() {
+                                let exports_obj = final_exports.to_object(scope).unwrap();
+                                MODULE_CACHE.with(|cache| {
+                                    let mut cache_lock = cache.lock().unwrap();
+                                    let exports_global = v8::Global::new(scope, &exports_obj);
+                                    cache_lock.insert(cache_key.clone(), exports_global);
+                                });
                             }
+
+                            retval.set(final_exports);
+                            return;
                         }
                     }
                 }
