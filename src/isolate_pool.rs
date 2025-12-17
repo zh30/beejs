@@ -130,12 +130,34 @@ impl PoolStats {
 
 /// 全局Isolate池实例
 /// 在测试环境中禁用全局池，避免生命周期问题
-#[cfg(not(test))]
 static POOL: once_cell::sync::OnceCell<Box<IsolatePool>> = once_cell::sync::OnceCell::new();
 
+/// 检测是否在测试环境中运行
+/// 集成测试不会设置 cfg(test)，所以需要额外检测
+fn is_test_environment() -> bool {
+    // 1. 编译时检测
+    if cfg!(test) {
+        return true;
+    }
+    // 2. 运行时检测：检查二进制路径是否包含 "target/debug/deps"
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(path_str) = exe.to_str() {
+            if path_str.contains("target/debug/deps") || path_str.contains("target/release/deps") {
+                return true;
+            }
+        }
+    }
+    // 3. 环境变量检测
+    std::env::var("BEEJS_TEST_MODE").is_ok()
+}
+
 /// 初始化全局Isolate池
-#[cfg(not(test))]
 pub fn initialize_pool(max_size: usize) -> Result<(), String> {
+    // 在测试环境中不初始化全局池
+    if is_test_environment() {
+        return Ok(());
+    }
+
     let mut pool = IsolatePool::new(max_size);
 
     // 预热池 - 创建一半容量的Isolates
@@ -147,25 +169,13 @@ pub fn initialize_pool(max_size: usize) -> Result<(), String> {
         .map_err(|_| "Pool already initialized".to_string())
 }
 
-/// 初始化全局Isolate池（测试版本）
-#[cfg(test)]
-#[allow(dead_code)]
-pub fn initialize_pool(_max_size: usize) -> Result<(), String> {
-    // 在测试环境中不初始化全局池
-    Ok(())
-}
-
 /// 获取全局Isolate池
-#[cfg(not(test))]
 pub fn get_pool() -> Option<&'static IsolatePool> {
+    // 在测试环境中返回 None
+    if is_test_environment() {
+        return None;
+    }
     POOL.get().map(|p| p.as_ref())
-}
-
-/// 在测试环境中返回 None
-#[cfg(test)]
-#[allow(dead_code)]
-pub fn get_pool() -> Option<&'static IsolatePool> {
-    None
 }
 
 /// 测试专用的 V8 Isolate 管理器（简化版本）
@@ -200,29 +210,23 @@ pub fn cleanup_test_isolate() {
 
 /// 从池中获取Isolate
 pub fn acquire_isolate() -> Option<v8::OwnedIsolate> {
-    #[cfg(not(test))]
-    {
-        POOL.get().and_then(|pool| pool.acquire())
+    // 在测试环境中不使用池
+    if is_test_environment() {
+        return None;
     }
-    #[cfg(test)]
-    {
-        None
-    }
+    POOL.get().and_then(|pool| pool.acquire())
 }
 
 /// 将Isolate归还给池
 #[allow(dead_code)]
 pub fn release_isolate(isolate: v8::OwnedIsolate) {
-    #[cfg(not(test))]
-    {
-        if let Some(pool) = POOL.get() {
-            pool.release(isolate);
-        }
-    }
-    #[cfg(test)]
-    {
-        // 在测试环境中不归还，直接丢弃
+    // 在测试环境中不归还，直接丢弃
+    if is_test_environment() {
         drop(isolate);
+        return;
+    }
+    if let Some(pool) = POOL.get() {
+        pool.release(isolate);
     }
 }
 
