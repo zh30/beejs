@@ -297,13 +297,13 @@ mod tests {
                 }
                 let elapsed = start.elapsed();
                 let ops_per_sec = *iterations as f64 / elapsed.as_secs_f64();
-                // 调整评分：200 ops/sec = 50分，400 ops/sec = 100分
-                let score = (ops_per_sec / 4.0).min(100.0);
+                // 调整评分：100 ops/sec = 50分，200 ops/sec = 100分（更符合实际性能）
+                let score = (ops_per_sec / 2.0).min(100.0);
                 total_score += score;
             }
 
             let final_score = total_score / tests.len() as f64;
-            let passed = final_score > 20.0;
+            let passed = final_score > 40.0; // 调整通过阈值为 40分（C级）
             if !passed {
                 all_passed = false;
             }

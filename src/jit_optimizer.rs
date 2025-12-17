@@ -235,7 +235,7 @@ impl JITOptimizer {
         }
     }
 
-    /// 确定优化级别
+    /// 确定优化级别（超级激进版）
     fn determine_optimization_level(
         &self,
         _complexity: &CodeComplexity,
@@ -252,13 +252,12 @@ impl JITOptimizer {
                 OptimizationLevel::Aggressive
             }
             JITStrategy::Adaptive => {
-                // 自适应策略：更激进的优化
-                if stat.execution_count > 2 && stat.avg_time > Duration::from_micros(500) {
+                // 超级激进的自适应策略：所有代码都使用激进优化
+                if stat.execution_count > 0 {
+                    // 只要执行过就使用激进优化
                     OptimizationLevel::Aggressive
-                } else if stat.execution_count > 1 {
-                    OptimizationLevel::Medium
                 } else {
-                    OptimizationLevel::Light
+                    OptimizationLevel::Medium
                 }
             }
         }
@@ -268,20 +267,20 @@ impl JITOptimizer {
     fn calculate_benefit(&self, stat: &ExecutionStat, complexity: &CodeComplexity) -> f64 {
         // 收益 = 执行次数 * 平均执行时间 * 复杂度因子 * 性能因子
         let complexity_factor = match complexity {
-            CodeComplexity::Simple => 8.0,  // 超激进的简单代码收益权重
-            CodeComplexity::Medium => 6.0,  // 超激进的中等代码收益权重
-            CodeComplexity::Complex => 4.0, // 超激进的复杂代码收益权重
+            CodeComplexity::Simple => 12.0,  // 超级激进的简单代码收益权重
+            CodeComplexity::Medium => 10.0,  // 超级激进的中等代码收益权重
+            CodeComplexity::Complex => 8.0,  // 超级激进的复杂代码收益权重
         };
 
-        let performance_factor = 5.0; // 超激进的性能因子
-        let time_factor = stat.avg_time.as_secs_f64().max(0.001); // 避免除零，最小0.001ms
+        let performance_factor = 8.0; // 超级激进的性能因子
+        let time_factor = stat.avg_time.as_secs_f64().max(0.0001); // 避免除零，最小0.0001ms
 
-        // 更激进的收益计算，确保更多代码被优化
+        // 超级激进的收益计算，确保所有代码都被优化
         stat.execution_count as f64
             * time_factor
             * complexity_factor
             * performance_factor
-            + (stat.execution_count as f64 * 10.0) // 额外奖励频繁执行的代码
+            + (stat.execution_count as f64 * 20.0) // 额外奖励频繁执行的代码
     }
 
     /// 记录编译事件

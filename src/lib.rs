@@ -24,7 +24,7 @@ mod isolate_guard;
 mod isolate_pool;
 mod jit_optimizer;
 mod lock_free;
-mod memory_pool;
+pub mod memory_pool;
 mod module_loader;
 mod nodejs;
 mod precompiled_cache;
@@ -405,6 +405,44 @@ impl Runtime {
     /// Execute JavaScript/TypeScript code
     pub fn execute_code(&self, code: &str) -> Result<String> {
         self.execute_code_with_file(code, None)
+    }
+
+    /// Get memory pool statistics (if initialized)
+    pub fn get_memory_pool_stats(&self) -> Option<memory_pool::MemoryStats> {
+        self.memory_pool.as_ref().map(|pool| pool.get_stats())
+    }
+
+    /// Get memory pool GC pressure reduction percentage
+    pub fn get_memory_pool_gc_reduction(&self) -> Option<f64> {
+        self.memory_pool.as_ref().map(|pool| pool.calculate_gc_pressure_reduction())
+    }
+
+    /// Execute code with memory pool optimization
+    pub fn execute_with_memory_pool(&self, code: &str) -> Result<String> {
+        if let Some(ref pool) = self.memory_pool {
+            if self.verbose {
+                let stats = pool.get_stats();
+                println!("Memory pool stats before execution:");
+                println!("  Strings allocated: {}", stats.strings_allocated);
+                println!("  Strings reused: {}", stats.strings_reused);
+                println!("  Objects allocated: {}", stats.objects_allocated);
+                println!("  Objects reused: {}", stats.objects_reused);
+            }
+        }
+
+        let result = self.execute_code(code)?;
+
+        if let Some(ref pool) = self.memory_pool {
+            if self.verbose {
+                let stats = pool.get_stats();
+                let gc_reduction = pool.calculate_gc_pressure_reduction();
+                println!("Memory pool stats after execution:");
+                println!("  Total memory saved: {} bytes", stats.total_memory_saved);
+                println!("  GC pressure reduction: {:.2}%", gc_reduction);
+            }
+        }
+
+        Ok(result)
     }
 
     /// Execute JavaScript/TypeScript code with inline caching

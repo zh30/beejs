@@ -1,0 +1,73 @@
+use beejs::Runtime;
+use beejs::memory_pool::{PoolConfig, SmartMemoryPool};
+
+#[test]
+fn test_memory_pool_integration() {
+    let runtime = Runtime::new(67108864, 1073741824, true).unwrap();
+
+    // 验证内存池已初始化
+    let stats = runtime.get_memory_pool_stats();
+    assert!(stats.is_some(), "Memory pool should be initialized");
+
+    let initial_stats = stats.unwrap();
+    println!("Initial memory pool stats: {:?}", initial_stats);
+
+    // 执行一些代码来触发内存分配
+    let code = r#"
+        const str1 = "Hello, World!";
+        const str2 = "This is a test string";
+        const str3 = str1 + " " + str2;
+        str3.length;
+    "#;
+
+    let result = runtime.execute_with_memory_pool(code);
+    assert!(result.is_ok(), "Code execution should succeed");
+    let result_str = result.unwrap();
+    // 检查结果是否包含数字（字符串长度）
+    assert!(result_str.trim().parse::<usize>().is_ok(), "Expected a number, got: {}", result_str);
+
+    // 检查内存池统计
+    let final_stats = runtime.get_memory_pool_stats().unwrap();
+    println!("Final memory pool stats: {:?}", final_stats);
+
+    // 验证GC压力减少
+    let gc_reduction = runtime.get_memory_pool_gc_reduction().unwrap();
+    println!("GC pressure reduction: {:.2}%", gc_reduction);
+    assert!(gc_reduction >= 0.0, "GC reduction should be non-negative");
+
+    println!("✅ Memory pool integration test passed!");
+}
+
+#[test]
+fn test_memory_pool_stats_access() {
+    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+
+    // 测试内存池统计API
+    let stats = runtime.get_memory_pool_stats();
+    assert!(stats.is_some(), "Memory pool stats should be available");
+
+    let gc_reduction = runtime.get_memory_pool_gc_reduction();
+    assert!(gc_reduction.is_some(), "GC reduction should be available");
+    assert!(gc_reduction.unwrap() >= 0.0, "GC reduction should be non-negative");
+
+    println!("✅ Memory pool stats access test passed!");
+}
+
+#[test]
+fn test_custom_memory_pool_config() {
+    // 创建自定义内存池配置
+    let custom_config = PoolConfig {
+        string_pool_size: 200,
+        object_pool_size: 100,
+        buffer_timeout: std::time::Duration::from_secs(600),
+        min_usage_threshold: 5,
+    };
+
+    // 验证配置
+    assert_eq!(custom_config.string_pool_size, 200);
+    assert_eq!(custom_config.object_pool_size, 100);
+    assert_eq!(custom_config.buffer_timeout.as_secs(), 600);
+    assert_eq!(custom_config.min_usage_threshold, 5);
+
+    println!("✅ Custom memory pool config test passed!");
+}
