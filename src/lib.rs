@@ -3,7 +3,7 @@ use anyhow::{Result, Context, anyhow};
 use std::fs;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use rquickjs::{Value, function::{Function, Rest}, Ctx};
+use rquickjs::{Value, function::{Function, Rest}, Ctx, Runtime as QjsRuntime, Context as QjsContext};
 
 mod typescript;
 mod module_loader;
@@ -14,6 +14,10 @@ pub struct Runtime {
     max_heap: usize,
     execution_count: Arc<AtomicUsize>,
     verbose: bool,
+    /// Reused QuickJS runtime for performance optimization
+    qjs_runtime: QjsRuntime,
+    /// Reused QuickJS context for performance optimization
+    qjs_context: QjsContext,
 }
 
 impl Runtime {
@@ -30,11 +34,21 @@ impl Runtime {
             println!("  QuickJS Engine: Initializing...");
         }
 
+        // Create a reusable QuickJS runtime for performance
+        let qjs_runtime = QjsRuntime::new()
+            .map_err(|e| anyhow!("Failed to create QuickJS runtime: {}", e))?;
+
+        // Create a reusable context for performance optimization
+        let qjs_context = QjsContext::full(&qjs_runtime)
+            .map_err(|e| anyhow!("Failed to create QuickJS context: {}", e))?;
+
         Ok(Self {
             stack_size,
             max_heap,
             execution_count: Arc::new(AtomicUsize::new(0)),
             verbose,
+            qjs_runtime,
+            qjs_context,
         })
     }
 
@@ -55,7 +69,7 @@ impl Runtime {
     }
 
     /// Execute JavaScript/TypeScript code with a specific base directory
-    fn execute_code_with_context(&self, code: &str, base_dir: PathBuf) -> Result<String> {
+    fn execute_code_with_context(&self, code: &str, _base_dir: PathBuf) -> Result<String> {
         if self.verbose {
             println!("Executing code: {} bytes", code.len());
         }
@@ -88,17 +102,14 @@ impl Runtime {
             code.to_string()
         };
 
-        // Create a new QuickJS runtime and context
-        let rt = rquickjs::Runtime::new().map_err(|e| anyhow!("Failed to create QuickJS runtime: {}", e))?;
-        let ctx = rquickjs::Context::full(&rt).map_err(|e| anyhow!("Failed to create QuickJS context: {}", e))?;
-
+        // Reuse the existing QuickJS runtime and context for better performance
         // TODO: Re-enable module system after fixing GC issues
         // Set up module system
         // let module_loader = module_loader::ModuleLoader::new(base_dir);
         // module_loader.setup_module_system(&ctx)?;
 
         // Execute in the context
-        ctx.with(|ctx| {
+        self.qjs_context.with(|ctx| {
             // Set up console
             let console_log = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
                 let mut output = String::new();
