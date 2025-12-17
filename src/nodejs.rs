@@ -544,16 +544,6 @@ fn require_callback(
         loading_lock.contains_key(&cache_key)
     });
 
-    // Check cache first using absolute path
-    MODULE_CACHE.with(|cache| {
-        let cache_lock = cache.lock().unwrap();
-        if let Some(cached_module) = cache_lock.get(&cache_key) {
-            let cached_local = v8::Local::new(scope, cached_module);
-            let exports = cached_local.into();
-            retval.set(exports);
-        }
-    });
-
     if is_loading {
         // Circular dependency detected - return empty object for now
         // This matches Node.js behavior where incomplete exports are returned
