@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use tokio::time::{sleep, timeout};
 
 /// 事件循环状态
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EventLoopState {
     /// 事件循环正在运行
     Running,
