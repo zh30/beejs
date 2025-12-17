@@ -76,7 +76,7 @@ mod tests {
                 })
                 .collect();
 
-            let results = futures::future::join_all(tasks).await;
+            let results: Vec<Result<String, tokio::task::JoinError>> = futures::future::join_all(tasks).await;
 
             let elapsed = start.elapsed();
 

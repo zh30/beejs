@@ -111,7 +111,7 @@ pub struct ModelConfig {
 }
 
 /// 模型性能指标
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ModelMetrics {
     pub total_requests: usize,
     pub successful_requests: usize,
@@ -122,6 +122,22 @@ pub struct ModelMetrics {
     pub throughput_rps: f64,
     pub error_rate: f64,
     pub last_updated: Instant,
+}
+
+impl Default for ModelMetrics {
+    fn default() -> Self {
+        Self {
+            total_requests: 0,
+            successful_requests: 0,
+            failed_requests: 0,
+            average_latency: Duration::from_nanos(0),
+            p95_latency: Duration::from_nanos(0),
+            p99_latency: Duration::from_nanos(0),
+            throughput_rps: 0.0,
+            error_rate: 0.0,
+            last_updated: Instant::now(),
+        }
+    }
 }
 
 impl ModelMetrics {
@@ -135,9 +151,9 @@ impl ModelMetrics {
 
         // 更新平均延迟
         let current_avg = self.average_latency;
-        let count = self.successful_requests as u32;
+        let count = self.successful_requests as u64;
         self.average_latency = Duration::from_nanos(
-            (current_avg.as_nanos() as u64 * (count - 1) + latency.as_nanos() as u64) / count as u64
+            (current_avg.as_nanos() as u64 * (count - 1) + latency.as_nanos() as u64) / count
         );
 
         self.error_rate = self.failed_requests as f64 / self.total_requests as f64;

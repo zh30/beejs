@@ -5,7 +5,7 @@ use std::collections::{BinaryHeap, HashMap};
 use std::cmp::{Ordering, Reverse};
 use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering as AtomicOrdering}};
 use std::time::{Duration, Instant};
-use tokio::sync::{mpsc, oneshot, Semaphore};
+use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinHandle;
 
 /// 任务优先级
@@ -195,12 +195,13 @@ impl AiAsyncQueue {
         for worker_id in 0..self.config.worker_count {
             let tasks = self.tasks.clone();
             let running_tasks = self.running_tasks.clone();
+            let task_results = self.task_results.clone();
             let queue_semaphore = self.queue_semaphore.clone();
             let stats = self.stats.clone();
             let config = self.config.clone();
 
             let handle = tokio::spawn(async move {
-                worker_loop(worker_id, tasks, running_tasks, queue_semaphore, stats, config).await;
+                worker_loop(worker_id, tasks, running_tasks, task_results, queue_semaphore, stats, config).await;
             });
 
             handles.push(handle);
@@ -361,6 +362,7 @@ async fn worker_loop(
     worker_id: usize,
     tasks: Arc<Mutex<BinaryHeap<Reverse<QueueTask>>>>,
     running_tasks: Arc<Mutex<HashMap<usize, RunningTaskInfo>>>,
+    task_results: Arc<Mutex<HashMap<usize, TaskResult>>>,
     queue_semaphore: Arc<Semaphore>,
     stats: Arc<Mutex<QueueStats>>,
     config: QueueConfig,
@@ -396,8 +398,7 @@ async fn worker_loop(
 
             // 记录结果
             {
-                let mut results = tokio::sync::Mutex::new(HashMap::new());
-                let mut results_guard = results.lock().await;
+                let mut results_guard = task_results.lock().unwrap();
                 results_guard.insert(task.id, result);
 
                 let mut stats_guard = stats.lock().unwrap();
@@ -421,7 +422,7 @@ async fn execute_task(task: &AiTask) -> TaskResult {
     let start_time = Instant::now();
 
     // 模拟任务执行
-    let execution_result = match task.task_type.as_str() {
+    let execution_result: Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> = match task.task_type.as_str() {
         "text_generation" => {
             tokio::time::sleep(Duration::from_millis(50)).await;
             Ok(vec![0; 1024])

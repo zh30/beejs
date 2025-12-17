@@ -4,8 +4,7 @@
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tokio::sync::{Semaphore, OwnedSemaphorePermit};
-use tokio::task::JoinHandle;
+use tokio::sync::Semaphore;
 
 /// AI任务类型
 #[derive(Debug, Clone)]
@@ -130,11 +129,12 @@ impl BatchStats {
 impl AiBatchProcessor {
     /// 创建新的AI批量处理器
     pub fn new(config: BatchConfig) -> Self {
+        let max_concurrent_batches = config.max_concurrent_batches;
         Self {
             config,
             pending_tasks: Arc::new(Mutex::new(VecDeque::new())),
             active_batches: Arc::new(Mutex::new(0)),
-            batch_semaphore: Arc::new(Semaphore::new(config.max_concurrent_batches)),
+            batch_semaphore: Arc::new(Semaphore::new(max_concurrent_batches)),
             next_task_id: Arc::new(Mutex::new(0)),
             stats: Arc::new(Mutex::new(BatchStats::default())),
         }
@@ -187,10 +187,10 @@ impl AiBatchProcessor {
         let config = self.config.clone();
 
         tokio::spawn(async move {
-            active_batches.lock().unwrap().clone_from(&(*active_batches.lock().unwrap() + 1));
+            *active_batches.lock().unwrap() += 1;
 
             let _permit = permit;
-            processor.run_batch(pending_tasks, stats, config).await;
+            Self::run_batch(pending_tasks, stats, config).await;
 
             *active_batches.lock().unwrap() -= 1;
         });
@@ -224,7 +224,7 @@ impl AiBatchProcessor {
         }
 
         // 处理批次
-        let results = Self::process_batch(&batch_tasks).await;
+        let _results = Self::process_batch(&batch_tasks).await;
 
         // 更新统计信息
         {
@@ -261,7 +261,7 @@ impl AiBatchProcessor {
         let start_time = Instant::now();
 
         let result = match task {
-            AiTaskType::TextGeneration { prompt, max_tokens, temperature } => {
+            AiTaskType::TextGeneration { prompt, max_tokens: _, temperature: _ } => {
                 // 模拟文本生成
                 tokio::time::sleep(Duration::from_millis(50)).await;
                 AiTaskResult::TextGeneration {

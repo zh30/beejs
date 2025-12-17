@@ -139,18 +139,18 @@ impl MemoryPoolStats {
     pub fn record_allocation(&mut self, time: Duration) {
         self.total_allocations += 1;
         let current_avg = self.average_allocation_time;
-        let count = self.total_allocations as u32;
+        let count = self.total_allocations as u64;
         self.average_allocation_time = Duration::from_nanos(
-            (current_avg.as_nanos() as u64 * (count - 1) + time.as_nanos() as u64) / count as u64
+            (current_avg.as_nanos() as u64 * (count - 1) + time.as_nanos() as u64) / count
         );
     }
 
     pub fn record_deallocation(&mut self, time: Duration) {
         self.total_deallocations += 1;
         let current_avg = self.average_deallocation_time;
-        let count = self.total_deallocations as u32;
+        let count = self.total_deallocations as u64;
         self.average_deallocation_time = Duration::from_nanos(
-            (current_avg.as_nanos() as u64 * (count - 1) + time.as_nanos() as u64) / count as u64
+            (current_avg.as_nanos() as u64 * (count - 1) + time.as_nanos() as u64) / count
         );
     }
 }
