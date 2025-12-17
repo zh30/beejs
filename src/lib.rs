@@ -298,22 +298,26 @@ impl Runtime {
             }
         }
 
-        // 在测试环境中，始终创建新的 Isolate（避免线程问题）
-        #[cfg(test)]
-        let mut isolate = v8::Isolate::new(Default::default());
-
-        // 在非测试环境中，尝试使用池化的 Isolate
-        #[cfg(not(test))]
-        let mut isolate = if let Some(pooled_isolate) = isolate_pool::acquire_isolate() {
+        // 获取 V8 Isolate
+        // 在测试环境中，创建新的 Isolate 避免线程问题
+        // 在生产环境中，使用池化 Isolate 提高性能
+        let mut isolate = if cfg!(test) {
             if self.verbose {
-                println!("Using pooled Isolate for execution");
-            }
-            pooled_isolate
-        } else {
-            if self.verbose {
-                println!("Creating new Isolate (pool unavailable)");
+                println!("Creating new Isolate for test");
             }
             v8::Isolate::new(Default::default())
+        } else {
+            if let Some(pooled_isolate) = isolate_pool::acquire_isolate() {
+                if self.verbose {
+                    println!("Using pooled Isolate for execution");
+                }
+                pooled_isolate
+            } else {
+                if self.verbose {
+                    println!("Creating new Isolate (pool unavailable)");
+                }
+                v8::Isolate::new(Default::default())
+            }
         };
 
         let result = {
@@ -338,10 +342,20 @@ impl Runtime {
                 }
             };
 
+            // 使用 TryCatch 捕获运行时异常
+            let scope = &mut v8::TryCatch::new(scope);
             let result = match script.run(scope) {
                 Some(result) => result,
                 None => {
-                    return Err(anyhow!("JavaScript execution error"));
+                    // 检查是否有异常
+                    if let Some(exception) = scope.exception() {
+                        let error_msg = exception.to_string(scope)
+                            .map(|s| s.to_rust_string_lossy(scope))
+                            .unwrap_or_else(|| "Unknown error".to_string());
+                        return Err(anyhow!("JavaScript execution error: {}", error_msg));
+                    } else {
+                        return Err(anyhow!("JavaScript execution error"));
+                    }
                 }
             };
 
@@ -381,7 +395,8 @@ impl Runtime {
             }
         }
 
-        // 在非测试环境中，归还 Isolate 到池中（如果是从池中获取的）
+        // 归还 Isolate 到池中（仅在非测试环境中）
+        // 在测试环境中，Isolate 会在作用域结束时自动销毁
         #[cfg(not(test))]
         {
             if isolate_pool::get_pool().is_some() {

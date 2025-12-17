@@ -87,7 +87,7 @@ impl SmartMemoryPool {
         // 预分配字符串缓冲区
         {
             let mut pool = self.string_buffers.lock().unwrap();
-            for i in 0..(self.config.string_pool_size / 4) {
+            for _ in 0..(self.config.string_pool_size / 4) {
                 pool.push_back(StringBuffer {
                     buffer: String::with_capacity(1024),
                     last_used: Instant::now(),
@@ -99,7 +99,7 @@ impl SmartMemoryPool {
         // 预分配对象缓冲区
         {
             let mut pool = self.object_buffers.lock().unwrap();
-            for i in 0..(self.config.object_pool_size / 4) {
+            for _ in 0..(self.config.object_pool_size / 4) {
                 pool.push_back(ObjectBuffer {
                     buffer: Vec::with_capacity(4096),
                     last_used: Instant::now(),
@@ -219,7 +219,6 @@ impl SmartMemoryPool {
 
     /// 清理字符串池中的过期缓冲区
     fn cleanup_string_pool(&self, pool: &mut VecDeque<StringBuffer>) {
-        let now = Instant::now();
         let mut to_remove = Vec::new();
 
         for (i, buffer) in pool.iter().enumerate() {
@@ -238,7 +237,6 @@ impl SmartMemoryPool {
 
     /// 清理对象池中的过期缓冲区
     fn cleanup_object_pool(&self, pool: &mut VecDeque<ObjectBuffer>) {
-        let now = Instant::now();
         let mut to_remove = Vec::new();
 
         for (i, buffer) in pool.iter().enumerate() {
