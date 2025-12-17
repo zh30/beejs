@@ -182,24 +182,26 @@ pub struct Runtime {
     _max_heap: usize,
     execution_count: Arc<AtomicUsize>,
     verbose: bool,
+    // Core modules - always initialized (essential for JS execution)
     memory_pool: Option<Arc<SmartMemoryPool>>,
     _bytecode_cache: Option<Arc<BytecodeCache>>,
     optimize_mode: OptimizeMode,
     compilation_stats: Arc<Mutex<CompilationStats>>,
+    // JIT optimization modules - initialized eagerly (critical for performance)
     hot_path_tracker: Option<Arc<hot_path_tracker::HotPathTracker>>,
     inline_cache: Option<Arc<inline_cache::InlineCache>>,
     jit_optimizer: Option<Arc<jit_optimizer::JITOptimizer>>,
-    // AI工作负载优化模块
-    ai_batch_processor: Option<Arc<ai_batch_processor::AiBatchProcessor>>,
-    ai_memory_pool: Option<Arc<ai_memory_pool::AiMemoryPool>>,
-    ai_async_queue: Option<Arc<tokio::sync::Mutex<ai_async_queue::AiAsyncQueue>>>,
-    ai_model_manager: Option<Arc<ai_model_interface::AiModelManager>>,
-    // 模块加载器
+    // Module system - initialized eagerly (often needed)
     module_loader: Option<Arc<module_loader::ModuleLoader>>,
-    // 深度优化器
+    // Deep optimizer - initialized eagerly (improves all code execution)
     deep_optimizer: Option<Arc<deep_optimization::DeepOptimizer>>,
-    // 预编译模块缓存
-    precompiled_cache: Option<Arc<precompiled_cache::PrecompiledModuleCache>>,
+    // Precompiled cache - initialized lazily (deferred for faster startup)
+    precompiled_cache: once_cell::sync::OnceCell<Arc<precompiled_cache::PrecompiledModuleCache>>,
+    // AI workload modules - initialized lazily (not needed for simple scripts)
+    ai_batch_processor: once_cell::sync::OnceCell<Arc<ai_batch_processor::AiBatchProcessor>>,
+    ai_memory_pool: once_cell::sync::OnceCell<Arc<ai_memory_pool::AiMemoryPool>>,
+    ai_async_queue: once_cell::sync::OnceCell<Arc<tokio::sync::Mutex<ai_async_queue::AiAsyncQueue>>>,
+    ai_model_manager: once_cell::sync::OnceCell<Arc<ai_model_interface::AiModelManager>>,
 }
 
 /// Compilation statistics for JIT optimization
@@ -264,6 +266,7 @@ impl Runtime {
             }
         }
 
+        // === CORE MODULES (always initialized - essential for JS execution) ===
         // 初始化智能内存池
         let memory_pool = Some(Arc::new(SmartMemoryPool::new(PoolConfig::default())));
 
@@ -279,15 +282,14 @@ impl Runtime {
         // 初始化JIT优化器
         let jit_optimizer = Some(Arc::new(jit_optimizer::JITOptimizer::new_default()));
 
-        // 初始化AI工作负载优化模块
-        let ai_batch_processor = Some(Arc::new(ai_batch_processor::AiBatchProcessor::new(
-            BatchConfig::default(),
-        )));
-        let ai_memory_pool = Some(Arc::new(ai_memory_pool::create_general_ai_memory_pool()));
-        let ai_async_queue = Some(Arc::new(tokio::sync::Mutex::new(
-            ai_async_queue::AiAsyncQueue::new(ai_async_queue::QueueConfig::default()),
-        )));
-        let ai_model_manager = Some(Arc::new(ai_model_interface::AiModelManager::new()));
+        // 初始化模块加载器
+        let module_loader = Some(Arc::new(module_loader::ModuleLoader::from_current_dir()?));
+
+        // 初始化深度优化器
+        let deep_optimizer = Some(Arc::new(deep_optimization::DeepOptimizer::new_default()));
+
+        // === LAZY MODULES (initialized on demand - for faster startup) ===
+        // AI modules and precompiled cache are lazily initialized
 
         if verbose {
             let version = v8::V8::get_version();
@@ -301,40 +303,12 @@ impl Runtime {
             println!("  Hot Path Tracker: enabled (identifies optimization opportunities)");
             println!("  Inline Cache: enabled (optimizes property access and function calls)");
             println!("  JIT Optimizer: enabled (dynamic threshold and custom strategy)");
-            println!("  AI Batch Processor: enabled (high-throughput batch processing)");
-            println!("  AI Memory Pool: enabled (pre-allocated AI memory)");
-            println!("  AI Async Queue: enabled (concurrent task scheduling)");
-            println!("  AI Model Manager: enabled (unified model interface)");
             println!("  Module Loader: enabled (npm/package.json support)");
             println!(
                 "  Deep Optimizer: enabled (escape analysis, loop unrolling, inline optimization)"
             );
-        }
-
-        // 初始化模块加载器
-        let module_loader = Some(Arc::new(module_loader::ModuleLoader::from_current_dir()?));
-
-        // 初始化深度优化器
-        let deep_optimizer = Some(Arc::new(deep_optimization::DeepOptimizer::new_default()));
-
-        // 初始化预编译模块缓存
-        let precompiled_cache = match precompiled_cache::PrecompiledModuleCache::new() {
-            Ok(cache) => Some(Arc::new(cache)),
-            Err(e) => {
-                if verbose {
-                    println!("Warning: Failed to initialize precompiled cache: {}", e);
-                }
-                None
-            }
-        };
-
-        // 预编译内置模块
-        if let Some(ref cache) = precompiled_cache {
-            if let Err(e) = cache.precompile_builtin_modules() {
-                if verbose {
-                    println!("Warning: Failed to precompile builtin modules: {}", e);
-                }
-            }
+            println!("  AI Modules: lazy (initialized on first use)");
+            println!("  Precompiled Cache: lazy (initialized on first use)");
         }
 
         Ok(Self {
@@ -349,13 +323,69 @@ impl Runtime {
             hot_path_tracker,
             inline_cache,
             jit_optimizer,
-            ai_batch_processor,
-            ai_memory_pool,
-            ai_async_queue,
-            ai_model_manager,
             module_loader,
             deep_optimizer,
-            precompiled_cache,
+            // Lazy modules
+            precompiled_cache: once_cell::sync::OnceCell::new(),
+            ai_batch_processor: once_cell::sync::OnceCell::new(),
+            ai_memory_pool: once_cell::sync::OnceCell::new(),
+            ai_async_queue: once_cell::sync::OnceCell::new(),
+            ai_model_manager: once_cell::sync::OnceCell::new(),
+        })
+    }
+
+    /// Get or initialize the precompiled module cache
+    fn get_precompiled_cache(&self) -> Option<&Arc<precompiled_cache::PrecompiledModuleCache>> {
+        self.precompiled_cache.get_or_try_init(|| {
+            let cache = precompiled_cache::PrecompiledModuleCache::new()?;
+            cache.precompile_builtin_modules().ok(); // Best effort precompilation
+            Ok::<_, anyhow::Error>(Arc::new(cache))
+        }).ok()
+    }
+
+    /// Get or initialize the AI batch processor
+    #[allow(dead_code)]
+    pub fn get_ai_batch_processor(&self) -> &Arc<ai_batch_processor::AiBatchProcessor> {
+        self.ai_batch_processor.get_or_init(|| {
+            if self.verbose {
+                println!("Lazy-initializing AI Batch Processor...");
+            }
+            Arc::new(ai_batch_processor::AiBatchProcessor::new(BatchConfig::default()))
+        })
+    }
+
+    /// Get or initialize the AI memory pool
+    #[allow(dead_code)]
+    pub fn get_ai_memory_pool(&self) -> &Arc<ai_memory_pool::AiMemoryPool> {
+        self.ai_memory_pool.get_or_init(|| {
+            if self.verbose {
+                println!("Lazy-initializing AI Memory Pool...");
+            }
+            Arc::new(ai_memory_pool::create_general_ai_memory_pool())
+        })
+    }
+
+    /// Get or initialize the AI async queue
+    #[allow(dead_code)]
+    pub fn get_ai_async_queue(&self) -> &Arc<tokio::sync::Mutex<ai_async_queue::AiAsyncQueue>> {
+        self.ai_async_queue.get_or_init(|| {
+            if self.verbose {
+                println!("Lazy-initializing AI Async Queue...");
+            }
+            Arc::new(tokio::sync::Mutex::new(
+                ai_async_queue::AiAsyncQueue::new(ai_async_queue::QueueConfig::default()),
+            ))
+        })
+    }
+
+    /// Get or initialize the AI model manager
+    #[allow(dead_code)]
+    pub fn get_ai_model_manager(&self) -> &Arc<ai_model_interface::AiModelManager> {
+        self.ai_model_manager.get_or_init(|| {
+            if self.verbose {
+                println!("Lazy-initializing AI Model Manager...");
+            }
+            Arc::new(ai_model_interface::AiModelManager::new())
         })
     }
 
