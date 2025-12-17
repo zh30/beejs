@@ -211,7 +211,7 @@ impl JITOptimizer {
     }
 
     /// 确定优化级别
-    fn determine_optimization_level(&self, complexity: &CodeComplexity, stat: &ExecutionStat) -> OptimizationLevel {
+    fn determine_optimization_level(&self, _complexity: &CodeComplexity, stat: &ExecutionStat) -> OptimizationLevel {
         match self.strategy {
             JITStrategy::Performance => {
                 // 性能优先策略：所有代码都使用激进优化

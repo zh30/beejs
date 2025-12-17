@@ -526,7 +526,6 @@ fn require_callback(
             let cached_local = v8::Local::new(scope, cached_module);
             let exports = cached_local.into();
             retval.set(exports);
-            return;
         }
     });
 
@@ -712,7 +711,7 @@ fn resolve_module_path(
     path.push(module_name_trimmed);
 
     // Add .js extension if not present and file doesn't exist
-    if !path.exists() && !path.extension().is_some() {
+    if !path.exists() && path.extension().is_none() {
         path.set_extension("js");
     }
 

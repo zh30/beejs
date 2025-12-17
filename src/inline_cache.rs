@@ -155,12 +155,12 @@ impl InlineCache {
 
         let _keys_to_remove: Vec<CacheKey> = entries
             .iter()
-            .filter_map(|(_, _entry)| {
+            .filter_map(|(key, _entry)| {
                 let is_old = now.duration_since(_entry.last_accessed) > max_age;
                 let is_rarely_used = _entry.access_count < min_access;
 
                 if is_old || is_rarely_used {
-                    None
+                    Some(key.clone())
                 } else {
                     None
                 }

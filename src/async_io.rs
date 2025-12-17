@@ -282,7 +282,7 @@ impl AsyncIoManager {
                     let file_read = async_read_single_file(&path_clone).await;
                     let content = match file_read.content {
                         Ok(c) => c,
-                        Err(e) => return Err(IoError::ReadError(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))),
+                        Err(e) => return Err(IoError::ReadError(std::io::Error::other(e))),
                     };
 
                     // 处理内容

@@ -200,11 +200,7 @@ pub fn get_test_isolate() -> Option<v8::OwnedIsolate> {
     // 安全地获取 Isolate
     #[allow(static_mut_refs)]
     unsafe {
-        if let Some(isolate) = TEST_ISOLATE.take() {
-            Some(isolate)
-        } else {
-            None
-        }
+        TEST_ISOLATE.take()
     }
 }
 

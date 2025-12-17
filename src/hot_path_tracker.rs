@@ -154,7 +154,7 @@ impl HotPathTracker {
                 }
 
                 // 生成优化建议
-                suggestions = self.generate_optimization_suggestions(&path_info);
+                suggestions = self.generate_optimization_suggestions(path_info);
                 path_info.optimization_suggestions = suggestions.clone();
             }
 

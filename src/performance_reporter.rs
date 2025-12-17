@@ -148,9 +148,9 @@ impl PerformanceReporter {
             json.push_str(&format!("      \"passed\": {}\n", comp.passed));
             json.push_str("    }");
             if i < comparisons.len() - 1 {
-                json.push_str(",");
+                json.push(',');
             }
-            json.push_str("\n");
+            json.push('\n');
         }
 
         json.push_str("  ]\n");
@@ -411,8 +411,8 @@ impl PerformanceReporter {
 
         for (i, result) in comparisons.iter().enumerate() {
             report.push_str(&format!("### {}. {}\n", i + 1, result.metric_name));
-            report.push_str(&format!("| 运行时 | 性能 |\n"));
-            report.push_str(&format!("|--------|------|\n"));
+            report.push_str("| 运行时 | 性能 |\n");
+            report.push_str("|--------|------|\n");
             report.push_str(&format!("| Beejs | {:.2} {} |\n", result.beejs_value, result.unit));
             report.push_str(&format!("| Bun | {:.2} {} |\n\n", result.bun_value, result.unit));
 

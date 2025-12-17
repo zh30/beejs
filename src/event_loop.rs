@@ -92,9 +92,8 @@ impl V8EventLoop {
     pub fn start(&self) -> Result<(), String> {
         let mut state = self.state.lock().map_err(|e| e.to_string())?;
 
-        match state.clone() {
-            EventLoopState::Running => return Ok(()),
-            _ => {},
+        if *state == EventLoopState::Running {
+            return Ok(());
         }
 
         *state = EventLoopState::Running;
@@ -183,6 +182,8 @@ impl V8EventLoop {
             }
         }
 
+        drop(tasks); // 显式释放锁
+
         // 将完成的任务移到已完成队列
         let mut completed_queue = self.completed_tasks.lock().map_err(|e| e.to_string())?;
         completed_queue.extend(completed);
@@ -253,7 +254,7 @@ impl V8EventLoop {
         });
 
         let resolve_instance = resolve_func.get_function(scope)
-            .ok_or_else(|| "Failed to create resolve function")?;
+            .ok_or("Failed to create resolve function")?;
 
         let resolve_key = v8::String::new(scope, "resolve").unwrap();
         promise_handler.set(scope, resolve_key.into(), resolve_instance.into());
@@ -266,7 +267,7 @@ impl V8EventLoop {
         });
 
         let reject_instance = reject_func.get_function(scope)
-            .ok_or_else(|| "Failed to create reject function")?;
+            .ok_or("Failed to create reject function")?;
 
         let reject_key = v8::String::new(scope, "reject").unwrap();
         promise_handler.set(scope, reject_key.into(), reject_instance.into());

@@ -211,7 +211,7 @@ impl AiMemoryPool {
             }
             PreallocationStrategy::Adaptive => {
                 // 自适应预分配：预分配一些常用大小的块
-                let common_sizes = vec![
+                let common_sizes = [
                     1024,      // 1KB - 小文本
                     4096,      // 4KB - 中文本
                     16384,     // 16KB - 大文本

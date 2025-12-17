@@ -198,8 +198,10 @@ pub struct AiModelManager {
 /// 模型路由策略
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
+#[derive(Default)]
 pub enum ModelRoutingStrategy {
     /// 轮询
+    #[default]
     RoundRobin,
     /// 最快响应
     Fastest,
@@ -207,12 +209,6 @@ pub enum ModelRoutingStrategy {
     LoadBalanced,
     /// 基于模型类型的路由
     TypeBased,
-}
-
-impl Default for ModelRoutingStrategy {
-    fn default() -> Self {
-        ModelRoutingStrategy::LoadBalanced
-    }
 }
 
 #[allow(dead_code)]
@@ -248,43 +244,59 @@ impl AiModelManager {
     pub async fn load_model(&self, model_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let start_time = Instant::now();
 
-        let mut models = self.models.lock().unwrap();
-        if let Some(model) = models.get_mut(model_id) {
-            if !model.is_loaded {
-                // 模拟模型加载
-                tokio::time::sleep(Duration::from_millis(100)).await;
+        let need_load = {
+            let models = self.models.lock().unwrap();
+            if let Some(model) = models.get(model_id) {
+                !model.is_loaded
+            } else {
+                return Err("模型不存在".into());
+            }
+        };
 
+        if need_load {
+            // 模拟模型加载
+            tokio::time::sleep(Duration::from_millis(100)).await;
+
+            let mut models = self.models.lock().unwrap();
+            if let Some(model) = models.get_mut(model_id) {
                 model.is_loaded = true;
                 model.load_time = Some(start_time);
-
-                println!("模型 {} 加载完成，耗时: {:.2}ms",
-                    model_id,
-                    start_time.elapsed().as_secs_f64() * 1000.0
-                );
             }
-            Ok(())
-        } else {
-            Err("模型不存在".into())
+
+            println!("模型 {} 加载完成，耗时: {:.2}ms",
+                model_id,
+                start_time.elapsed().as_secs_f64() * 1000.0
+            );
         }
+
+        Ok(())
     }
 
     /// 卸载模型
     pub async fn unload_model(&self, model_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let mut models = self.models.lock().unwrap();
-        if let Some(model) = models.get_mut(model_id) {
-            if model.is_loaded {
-                // 模拟模型卸载
-                tokio::time::sleep(Duration::from_millis(50)).await;
+        let need_unload = {
+            let models = self.models.lock().unwrap();
+            if let Some(model) = models.get(model_id) {
+                model.is_loaded
+            } else {
+                return Err("模型不存在".into());
+            }
+        };
 
+        if need_unload {
+            // 模拟模型卸载
+            tokio::time::sleep(Duration::from_millis(50)).await;
+
+            let mut models = self.models.lock().unwrap();
+            if let Some(model) = models.get_mut(model_id) {
                 model.is_loaded = false;
                 model.load_time = None;
-
-                println!("模型 {} 已卸载", model_id);
             }
-            Ok(())
-        } else {
-            Err("模型不存在".into())
+
+            println!("模型 {} 已卸载", model_id);
         }
+
+        Ok(())
     }
 
     /// 调用模型

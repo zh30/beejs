@@ -301,7 +301,7 @@ impl PooledV8String {
     #[allow(dead_code)]
     pub fn new(pool: Arc<SmartMemoryPool>, value: &str) -> Self {
         let mut buffer = pool.get_string_buffer(value.len());
-        let string = std::mem::replace(&mut buffer.buffer, String::new());
+        let string = std::mem::take(&mut buffer.buffer);
         // 立即归还缓冲区到池中（空缓冲区）
         pool.return_string_buffer(buffer);
 

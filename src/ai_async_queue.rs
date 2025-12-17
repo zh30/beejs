@@ -65,11 +65,7 @@ impl Eq for QueueTask {}
 
 impl PartialOrd for QueueTask {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        // 反向比较以实现最大堆（高优先级在前）
-        match self.task.priority.cmp(&other.task.priority) {
-            Ordering::Equal => Some(self.enqueue_time.cmp(&other.enqueue_time)),
-            ordering => Some(ordering.reverse()), // 高优先级在前
-        }
+        Some(self.cmp(other))
     }
 }
 

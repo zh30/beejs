@@ -94,7 +94,7 @@ impl TypeScriptCompiler {
         // Find the end of the multi-line comment
         if !line.contains("*/") {
             result.push('\n');
-            while let Some(next_line) = lines.next() {
+            for next_line in lines.by_ref() {
                 result.push_str(next_line);
                 result.push('\n');
                 if next_line.contains("*/") {

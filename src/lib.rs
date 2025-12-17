@@ -38,8 +38,8 @@ static V8_AVAILABLE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBo
 /// Test if V8 engine is available (not poisoned)
 pub fn test_v8_availability() -> bool {
     // 如果已经测试过且不可用，直接返回
-    if V8_AVAILABLE.load(std::sync::atomic::Ordering::SeqCst) == false &&
-       V8_INITIALIZED.load(std::sync::atomic::Ordering::SeqCst) == false {
+    if !V8_AVAILABLE.load(std::sync::atomic::Ordering::SeqCst) &&
+       !V8_INITIALIZED.load(std::sync::atomic::Ordering::SeqCst) {
         return false;
     }
 
