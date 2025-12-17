@@ -51,6 +51,12 @@ pub use precompiled_cache::{PrecompiledCacheStats, PrecompiledModuleCache};
 // Re-export lightweight runtime types
 pub use runtime_lite::{RuntimeLite, get_global_lite_runtime};
 
+// Re-export lock-free concurrency types
+pub use lock_free::{
+    LockFreeCounter, LockFreeTaskScheduler, LockFreeQueue,
+    ShardedLock, LockFreeBufferPool, AtomicStats
+};
+
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
 static V8_INITIALIZED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
