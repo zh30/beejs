@@ -148,6 +148,7 @@ pub fn initialize_pool(max_size: usize) -> Result<(), String> {
 
 /// 初始化全局Isolate池（测试版本）
 #[cfg(test)]
+#[allow(dead_code)]
 pub fn initialize_pool(_max_size: usize) -> Result<(), String> {
     // 在测试环境中不初始化全局池
     Ok(())
@@ -209,6 +210,7 @@ pub fn acquire_isolate() -> Option<v8::OwnedIsolate> {
 }
 
 /// 将Isolate归还给池
+#[allow(dead_code)]
 pub fn release_isolate(isolate: v8::OwnedIsolate) {
     #[cfg(not(test))]
     {

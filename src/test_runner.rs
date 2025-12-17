@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 /// Test status
 #[derive(Debug, Clone, PartialEq)]

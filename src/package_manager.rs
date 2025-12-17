@@ -8,10 +8,9 @@
 //! - 包下载和缓存
 //! - node_modules 结构管理
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::io::Write;
 use serde::{Deserialize, Serialize};
 use anyhow::{Result, anyhow};
 
@@ -230,7 +229,7 @@ impl PackageManager {
 
                 let path = entry.path();
                 if path.is_dir() {
-                    let name = path.file_name()
+                    let _name = path.file_name()
                         .and_then(|s| s.to_str())
                         .map(|s| s.to_string())
                         .unwrap_or_default();

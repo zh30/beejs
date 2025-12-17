@@ -243,7 +243,7 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
                 println!("Adding dependency: {}@{}", package, version);
             }
 
-            let mut package_json_path = PathBuf::from("package.json");
+            let package_json_path = PathBuf::from("package.json");
             if !package_json_path.exists() {
                 println!("Error: package.json not found. Run 'beejs init' first.");
                 return Ok(());
@@ -269,7 +269,7 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
                 println!("Removing dependency: {}", package);
             }
 
-            let mut package_json_path = PathBuf::from("package.json");
+            let package_json_path = PathBuf::from("package.json");
             if !package_json_path.exists() {
                 println!("Error: package.json not found.");
                 return Ok(());
