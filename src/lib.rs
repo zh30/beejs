@@ -18,6 +18,8 @@ mod code_analyzer;
 mod hot_path_tracker;
 mod inline_cache;
 mod jit_optimizer;
+mod async_io;
+mod lock_free;
 
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
@@ -147,7 +149,7 @@ pub struct Runtime {
     execution_count: Arc<AtomicUsize>,
     verbose: bool,
     memory_pool: Option<Arc<SmartMemoryPool>>,
-    bytecode_cache: Option<Arc<BytecodeCache>>,
+    _bytecode_cache: Option<Arc<BytecodeCache>>,
     optimize_mode: OptimizeMode,
     compilation_stats: Arc<Mutex<CompilationStats>>,
     hot_path_tracker: Option<Arc<hot_path_tracker::HotPathTracker>>,
@@ -248,7 +250,7 @@ impl Runtime {
             execution_count: Arc::new(AtomicUsize::new(0)),
             verbose,
             memory_pool,
-            bytecode_cache,
+            _bytecode_cache: bytecode_cache,
             optimize_mode,
             compilation_stats: Arc::new(Mutex::new(CompilationStats::default())),
             hot_path_tracker,

@@ -17,7 +17,7 @@ pub struct SmartMemoryPool {
 
 /// 字符串缓冲区池
 #[derive(Debug)]
-struct StringBuffer {
+pub(crate) struct StringBuffer {
     buffer: String,
     last_used: Instant,
     usage_count: usize,
@@ -25,7 +25,7 @@ struct StringBuffer {
 
 /// 对象缓冲区池
 #[derive(Debug)]
-struct ObjectBuffer {
+pub(crate) struct ObjectBuffer {
     buffer: Vec<u8>,
     last_used: Instant,
     usage_count: usize,
