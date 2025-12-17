@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 
 /// 内存块
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct MemoryBlock {
     pub id: usize,
     pub size: usize,
@@ -18,6 +19,7 @@ pub struct MemoryBlock {
 
 /// AI模型内存配置
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ModelMemoryConfig {
     /// 模型名称
     pub model_name: String,
@@ -36,6 +38,7 @@ pub struct ModelMemoryConfig {
 }
 
 impl ModelMemoryConfig {
+    #[allow(dead_code)]
     pub fn new(model_name: &str, weights_memory: usize, activations_memory: usize) -> Self {
         Self {
             model_name: model_name.to_string(),
@@ -49,6 +52,7 @@ impl ModelMemoryConfig {
     }
 
     /// 计算总内存需求
+    #[allow(dead_code)]
     pub fn total_memory(&self) -> usize {
         self.weights_memory + self.activations_memory + self.gradients_memory + self.temp_buffer_size
     }
@@ -56,6 +60,7 @@ impl ModelMemoryConfig {
 
 /// AI内存池配置
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct AiMemoryPoolConfig {
     /// 池最大容量（字节）
     pub max_pool_size: usize,
@@ -71,6 +76,7 @@ pub struct AiMemoryPoolConfig {
     pub memory_usage_warning_threshold: f32,
 }
 
+#[allow(dead_code)]
 impl Default for AiMemoryPoolConfig {
     fn default() -> Self {
         Self {
@@ -104,6 +110,7 @@ pub enum PreallocationStrategy {
 }
 
 /// AI内存池
+#[allow(dead_code)]
 pub struct AiMemoryPool {
     config: AiMemoryPoolConfig,
     blocks: Arc<Mutex<Vec<MemoryBlock>>>,
@@ -116,6 +123,7 @@ pub struct AiMemoryPool {
 
 /// 内存池统计信息
 #[derive(Debug, Clone, Default)]
+#[allow(dead_code)]
 pub struct MemoryPoolStats {
     pub total_allocations: usize,
     pub total_deallocations: usize,
@@ -128,6 +136,7 @@ pub struct MemoryPoolStats {
 }
 
 impl MemoryPoolStats {
+    #[allow(dead_code)]
     pub fn cache_hit_rate(&self) -> f64 {
         let total = self.cache_hits + self.cache_misses;
         if total > 0 {
@@ -137,6 +146,7 @@ impl MemoryPoolStats {
         }
     }
 
+    #[allow(dead_code)]
     pub fn record_allocation(&mut self, time: Duration) {
         self.total_allocations += 1;
         let current_avg = self.average_allocation_time;
@@ -146,6 +156,7 @@ impl MemoryPoolStats {
         );
     }
 
+    #[allow(dead_code)]
     pub fn record_deallocation(&mut self, time: Duration) {
         self.total_deallocations += 1;
         let current_avg = self.average_deallocation_time;
@@ -156,6 +167,7 @@ impl MemoryPoolStats {
     }
 }
 
+#[allow(dead_code)]
 impl AiMemoryPool {
     /// 创建新的AI内存池
     pub fn new(config: AiMemoryPoolConfig) -> Self {
@@ -417,6 +429,7 @@ pub struct MemoryUsage {
     pub available_blocks: usize,
 }
 
+#[allow(dead_code)]
 impl MemoryUsage {
     pub fn usage_percentage(&self) -> f64 {
         self.utilization * 100.0
@@ -442,6 +455,7 @@ impl MemoryUsage {
 }
 
 /// 便利函数：创建大语言模型内存池
+#[allow(dead_code)]
 pub fn create_llm_memory_pool() -> AiMemoryPool {
     let config = AiMemoryPoolConfig {
         max_pool_size: 2 * 1024 * 1024 * 1024, // 2GB
@@ -461,6 +475,7 @@ pub fn create_llm_memory_pool() -> AiMemoryPool {
 }
 
 /// 便利函数：创建计算机视觉内存池
+#[allow(dead_code)]
 pub fn create_cv_memory_pool() -> AiMemoryPool {
     let config = AiMemoryPoolConfig {
         max_pool_size: 4 * 1024 * 1024 * 1024, // 4GB

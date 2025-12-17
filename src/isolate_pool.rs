@@ -110,11 +110,13 @@ pub struct PoolStats {
 
 impl PoolStats {
     /// 检查池是否接近满载
+    #[allow(dead_code)]
     pub fn is_near_full(&self) -> bool {
         self.in_use as f64 / self.max_size as f64 > 0.8
     }
 
     /// 获取利用率百分比
+    #[allow(dead_code)]
     pub fn utilization_percent(&self) -> f64 {
         if self.max_size == 0 {
             0.0

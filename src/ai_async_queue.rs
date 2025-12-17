@@ -33,6 +33,7 @@ pub enum TaskStatus {
 
 /// AI任务
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct AiTask {
     pub id: usize,
     pub priority: TaskPriority,
@@ -46,6 +47,7 @@ pub struct AiTask {
 
 /// 队列任务（用于优先级队列）
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct QueueTask {
     task: AiTask,
     enqueue_time: Instant,
@@ -83,6 +85,7 @@ impl Ord for QueueTask {
 
 /// 任务执行结果
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct TaskResult {
     pub task_id: usize,
     pub status: TaskStatus,
@@ -94,6 +97,7 @@ pub struct TaskResult {
 
 /// 队列配置
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct QueueConfig {
     pub max_queue_size: usize,
     pub max_concurrent_tasks: usize,
@@ -121,6 +125,7 @@ impl Default for QueueConfig {
 }
 
 /// 异步任务队列
+#[allow(dead_code)]
 pub struct AiAsyncQueue {
     config: QueueConfig,
     tasks: Arc<Mutex<BinaryHeap<Reverse<QueueTask>>>>,
@@ -134,6 +139,7 @@ pub struct AiAsyncQueue {
 
 /// 正在运行的任务信息
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct RunningTaskInfo {
     task: AiTask,
     start_time: Instant,
@@ -142,6 +148,7 @@ struct RunningTaskInfo {
 
 /// 队列统计信息
 #[derive(Debug, Clone, Default)]
+#[allow(dead_code)]
 pub struct QueueStats {
     pub total_tasks_enqueued: usize,
     pub total_tasks_completed: usize,
@@ -159,6 +166,7 @@ pub struct QueueStats {
 }
 
 impl QueueStats {
+    #[allow(dead_code)]
     pub fn success_rate(&self) -> f64 {
         let total = self.total_tasks_completed + self.total_tasks_failed;
         if total > 0 {
@@ -168,6 +176,7 @@ impl QueueStats {
         }
     }
 
+    #[allow(dead_code)]
     pub fn update_throughput(&mut self, elapsed: Duration) {
         if elapsed.as_secs_f64() > 0.0 {
             self.throughput_tasks_per_second = self.total_tasks_completed as f64 / elapsed.as_secs_f64();
@@ -468,6 +477,7 @@ async fn execute_task(task: &AiTask) -> TaskResult {
 }
 
 /// 便利函数：创建高吞吐量队列
+#[allow(dead_code)]
 pub fn create_high_throughput_queue() -> AiAsyncQueue {
     let config = QueueConfig {
         max_queue_size: 50000,
@@ -483,6 +493,7 @@ pub fn create_high_throughput_queue() -> AiAsyncQueue {
 }
 
 /// 便利函数：创建低延迟队列
+#[allow(dead_code)]
 pub fn create_low_latency_queue() -> AiAsyncQueue {
     let config = QueueConfig {
         max_queue_size: 5000,

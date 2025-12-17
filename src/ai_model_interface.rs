@@ -104,6 +104,7 @@ pub enum ModelOutput {
 
 /// 模型配置
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ModelConfig {
     pub model_type: ModelType,
     pub max_batch_size: usize,
@@ -115,6 +116,7 @@ pub struct ModelConfig {
 
 /// 模型性能指标
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ModelMetrics {
     pub total_requests: usize,
     pub successful_requests: usize,
@@ -144,6 +146,7 @@ impl Default for ModelMetrics {
 }
 
 impl ModelMetrics {
+    #[allow(dead_code)]
     pub fn update(&mut self, latency: Duration, success: bool) {
         self.total_requests += 1;
         if success {
@@ -163,6 +166,7 @@ impl ModelMetrics {
         self.last_updated = Instant::now();
     }
 
+    #[allow(dead_code)]
     pub fn success_rate(&self) -> f64 {
         if self.total_requests > 0 {
             self.successful_requests as f64 / self.total_requests as f64
@@ -174,6 +178,7 @@ impl ModelMetrics {
 
 /// AI模型实例
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct AiModel {
     pub id: String,
     pub config: ModelConfig,
@@ -183,6 +188,7 @@ pub struct AiModel {
 }
 
 /// AI模型管理器
+#[allow(dead_code)]
 pub struct AiModelManager {
     models: Arc<Mutex<HashMap<String, AiModel>>>,
     default_model_id: Arc<Mutex<Option<String>>>,
@@ -470,6 +476,7 @@ impl AiModelManager {
 }
 
 /// 便利函数：创建文本生成模型
+#[allow(dead_code)]
 pub fn create_text_generation_model(model_id: &str) -> AiModel {
     let config = ModelConfig {
         model_type: ModelType::LanguageModel {
@@ -494,6 +501,7 @@ pub fn create_text_generation_model(model_id: &str) -> AiModel {
 }
 
 /// 便利函数：创建图像分类模型
+#[allow(dead_code)]
 pub fn create_image_classification_model(model_id: &str) -> AiModel {
     let config = ModelConfig {
         model_type: ModelType::ImageClassifier {

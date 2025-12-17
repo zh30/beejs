@@ -18,6 +18,7 @@ pub struct SmartMemoryPool {
 /// 字符串缓冲区池
 #[derive(Debug)]
 pub(crate) struct StringBuffer {
+    #[allow(dead_code)]
     buffer: String,
     last_used: Instant,
     usage_count: usize,
@@ -26,6 +27,7 @@ pub(crate) struct StringBuffer {
 /// 对象缓冲区池
 #[derive(Debug)]
 pub(crate) struct ObjectBuffer {
+    #[allow(dead_code)]
     buffer: Vec<u8>,
     last_used: Instant,
     usage_count: usize,
@@ -110,6 +112,7 @@ impl SmartMemoryPool {
     }
 
     /// 获取或创建字符串缓冲区
+    #[allow(dead_code)]
     pub fn get_string_buffer(&self, min_capacity: usize) -> StringBuffer {
         let mut pool = self.string_buffers.lock().unwrap();
 
@@ -142,6 +145,7 @@ impl SmartMemoryPool {
     }
 
     /// 归还字符串缓冲区到池中
+    #[allow(dead_code)]
     pub fn return_string_buffer(&self, mut buffer: StringBuffer) {
         // 更新使用统计
         buffer.usage_count += 1;
@@ -164,6 +168,7 @@ impl SmartMemoryPool {
     }
 
     /// 获取或创建对象缓冲区
+    #[allow(dead_code)]
     pub fn get_object_buffer(&self, min_capacity: usize) -> ObjectBuffer {
         let mut pool = self.object_buffers.lock().unwrap();
 
@@ -196,6 +201,7 @@ impl SmartMemoryPool {
     }
 
     /// 归还对象缓冲区到池中
+    #[allow(dead_code)]
     pub fn return_object_buffer(&self, mut buffer: ObjectBuffer) {
         // 更新使用统计
         buffer.usage_count += 1;
@@ -292,6 +298,7 @@ pub struct PooledV8String {
 }
 
 impl PooledV8String {
+    #[allow(dead_code)]
     pub fn new(pool: Arc<SmartMemoryPool>, value: &str) -> Self {
         let mut buffer = pool.get_string_buffer(value.len());
         let string = std::mem::replace(&mut buffer.buffer, String::new());
@@ -308,6 +315,7 @@ impl PooledV8String {
         result
     }
 
+    #[allow(dead_code)]
     pub fn as_str(&self) -> &str {
         &self.string
     }

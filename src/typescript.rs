@@ -11,6 +11,7 @@ pub struct TypeScriptCompiler {
 
 impl TypeScriptCompiler {
     /// Create a new TypeScript compiler
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             type_map: HashMap::new(),
@@ -18,6 +19,7 @@ impl TypeScriptCompiler {
     }
 
     /// Compile TypeScript code to JavaScript
+    #[allow(dead_code)]
     pub fn compile(&mut self, code: &str) -> Result<String> {
         let mut result = String::new();
         let mut lines = code.lines().peekable();
@@ -34,6 +36,7 @@ impl TypeScriptCompiler {
     }
 
     /// Compile a single line of TypeScript
+    #[allow(dead_code)]
     fn compile_line(&mut self, line: &str, lines: &mut std::iter::Peekable<std::str::Lines>) -> Result<String> {
         // Skip empty lines and comments
         if line.is_empty() || line.starts_with("//") {
@@ -84,6 +87,7 @@ impl TypeScriptCompiler {
     }
 
     /// Compile multi-line comments
+    #[allow(dead_code)]
     fn compile_multiline_comment(&mut self, line: &str, lines: &mut std::iter::Peekable<std::str::Lines>) -> Result<String> {
         let mut result = line.to_string();
 
@@ -103,6 +107,7 @@ impl TypeScriptCompiler {
     }
 
     /// Remove type annotations from variable declarations
+    #[allow(dead_code)]
     fn remove_variable_types(&mut self, line: &str) -> String {
         let mut result = line.to_string();
 
@@ -142,6 +147,7 @@ impl TypeScriptCompiler {
     }
 
     /// Remove type annotations from function parameters
+    #[allow(dead_code)]
     fn remove_function_param_types(&self, line: &str) -> String {
         // Pattern: function name(param: type, param2: type)
         let mut result = line.to_string();
@@ -184,6 +190,7 @@ impl TypeScriptCompiler {
     }
 
     /// Clean a parameter list by removing type annotations
+    #[allow(dead_code)]
     fn clean_parameter_list(&self, params: &str) -> String {
         let mut result = Vec::new();
         let mut current_param = String::new();
@@ -239,6 +246,7 @@ impl TypeScriptCompiler {
     }
 
     /// Clean a single parameter by removing type annotation
+    #[allow(dead_code)]
     fn clean_single_parameter(&self, param: &str) -> String {
         let trimmed = param.trim();
         if let Some(colon_pos) = trimmed.find(':') {
@@ -258,6 +266,7 @@ impl TypeScriptCompiler {
     }
 
     /// Remove return type annotations
+    #[allow(dead_code)]
     fn remove_return_type(&self, line: &str) -> String {
         let trimmed = line.trim();
 
@@ -308,6 +317,7 @@ impl TypeScriptCompiler {
     }
 
     /// Remove generic type parameters
+    #[allow(dead_code)]
     fn remove_generic_types(&self, line: &str) -> String {
         let mut result = String::new();
         let chars: Vec<char> = line.chars().collect();
