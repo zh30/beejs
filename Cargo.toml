@@ -28,6 +28,7 @@ num_cpus = "1.0"
 # Testing
 [dev-dependencies]
 tempfile = "3.0"
+futures = "0.3"
 
 [[bin]]
 name = "beejs-benchmark"
