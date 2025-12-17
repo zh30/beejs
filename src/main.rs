@@ -16,7 +16,7 @@ struct Args {
     eval: Option<String>,
 
     /// Print version and exit
-    #[arg(short, long)]
+    #[arg(short = 'V', long)]
     version: bool,
 
     /// Enable verbose output

@@ -1,11 +1,9 @@
-// Note: Using deno_v8 which provides a more stable V8 binding
-// This is a placeholder - we'll implement proper V8 integration
-// For now, we'll use a simpler approach that can be extended
 use std::path::PathBuf;
 use anyhow::{Result, Context, anyhow};
 use std::fs;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use rquickjs::{Value, function::{Function, Rest}, Ctx};
 
 /// Beejs Runtime - High-performance JavaScript/TypeScript execution engine
 pub struct Runtime {
@@ -26,6 +24,7 @@ impl Runtime {
             println!("Runtime created with:");
             println!("  Stack size: {} bytes", stack_size);
             println!("  Max heap: {} bytes", max_heap);
+            println!("  QuickJS Engine: Initializing...");
         }
 
         Ok(Self {
@@ -54,18 +53,55 @@ impl Runtime {
             println!("Executing code: {} bytes", code.len());
         }
 
-        // TODO: Integrate with V8 engine
-        // For now, return a placeholder result
-        // This will be replaced with actual V8 execution
+        // Create a new QuickJS runtime and context
+        let rt = rquickjs::Runtime::new().map_err(|e| anyhow!("Failed to create QuickJS runtime: {}", e))?;
+        let ctx = rquickjs::Context::full(&rt).map_err(|e| anyhow!("Failed to create QuickJS context: {}", e))?;
 
-        // Increment execution count
-        self.execution_count.fetch_add(1, Ordering::SeqCst);
+        // Execute in the context
+        ctx.with(|ctx| {
+            // Set up console
+            let console_log = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
+                let mut output = String::new();
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        output.push(' ');
+                    }
+                    // Convert Value to string manually
+                    output.push_str(&format!("{:?}", arg));
+                }
+                println!("{}", output);
+                rquickjs::Undefined
+            }).map_err(|e| anyhow!("Failed to create console.log: {}", e))?;
 
-        if self.verbose {
-            println!("Execution completed successfully");
-        }
+            let console = rquickjs::Object::new(ctx.clone())?;
+            console.set("log", console_log)?;
+            ctx.globals().set("console", console)?;
 
-        Ok("Execution successful (placeholder)".to_string())
+            // Evaluate the code
+            let result: Result<Option<Value>, _> = ctx.eval(code);
+
+            match result {
+                Ok(result) => {
+                    // Increment execution count
+                    self.execution_count.fetch_add(1, Ordering::SeqCst);
+
+                    if self.verbose {
+                        println!("Execution completed successfully");
+                    }
+
+                    // Convert result to string
+                    let result_str = match result {
+                        Some(v) => format!("{:?}", v),
+                        None => "undefined".to_string(),
+                    };
+
+                    Ok(result_str)
+                }
+                Err(e) => {
+                    Err(anyhow!("JavaScript execution error: {}", e))
+                }
+            }
+        })
     }
 
     /// Get execution count
@@ -106,7 +142,7 @@ mod tests {
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("1 + 1");
         assert!(result.is_ok());
-        assert!(result.unwrap().contains("successful"));
+        assert!(result.unwrap().contains("2"));
     }
 
     #[test]
@@ -119,7 +155,7 @@ mod tests {
 
         let result = runtime.execute_file(&file.path().to_path_buf());
         assert!(result.is_ok());
-        assert!(result.unwrap().contains("successful"));
+        assert!(result.unwrap().contains("84"));
     }
 
     #[test]

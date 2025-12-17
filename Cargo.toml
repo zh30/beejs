@@ -7,9 +7,8 @@ description = "High-performance JavaScript/TypeScript runtime built with Rust an
 license = "MIT"
 
 [dependencies]
-# V8 integration - will be added after resolving dependencies
-# v8 = { version = "0.56", features = ["serde"] }
-# deno_v8 = "0.100"
+# QuickJS - Fast JavaScript engine with Rust bindings (no C++ compilation needed)
+rquickjs = "0.5"
 
 # CLI and argument parsing
 clap = { version = "4.0", features = ["derive"] }
