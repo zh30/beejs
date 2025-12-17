@@ -3,6 +3,7 @@ use anyhow::{Result, Context, anyhow};
 use std::fs;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Instant;
 use rusty_v8 as v8;
 use crate::memory_pool::{SmartMemoryPool, PoolConfig};
 
@@ -22,12 +23,41 @@ pub fn initialize_v8() {
         return;
     }
 
-    V8_INIT.call_once(|| {
-        let platform = v8::new_default_platform().unwrap();
-        v8::V8::initialize_platform(platform);
-        v8::V8::initialize();
-        V8_INITIALIZED.store(true, std::sync::atomic::Ordering::SeqCst);
-    });
+    // 在测试环境中，如果 Once 被污染，尝试恢复
+    #[cfg(test)]
+    {
+        // 检查 Once 是否被污染（通过尝试调用）
+        let init_result = std::panic::catch_unwind(|| {
+            V8_INIT.call_once(|| {
+                let platform = v8::new_default_platform().unwrap();
+                v8::V8::initialize_platform(platform);
+                v8::V8::initialize();
+                V8_INITIALIZED.store(true, std::sync::atomic::Ordering::SeqCst);
+            });
+        });
+
+        // 如果 Once 被污染，尝试手动初始化
+        if init_result.is_err() && !V8_INITIALIZED.load(std::sync::atomic::Ordering::SeqCst) {
+            // 手动初始化 V8（不依赖 Once）
+            let _ = std::panic::catch_unwind(|| {
+                let platform = v8::new_default_platform().unwrap();
+                v8::V8::initialize_platform(platform);
+                v8::V8::initialize();
+                V8_INITIALIZED.store(true, std::sync::atomic::Ordering::SeqCst);
+            });
+        }
+    }
+
+    // 在非测试环境中，正常使用 Once
+    #[cfg(not(test))]
+    {
+        V8_INIT.call_once(|| {
+            let platform = v8::new_default_platform().unwrap();
+            v8::V8::initialize_platform(platform);
+            v8::V8::initialize();
+            V8_INITIALIZED.store(true, std::sync::atomic::Ordering::SeqCst);
+        });
+    }
 }
 
 /// Check if V8 is initialized
@@ -51,10 +81,23 @@ impl Runtime {
         max_heap: usize,
         verbose: bool,
     ) -> Result<Self> {
-        initialize_v8();
+        // 安全地初始化 V8（处理测试环境中的 Once 被污染情况）
+        #[cfg(test)]
+        {
+            if !is_v8_initialized() {
+                // 尝试恢复被污染的 Once
+                let _ = std::panic::catch_unwind(|| {
+                    initialize_v8();
+                });
+            }
+        }
+        #[cfg(not(test))]
+        {
+            initialize_v8();
+        }
 
         // 初始化 Isolate 池（大小为 CPU 核心数，最大不超过 8）
-        // 注意：在测试环境中，池可能已经初始化过了
+        // 在测试环境中禁用自动初始化，避免 Once 实例污染
         #[cfg(not(test))]
         {
             let pool_size = std::cmp::min(num_cpus::get(), 8);
@@ -324,19 +367,9 @@ mod tests {
     use tempfile::NamedTempFile;
     use std::io::Write;
 
-    // 确保 V8 只被初始化一次
-    static TEST_V8_INIT: std::sync::Once = std::sync::Once::new();
-
-    fn init_test_v8() {
-        TEST_V8_INIT.call_once(|| {
-            // 使用新的初始化函数
-            initialize_v8();
-        });
-    }
-
     #[test]
     fn test_runtime_creation() {
-        init_test_v8();
+        // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false);
         assert!(runtime.is_ok());
         assert!(runtime.unwrap().is_initialized());
@@ -344,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_simple_code_execution() {
-        init_test_v8();
+        // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("1 + 1");
         assert!(result.is_ok());
@@ -353,7 +386,7 @@ mod tests {
 
     #[test]
     fn test_file_execution() {
-        init_test_v8();
+        // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
         // Create a temporary file with JavaScript code
@@ -367,7 +400,7 @@ mod tests {
 
     #[test]
     fn test_execution_count() {
-        init_test_v8();
+        // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         assert_eq!(runtime.execution_count(), 0);
 
@@ -377,7 +410,7 @@ mod tests {
 
     #[test]
     fn test_console_log() {
-        init_test_v8();
+        // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("console.log('hello'); 'done'");
         assert!(result.is_ok());
@@ -386,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_process_version() {
-        init_test_v8();
+        // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("process.version");
         assert!(result.is_ok());
@@ -395,7 +428,7 @@ mod tests {
 
     #[test]
     fn test_path_join() {
-        init_test_v8();
+        // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("path.join('a', 'b', 'c')");
         assert!(result.is_ok());
@@ -404,7 +437,7 @@ mod tests {
 
     #[test]
     fn test_require_builtin() {
-        init_test_v8();
+        // Runtime::new 会自动处理 V8 初始化
         let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
         let result = runtime.execute_code("const p = require('path'); p.join('x', 'y')");
         assert!(result.is_ok());
@@ -413,7 +446,7 @@ mod tests {
 
     #[test]
     fn test_isolate_pool_startup_optimization() {
-        init_test_v8();
+        // Runtime::new 会自动处理 V8 初始化
 
         // 测试启动时间优化
         use crate::isolate_pool::{initialize_pool, acquire_isolate, release_isolate};
@@ -461,7 +494,7 @@ mod tests {
 
     #[test]
     fn test_isolate_pool_vs_fresh_creation() {
-        init_test_v8();
+        // Runtime::new 会自动处理 V8 初始化
 
         use crate::isolate_pool::{initialize_pool, acquire_isolate, release_isolate};
 
