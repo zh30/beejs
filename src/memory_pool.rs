@@ -285,6 +285,7 @@ impl SmartMemoryPool {
 }
 
 /// V8对象包装器，使用内存池优化
+#[allow(dead_code)]
 pub struct PooledV8String {
     string: String,
     _pool: Arc<SmartMemoryPool>, // 保持池的引用

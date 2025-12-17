@@ -101,6 +101,7 @@ impl IsolatePool {
 
 /// 池统计信息
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct PoolStats {
     pub available: usize,
     pub in_use: usize,

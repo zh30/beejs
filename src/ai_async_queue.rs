@@ -10,6 +10,7 @@ use tokio::task::JoinHandle;
 
 /// 任务优先级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(dead_code)]
 pub enum TaskPriority {
     Critical = 0,
     High = 1,
@@ -20,6 +21,7 @@ pub enum TaskPriority {
 
 /// AI任务状态
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum TaskStatus {
     Pending,
     Running,
@@ -282,7 +284,7 @@ impl AiAsyncQueue {
 
     /// 获取任务结果（异步）
     pub async fn get_result(&self, task_id: usize) -> Option<TaskResult> {
-        let (tx, rx) = oneshot::channel();
+        let (_tx, rx) = oneshot::channel();
 
         // 检查任务是否已完成
         {
@@ -358,6 +360,7 @@ impl AiAsyncQueue {
 }
 
 /// 工作线程循环
+#[allow(dead_code)]
 async fn worker_loop(
     worker_id: usize,
     tasks: Arc<Mutex<BinaryHeap<Reverse<QueueTask>>>>,
@@ -365,7 +368,7 @@ async fn worker_loop(
     task_results: Arc<Mutex<HashMap<usize, TaskResult>>>,
     queue_semaphore: Arc<Semaphore>,
     stats: Arc<Mutex<QueueStats>>,
-    config: QueueConfig,
+    _config: QueueConfig,
 ) {
     loop {
         // 获取任务
@@ -418,6 +421,7 @@ async fn worker_loop(
 }
 
 /// 执行单个任务
+#[allow(dead_code)]
 async fn execute_task(task: &AiTask) -> TaskResult {
     let start_time = Instant::now();
 

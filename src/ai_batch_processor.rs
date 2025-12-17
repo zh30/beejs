@@ -8,6 +8,7 @@ use tokio::sync::Semaphore;
 
 /// AI任务类型
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum AiTaskType {
     /// 文本生成任务
     TextGeneration {
@@ -35,6 +36,7 @@ pub enum AiTaskType {
 
 /// AI任务结果
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum AiTaskResult {
     TextGeneration {
         generated_text: String,
@@ -270,7 +272,7 @@ impl AiBatchProcessor {
                     processing_time: start_time.elapsed(),
                 }
             }
-            AiTaskType::ImageClassification { image_data, top_k } => {
+            AiTaskType::ImageClassification { image_data: _, top_k } => {
                 // 模拟图像分类
                 tokio::time::sleep(Duration::from_millis(100)).await;
                 let predictions = vec![
@@ -288,7 +290,7 @@ impl AiBatchProcessor {
                     processing_time: start_time.elapsed(),
                 }
             }
-            AiTaskType::Embedding { text, model_name } => {
+            AiTaskType::Embedding { text: _, model_name: _ } => {
                 // 模拟嵌入向量生成
                 tokio::time::sleep(Duration::from_millis(30)).await;
                 let dimensions = 384;

@@ -64,6 +64,7 @@ pub enum OptimizationLevel {
 
 /// 自定义JIT策略
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum JITStrategy {
     /// 性能优先
     Performance,

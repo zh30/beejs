@@ -86,6 +86,7 @@ impl Default for AiMemoryPoolConfig {
 
 /// 预分配策略
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum PreallocationStrategy {
     /// 固定大小预分配
     Fixed {
@@ -360,7 +361,7 @@ impl AiMemoryPool {
     /// 清理未使用的内存块
     pub fn cleanup_unused(&self) {
         let cutoff = Instant::now() - Duration::from_secs(self.config.auto_cleanup_interval);
-        let mut blocks = self.blocks.lock().unwrap();
+        let blocks = self.blocks.lock().unwrap();
         let mut available = self.available_blocks.lock().unwrap();
 
         // 清理长时间未访问的块
@@ -376,7 +377,7 @@ impl AiMemoryPool {
 
     /// 碎片整理
     pub fn defragment(&self) {
-        let mut blocks = self.blocks.lock().unwrap();
+        let _blocks = self.blocks.lock().unwrap();
         let mut available = self.available_blocks.lock().unwrap();
 
         // 简单的碎片整理：重新组织可用块
@@ -406,6 +407,7 @@ impl AiMemoryPool {
 
 /// 内存使用情况
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct MemoryUsage {
     pub total_allocated: usize,
     pub peak_allocated: usize,

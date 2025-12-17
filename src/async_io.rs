@@ -12,6 +12,7 @@ use crate::Runtime;
 
 /// 异步I/O管理器
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct AsyncIoManager {
     /// 并发任务限制
     max_concurrent_tasks: usize,
@@ -23,6 +24,7 @@ pub struct AsyncIoManager {
 
 /// I/O操作统计
 #[derive(Debug, Clone, Default)]
+#[allow(dead_code)]
 pub struct IoStats {
     pub total_operations: u64,
     pub successful_operations: u64,
@@ -33,6 +35,7 @@ pub struct IoStats {
 
 /// 异步文件读取结果
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct AsyncFileRead {
     /// 文件路径
     pub path: String,
@@ -44,6 +47,7 @@ pub struct AsyncFileRead {
 
 /// I/O错误类型
 #[derive(Debug, thiserror::Error)]
+#[allow(dead_code)]
 pub enum IoError {
     #[error("文件不存在: {0}")]
     FileNotFound(String),
@@ -60,6 +64,7 @@ pub enum IoError {
 
 /// 异步脚本执行结果
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct AsyncScriptExecution {
     /// 脚本内容
     pub code: String,

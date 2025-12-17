@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 /// TypeScript to JavaScript compiler
 /// Strips TypeScript type annotations and converts to JavaScript
+#[allow(dead_code)]
 pub struct TypeScriptCompiler {
     // Track variable types for inference (basic implementation)
     type_map: HashMap<String, String>,
@@ -356,6 +357,7 @@ impl TypeScriptCompiler {
 }
 
 /// Helper function to find where a type annotation ends
+#[allow(dead_code)]
 fn find_type_end(after_colon: &str) -> usize {
     let mut depth = 0;
     let mut bracket_depth = 0;
@@ -382,6 +384,7 @@ fn find_type_end(after_colon: &str) -> usize {
 }
 
 /// Helper function to find type annotation at the end of a string
+#[allow(dead_code)]
 fn find_type_annotation_at_end(s: &str) -> Option<usize> {
     let trimmed = s.trim_end();
     if let Some(colon_pos) = trimmed.rfind(':') {

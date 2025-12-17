@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 
 /// AI模型类型
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum ModelType {
     /// 大语言模型
     LanguageModel {
@@ -45,6 +46,7 @@ pub enum ModelType {
 
 /// 模型输入
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum ModelInput {
     Text {
         content: String,
@@ -72,6 +74,7 @@ pub enum ModelInput {
 
 /// 模型输出
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum ModelOutput {
     Text {
         content: String,
@@ -188,6 +191,7 @@ pub struct AiModelManager {
 
 /// 模型路由策略
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub enum ModelRoutingStrategy {
     /// 轮询
     RoundRobin,
@@ -291,7 +295,7 @@ impl AiModelManager {
         let start_time = Instant::now();
 
         // 检查模型是否存在且已加载
-        let (model_type, config) = {
+        let (model_type, _config) = {
             let models = self.models.lock().unwrap();
             if let Some(model) = models.get(&actual_model_id) {
                 if !model.is_loaded {
@@ -326,7 +330,7 @@ impl AiModelManager {
         input: ModelInput,
     ) -> Result<ModelOutput, Box<dyn std::error::Error + Send + Sync>> {
         match (model_type, input) {
-            (ModelType::LanguageModel { .. }, ModelInput::Text { content, max_tokens, temperature }) => {
+            (ModelType::LanguageModel { .. }, ModelInput::Text { content, max_tokens: _, temperature: _ }) => {
                 // 模拟文本生成
                 tokio::time::sleep(Duration::from_millis(50)).await;
                 Ok(ModelOutput::Text {
@@ -335,7 +339,7 @@ impl AiModelManager {
                     finish_reason: "stop".to_string(),
                 })
             }
-            (ModelType::ImageClassifier { .. }, ModelInput::Image { data, format: _ }) => {
+            (ModelType::ImageClassifier { .. }, ModelInput::Image { data: _, format: _ }) => {
                 // 模拟图像分类
                 tokio::time::sleep(Duration::from_millis(100)).await;
                 Ok(ModelOutput::Classification {
@@ -347,7 +351,7 @@ impl AiModelManager {
                     confidence: 0.85,
                 })
             }
-            (ModelType::EmbeddingModel { dimensions, .. }, ModelInput::Embedding { text }) => {
+            (ModelType::EmbeddingModel { dimensions, .. }, ModelInput::Embedding { text: _ }) => {
                 // 模拟嵌入生成
                 tokio::time::sleep(Duration::from_millis(30)).await;
                 Ok(ModelOutput::Embedding {
@@ -355,7 +359,7 @@ impl AiModelManager {
                     dimensions: *dimensions,
                 })
             }
-            (ModelType::TextToSpeech { .. }, ModelInput::Text { content, .. }) => {
+            (ModelType::TextToSpeech { .. }, ModelInput::Text { content: _, .. }) => {
                 // 模拟文本转语音
                 tokio::time::sleep(Duration::from_millis(200)).await;
                 Ok(ModelOutput::Audio {
@@ -364,7 +368,7 @@ impl AiModelManager {
                     duration: Duration::from_secs(1),
                 })
             }
-            (ModelType::SpeechToText { .. }, ModelInput::Audio { data, format: _, .. }) => {
+            (ModelType::SpeechToText { .. }, ModelInput::Audio { data: _, format: _, .. }) => {
                 // 模拟语音识别
                 tokio::time::sleep(Duration::from_millis(150)).await;
                 Ok(ModelOutput::Text {

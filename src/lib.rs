@@ -148,6 +148,7 @@ pub enum OptimizeMode {
 }
 
 /// Beejs Runtime - High-performance JavaScript/TypeScript execution engine using V8
+#[allow(dead_code)]
 pub struct Runtime {
     _stack_size: usize,
     _max_heap: usize,

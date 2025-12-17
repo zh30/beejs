@@ -8,6 +8,7 @@ use crossbeam::utils::CachePadded;
 
 /// 无锁计数器 - 使用原子操作实现高性能计数
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct LockFreeCounter {
     count: CachePadded<AtomicUsize>,
 }
@@ -48,6 +49,7 @@ impl LockFreeCounter {
 
 /// 无锁任务调度器
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct LockFreeTaskScheduler {
     pending_tasks: CachePadded<AtomicUsize>,
     completed_tasks: CachePadded<AtomicUsize>,
@@ -119,6 +121,7 @@ impl LockFreeTaskScheduler {
 
 /// 无锁队列实现（基于原子指针）
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct LockFreeQueue<T> {
     head: Arc<CachePadded<AtomicU64>>,
     tail: Arc<CachePadded<AtomicU64>>,
@@ -153,6 +156,7 @@ impl<T> LockFreeQueue<T> {
 
 /// 分片锁实现 - 将数据分片减少锁竞争
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct ShardedLock<T> {
     shards: Vec<CachePadded<Mutex<T>>>,
     shard_count: usize,
@@ -176,7 +180,7 @@ impl<T> ShardedLock<T> {
     }
 
     /// 获取分片锁
-    pub async fn shard(&self, key: &str) -> tokio::sync::MutexGuard<T> {
+    pub async fn shard(&self, key: &str) -> tokio::sync::MutexGuard<'_, T> {
         let hash = self.simple_hash(key);
         let index = hash % self.shard_count;
         self.shards[index].lock().await
@@ -194,6 +198,7 @@ impl<T> ShardedLock<T> {
 
 /// 无锁缓冲区池
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct LockFreeBufferPool {
     available_buffers: LockFreeCounter,
     total_allocations: LockFreeCounter,
@@ -239,9 +244,12 @@ impl LockFreeBufferPool {
 }
 
 /// 减少锁竞争的RwLock优化版本
+#[allow(dead_code)]
 pub type OptimizedRwLock<T> = RwLock<T>;
 
 /// 原子操作性能统计
+#[derive(Debug)]
+#[allow(dead_code)]
 pub struct AtomicStats {
     pub total_operations: LockFreeCounter,
     pub cache_line_contention: LockFreeCounter,
