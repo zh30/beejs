@@ -44,7 +44,7 @@ fn test_require_basic_module() {
         const math = require('./math.js');
         console.log(math.add(5, 3));
         console.log(math.multiply(4, 7));
-        math.add(5, 3);
+        math.add(5, 3)
     ").unwrap();
 
     let result = runtime.execute_file(&main_file);
@@ -75,7 +75,7 @@ fn test_require_relative_path() {
     std::fs::write(&main_file, "
         const utils = require('./lib/utils.js');
         console.log(utils.greet('World'));
-        utils.PI;
+        utils.PI
     ").unwrap();
 
     let result = runtime.execute_file(&main_file);
@@ -107,7 +107,7 @@ fn test_module_exports_object() {
         const config = require('./config.js');
         console.log(config.apiUrl);
         console.log(config.timeout);
-        config.timeout;
+        config.timeout
     ").unwrap();
 
     let result = runtime.execute_file(&main_file);
@@ -135,7 +135,7 @@ fn test_multiple_requires() {
         const mod1 = require('./module1.js');
         const mod2 = require('./module2.js');
         console.log(mod1, mod2);
-        mod1;
+        mod1
     ").unwrap();
 
     let result = runtime.execute_file(&main_file);
@@ -162,7 +162,7 @@ fn test_nested_require() {
     std::fs::write(&main_file, r#"
         const nested = require('./deep/nested.js');
         console.log(nested.value);
-        nested.value;
+        nested.value
     "#).unwrap();
 
     let result = runtime.execute_file(&main_file);
@@ -220,7 +220,7 @@ fn test_circular_dependency() {
         const moduleA = require('./moduleA.js');
         console.log(moduleA.name);
         console.log(moduleA.fromB);
-        moduleA.name;
+        moduleA.name
     ").unwrap();
 
     let result = runtime.execute_file(&main_file);
@@ -251,7 +251,7 @@ fn test_module_caching() {
         const mod2 = require('./counter.js');  // Should get same module instance
         console.log(mod1.getCount());
         console.log(mod2.getCount());
-        mod1.getCount();
+        mod1.getCount()
     ").unwrap();
 
     let result = runtime.execute_file(&main_file);

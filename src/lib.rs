@@ -88,8 +88,22 @@ impl Runtime {
         // Set up Node.js compatibility APIs with current file path
         nodejs::setup_nodejs_apis(scope, &context, file.map(|p| p.as_path()))?;
 
+        // Wrap code in IIFE and return last expression
+        let wrapped_code = if file.is_some() {
+            // For files, wrap in IIFE to match module system behavior
+            format!(
+                r#"(function() {{
+                    {code}
+                }})()"#,
+                code = code
+            )
+        } else {
+            // For eval, just execute as-is
+            code.to_string()
+        };
+
         // Compile and execute the script
-        let source = v8::String::new(scope, code)
+        let source = v8::String::new(scope, &wrapped_code)
             .ok_or_else(|| anyhow!("Failed to create V8 string"))?;
 
         let script = match v8::Script::compile(scope, source, None) {

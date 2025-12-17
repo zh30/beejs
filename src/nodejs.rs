@@ -430,23 +430,14 @@ fn setup_module_system(
     context: &v8::Local<v8::Context>,
     current_file: Option<&Path>,
 ) -> Result<()> {
-    // Global require function
+    // Create a require function template that captures the current scope
     let require_func = v8::FunctionTemplate::new(scope, require_callback);
     let require_instance = require_func.get_function(scope).unwrap();
 
+    // Set require as a global function (but NOT module/exports to avoid pollution)
     let global = context.global(scope);
     let require_key = v8::String::new(scope, "require").unwrap();
     global.set(scope, require_key.into(), require_instance.into());
-
-    // Module object (will be overridden per-file)
-    let module = v8::Object::new(scope);
-    let module_key = v8::String::new(scope, "module").unwrap();
-    global.set(scope, module_key.into(), module.into());
-
-    // Global exports (will be overridden per-file)
-    let exports = v8::Object::new(scope);
-    let exports_key = v8::String::new(scope, "exports").unwrap();
-    global.set(scope, exports_key.into(), exports.into());
 
     // Set __dirname and __filename based on current file
     if let Some(file_path) = current_file {
@@ -531,62 +522,78 @@ fn require_callback(
         if Path::new(&path_str).exists() {
             // Read module code
             if let Ok(code) = fs::read_to_string(&path_str) {
-                let global = context.global(scope);
-
-                // Create exports object
+                // Create module scope objects (do NOT set on global to avoid pollution)
                 let exports_obj = v8::Object::new(scope);
                 let exports_key = v8::String::new(scope, "exports").unwrap();
 
-                // Set module.exports to exports object
+                // Create module object
                 let module_obj = v8::Object::new(scope);
                 module_obj.set(scope, exports_key.into(), exports_obj.into());
                 let module_key = v8::String::new(scope, "module").unwrap();
 
-                // Set module and exports on global (this is critical!)
-                global.set(scope, module_key.into(), module_obj.into());
-                global.set(scope, exports_key.into(), exports_obj.into());
-
-                // Set __dirname and __filename for the module
+                // Get current __dirname and __filename for this module
                 let module_dir = Path::new(&path_str).parent()
-                    .unwrap_or_else(|| Path::new("."));
-                let dirname_key = v8::String::new(scope, "__dirname").unwrap();
-                let dirname_val = v8::String::new(scope, &module_dir.to_string_lossy()).unwrap();
-                global.set(scope, dirname_key.into(), dirname_val.into());
+                    .unwrap_or_else(|| Path::new(".")).to_string_lossy();
+                let dirname_str = v8::String::new(scope, &module_dir).unwrap();
+                let filename_str = v8::String::new(scope, &path_str).unwrap();
 
-                let filename_key = v8::String::new(scope, "__filename").unwrap();
-                let filename_val = v8::String::new(scope, &path_str).unwrap();
-                global.set(scope, filename_key.into(), filename_val.into());
+                // Get require function from global
+                let global = context.global(scope);
+                let require_key = v8::String::new(scope, "require").unwrap();
+                let require_func = if let Some(require) = global.get(scope, require_key.into()) {
+                    require
+                } else {
+                    v8::null(scope).into()
+                };
 
-                // Compile and execute the module code
-                if let Some(source) = v8::String::new(scope, &code) {
+                // Compile and execute the module code in an IIFE to avoid scope pollution
+                // The IIFE returns module.exports so the require call gets the exports
+                let module_wrapper = format!(
+                    r#"(function(module, exports, __dirname, __filename, require) {{
+                        {code}
+                        return module.exports;
+                    }})"#,
+                    code = code
+                );
+
+                if let Some(source) = v8::String::new(scope, &module_wrapper) {
                     if let Some(script) = v8::Script::compile(scope, source, None) {
-                        let _result = script.run(scope);
+                        if let Some(func_result) = script.run(scope) {
+                            // func_result is now the IIFE function itself (not the return value yet)
+                            if func_result.is_function() {
+                                let func = v8::Local::<v8::Function>::try_from(func_result).unwrap();
 
-                        // CRITICAL: Get the final exports from global.module.exports
-                        // This is important because module code might reassign module.exports
-                        let module_from_global = global.get(scope, module_key.into())
-                            .unwrap_or_else(|| v8::null(scope).into());
+                                // Prepare arguments before calling
+                                let undefined = v8::undefined(scope);
+                                let call_args = vec![
+                                    module_obj.into(),
+                                    exports_obj.into(),
+                                    dirname_str.into(),
+                                    filename_str.into(),
+                                    require_func,  // Pass the require function for nested requires
+                                ];
 
-                        let final_exports = if module_from_global.is_object() {
-                            module_from_global.to_object(scope)
-                                .and_then(|module| module.get(scope, exports_key.into()))
-                                .unwrap_or_else(|| v8::null(scope).into())
-                        } else {
-                            v8::null(scope).into()
-                        };
+                                // Call the function and get its return value (which is module.exports)
+                                let final_exports = if let Some(result) = func.call(scope, undefined.into(), &call_args) {
+                                    result
+                                } else {
+                                    v8::null(scope).into()
+                                };
 
-                        // Cache the module (only if it's an object)
-                        if final_exports.is_object() {
-                            MODULE_CACHE.with(|cache| {
-                                let mut cache_lock = cache.lock().unwrap();
-                                let exports_obj = v8::Local::new(scope, &final_exports).to_object(scope).unwrap();
-                                let exports_global = v8::Global::new(scope, &exports_obj);
-                                cache_lock.insert(cache_key.clone(), exports_global);
-                            });
+                                // Cache the module (only if it's an object)
+                                if final_exports.is_object() {
+                                    MODULE_CACHE.with(|cache| {
+                                        let mut cache_lock = cache.lock().unwrap();
+                                        let exports_obj = v8::Local::new(scope, &final_exports).to_object(scope).unwrap();
+                                        let exports_global = v8::Global::new(scope, &exports_obj);
+                                        cache_lock.insert(cache_key.clone(), exports_global);
+                                    });
+                                }
+
+                                retval.set(final_exports);
+                                return;
+                            }
                         }
-
-                        retval.set(final_exports);
-                        return;
                     }
                 }
             }
