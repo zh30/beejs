@@ -1,0 +1,13 @@
+{
+  "name": "test-package",
+  "version": "1.0.0",
+  "description": null,
+  "main": "index.js",
+  "scripts": null,
+  "dependencies": null,
+  "dev_dependencies": null,
+  "peer_dependencies": null,
+  "author": null,
+  "license": "MIT",
+  "repository": null
+}
