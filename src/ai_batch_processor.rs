@@ -196,9 +196,9 @@ impl AiBatchProcessor {
         let config = self.config.clone();
 
         tokio::spawn(async move {
+            let _permit = permit;
             *active_batches.lock().unwrap() += 1;
 
-            let _permit = permit;
             Self::run_batch(pending_tasks, stats, config).await;
 
             *active_batches.lock().unwrap() -= 1;
@@ -228,10 +228,7 @@ impl AiBatchProcessor {
             }
         }
 
-        if batch_tasks.is_empty() {
-            return;
-        }
-
+        // 即使没有任务也要处理，避免无限等待
         // 处理批次
         let _results = Self::process_batch(&batch_tasks).await;
 
@@ -469,6 +466,10 @@ mod tests {
         };
 
         let _task_id = processor.add_task(task).await;
+
+        // 等待一小段时间让异步任务开始执行
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
         processor.flush().await;
 
         assert_eq!(processor.pending_tasks_count(), 0);

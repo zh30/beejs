@@ -454,7 +454,15 @@ impl AiModelManager {
         let mut health_status = HashMap::new();
 
         for (id, model) in models.iter() {
-            let is_healthy = model.is_loaded && model.metrics.lock().unwrap().success_rate() > 0.5;
+            // 模型健康条件：
+            // 1. 必须已加载
+            // 2. 如果有请求记录，成功率必须 > 0.5
+            // 3. 如果没有请求记录（全新加载），也认为是健康的
+            let metrics = model.metrics.lock().unwrap();
+            let has_requests = metrics.total_requests > 0;
+            let success_rate = metrics.success_rate();
+
+            let is_healthy = model.is_loaded && (!has_requests || success_rate > 0.5);
             health_status.insert(id.clone(), is_healthy);
         }
 
