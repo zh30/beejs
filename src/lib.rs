@@ -110,7 +110,10 @@ impl Runtime {
 
         // Execute in the context
         self.qjs_context.with(|ctx| {
-            // Set up console
+            // Set up complete console API
+            let console = rquickjs::Object::new(ctx.clone())?;
+
+            // console.log - standard output
             let console_log = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
                 let mut output = String::new();
                 for (i, arg) in args.iter().enumerate() {
@@ -121,11 +124,69 @@ impl Runtime {
                     output.push_str(&format!("{:?}", arg));
                 }
                 println!("{}", output);
+                // Explicitly return undefined to match JS console.log behavior
                 rquickjs::Undefined
             }).map_err(|e| anyhow!("Failed to create console.log: {}", e))?;
 
-            let console = rquickjs::Object::new(ctx.clone())?;
+            // console.error - error output (stderr)
+            let console_error = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
+                let mut output = String::new();
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        output.push(' ');
+                    }
+                    output.push_str(&format!("{:?}", arg));
+                }
+                eprintln!("{}", output);
+                rquickjs::Undefined
+            }).map_err(|e| anyhow!("Failed to create console.error: {}", e))?;
+
+            // console.warn - warning output (stderr)
+            let console_warn = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
+                let mut output = String::new();
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        output.push(' ');
+                    }
+                    output.push_str(&format!("{:?}", arg));
+                }
+                eprintln!("{}", output);
+                rquickjs::Undefined
+            }).map_err(|e| anyhow!("Failed to create console.warn: {}", e))?;
+
+            // console.info - info output (stdout, same as log)
+            let console_info = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
+                let mut output = String::new();
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        output.push(' ');
+                    }
+                    output.push_str(&format!("{:?}", arg));
+                }
+                println!("{}", output);
+                rquickjs::Undefined
+            }).map_err(|e| anyhow!("Failed to create console.info: {}", e))?;
+
+            // console.debug - debug output (always outputs, simple implementation)
+            let console_debug = Function::new(ctx.clone(), |_this: Ctx, args: Rest<Value>| {
+                let mut output = String::new();
+                for (i, arg) in args.iter().enumerate() {
+                    if i > 0 {
+                        output.push(' ');
+                    }
+                    output.push_str(&format!("{:?}", arg));
+                }
+                println!("[DEBUG] {}", output);
+                rquickjs::Undefined
+            }).map_err(|e| anyhow!("Failed to create console.debug: {}", e))?;
+
+            // Set all console methods
             console.set("log", console_log)?;
+            console.set("error", console_error)?;
+            console.set("warn", console_warn)?;
+            console.set("info", console_info)?;
+            console.set("debug", console_debug)?;
+
             ctx.globals().set("console", console)?;
 
             // Evaluate the code
@@ -140,9 +201,12 @@ impl Runtime {
                         println!("Execution completed successfully");
                     }
 
-                    // Convert result to string
+                    // Convert result to string (improved formatting)
                     let result_str = match result {
-                        Some(v) => format!("{:?}", v),
+                        Some(v) => {
+                            // Use Debug formatting for consistency
+                            format!("{:?}", v)
+                        }
                         None => "undefined".to_string(),
                     };
 

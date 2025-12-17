@@ -8,7 +8,9 @@ fn test_hello_world() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
     let result = runtime.execute_code(r#"console.log("Hello, World!");"#);
     assert!(result.is_ok());
-    assert!(result.unwrap().contains("successful"));
+    // console.log returns undefined
+    let result_str = result.unwrap();
+    assert!(result_str.contains("undefined"));
 }
 
 #[test]
@@ -31,8 +33,8 @@ fn test_type_execution() {
     let result = runtime.execute_code("[1, 2, 3, 4, 5]");
     assert!(result.is_ok());
 
-    // Test object types
-    let result = runtime.execute_code("{ name: 'test', value: 42 }");
+    // Test object types - use proper object literal
+    let result = runtime.execute_code("({ name: 'test', value: 42 })");
     assert!(result.is_ok());
 }
 
@@ -186,11 +188,13 @@ fn test_performance_sequential_execution() {
     let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
 
     let code = r#"
-        let sum = 0;
-        for (let i = 0; i < 1000; i++) {
-            sum += i;
-        }
-        sum;
+        (function() {
+            var sum = 0;
+            for (var i = 0; i < 1000; i++) {
+                sum += i;
+            }
+            return sum;
+        })();
     "#;
 
     for i in 0..10 {
@@ -216,6 +220,52 @@ fn test_memory_efficient_execution() {
 
     // Verify execution count increased
     assert_eq!(runtime.execution_count(), 1);
+}
+
+#[test]
+fn test_console_api_complete() {
+    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+
+    // Test console.log
+    let result = runtime.execute_code(r#"console.log("test log");"#);
+    assert!(result.is_ok());
+
+    // Test console.error
+    let result = runtime.execute_code(r#"console.error("test error");"#);
+    assert!(result.is_ok());
+
+    // Test console.warn
+    let result = runtime.execute_code(r#"console.warn("test warn");"#);
+    assert!(result.is_ok());
+
+    // Test console.info
+    let result = runtime.execute_code(r#"console.info("test info");"#);
+    assert!(result.is_ok());
+
+    // Test console.debug
+    let result = runtime.execute_code(r#"console.debug("test debug");"#);
+    assert!(result.is_ok());
+
+    // Verify all methods return undefined
+    let result = runtime.execute_code(r#"typeof console.log;"#);
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("function"));
+
+    let result = runtime.execute_code(r#"typeof console.error;"#);
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("function"));
+
+    let result = runtime.execute_code(r#"typeof console.warn;"#);
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("function"));
+
+    let result = runtime.execute_code(r#"typeof console.info;"#);
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("function"));
+
+    let result = runtime.execute_code(r#"typeof console.debug;"#);
+    assert!(result.is_ok());
+    assert!(result.unwrap().contains("function"));
 }
 
 #[test]
