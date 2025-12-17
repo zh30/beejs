@@ -27,7 +27,10 @@ mod ai_memory_pool;
 mod ai_async_queue;
 mod ai_model_interface;
 mod module_loader;
+mod test_runner;
 pub mod performance_reporter;
+
+pub use test_runner::{TestRunner, TestRunnerConfig, TestSuite, TestCase, TestStatus, TestStats};
 
 // Re-export AI module types for easier testing
 pub use ai_memory_pool::{AiMemoryPool, AiMemoryPoolConfig, PreallocationStrategy};
