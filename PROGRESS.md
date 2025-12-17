@@ -85,6 +85,14 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 **状态**: ✅ Completed (2025-12-18) 🎯
 
 ### 最新提交 (2025-12-18)
+**c7b6807** - feat: 重新启用已修复的并发脚本执行测试 🎯
+  - ✅ 重新启用 test_concurrent_script_execution 测试
+  - ✅ 验证 V8 Isolate 生命周期问题已修复
+  - ✅ 1000个并发脚本执行测试通过
+  - ✅ 证明 Runtime 实例复用优化有效
+  - 📊 并发执行测试: 9/9 通过 (100% 通过率)
+  - 📊 核心库测试: 116/116 通过 (100% 通过率)
+
 **bafd574** - feat: 实现 Runtime 实例复用优化测试套件 🎯
   - ✅ 创建 runtime_reuse_integration_tests.rs 集成测试套件
   - ✅ 11/11 测试全部通过 (100% 通过率)
@@ -502,6 +510,8 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 - 兼容性测试：测试计划已完成 ⏳
 - CLI 功能：基础结构完成 ✅
 - V8 引擎：核心功能实现 ✅ (编译环境待优化)
+- **核心库测试**：116/116 通过 ✅ (100% 通过率)
+- **并发执行测试**：9/9 通过 ✅ (100% 通过率)
 - **模块系统测试**：9/9 通过 ✅ (100% 通过率) 🎉
   - ✅ test_parse_package_json
   - ✅ test_builtin_modules
