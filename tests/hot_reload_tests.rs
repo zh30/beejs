@@ -2,7 +2,6 @@
 
 use beejs::watcher::{FileChangeType, HotReloader, WatcherConfig, WatcherConfigBuilder};
 use std::path::Path;
-use std::time::Duration;
 
 /// Test 1: Verify watcher configuration defaults
 #[test]

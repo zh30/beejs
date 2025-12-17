@@ -2,7 +2,7 @@
 //! 验证实施优化后的性能提升
 
 use beejs::Runtime;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// 性能优化验证结果
 #[derive(Debug, Clone)]

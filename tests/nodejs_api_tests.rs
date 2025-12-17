@@ -199,13 +199,69 @@ fn test_require_module() {
     let result_str = result.unwrap();
     assert!(result_str.contains("function"));
 
-    // TODO: Fix require() to return actual module objects
-    // Currently returns string representation due to GC/lifetime issues
-    // Test that built-in modules can be required
-    // let result = runtime.execute_code("const path = require('path'); path.basename('/foo/bar/baz.txt')");
-    // assert!(result.is_ok());
-    // let result_str = result.unwrap();
-    // assert!(result_str.contains("baz.txt"));
+    // Test that built-in modules can be required and used
+    let result = runtime.execute_code(
+        "const path = require('path'); const basename = path.basename('/foo/bar/baz.txt'); basename"
+    );
+    assert!(result.is_ok());
+    let result_str = result.unwrap();
+    assert!(result_str.contains("baz.txt"), "Expected 'baz.txt' in result, got: {}", result_str);
+}
+
+#[test]
+fn test_require_builtin_module() {
+    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+
+    // Test that fs module can be required
+    let result = runtime.execute_code(
+        r#"
+        const fs = require('fs');
+        const content = fs.readFileSync('/dev/null', 'utf8');
+        typeof fs === 'object' && content === '';
+        "#
+    );
+    assert!(result.is_ok());
+    let result_str = result.unwrap();
+    assert!(result_str.contains("true"), "Expected fs module to be loaded correctly, got: {}", result_str);
+}
+
+#[test]
+fn test_require_custom_module() {
+    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+
+    // Create a temporary module file
+    let temp_file = NamedTempFile::new().unwrap();
+    let temp_path = temp_file.path().to_str().unwrap().to_string();
+
+    // Write a test module
+    let module_code = r#"
+        exports.add = (a, b) => a + b;
+        exports.multiply = (a, b) => a * b;
+        exports.PI = 3.14159;
+        module.exports = {
+            add: exports.add,
+            multiply: exports.multiply,
+            PI: exports.PI
+        };
+    "#;
+    std::fs::write(&temp_file, module_code).unwrap();
+
+    // Test that the custom module can be required and used
+    let code = format!(
+        r#"
+        const math = require('{}');
+        const result1 = math.add(2, 3);
+        const result2 = math.multiply(4, 5);
+        const result3 = math.PI;
+        result1 === 5 && result2 === 20 && result3 === 3.14159;
+        "#,
+        temp_path
+    );
+
+    let result = runtime.execute_code(&code);
+    assert!(result.is_ok(), "Failed to execute code: {:?}", result);
+    let result_str = result.unwrap();
+    assert!(result_str.contains("true"), "Expected custom module to work correctly, got: {}", result_str);
 }
 
 #[test]

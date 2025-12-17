@@ -2,7 +2,7 @@
 //! 使用现有 Runtime 实例分析性能瓶颈，避免 V8 生命周期问题
 
 use beejs::Runtime;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// 性能瓶颈分析结果
 #[derive(Debug, Clone)]
@@ -266,7 +266,7 @@ mod tests {
     #[ignore = "需要V8隔离修复 - 避免Runtime创建/销毁崩溃"]
     fn test_bottleneck_analyzer_creation() {
         let analyzer = PerformanceBottleneckAnalyzer::new();
-        assert!(!analyzer.runtime.execution_count() >= 0);
+        /* Remove useless comparison */ assert!(true);
     }
 
     #[test]

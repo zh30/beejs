@@ -3,7 +3,6 @@
 use beejs::Runtime;
 // use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
 
 #[test]
 fn test_isolate_lifecycle_in_single_thread() {

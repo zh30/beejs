@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod precompiled_modules_tests {
     use beejs::*;
-    use std::path::PathBuf;
+    
     use tempfile::TempDir;
 
     /// 测试创建预编译模块缓存
@@ -71,8 +71,8 @@ mod precompiled_modules_tests {
         let stats = cache.get_stats();
 
         assert!(stats.total_modules >= 5); // 至少有5个内置模块
-        assert!(stats.cache_hits >= 0);
-        assert!(stats.cache_misses >= 0);
+        assert!(stats.cache_hits >= 0, "Cache hits should be non-negative");
+        assert!(stats.cache_misses >= 0, "Cache misses should be non-negative");
         assert!(stats.average_compile_time_ms >= 0.0);
     }
 
@@ -111,7 +111,7 @@ mod precompiled_modules_tests {
         cache.cache_module("math_utils", module_code).unwrap();
 
         // 测试使用预编译模块
-        let test_script = r#"
+        let _test_script = r#"
             const { fibonacci } = require('math_utils');
             fibonacci(10);
         "#;
