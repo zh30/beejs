@@ -4,9 +4,36 @@ use std::fs;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use rusty_v8 as v8;
+use crate::isolate_pool::{acquire_isolate, release_isolate, initialize_pool, get_pool};
 
 mod typescript;
 mod nodejs;
+mod isolate_pool;
+
+/// RAII包装器，确保Isolate被归还给池
+struct PooledIsolate {
+    isolate: Option<v8::OwnedIsolate>,
+}
+
+impl PooledIsolate {
+    fn new(isolate: v8::OwnedIsolate) -> Self {
+        Self {
+            isolate: Some(isolate),
+        }
+    }
+
+    fn get_mut(&mut self) -> Option<&mut v8::OwnedIsolate> {
+        self.isolate.as_mut()
+    }
+}
+
+impl Drop for PooledIsolate {
+    fn drop(&mut self) {
+        if let Some(isolate) = self.isolate.take() {
+            release_isolate(isolate);
+        }
+    }
+}
 
 /// Global V8 initialization
 static V8_INIT: std::sync::Once = std::sync::Once::new();
@@ -37,12 +64,32 @@ impl Runtime {
     ) -> Result<Self> {
         initialize_v8();
 
+        // 初始化Isolate池（如果尚未初始化）
+        if get_pool().is_none() {
+            // 池大小基于CPU核心数，默认4个Isolate
+            let pool_size = std::thread::available_parallelism()
+                .map(|p| p.get().max(1).min(8))
+                .unwrap_or(4);
+
+            if verbose {
+                println!("Initializing Isolate pool with {} isolates...", pool_size);
+            }
+
+            initialize_pool(pool_size)
+                .map_err(|e| anyhow!("Failed to initialize Isolate pool: {:?}", e))?;
+        }
+
         if verbose {
             let version = v8::V8::get_version();
             println!("Runtime created with:");
             println!("  Stack size: {} bytes", stack_size);
             println!("  Max heap: {} bytes", max_heap);
-            println!("  V8 Engine: Initializing (version {})...", version);
+            println!("  V8 Engine: version {}", version);
+            if let Some(pool) = get_pool() {
+                let stats = pool.stats();
+                println!("  Isolate Pool: {} available, {} in use (max: {})",
+                    stats.available, stats.in_use, stats.max_size);
+            }
         }
 
         Ok(Self {
@@ -76,8 +123,21 @@ impl Runtime {
             println!("Executing code: {} bytes", code.len());
         }
 
-        // Create a new isolate for each execution
-        let isolate = &mut v8::Isolate::new(Default::default());
+        // 从池中获取Isolate（而不是创建新的）
+        let isolate = match acquire_isolate() {
+            Some(isolate) => isolate,
+            None => {
+                return Err(anyhow!("Failed to acquire Isolate from pool"));
+            }
+        };
+
+        // 使用RAII包装器确保Isolate被归还
+        let mut pooled_isolate = PooledIsolate::new(isolate);
+        self.execute_with_isolate(pooled_isolate.get_mut().unwrap(), code, file)
+    }
+
+    /// 使用给定的Isolate执行代码
+    fn execute_with_isolate(&self, isolate: &mut v8::Isolate, code: &str, file: Option<&PathBuf>) -> Result<String> {
         let handle_scope = &mut v8::HandleScope::new(isolate);
         let context = v8::Context::new(handle_scope);
         let scope = &mut v8::ContextScope::new(handle_scope, context);

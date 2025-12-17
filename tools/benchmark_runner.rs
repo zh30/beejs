@@ -181,7 +181,6 @@ impl BenchmarkSuite {
             "startup_time".to_string(),
             self.iterations,
             durations,
-            None,
         )
     }
 
@@ -202,7 +201,6 @@ impl BenchmarkSuite {
             "code_execution".to_string(),
             self.iterations,
             durations,
-            None,
         )
     }
 
