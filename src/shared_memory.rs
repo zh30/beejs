@@ -2,6 +2,7 @@
 //! 提供高性能的跨V8 Isolate和进程的内存共享机制
 
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
@@ -76,6 +77,10 @@ pub struct SharedMemoryStats {
     pub cache_misses: u64,
     pub gc_runs: u64,
     pub cleaned_regions: usize,
+    /// 预取统计
+    pub prefetch_requests: u64,
+    pub prefetch_hits: u64,
+    pub prefetch_misses: u64,
 }
 
 /// 内存区域句柄
@@ -85,6 +90,23 @@ pub struct SharedMemoryHandle {
     is_writer: bool,
     /// COW 副本数据（仅在写入时创建）
     cow_copy: Option<Arc<Mutex<Vec<u8>>>>,
+}
+
+/// 访问模式跟踪
+#[derive(Debug, Clone)]
+struct AccessPattern {
+    region_id: String,
+    offset: usize,
+    timestamp: Instant,
+    frequency: usize,
+}
+
+/// 预取缓存项
+#[derive(Debug, Clone)]
+struct PrefetchEntry {
+    data: Vec<u8>,
+    offset: usize,
+    timestamp: Instant,
 }
 
 /// 共享内存管理器
@@ -99,6 +121,10 @@ pub struct SharedMemoryManager {
     stats: Arc<Mutex<SharedMemoryStats>>,
     /// 运行状态
     running: Arc<AtomicBool>,
+    /// 访问模式跟踪
+    access_patterns: Arc<Mutex<VecDeque<AccessPattern>>>,
+    /// 预取缓存
+    prefetch_cache: Arc<Mutex<HashMap<String, PrefetchEntry>>>,
 }
 
 impl SharedMemoryManager {
@@ -109,10 +135,13 @@ impl SharedMemoryManager {
             config,
             stats: Arc::new(Mutex::new(SharedMemoryStats::default())),
             running: Arc::new(AtomicBool::new(true)),
+            access_patterns: Arc::new(Mutex::new(VecDeque::new())),
+            prefetch_cache: Arc::new(Mutex::new(HashMap::new())),
         };
 
-        // 启动GC线程
+        // 启动GC线程和预取线程
         manager.start_gc_thread();
+        manager.start_prefetch_thread();
 
         manager
     }
@@ -195,7 +224,7 @@ impl SharedMemoryManager {
         self.create_region(id, size)
     }
 
-    /// 读取数据（支持 COW）
+    /// 读取数据（支持 COW 和预取）
     pub fn read(&self, handle: &SharedMemoryHandle, offset: usize, size: usize) -> Result<Vec<u8>> {
         // 更新访问时间
         {
@@ -203,6 +232,34 @@ impl SharedMemoryManager {
             *last_accessed = Instant::now();
         }
 
+        // 记录访问模式
+        self.record_access_pattern(&handle.region.id, offset);
+
+        // 尝试预取（仅对非 COW 副本）
+        let data = if handle.cow_copy.is_none() {
+            // 尝试从预取缓存获取
+            if let Ok(prefetched) = self.prefetch_data(&handle.region.id, offset, size) {
+                // 更新统计
+                {
+                    let mut stats = self.stats.lock().unwrap();
+                    stats.cache_hits += 1;
+                    stats.total_reads += 1;
+                }
+                Ok(prefetched)
+            } else {
+                // 预取失败，从原始数据读取
+                self.read_from_region(handle, offset, size)
+            }
+        } else {
+            // COW 副本直接从副本读取
+            self.read_from_region(handle, offset, size)
+        };
+
+        data
+    }
+
+    /// 从区域读取数据（内部方法）
+    fn read_from_region(&self, handle: &SharedMemoryHandle, offset: usize, size: usize) -> Result<Vec<u8>> {
         // 增加读者计数
         handle.region.readers.fetch_add(1, Ordering::SeqCst);
 
@@ -211,8 +268,12 @@ impl SharedMemoryManager {
             let cow_data = cow_copy.lock().unwrap();
             cow_data[offset..offset + size].to_vec()
         } else {
-            let data = handle.region.data.lock().unwrap();
-            data[offset..offset + size].to_vec()
+            let region_data = handle.region.data.lock().unwrap();
+            if offset + size > region_data.len() {
+                handle.region.readers.fetch_sub(1, Ordering::SeqCst);
+                return Err(anyhow::anyhow!("Read would exceed region size"));
+            }
+            region_data[offset..offset + size].to_vec()
         };
 
         // 减少读者计数
@@ -222,6 +283,9 @@ impl SharedMemoryManager {
         {
             let mut stats = self.stats.lock().unwrap();
             stats.total_reads += 1;
+            if handle.cow_copy.is_none() {
+                stats.cache_misses += 1;
+            }
         }
 
         Ok(data)
@@ -421,6 +485,134 @@ impl SharedMemoryManager {
     pub fn shutdown(&self) {
         self.running.store(false, Ordering::SeqCst);
     }
+
+    /// 记录访问模式
+    fn record_access_pattern(&self, region_id: &str, offset: usize) {
+        let mut patterns = self.access_patterns.lock().unwrap();
+        let now = Instant::now();
+
+        // 查找现有模式
+        if let Some(pattern) = patterns.iter_mut().find(|p| p.region_id == region_id && p.offset == offset) {
+            pattern.timestamp = now;
+            pattern.frequency += 1;
+        } else {
+            // 添加新模式
+            patterns.push_back(AccessPattern {
+                region_id: region_id.to_string(),
+                offset,
+                timestamp: now,
+                frequency: 1,
+            });
+
+            // 限制模式数量
+            if patterns.len() > 1000 {
+                patterns.pop_front();
+            }
+        }
+    }
+
+    /// 预取数据
+    fn prefetch_data(&self, region_id: &str, offset: usize, size: usize) -> Result<Vec<u8>> {
+        let cache_key = format!("{}:{}:{}", region_id, offset, size);
+
+        // 检查预取缓存
+        {
+            let cache = self.prefetch_cache.lock().unwrap();
+            if let Some(entry) = cache.get(&cache_key) {
+                if now_elapsed(&entry.timestamp) < Duration::from_secs(10) {
+                    // 缓存命中
+                    let mut stats = self.stats.lock().unwrap();
+                    stats.prefetch_hits += 1;
+                    return Ok(entry.data.clone());
+                }
+            }
+        }
+
+        // 缓存未命中，从内存区域读取
+        let regions = self.regions.lock().unwrap();
+        if let Some(weak_region) = regions.get(region_id) {
+            if let Some(region) = weak_region.upgrade() {
+                let data = {
+                    let region_data = region.data.lock().unwrap();
+                    if offset + size > region_data.len() {
+                        return Err(anyhow::anyhow!("Prefetch would exceed region size"));
+                    }
+                    region_data[offset..offset + size].to_vec()
+                };
+
+                // 更新缓存
+                {
+                    let mut cache = self.prefetch_cache.lock().unwrap();
+                    cache.insert(cache_key, PrefetchEntry {
+                        data: data.clone(),
+                        offset,
+                        timestamp: Instant::now(),
+                    });
+
+                    // 限制缓存大小
+                    if cache.len() > 100 {
+                        // 移除最旧的条目
+                        let keys_to_remove: Vec<String> = cache.keys()
+                            .take(cache.len() - 100)
+                            .cloned()
+                            .collect();
+                        for key in keys_to_remove {
+                            cache.remove(&key);
+                        }
+                    }
+                }
+
+                // 更新统计
+                let mut stats = self.stats.lock().unwrap();
+                stats.prefetch_misses += 1;
+                stats.prefetch_requests += 1;
+
+                return Ok(data);
+            }
+        }
+
+        // 更新统计（预取失败）
+        let mut stats = self.stats.lock().unwrap();
+        stats.prefetch_requests += 1;
+
+        Err(anyhow::anyhow!("Region {} not found for prefetch", region_id))
+    }
+
+    /// 启动预取线程
+    fn start_prefetch_thread(&self) {
+        let regions = Arc::downgrade(&self.regions);
+        let patterns = Arc::downgrade(&self.access_patterns);
+        let running = self.running.clone();
+
+        std::thread::spawn(move || {
+            while running.load(Ordering::SeqCst) {
+                std::thread::sleep(Duration::from_millis(100)); // 预取间隔
+
+                // 分析访问模式并预取
+                if let (Some(regions), Some(patterns)) = (regions.upgrade(), patterns.upgrade()) {
+                    let patterns = patterns.lock().unwrap();
+
+                    // 查找高频访问模式
+                    let hot_patterns: Vec<&AccessPattern> = patterns.iter()
+                        .filter(|p| p.frequency > 5)
+                        .take(10)
+                        .collect();
+
+                    // 预取数据（这里只是示例，实际实现可能更复杂）
+                    for pattern in hot_patterns {
+                        if let Some(_) = regions.lock().unwrap().get(&pattern.region_id) {
+                            // 实际预取逻辑在 read 方法中处理
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+/// 计算时间差
+fn now_elapsed(start: &Instant) -> Duration {
+    Instant::now().duration_since(*start)
 }
 
 impl Drop for SharedMemoryManager {
