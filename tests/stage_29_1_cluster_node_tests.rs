@@ -1,0 +1,385 @@
+//! Stage 29.1: 集群节点管理测试
+//! 测试节点发现、注册、心跳和健康检查系统
+
+#[cfg(test)]
+mod cluster_node_tests {
+    use std::sync::Arc;
+    use std::time::Duration;
+    use tokio::sync::RwLock;
+    use crate::distributed::node_manager::{NodeManager, NodeInfo, NodeStatus, NodeLoad};
+    use crate::distributed::service_discovery::{ServiceDiscovery, DiscoveryConfig};
+    use crate::distributed::health_monitor::{HealthMonitor, HealthStatus};
+
+    /// 测试节点注册和发现
+    #[tokio::test]
+    async fn test_node_registration_and_discovery() {
+        let config = DiscoveryConfig {
+            cluster_name: "beejs-test".to_string(),
+            gossip_interval: Duration::from_millis(100),
+            node_timeout: Duration::from_secs(5),
+        };
+
+        let discovery = ServiceDiscovery::new(config);
+        let node_manager: NodeManager = NodeManager::new(discovery);
+
+        // 注册节点
+        let node: NodeInfo = NodeInfo {
+            id: "node-1".to_string(),
+            address: "192.168.1.1:8080".to_string(),
+            cpu_cores: 8,
+            memory_gb: 16,
+            location: "us-west-1".to_string(),
+            capabilities: vec!["js-execution".to_string(), "ts-compilation".to_string()],
+        };
+
+        let result = node_manager.register_node(node.clone()).await;
+        assert!(result.is_ok());
+
+        // 发现节点
+        let discovered = node_manager.discover_nodes().await;
+        assert!(discovered.contains(&node));
+    }
+
+    /// 测试心跳检测和故障检测
+    #[tokio::test]
+    async fn test_heartbeat_and_failure_detection() {
+        let config = DiscoveryConfig {
+            cluster_name: "beejs-test".to_string(),
+            gossip_interval: Duration::from_millis(50),
+            node_timeout: Duration::from_millis(300),
+        };
+
+        let discovery = ServiceDiscovery::new(config);
+        let node_manager: NodeManager = NodeManager::new(discovery);
+
+        // 注册节点
+        let node: NodeInfo = NodeInfo {
+            id: "node-2".to_string(),
+            address: "192.168.1.2:8080".to_string(),
+            cpu_cores: 4,
+            memory_gb: 8,
+            location: "us-east-1".to_string(),
+            capabilities: vec!["js-execution".to_string()],
+        };
+
+        node_manager.register_node(node.clone()).await.unwrap();
+
+        // 发送心跳
+        let heartbeat_result = node_manager.send_heartbeat("node-2").await;
+        assert!(heartbeat_result.is_ok());
+
+        // 等待超时
+        tokio::time::sleep(Duration::from_millis(400)).await;
+
+        // 检查节点状态
+        let status = node_manager.get_node_status("node-2").await;
+        assert_eq!(status, NodeStatus::Offline);
+    }
+
+    /// 测试节点状态同步
+    #[tokio::test]
+    async fn test_node_status_synchronization() {
+        let config = DiscoveryConfig {
+            cluster_name: "beejs-test".to_string(),
+            gossip_interval: Duration::from_millis(100),
+            node_timeout: Duration::from_secs(5),
+        };
+
+        let discovery = ServiceDiscovery::new(config);
+        let node_manager = NodeManager::new(discovery);
+
+        // 注册多个节点
+        for i in 0..5 {
+            let node: NodeInfo = NodeInfo {
+                id: format!("node-{}", i),
+                address: format!("192.168.1.{}:8080", i + 1),
+                cpu_cores: 4,
+                memory_gb: 8,
+                location: format!("region-{}", i % 2),
+                capabilities: vec!["js-execution".to_string()],
+            };
+
+            node_manager.register_node(node).await.unwrap();
+        }
+
+        // 更新节点状态
+        node_manager.update_node_status("node-0", NodeStatus::Maintenance).await.unwrap();
+
+        // 同步所有节点状态
+        let statuses = node_manager.sync_all_statuses().await;
+
+        assert_eq!(statuses.len(), 5);
+        assert_eq!(statuses.get("node-0"), Some(&NodeStatus::Maintenance));
+    }
+
+    /// 测试集群拓扑管理
+    #[tokio::test]
+    async fn test_cluster_topology_management() {
+        let config = DiscoveryConfig {
+            cluster_name: "beejs-test".to_string(),
+            gossip_interval: Duration::from_millis(100),
+            node_timeout: Duration::from_secs(5),
+        };
+
+        let discovery = ServiceDiscovery::new(config);
+        let node_manager = NodeManager::new(discovery);
+
+        // 注册不同位置的节点
+        let nodes = vec![
+            NodeInfo {
+                id: "node-us-west".to_string(),
+                address: "192.168.1.1:8080".to_string(),
+                cpu_cores: 8,
+                memory_gb: 16,
+                location: "us-west-1".to_string(),
+                capabilities: vec!["js-execution".to_string(), "ai-inference".to_string()],
+            },
+            NodeInfo {
+                id: "node-us-east".to_string(),
+                address: "192.168.1.2:8080".to_string(),
+                cpu_cores: 8,
+                memory_gb: 16,
+                location: "us-east-1".to_string(),
+                capabilities: vec!["js-execution".to_string(), "ai-inference".to_string()],
+            },
+            NodeInfo {
+                id: "node-eu".to_string(),
+                address: "192.168.1.3:8080".to_string(),
+                cpu_cores: 8,
+                memory_gb: 16,
+                location: "eu-west-1".to_string(),
+                capabilities: vec!["js-execution".to_string()],
+            },
+        ];
+
+        for node in nodes {
+            node_manager.register_node(node).await.unwrap();
+        }
+
+        // 获取集群拓扑
+        let topology = node_manager.get_cluster_topology().await;
+
+        assert_eq!(topology.regions.len(), 3);
+        assert!(topology.regions.contains_key("us-west-1"));
+        assert!(topology.regions.contains_key("us-east-1"));
+        assert!(topology.regions.contains_key("eu-west-1"));
+    }
+
+    /// 测试节点元数据管理
+    #[tokio::test]
+    async fn test_node_metadata_management() {
+        let config = DiscoveryConfig {
+            cluster_name: "beejs-test".to_string(),
+            gossip_interval: Duration::from_millis(100),
+            node_timeout: Duration::from_secs(5),
+        };
+
+        let discovery = ServiceDiscovery::new(config);
+        let node_manager = NodeManager::new(discovery);
+
+        let node: NodeInfo = NodeInfo {
+            id: "node-metadata".to_string(),
+            address: "192.168.1.100:8080".to_string(),
+            cpu_cores: 16,
+            memory_gb: 32,
+            location: "asia-pacific-1".to_string(),
+            capabilities: vec![
+                "js-execution".to_string(),
+                "ts-compilation".to_string(),
+                "ai-inference".to_string(),
+                "wasm-compilation".to_string(),
+            ],
+        };
+
+        node_manager.register_node(node).await.unwrap();
+
+        // 获取节点元数据
+        let metadata = node_manager.get_node_metadata("node-metadata").await.unwrap();
+
+        assert_eq!(metadata.cpu_cores, 16);
+        assert_eq!(metadata.memory_gb, 32);
+        assert_eq!(metadata.location, "asia-pacific-1");
+        assert_eq!(metadata.capabilities.len(), 4);
+    }
+
+    /// 测试健康检查系统
+    #[tokio::test]
+    async fn test_health_check_system() {
+        let config = DiscoveryConfig {
+            cluster_name: "beejs-test".to_string(),
+            gossip_interval: Duration::from_millis(100),
+            node_timeout: Duration::from_secs(5),
+        };
+
+        let discovery = ServiceDiscovery::new(config);
+        let node_manager = NodeManager::new(discovery);
+        let health_monitor = HealthMonitor::new(node_manager.clone());
+
+        let node: NodeInfo = NodeInfo {
+            id: "node-health".to_string(),
+            address: "192.168.1.101:8080".to_string(),
+            cpu_cores: 4,
+            memory_gb: 8,
+            location: "us-central-1".to_string(),
+            capabilities: vec!["js-execution".to_string()],
+        };
+
+        node_manager.register_node(node).await.unwrap();
+
+        // 执行健康检查
+        let health_status = health_monitor.check_node_health("node-health").await.unwrap();
+        assert_eq!(health_status.status, HealthStatus::Healthy);
+
+        // 模拟高负载
+        health_monitor.simulate_high_load("node-health").await;
+        let health_status_after = health_monitor.check_node_health("node-health").await.unwrap();
+        assert_eq!(health_status_after.status, HealthStatus::Degraded);
+    }
+
+    /// 测试 Gossip 协议节点发现
+    #[tokio::test]
+    async fn test_gossip_protocol_discovery() {
+        let mut discovery_nodes = Vec::new();
+
+        for i in 0..3 {
+            let config = DiscoveryConfig {
+                cluster_name: "beejs-test".to_string(),
+                gossip_interval: Duration::from_millis(50),
+                node_timeout: Duration::from_secs(5),
+            };
+
+            let discovery = ServiceDiscovery::new(config);
+            discovery_nodes.push(discovery);
+        }
+
+        // 启动 gossip 协议
+        for (i, discovery) in discovery_nodes.iter().enumerate() {
+            let node: NodeInfo = NodeInfo {
+                id: format!("gossip-node-{}", i),
+                address: format!("192.168.1.{}:8080", i + 200),
+                cpu_cores: 4,
+                memory_gb: 8,
+                location: "gossip-region".to_string(),
+                capabilities: vec!["js-execution".to_string()],
+            };
+
+            discovery.register_self(node).await;
+        }
+
+        // 等待 gossip 传播
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        // 检查节点是否被发现
+        let known_nodes = discovery_nodes[0].get_known_nodes().await;
+        assert!(known_nodes.len() >= 3);
+    }
+
+    /// 测试节点自动清理
+    #[tokio::test]
+    async fn test_node_auto_cleanup() {
+        let config = DiscoveryConfig {
+            cluster_name: "beejs-test".to_string(),
+            gossip_interval: Duration::from_millis(100),
+            node_timeout: Duration::from_millis(500),
+        };
+
+        let discovery = ServiceDiscovery::new(config);
+        let node_manager: NodeManager = NodeManager::new(discovery);
+
+        // 注册节点
+        let node: NodeInfo = NodeInfo {
+            id: "node-cleanup".to_string(),
+            address: "192.168.1.102:8080".to_string(),
+            cpu_cores: 4,
+            memory_gb: 8,
+            location: "cleanup-region".to_string(),
+            capabilities: vec!["js-execution".to_string()],
+        };
+
+        node_manager.register_node(node).await.unwrap();
+
+        // 确认节点存在
+        let discovered = node_manager.discover_nodes().await;
+        assert!(discovered.iter().any(|n| n.id == "node-cleanup"));
+
+        // 等待超时
+        tokio::time::sleep(Duration::from_millis(600)).await;
+
+        // 执行自动清理
+        let cleaned_count = node_manager.cleanup_offline_nodes().await;
+        assert_eq!(cleaned_count, 1);
+
+        // 确认节点已被清理
+        let discovered_after = node_manager.discover_nodes().await;
+        assert!(!discovered_after.iter().any(|n| n.id == "node-cleanup"));
+    }
+
+    /// 测试批量节点操作
+    #[tokio::test]
+    async fn test_batch_node_operations() {
+        let config = DiscoveryConfig {
+            cluster_name: "beejs-test".to_string(),
+            gossip_interval: Duration::from_millis(100),
+            node_timeout: Duration::from_secs(5),
+        };
+
+        let discovery = ServiceDiscovery::new(config);
+        let node_manager = NodeManager::new(discovery);
+
+        // 批量注册节点
+        let mut nodes = Vec::new();
+        for i in 0..10 {
+            let node: NodeInfo = NodeInfo {
+                id: format!("batch-node-{}", i),
+                address: format!("192.168.1.{}:8080", i + 300),
+                cpu_cores: 4,
+                memory_gb: 8,
+                location: "batch-region".to_string(),
+                capabilities: vec!["js-execution".to_string()],
+            };
+            nodes.push(node);
+        }
+
+        let registration_results = node_manager.register_nodes_batch(nodes).await;
+        assert_eq!(registration_results.len(), 10);
+        assert!(registration_results.iter().all(|r| r.is_ok()));
+
+        // 批量获取节点状态
+        let node_ids: Vec<String> = (0..10).map(|i| format!("batch-node-{}", i)).collect();
+        let statuses = node_manager.get_nodes_status_batch(&node_ids).await;
+        assert_eq!(statuses.len(), 10);
+    }
+
+    /// 测试节点负载报告
+    #[tokio::test]
+    async fn test_node_load_reporting() {
+        let config = DiscoveryConfig {
+            cluster_name: "beejs-test".to_string(),
+            gossip_interval: Duration::from_millis(100),
+            node_timeout: Duration::from_secs(5),
+        };
+
+        let discovery = ServiceDiscovery::new(config);
+        let node_manager = NodeManager::new(discovery);
+
+        let node: NodeInfo = NodeInfo {
+            id: "node-load".to_string(),
+            address: "192.168.1.103:8080".to_string(),
+            cpu_cores: 8,
+            memory_gb: 16,
+            location: "load-region".to_string(),
+            capabilities: vec!["js-execution".to_string()],
+        };
+
+        node_manager.register_node(node).await.unwrap();
+
+        // 报告负载
+        let _report_result: Result<(), String> = node_manager.report_load("node-load", 0.75, 0.60, 100).await;
+
+        // 获取负载信息
+        let load_info: NodeLoad = node_manager.get_node_load("node-load").await.unwrap();
+        assert_eq!(load_info.cpu_usage, 0.75);
+        assert_eq!(load_info.memory_usage, 0.60);
+        assert_eq!(load_info.active_tasks, 100);
+    }
+}

@@ -98,9 +98,16 @@ pub mod wasm_integration;
 // Stage 27.4: AI 模型集成模块
 pub mod ai {
     pub mod llm_engine;
-    pub mod model_cache;
     pub mod acceleration_engine;
+    pub mod model_cache;
     pub mod model_manager;
+}
+
+// Stage 29.0: 分布式运行时模块
+pub mod distributed {
+    pub mod service_discovery;
+    pub mod node_manager;
+    pub mod health_monitor;
 }
 
 // Note: edge module exports are temporarily disabled due to compilation issues
