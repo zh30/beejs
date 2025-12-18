@@ -226,12 +226,23 @@ impl Autoscaler {
         // 归一化活跃任务数（假设最大任务数为 200）
         let task_score = (metrics.active_tasks as f64 / 200.0).min(1.0);
 
-        metrics.cpu_utilization * cpu_weight +
+        let load_score = metrics.cpu_utilization * cpu_weight +
             metrics.memory_utilization * memory_weight +
             queue_score * queue_weight +
             response_time_score * response_time_weight +
             metrics.error_rate * error_rate_weight +
-            task_score * task_weight
+            task_score * task_weight;
+
+        debug!("负载分数计算: cpu={:.2}* {:.2} + mem={:.2}* {:.2} + queue={:.2}* {:.2} + rt={:.2}* {:.2} + err={:.2}* {:.2} + task={:.2}* {:.2} = {:.2}",
+            metrics.cpu_utilization, cpu_weight,
+            metrics.memory_utilization, memory_weight,
+            queue_score, queue_weight,
+            response_time_score, response_time_weight,
+            metrics.error_rate, error_rate_weight,
+            task_score, task_weight,
+            load_score);
+
+        load_score
     }
 
     /// 制定扩缩容决策
@@ -281,11 +292,11 @@ impl Autoscaler {
 
         // 根据负载分数调整
         let load_factor = if metrics.cpu_utilization < 0.15 {
-            2
-        } else if metrics.cpu_utilization < 0.3 {
-            1
+            1  // 极低负载，额外缩容 1 个节点
+        } else if metrics.cpu_utilization < 0.25 {
+            0  // 低负载，只缩容 base_count 个节点
         } else {
-            0
+            0  // 正常负载，不缩容
         };
 
         base_count + load_factor

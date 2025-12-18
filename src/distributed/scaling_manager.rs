@@ -286,8 +286,13 @@ impl ScalingManager {
         // 收集当前指标
         let metrics = self.collect_cluster_metrics();
 
+        debug!("检查扩缩容需求，指标: CPU {:.2}, 内存 {:.2}, 任务 {}, 队列 {}",
+            metrics.cpu_utilization, metrics.memory_utilization, metrics.active_tasks, metrics.queue_depth);
+
         // 让自动扩缩容器评估
         let action = self.autoscaler.evaluate_scaling(&metrics);
+
+        debug!("扩缩容评估结果: {:?}", action);
 
         // 总是返回评估结果，包括 NoOp
         if !matches!(action, ScalingAction::NoOp) {
@@ -298,6 +303,11 @@ impl ScalingManager {
         }
 
         Some(action)
+    }
+
+    /// 收集集群指标（测试用）
+    pub fn collect_cluster_metrics_for_test(&self) -> ClusterMetrics {
+        self.collect_cluster_metrics()
     }
 
     /// 收集集群指标
@@ -346,11 +356,22 @@ impl ScalingManager {
     pub fn simulate_load_increase(&mut self, load: f64) {
         *self.current_load.lock().unwrap() = load;
 
-        // 分配更多资源来模拟负载
+        // 分配更多资源来模拟负载 - 支持超过 100% 的负载
         let task_count = (load * 100.0) as usize;
         for i in 0..task_count {
             let task_id = format!("load-task-{}", i);
-            let _ = self.resource_tracker.allocate(&task_id, 10, 1);
+            // 增加内存分配到 50MB 以提高内存使用率
+            let _ = self.resource_tracker.allocate(&task_id, 50, 1);
+        }
+
+        // 如果负载超过 100%，分配额外的高内存任务
+        if load > 1.0 {
+            let extra_tasks = ((load - 1.0) * 100.0) as usize;
+            for i in 0..extra_tasks {
+                let task_id = format!("extra-load-task-{}", i);
+                // 分配更多内存
+                let _ = self.resource_tracker.allocate(&task_id, 100, 2);
+            }
         }
     }
 
