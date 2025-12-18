@@ -150,7 +150,8 @@ pub struct ProcessPool {
     /// Last scaling operation timestamp
     last_scale_operation: Arc<Mutex<Instant>>,
     /// Worker idle time tracking
-    worker_idle_times: Arc<Mutex<HashMap<u32, Instant>>>,
+    #[allow(dead_code)]
+    worker_idle_times: Arc<Mutex<HashMap<u32, Instant>>>, // Reserved for future idle tracking
 }
 
 impl ProcessPool {
@@ -280,6 +281,7 @@ impl ProcessPool {
     }
 
     /// Initialize worker processes (async to allow proper async/await)
+    #[allow(dead_code)]
     async fn initialize_workers(&self) -> Result<()> {
         let initial = self.config.initial_workers;
 
@@ -304,6 +306,7 @@ impl ProcessPool {
     }
 
     /// Spawn a new worker process (async wrapper)
+    #[allow(dead_code)]
     async fn spawn_worker(&self, worker_id: usize) -> Result<u32> {
         // Use the blocking version for actual spawning
         self.spawn_worker_blocking(worker_id)

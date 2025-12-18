@@ -5,7 +5,6 @@
 
 use beejs::process_pool::{ProcessPool, ProcessPoolConfig};
 use std::sync::Arc;
-use std::time::Duration;
 
 #[cfg(test)]
 mod auto_scaling_tests {

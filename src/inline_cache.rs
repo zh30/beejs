@@ -455,10 +455,13 @@ impl Default for OptimizationResult {
 /// 缓存使用情况报告
 #[derive(Debug, Clone)]
 pub struct CacheUsageReport {
+    #[allow(dead_code)]
     pub total_entries: usize,
     #[allow(dead_code)]
     pub max_entries: usize,
+    #[allow(dead_code)]
     pub utilization: f64,
+    #[allow(dead_code)]
     pub hit_rate: f64,
     #[allow(dead_code)]
     pub total_operations: usize,
@@ -658,7 +661,7 @@ mod tests {
         cache.get(&cache_type, receiver_hash);
 
         let report = cache.get_usage_report();
-        assert!(report.total_entries >= 0);
+        // total_entries is always >= 0 by definition (usize is non-negative)
         assert!(report.hit_rate >= 0.0);
         assert!(report.utilization >= 0.0);
     }

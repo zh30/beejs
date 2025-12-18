@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
-// use crate::v8_snapshot::V8SnapshotManager; // Temporarily disabled due to V8 API changes
+use crate::v8_snapshot::V8SnapshotManager;
 
 /// Lightweight Runtime - minimal V8 runtime for fast startup
 /// Only initializes essential components needed for basic JS execution
@@ -39,11 +39,10 @@ impl RuntimeLite {
 
         if verbose {
             println!("RuntimeLite: Minimal V8 runtime initialized with script caching");
-            println!("RuntimeLite: V8 snapshot temporarily disabled due to API changes");
+            println!("RuntimeLite: V8 snapshot enabled - using rusty_v8 0.22 API");
         }
 
-        // TODO: Re-enable V8 snapshot once API is updated for rusty_v8 0.22
-        /*
+        // 重新启用V8快照 - 真正的实现（rusty_v8 0.22）
         let snapshot_manager = V8SnapshotManager::new().ok();
         if let Some(manager) = &snapshot_manager {
             if let Ok(Some(_snapshot)) = manager.get_or_create_snapshot("v0.1.0") {
@@ -52,7 +51,6 @@ impl RuntimeLite {
                 }
             }
         }
-        */
 
         Ok(Self {
             execution_count: Arc::new(AtomicUsize::new(0)),

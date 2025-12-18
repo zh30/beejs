@@ -124,6 +124,7 @@ enum OptimizeMode {
 }
 
 /// Initialize the process pool with the given configuration
+#[allow(dead_code)]
 fn initialize_process_pool(verbose: bool, pool_size: Option<usize>) -> Result<()> {
     use beejs::process_pool::{ProcessPoolConfig, initialize_process_pool as init_pool};
 
