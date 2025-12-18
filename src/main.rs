@@ -3,6 +3,11 @@ use clap::Parser;
 use std::fs;
 use std::path::PathBuf;
 
+/// Internal flag for worker processes (not exposed in help)
+const WORKER_MODE_FLAG: &str = "--worker-mode";
+const WORKER_ID_FLAG: &str = "--worker-id";
+const SOCKET_PATH_FLAG: &str = "--socket-path";
+
 /// Beejs - High-performance JavaScript/TypeScript runtime
 #[derive(Parser, Debug)]
 #[command(name = "beejs")]
@@ -155,6 +160,11 @@ fn main() -> Result<()> {
     if args_vec.len() == 2 && (args_vec[1] == "--help" || args_vec[1] == "-h") {
         let _args = Args::parse();
         return Ok(());
+    }
+
+    // Check for worker mode (internal flag for process pool workers)
+    if args_vec.len() >= 2 && args_vec[1] == WORKER_MODE_FLAG {
+        return run_worker_mode(&args_vec);
     }
 
     // Parse all arguments only when we need them
@@ -638,6 +648,53 @@ fn execute_script_for_watch(
             false
         }
     }
+}
+
+/// Run worker mode for process pool
+fn run_worker_mode(args: &[String]) -> Result<()> {
+    use beejs::process_pool;
+
+    // Parse worker arguments
+    let mut worker_id: Option<u32> = None;
+    let mut socket_path: Option<String> = None;
+
+    let mut i = 2; // Start after --worker-mode
+    while i < args.len() {
+        match args[i].as_str() {
+            WORKER_ID_FLAG => {
+                if i + 1 < args.len() {
+                    worker_id = Some(args[i + 1].parse()?);
+                    i += 2;
+                } else {
+                    return Err(anyhow::anyhow!("{} requires a value", WORKER_ID_FLAG));
+                }
+            }
+            SOCKET_PATH_FLAG => {
+                if i + 1 < args.len() {
+                    socket_path = Some(args[i + 1].clone());
+                    i += 2;
+                } else {
+                    return Err(anyhow::anyhow!("{} requires a value", SOCKET_PATH_FLAG));
+                }
+            }
+            _ => i += 1,
+        }
+    }
+
+    let worker_id = worker_id.ok_or_else(|| anyhow::anyhow!("Missing {}", WORKER_ID_FLAG))?;
+    let socket_path = socket_path.ok_or_else(|| anyhow::anyhow!("Missing {}", SOCKET_PATH_FLAG))?;
+
+    // Run the worker using tokio runtime
+    let rt = tokio::runtime::Runtime::new()
+        .context("Failed to create tokio runtime for worker")?;
+
+    rt.block_on(async {
+        process_pool::worker_main(worker_id, socket_path)
+            .await
+            .context("Worker execution failed")
+    })?;
+
+    Ok(())
 }
 
 /// Run interactive REPL mode
