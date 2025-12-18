@@ -35,6 +35,9 @@ pub struct Server {
     runtime: Arc<Mutex<Runtime>>,
 }
 
+/// WebSocket server module
+pub mod websocket;
+
 impl Server {
     /// Create a new Server instance
     pub fn new(runtime: Runtime) -> Self {
@@ -77,6 +80,7 @@ impl Server {
         info!("📊 POST /api/v1/eval - Execute JavaScript code");
         info!("📊 GET  /api/v1/stats - Get server statistics");
         info!("❤️  GET  /health - Health check");
+        info!("🔌 WebSocket available on ws://{}:{}/ws", self.config.host, self.config.port + 1);
         info!("⚠️  Note: Running in single-threaded mode for V8 compatibility");
 
         // Process requests synchronously on the main thread
