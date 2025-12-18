@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixStream, UnixListener};
 use num_cpus;
@@ -98,6 +98,125 @@ struct WorkerInfo {
     total_executions: usize,
 }
 
+/// Worker performance metrics for intelligent scheduling
+#[derive(Debug, Clone)]
+pub struct WorkerMetrics {
+    pub worker_id: u32,
+    pub avg_execution_time: Duration,
+    pub success_rate: f64,
+    pub memory_usage: usize,
+    pub task_count: usize,
+    pub last_used: Instant,
+    pub min_execution_time: Duration,
+    pub max_execution_time: Duration,
+    pub total_execution_time: Duration,
+    pub failed_tasks: usize,
+    /// Weighted score for scheduling decisions (lower is better)
+    pub scheduling_score: f64,
+}
+
+impl Default for WorkerMetrics {
+    fn default() -> Self {
+        Self {
+            worker_id: 0,
+            avg_execution_time: Duration::from_millis(100),
+            success_rate: 1.0,
+            memory_usage: 0,
+            task_count: 0,
+            last_used: Instant::now(),
+            min_execution_time: Duration::from_millis(100),
+            max_execution_time: Duration::from_millis(100),
+            total_execution_time: Duration::from_millis(0),
+            failed_tasks: 0,
+            scheduling_score: 100.0,
+        }
+    }
+}
+
+impl WorkerMetrics {
+    /// Update metrics after task execution
+    pub fn update_after_execution(&mut self, execution_time: Duration, success: bool) {
+        self.task_count += 1;
+        self.total_execution_time += execution_time;
+
+        // Update min/max
+        if execution_time < self.min_execution_time {
+            self.min_execution_time = execution_time;
+        }
+        if execution_time > self.max_execution_time {
+            self.max_execution_time = execution_time;
+        }
+
+        // Update average using exponential moving average
+        let alpha = 0.1; // Smoothing factor
+        self.avg_execution_time = self.avg_execution_time.mul_f64(1.0 - alpha) + execution_time.mul_f64(alpha);
+
+        // Update success rate
+        if success {
+            // Keep success rate as exponential moving average
+            self.success_rate = self.success_rate * 0.99 + 1.0 * 0.01;
+        } else {
+            self.failed_tasks += 1;
+            self.success_rate = self.success_rate * 0.99;
+        }
+
+        // Calculate scheduling score (lower is better)
+        // Factors: average execution time, success rate, task count
+        let time_factor = self.avg_execution_time.as_millis() as f64 / 100.0; // Normalize to 100ms units
+        let reliability_factor = 1.0 / self.success_rate; // Lower is better (inverse of success rate)
+        let experience_factor = (self.task_count as f64 / 1000.0).min(2.0); // Cap at 2x for experience
+
+        self.scheduling_score = time_factor * reliability_factor * experience_factor;
+        self.last_used = Instant::now();
+    }
+
+    /// Get a score for a specific task type
+    /// Simple tasks prefer fast workers, complex tasks prefer reliable workers
+    pub fn get_score_for_task_type(&self, task_complexity: TaskComplexity) -> f64 {
+        match task_complexity {
+            TaskComplexity::Simple => {
+                // For simple tasks, prioritize speed
+                self.avg_execution_time.as_millis() as f64 * (1.0 / self.success_rate)
+            }
+            TaskComplexity::Medium => {
+                // For medium tasks, balance speed and reliability
+                self.avg_execution_time.as_millis() as f64 * (2.0 - self.success_rate)
+            }
+            TaskComplexity::Complex => {
+                // For complex tasks, prioritize reliability
+                self.avg_execution_time.as_millis() as f64 * (1.0 / self.success_rate.powi(2))
+            }
+        }
+    }
+}
+
+/// Task complexity classification
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TaskComplexity {
+    Simple,   // < 100 chars, no loops/conditions
+    Medium,   // 100-500 chars, some loops/conditions
+    Complex,  // > 500 chars, complex logic
+}
+
+impl TaskComplexity {
+    /// Determine task complexity from script
+    pub fn from_script(script: &str) -> Self {
+        let len = script.len();
+        let has_loops = script.contains("for") || script.contains("while");
+        let has_conditions = script.contains("if") || script.contains("else");
+        let has_functions = script.contains("function") || script.contains("=>");
+
+        let complexity_score = len / 100 + if has_loops { 2 } else { 0 } +
+                              if has_conditions { 1 } else { 0 } + if has_functions { 1 } else { 0 };
+
+        match complexity_score {
+            0..=2 => TaskComplexity::Simple,
+            3..=5 => TaskComplexity::Medium,
+            _ => TaskComplexity::Complex,
+        }
+    }
+}
+
 /// Statistics about the process pool
 #[derive(Debug, Clone)]
 pub struct ProcessPoolStats {
@@ -117,6 +236,8 @@ pub struct ProcessPoolStats {
     pub peak_queue_length: usize,
     /// Worker utilization percentage
     pub worker_utilization_percent: f64,
+    /// Worker metrics for intelligent scheduling
+    pub worker_metrics: HashMap<u32, WorkerMetrics>,
 }
 
 impl Default for ProcessPoolStats {
@@ -133,6 +254,7 @@ impl Default for ProcessPoolStats {
             total_scale_operations: 0,
             peak_queue_length: 0,
             worker_utilization_percent: 0.0,
+            worker_metrics: HashMap::new(),
         }
     }
 }
@@ -344,8 +466,17 @@ impl ProcessPool {
             .context("No available workers")?;
 
         let wait_time = start.elapsed();
+        let task_start = Instant::now();
+
+        // Determine task complexity for intelligent scheduling
+        let _task_complexity = TaskComplexity::from_script(script);
 
         let result = self.execute_on_worker(worker_pid, script).await;
+
+        // Update worker metrics after execution
+        let execution_time = task_start.elapsed();
+        let success = result.is_ok();
+        self.update_worker_metrics(worker_pid, execution_time, success);
 
         // Release the worker
         self.release_worker(worker_pid);
@@ -384,21 +515,12 @@ impl ProcessPool {
         result
     }
 
-    /// Acquire an available worker process
+    /// Acquire an available worker process using intelligent scheduling
     async fn acquire_worker(&self) -> Option<u32> {
-        let mut available = self.available_workers.lock().unwrap();
+        let available = self.available_workers.lock().unwrap();
 
-        while let Some(pid) = available.pop() {
-            let workers = self.workers.lock().unwrap();
-            if let Some(worker) = workers.get(&pid) {
-                if worker.state == WorkerState::Ready {
-                    return Some(pid);
-                }
-            }
-        }
-
-        // No ready workers, try to spawn a new one
-        {
+        if available.is_empty() {
+            // No ready workers, try to spawn a new one
             let workers_count = self.workers.lock().unwrap().len();
             drop(available);
 
@@ -407,9 +529,85 @@ impl ProcessPool {
                     return Some(new_pid);
                 }
             }
+            return None;
         }
 
-        None
+        // Intelligent worker selection
+        let task_complexity = TaskComplexity::Simple; // Default for now, will be updated based on actual task
+        self.select_optimal_worker(&available, task_complexity)
+    }
+
+    /// Select optimal worker based on historical performance and task type
+    fn select_optimal_worker(&self, available_workers: &Vec<u32>, task_complexity: TaskComplexity) -> Option<u32> {
+        if available_workers.is_empty() {
+            return None;
+        }
+
+        let workers = self.workers.lock().unwrap();
+        let stats = self.stats.lock().unwrap();
+
+        // Collect worker metrics
+        let mut worker_candidates: Vec<(u32, f64)> = Vec::new();
+
+        for &pid in available_workers {
+            if let Some(worker) = workers.get(&pid) {
+                if worker.state == WorkerState::Ready {
+                    // Get or create worker metrics
+                    let metrics = stats.worker_metrics.get(&pid)
+                        .cloned()
+                        .unwrap_or_else(|| WorkerMetrics {
+                            worker_id: pid,
+                            ..Default::default()
+                        });
+
+                    // Calculate score based on task complexity
+                    let score = metrics.get_score_for_task_type(task_complexity);
+                    worker_candidates.push((pid, score));
+                }
+            }
+        }
+
+        drop(workers);
+        drop(stats);
+
+        if worker_candidates.is_empty() {
+            return None;
+        }
+
+        // Sort by score (lower is better)
+        worker_candidates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Apply load balancing: randomly select from top 3 workers to avoid always picking the same one
+        let top_k = std::cmp::min(3, worker_candidates.len());
+        let selected_index = if top_k > 1 {
+            use std::collections::hash_map::DefaultHasher;
+            use std::hash::{Hash, Hasher};
+            let mut hasher = DefaultHasher::new();
+            std::time::Instant::now().hash(&mut hasher);
+            (hasher.finish() as usize) % top_k
+        } else {
+            0
+        };
+
+        Some(worker_candidates[selected_index].0)
+    }
+
+    /// Update worker metrics after task execution
+    pub fn update_worker_metrics(&self, worker_pid: u32, execution_time: Duration, success: bool) {
+        let mut stats = self.stats.lock().unwrap();
+
+        let metrics = stats.worker_metrics.entry(worker_pid).or_insert_with(|| WorkerMetrics {
+            worker_id: worker_pid,
+            ..Default::default()
+        });
+
+        metrics.update_after_execution(execution_time, success);
+    }
+
+    /// Get worker metrics for debugging/analysis
+    pub fn get_worker_metrics(&self) -> HashMap<u32, WorkerMetrics> {
+        let stats = self.stats.lock().unwrap();
+        stats.worker_metrics.clone()
     }
 
     /// Release a worker process back to the pool
@@ -487,6 +685,7 @@ impl ProcessPool {
             total_executions: stats.total_executions,
             avg_execution_time_ms: stats.avg_execution_time_ms,
             pool_hit_rate: stats.pool_hit_rate,
+            worker_metrics: stats.worker_metrics.clone(),
         }
     }
 
