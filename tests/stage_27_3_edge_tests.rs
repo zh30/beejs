@@ -68,7 +68,7 @@ mod edge_computing_tests {
 
     #[tokio::test]
     async fn test_cold_start_performance() {
-        let runtime = EdgeRuntime::new(8192 * 1024, 256 * 1024 * 1024, false);
+        let runtime = EdgeRuntime::new();
         let start = std::time::Instant::now();
         let result = runtime.initialize().await;
         let elapsed = start.elapsed();
@@ -310,7 +310,7 @@ mod edge_computing_tests {
     /// Performance Target Validation
     #[tokio::test]
     async fn test_cold_start_target() {
-        let runtime = EdgeRuntime::new(8192 * 1024, 256 * 1024 * 1024, false);
+        let runtime = EdgeRuntime::new();
         let start = std::time::Instant::now();
         runtime.initialize().await.unwrap();
         let elapsed = start.elapsed();
@@ -418,8 +418,8 @@ impl CdnOptimizer {
     fn new() -> Self {
         CdnOptimizer
     }
-    async fn optimize(&self, _config: HashMap<String, String>) -> Result<HashMap<String, String>, String> {
-        let mut optimized = HashMap::new();
+    async fn optimize(&self, _config: std::collections::HashMap<String, String>) -> Result<std::collections::HashMap<String, String>, String> {
+        let mut optimized = std::collections::HashMap::new();
         optimized.insert("optimized_tier".to_string(), "enterprise".to_string());
         Ok(optimized)
     }
@@ -467,8 +467,8 @@ impl CrossRegionBalancer {
     fn new() -> Self {
         CrossRegionBalancer
     }
-    async fn calculate_load(&self, _regions: &[String]) -> Result<HashMap<String, f64>, String> {
-        let mut load = HashMap::new();
+    async fn calculate_load(&self, _regions: &[String]) -> Result<std::collections::HashMap<String, f64>, String> {
+        let mut load = std::collections::HashMap::new();
         load.insert("us-west".to_string(), 0.5);
         load.insert("eu-central".to_string(), 0.3);
         load.insert("ap-southeast".to_string(), 0.2);

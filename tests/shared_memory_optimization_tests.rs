@@ -30,7 +30,7 @@ mod tests {
         let manager = SharedMemoryManager::new(config);
 
         // 创建共享内存区域
-        let handle = manager.create_region("test_region".to_string(), Some(1024)).unwrap();
+        let mut handle = manager.create_region("test_region".to_string(), Some(1024)).unwrap();
 
         // 写入数据
         manager.write(&mut handle, 0, b"Hello, Shared Memory!").unwrap();
@@ -51,7 +51,7 @@ mod tests {
         let config = SharedMemoryConfig::default();
         let manager = SharedMemoryManager::new(config);
 
-        let handle = manager.create_region("test_region".to_string(), Some(1024)).unwrap();
+        let mut handle = manager.create_region("test_region".to_string(), Some(1024)).unwrap();
 
         // 初始化值
         manager.write(&mut handle, 0, &[0]).unwrap();
@@ -81,7 +81,7 @@ mod tests {
         // 创建多个区域
         for i in 0..5 {
             let region_id = format!("region_{}", i);
-            let handle = manager.create_region(region_id, Some(512)).unwrap();
+            let mut handle = manager.create_region(region_id, Some(512)).unwrap();
 
             // 写入数据
             let data = format!("Data for region {}", i);
@@ -103,7 +103,7 @@ mod tests {
         let manager = SharedMemoryManager::new(config);
 
         // 第一次创建
-        let handle1 = manager.get_or_create_region("shared".to_string(), Some(1024)).unwrap();
+        let mut handle1 = manager.get_or_create_region("shared".to_string(), Some(1024)).unwrap();
         manager.write(&mut handle1, 0, b"first").unwrap();
 
         // 第二次获取
@@ -361,7 +361,7 @@ mod tests {
         let config = SharedMemoryConfig::default();
         let manager = SharedMemoryManager::new(config);
 
-        let handle = manager.create_region("perf_test".to_string(), Some(1024 * 1024)).unwrap();
+        let mut handle = manager.create_region("perf_test".to_string(), Some(1024 * 1024)).unwrap();
 
         let start = Instant::now();
         for _ in 0..1000 {
@@ -413,7 +413,7 @@ mod tests {
 
         // 创建多个区域并执行大量操作
         for region_id in 0..50 {
-            let handle = manager.create_region(
+            let mut handle = manager.create_region(
                 format!("stress_region_{}", region_id),
                 Some(4096)
             ).unwrap();
@@ -523,19 +523,24 @@ mod tests {
         let config = SharedMemoryConfig::default();
         let manager = Arc::new(SharedMemoryManager::new(config));
 
-        let handle = manager.create_region("concurrent_test".to_string(), Some(1024)).unwrap();
+        let mut handle = manager.create_region("concurrent_test".to_string(), Some(1024)).unwrap();
 
         // 启动多个线程并发访问
         let mut handles = vec![];
         for i in 0..10 {
             let manager_clone = Arc::clone(&manager);
-            let handle_clone = handle.clone();
 
             let handle = thread::spawn(move || {
+                // 每个线程创建自己的区域
+                let mut thread_handle = manager_clone.create_region(
+                    format!("thread_region_{}", i),
+                    Some(1024)
+                ).unwrap();
+
                 for j in 0..100 {
                     let data = format!("Thread {} Message {}", i, j);
-                    manager_clone.write(&handle_clone, 0, data.as_bytes()).unwrap();
-                    let _ = manager_clone.read(&handle_clone, 0, data.len()).unwrap();
+                    manager_clone.write(&mut thread_handle, 0, data.as_bytes()).unwrap();
+                    let _ = manager_clone.read(&thread_handle, 0, data.len()).unwrap();
                 }
             });
 
