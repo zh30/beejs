@@ -69,6 +69,22 @@ pub use network::buffer_pool::BufferPoolConfig;
 pub use network::connection_pool::ConnectionPoolConfig;
 pub use network::statistics::StatisticsConfig;
 
+// Stage 30.3: 网络 I/O 零拷贝优化模块
+pub use network::{
+    EpollManager,
+    ZeroCopyIO,
+    BatchProcessor,
+    NetworkConfig,
+    ConnectionPool,
+    Http2Server,
+    Http3Server,
+    NetworkStats,
+    NetworkEvent,
+    NetworkError,
+    NetworkEventHandler,
+    NetworkMonitor,
+};
+
 // Re-export profiler types
 pub use profiler::{Profiler, ProfileTarget, ProfilingMode, ProfileResult, ProfilingStats};
 

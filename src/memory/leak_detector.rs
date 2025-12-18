@@ -19,7 +19,6 @@ pub struct MemoryLeakDetector {
 }
 
 /// 对象跟踪信息
-#[derive(Debug, Clone)]
 struct ObjectTrackingInfo {
     /// 对象地址
     address: usize,
@@ -29,8 +28,8 @@ struct ObjectTrackingInfo {
     allocated_at: Instant,
     /// 最后访问时间
     last_accessed: Instant,
-    /// 访问次数 (非原子，用于快照)
-    access_count: usize,
+    /// 访问次数
+    access_count: AtomicUsize,
     /// 分配位置（文件/行号）
     allocation_location: Option<String>,
     /// 对象类型
@@ -41,8 +40,24 @@ struct ObjectTrackingInfo {
     leak_candidate: bool,
 }
 
+impl Clone for ObjectTrackingInfo {
+    fn clone(&self) -> Self {
+        Self {
+            address: self.address,
+            size: self.size,
+            allocated_at: self.allocated_at,
+            last_accessed: self.last_accessed,
+            access_count: AtomicUsize::new(self.access_count.load(Ordering::Relaxed)),
+            allocation_location: self.allocation_location.clone(),
+            object_type: self.object_type,
+            expected_lifetime: self.expected_lifetime,
+            leak_candidate: self.leak_candidate,
+        }
+    }
+}
+
 /// 对象类型
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ObjectType {
     /// 普通对象
     Normal,
@@ -242,7 +257,7 @@ impl MemoryLeakDetector {
         let mut objects = self.active_objects.write().unwrap();
         if let Some(info) = objects.get_mut(&address) {
             info.last_accessed = Instant::now();
-            info.access_count += 1;
+            info.access_count.fetch_add(1, Ordering::Relaxed);
         }
     }
 
@@ -455,7 +470,7 @@ impl MemoryLeakDetector {
     }
 
     /// 停止检测器
-    pub fn stop(&self) {
+    pub fn stop(&mut self) {
         self.stop_flag.store(1, Ordering::Relaxed);
         if let Some(handle) = self.detection_thread.take() {
             handle.join().unwrap();

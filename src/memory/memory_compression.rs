@@ -142,7 +142,7 @@ impl Default for CompressionConfig {
 
 /// 压缩数据块
 #[derive(Debug, Clone)]
-struct CompressedBlock {
+pub struct CompressedBlock {
     /// 原始数据地址
     original_address: usize,
     /// 压缩数据
@@ -239,21 +239,24 @@ impl MemoryCompression {
         let algorithm = self.select_algorithm(data);
 
         // 执行压缩
-        let (compressed_data, compression_ratio) = match algorithm {
+        let (compressed_data, compression_ratio, algorithm_used) = match algorithm {
             CompressionAlgorithm::LZ4 => {
                 let compressed = self.compress_lz4(data)?;
                 self.stats.lz4_usage.fetch_add(1, Ordering::Relaxed);
-                (compressed, self.calculate_compression_ratio(data, &compressed))
+                let ratio = self.calculate_compression_ratio(data, &compressed);
+                (compressed, ratio, algorithm)
             }
             CompressionAlgorithm::Snappy => {
                 let compressed = self.compress_snappy(data)?;
                 self.stats.snappy_usage.fetch_add(1, Ordering::Relaxed);
-                (compressed, self.calculate_compression_ratio(data, &compressed))
+                let ratio = self.calculate_compression_ratio(data, &compressed);
+                (compressed, ratio, algorithm)
             }
             CompressionAlgorithm::Zstd => {
                 let compressed = self.compress_zstd(data)?;
                 self.stats.zstd_usage.fetch_add(1, Ordering::Relaxed);
-                (compressed, self.calculate_compression_ratio(data, &compressed))
+                let ratio = self.calculate_compression_ratio(data, &compressed);
+                (compressed, ratio, algorithm)
             }
             CompressionAlgorithm::None => {
                 return Err(CompressionError::TooSmall);
@@ -281,12 +284,14 @@ impl MemoryCompression {
         let new_avg = (current_avg * (total_compressions - 1) + (compression_ratio * 1000.0) as u64) / total_compressions;
         self.stats.avg_compression_ratio.store(new_avg, Ordering::Relaxed);
 
+        let compressed_size = compressed_data.len();
+
         Ok(CompressedBlock {
             original_address: address,
             compressed_data,
-            algorithm,
+            algorithm: algorithm_used,
             original_size: data.len(),
-            compressed_size: compressed_data.len(),
+            compressed_size,
             created_at: Instant::now(),
             last_accessed: Instant::now(),
             access_count: 0,
@@ -462,7 +467,7 @@ impl MemoryCompression {
     }
 
     /// 停止压缩器
-    pub fn stop(&self) {
+    pub fn stop(&mut self) {
         self.stop_flag.store(1, Ordering::Relaxed);
         if let Some(handle) = self.compression_thread.take() {
             handle.join().unwrap();

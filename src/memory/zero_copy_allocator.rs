@@ -222,7 +222,7 @@ impl ZeroCopyAllocator {
 
     /// 大内存分配
     fn allocate_large(&self, size: usize) -> *mut u8 {
-        let layout = Layout::from_size_align_unchecked(size, 1);
+        let layout = unsafe { Layout::from_size_align_unchecked(size, 1) };
         let ptr = unsafe { std::alloc::alloc(layout) };
 
         // 记录大内存分配
@@ -324,7 +324,7 @@ impl MemoryPool {
 
         // 预分配初始块
         for _ in 0..initial_blocks {
-            let layout = Layout::from_size_align_unchecked(block_size, 1);
+            let layout = unsafe { Layout::from_size_align_unchecked(block_size, 1) };
             let ptr = unsafe { std::alloc::alloc(layout) };
             if !ptr.is_null() {
                 free_blocks.push(ptr);
@@ -350,7 +350,7 @@ impl MemoryPool {
             Some(ptr)
         } else if self.allocated_blocks.len() < self.max_blocks {
             // 分配新块
-            let layout = Layout::from_size_align_unchecked(self.block_size, 1);
+            let layout = unsafe { Layout::from_size_align_unchecked(self.block_size, 1) };
             let ptr = unsafe { std::alloc::alloc(layout) };
             if !ptr.is_null() {
                 self.allocated_blocks.push(ptr);

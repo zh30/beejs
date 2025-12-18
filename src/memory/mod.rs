@@ -29,6 +29,7 @@ pub use memory_compression::{
     CompressionStats,
     CompressionStatsSnapshot,
     CompressionAlgorithm,
+    CompressedBlock,
 };
 
 pub use leak_detector::{
@@ -42,7 +43,7 @@ pub use leak_detector::{
     LeakSeverity,
 };
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 /// 统一内存管理器 - 整合所有内存优化组件
@@ -51,11 +52,11 @@ pub struct UnifiedMemoryManager {
     /// 零拷贝分配器
     allocator: Arc<ZeroCopyAllocator>,
     /// 分代垃圾回收器
-    gc: Arc<GenerationalGC>,
+    gc: Arc<Mutex<GenerationalGC>>,
     /// 内存压缩器
-    compressor: Arc<MemoryCompression>,
+    compressor: Arc<Mutex<MemoryCompression>>,
     /// 泄漏检测器
-    leak_detector: Arc<MemoryLeakDetector>,
+    leak_detector: Arc<Mutex<MemoryLeakDetector>>,
     /// 集成统计
     integrated_stats: Arc<IntegratedStats>,
     /// 创建时间
@@ -102,9 +103,9 @@ impl UnifiedMemoryManager {
         leak_detector_config: LeakDetectorConfig,
     ) -> Self {
         let allocator = Arc::new(ZeroCopyAllocator::new(allocator_config));
-        let gc = Arc::new(GenerationalGC::new(gc_config));
-        let compressor = Arc::new(MemoryCompression::new(compression_config));
-        let leak_detector = Arc::new(MemoryLeakDetector::new(leak_detector_config));
+        let gc = Arc::new(Mutex::new(GenerationalGC::new(gc_config)));
+        let compressor = Arc::new(Mutex::new(MemoryCompression::new(compression_config)));
+        let leak_detector = Arc::new(Mutex::new(MemoryLeakDetector::new(leak_detector_config)));
 
         Self {
             allocator: Arc::clone(&allocator),
@@ -128,12 +129,15 @@ impl UnifiedMemoryManager {
     /// 分配内存
     pub fn allocate(&self, size: usize) -> *mut u8 {
         // 记录分配
-        self.leak_detector.track_allocation(
-            self.allocator.generate_address_for_tracking(),
-            size,
-            ObjectType::Normal,
-            None,
-        );
+        {
+            let leak_detector = self.leak_detector.lock().unwrap();
+            leak_detector.track_allocation(
+                self.allocator.generate_address_for_tracking(),
+                size,
+                ObjectType::Normal,
+                None,
+            );
+        }
 
         // 执行分配
         self.allocator.allocate(size)
@@ -142,7 +146,10 @@ impl UnifiedMemoryManager {
     /// 释放内存
     pub fn deallocate(&self, ptr: *mut u8, size: usize) {
         // 记录释放
-        self.leak_detector.track_deallocation(ptr as usize);
+        {
+            let leak_detector = self.leak_detector.lock().unwrap();
+            leak_detector.track_deallocation(ptr as usize);
+        }
 
         // 执行释放
         self.allocator.deallocate(ptr, size);
@@ -150,28 +157,34 @@ impl UnifiedMemoryManager {
 
     /// 触发垃圾回收
     pub fn trigger_gc(&self) {
-        self.gc.trigger_full_gc();
+        let gc = self.gc.lock().unwrap();
+        gc.trigger_full_gc();
     }
 
     /// 检测内存泄漏
     pub fn detect_leaks(&self) -> LeakReport {
-        self.leak_detector.detect_leaks()
+        let leak_detector = self.leak_detector.lock().unwrap();
+        leak_detector.detect_leaks()
     }
 
     /// 压缩数据
     pub fn compress_data(&self, data: &[u8], address: usize) -> Result<(), memory_compression::CompressionError> {
         // 简化的压缩实现
         // 实际应用中需要处理压缩结果
-        let _ = self.compressor.compress(data, address)?;
+        let compressor = self.compressor.lock().unwrap();
+        let _ = compressor.compress(data, address)?;
         Ok(())
     }
 
     /// 获取集成统计信息
     pub fn get_integrated_stats(&self) -> IntegratedStatsSnapshot {
         let allocator_stats = self.allocator.get_stats();
-        let gc_stats = self.gc.get_stats();
-        let compression_stats = self.compressor.get_stats();
-        let leak_stats = self.leak_detector.get_stats();
+        let gc = self.gc.lock().unwrap();
+        let gc_stats = gc.get_stats();
+        let compressor = self.compressor.lock().unwrap();
+        let compression_stats = compressor.get_stats();
+        let leak_detector = self.leak_detector.lock().unwrap();
+        let leak_stats = leak_detector.get_stats();
 
         // 计算集成指标
         let zero_copy_ratio = if allocator_stats.total_allocations > 0 {
@@ -232,7 +245,8 @@ impl UnifiedMemoryManager {
     /// 计算性能指标
     fn calculate_performance_metrics(&self) -> PerformanceMetrics {
         let allocator_stats = self.allocator.get_stats();
-        let gc_stats = self.gc.get_stats();
+        let gc = self.gc.lock().unwrap();
+        let gc_stats = gc.get_stats();
 
         PerformanceMetrics {
             allocation_throughput: if allocator_stats.total_allocations > 0 {
@@ -293,7 +307,8 @@ impl UnifiedMemoryManager {
 
     /// 计算压缩比
     fn calculate_compression_ratio(&self) -> f64 {
-        let compression_stats = self.compressor.get_stats();
+        let compressor = self.compressor.lock().unwrap();
+        let compression_stats = compressor.get_stats();
         compression_stats.avg_compression_ratio
     }
 
@@ -303,10 +318,16 @@ impl UnifiedMemoryManager {
     }
 
     /// 停止所有组件
-    pub fn stop(&self) {
-        self.gc.stop();
-        self.compressor.stop();
-        self.leak_detector.stop();
+    pub fn stop(&mut self) {
+        if let Some(gc) = Arc::get_mut(&mut self.gc) {
+            gc.lock().unwrap().stop();
+        }
+        if let Some(compressor) = Arc::get_mut(&mut self.compressor) {
+            compressor.lock().unwrap().stop();
+        }
+        if let Some(leak_detector) = Arc::get_mut(&mut self.leak_detector) {
+            leak_detector.lock().unwrap().stop();
+        }
     }
 }
 

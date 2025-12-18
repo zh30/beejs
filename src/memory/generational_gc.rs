@@ -367,12 +367,12 @@ impl GenerationalGC {
                 // 检查是否需要 GC
                 if now.duration_since(last_gc) > Duration::from_millis(config.gc_interval_ms) {
                     // 检查年轻代使用率
-                    if let Ok(young_gen) = young_gen.read() {
-                        let usage_ratio = (young_gen.total_space - young_gen.free_space) as f64
-                            / young_gen.total_space as f64;
+                    if let Ok(young_gen_guard) = young_gen.read() {
+                        let usage_ratio = (young_gen_guard.total_space - young_gen_guard.free_space) as f64
+                            / young_gen_guard.total_space as f64;
 
                         if usage_ratio > config.young_gen_threshold {
-                            drop(young_gen);
+                            drop(young_gen_guard);
                             // 触发年轻代 GC
                             Self::trigger_gc_internal(
                                 Arc::clone(&young_gen),
@@ -447,7 +447,7 @@ impl GenerationalGC {
     }
 
     /// 停止 GC
-    pub fn stop(&self) {
+    pub fn stop(&mut self) {
         self.stop_flag.store(1, Ordering::Relaxed);
         if let Some(handle) = self.gc_thread.take() {
             handle.join().unwrap();
