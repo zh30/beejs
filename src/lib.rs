@@ -27,6 +27,7 @@ mod jit_optimizer;
 mod lock_free;
 pub mod process_pool;
 mod runtime_lite;
+pub mod string_interner;
 mod zero_copy;
 pub mod v8_snapshot;
 pub mod repl;
