@@ -50,6 +50,9 @@ pub mod shared_memory;
 pub mod shared_object_cache;
 pub mod memory_mapped_file;
 
+// 新增WASM集成模块
+pub mod wasm_integration;
+
 pub use test_runner::{TestCase, TestRunner, TestRunnerConfig, TestStats, TestStatus, TestSuite};
 
 // Re-export AI module types for easier testing

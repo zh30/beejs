@@ -552,10 +552,16 @@ mod tests {
         let config = SharedObjectCacheConfig::default();
         let cache = SharedObjectCache::new(config);
 
+        // 测试插入字符串值
         cache.insert("str1".to_string(), SharedValue::String("hello".to_string()));
-        cache.insert("str2".to_string(), SharedValue::String("hello".to_string()));
+        cache.insert("str2".to_string(), SharedValue::String("world".to_string()));
 
-        // 验证字符串缓存正常工作
-        assert!(cache.get_string_cache().len() >= 0);
+        // 验证字符串缓存正常工作 - 检查缓存是否工作
+        let value1 = cache.get(&"str1".to_string());
+        assert!(value1.is_some(), "应该能找到插入的字符串");
+
+        // 验证缓存统计
+        let stats = cache.get_stats();
+        assert!(stats.total_objects > 0, "应该有对象被缓存");
     }
 }
