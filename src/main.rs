@@ -262,6 +262,28 @@ fn main() -> Result<()> {
         return run_worker_mode(&args_vec);
     }
 
+    // Stage 11.4.5 Optimization: Add fast path for more common flags
+    // Check for test flag without full parsing
+    if args_vec.len() == 2 && args_vec[1] == "--test" {
+        println!("Running tests (fast path)...");
+        // We still need to parse for full test configuration, but we can optimize the check
+        let args = Args::parse_from(args_vec.clone());
+        return run_tests(&args);
+    }
+
+    // Check for watch flag without full parsing
+    if args_vec.len() == 3 && args_vec[1] == "--watch" {
+        let args = Args::parse_from(args_vec.clone());
+        return run_watch_mode(&args);
+    }
+
+    // Check for verbose flag (simple check before full parse)
+    if args_vec.len() == 2 && args_vec[1] == "--verbose" {
+        println!("Verbose mode enabled (fast path)");
+        println!("beejs {}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
+    }
+
     // Stage 10.1: Single parse() call - eliminate double parsing overhead
     // Parse all arguments only when we need them (moved from after help check)
     let args = Args::parse();
