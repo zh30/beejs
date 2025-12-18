@@ -9,10 +9,10 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-mod ai_async_queue;
-mod ai_batch_processor;
-mod ai_memory_pool;
-mod ai_model_interface;
+pub mod ai_async_queue;
+pub mod ai_batch_processor;
+pub mod ai_memory_pool;
+pub mod ai_model_interface;
 mod async_io;
 mod code_analyzer;
 mod code_cache;
@@ -77,8 +77,11 @@ pub use test_runner::{TestCase, TestRunner, TestRunnerConfig, TestStats, TestSta
 
 // Re-export AI module types for easier testing
 pub use ai_async_queue::{AiAsyncQueue, TaskPriority};
-pub use ai_batch_processor::BatchConfig;
-pub use ai_memory_pool::{AiMemoryPool, AiMemoryPoolConfig, PreallocationStrategy};
+pub use ai_batch_processor::{BatchConfig, AiBatchProcessor, AiTaskType, AiTaskResult};
+pub use ai_memory_pool::{
+    AiMemoryPool, AiMemoryPoolConfig, PreallocationStrategy, ModelMemoryConfig,
+    create_llm_memory_pool, create_cv_memory_pool, create_general_ai_memory_pool
+};
 pub use ai_model_interface::{AiModelManager, ModelType};
 
 // Re-export Async I/O types (Stage 25.2)
