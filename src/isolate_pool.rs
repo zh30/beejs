@@ -157,20 +157,15 @@ static POOL: once_cell::sync::OnceCell<Box<IsolatePool>> = once_cell::sync::Once
 /// 检测是否在测试环境中运行
 /// 集成测试不会设置 cfg(test)，所以需要额外检测
 fn is_test_environment() -> bool {
-    // 1. 编译时检测
-    if cfg!(test) {
-        return true;
-    }
-    // 2. 运行时检测：检查二进制路径是否包含 "target/debug/deps"
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(path_str) = exe.to_str() {
-            if path_str.contains("target/debug/deps") || path_str.contains("target/release/deps") {
-                return true;
-            }
-        }
-    }
-    // 3. 环境变量检测
+    // 1. 编译时检测 - 仅在 cargo test 时为 true
+    #[cfg(test)]
+    return true;
+
+    // 2. 环境变量检测 - 仅在明确设置时为 true
     std::env::var("BEEJS_TEST_MODE").is_ok()
+
+    // 注意：不再检查二进制路径，因为 target/release/beejs 会被误判为测试环境
+    // 这会导致生产构建的 beejs 无法使用 Isolate 池，严重影响性能
 }
 
 /// 初始化全局Isolate池（超级激进版）
