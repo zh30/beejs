@@ -27,7 +27,7 @@ mod jit_optimizer;
 mod lock_free;
 mod runtime_lite;
 mod zero_copy;
-mod v8_snapshot;
+pub mod v8_snapshot;
 pub mod repl;
 pub mod memory_pool;
 pub mod error_handler;
@@ -55,6 +55,9 @@ pub use precompiled_cache::{PrecompiledCacheStats, PrecompiledModuleCache};
 
 // Re-export lightweight runtime types
 pub use runtime_lite::{RuntimeLite, get_global_lite_runtime};
+
+// Re-export V8 snapshot types
+pub use v8_snapshot::V8SnapshotManager;
 
 // Re-export REPL types
 pub use repl::{Repl, ReplConfig};
@@ -1197,7 +1200,7 @@ impl Runtime {
         if let Some(i) = op_index {
             let left = trimmed[..i].trim();
             let op = &trimmed[i..].trim();
-            let op_char = op.chars().next().unwrap();
+            let _op_char = op.chars().next().unwrap();
 
             // Extract right side by finding the operator length
             let op_str = if op.starts_with("==") || op.starts_with("!=") || op.starts_with(">=") || op.starts_with("<=") {

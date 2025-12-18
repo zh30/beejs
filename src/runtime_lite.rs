@@ -516,7 +516,7 @@ impl RuntimeLite {
         if let Some(i) = op_index {
             let left = trimmed[..i].trim();
             let op = &trimmed[i..].trim();
-            let op_char = op.chars().next().unwrap();
+            let _op_char = op.chars().next().unwrap();
 
             // Extract right side by finding the operator length
             let op_str = if op.starts_with("==") || op.starts_with("!=") || op.starts_with(">=") || op.starts_with("<=") {

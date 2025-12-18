@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::runtime_lite::RuntimeLite;
 
     #[test]
     fn test_fast_path_constant_execution() {
