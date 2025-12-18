@@ -81,6 +81,9 @@ pub use ai_batch_processor::BatchConfig;
 pub use ai_memory_pool::{AiMemoryPool, AiMemoryPoolConfig, PreallocationStrategy};
 pub use ai_model_interface::{AiModelManager, ModelType};
 
+// Re-export Async I/O types (Stage 25.2)
+pub use async_io::{AsyncIoManager, IoStats, AsyncFileRead, IoError};
+
 // Re-export WASM integration types
 pub use wasm_integration::{WasmExecutor, WasmModule, WasmStats};
 
@@ -101,6 +104,9 @@ pub use jit_optimizer::{
 
 // Re-export Isolate pre-warming types (Stage 21.3)
 pub use isolate_prewarmer::{IsolatePrewarmer, PrewarmConfig, PrewarmStats};
+
+// Re-export Isolate Pool types (Stage 25.2)
+pub use isolate_pool::{IsolatePool, PoolStatistics};
 
 // Re-export zero-copy network I/O types (Stage 21.5)
 pub use network::{

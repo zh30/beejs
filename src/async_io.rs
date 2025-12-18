@@ -224,6 +224,12 @@ impl AsyncIoManager {
         Ok(file)
     }
 
+    /// 获取 I/O 统计信息
+    pub async fn stats(&self) -> IoStats {
+        let stats = self.stats.lock().await;
+        stats.clone()
+    }
+
     /// 异步写入文件（使用缓冲）
     pub async fn write_file_buffered(&self, path: &str, content: &[u8]) -> Result<(), IoError> {
         let path = Path::new(path);

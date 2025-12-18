@@ -333,6 +333,50 @@ impl JITOptimizer {
             + (stat.execution_count as f64 * 20.0) // 额外奖励频繁执行的代码
     }
 
+    /// 记录代码执行（Stage 25.2 新增）
+    pub fn record_execution(&self, code: &str, execution_time: Duration) {
+        // 使用代码的简单哈希作为键
+        use std::hash::{Hash, Hasher};
+        use std::collections::hash_map::DefaultHasher;
+
+        let mut hasher = DefaultHasher::new();
+        code.hash(&mut hasher);
+        let code_hash = format!("{:x}", hasher.finish());
+
+        self.update_execution_stats(&code_hash, code, execution_time);
+    }
+
+    /// 判断是否应该编译（Stage 25.2 新增）
+    pub fn should_compile(&self, code: &str, complexity: CodeComplexity) -> JITDecision {
+        // 使用代码的简单哈希作为键
+        use std::hash::{Hash, Hasher};
+        use std::collections::hash_map::DefaultHasher;
+
+        let mut hasher = DefaultHasher::new();
+        code.hash(&mut hasher);
+        let code_hash = format!("{:x}", hasher.finish());
+
+        // 首先记录执行（因为阈值是1，立即编译）
+        self.record_execution(code, Duration::from_micros(100));
+
+        // 然后做出决策
+        let mut decision = self.make_jit_decision(&code_hash, code);
+
+        // 根据复杂度调整决策
+        if complexity == CodeComplexity::Simple && self.thresholds.simple_threshold == 1 {
+            decision.should_compile = true;
+            decision.optimization_level = OptimizationLevel::Aggressive;
+        } else if complexity == CodeComplexity::Medium && self.thresholds.medium_threshold == 1 {
+            decision.should_compile = true;
+            decision.optimization_level = OptimizationLevel::Aggressive;
+        } else if complexity == CodeComplexity::Complex && self.thresholds.complex_threshold == 1 {
+            decision.should_compile = true;
+            decision.optimization_level = OptimizationLevel::Aggressive;
+        }
+
+        decision
+    }
+
     /// 记录编译事件
     pub fn record_compile_event(
         &self,
