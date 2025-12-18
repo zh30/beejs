@@ -7,7 +7,6 @@ mod tests {
     use beejs::*;
 
     /// 测试1: 基本 async 函数
-    #[ignore]
     #[test]
     fn test_basic_async_function() {
         let code = r#"
@@ -17,13 +16,12 @@ mod tests {
             greet("Beejs");
         "#;
 
-        let runtime = Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, false).expect("Failed to create runtime");
-        let result = runtime.execute_code(code);
+        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let result = runtime.execute_standard(code);
         assert!(result.is_ok(), "Async function should execute without errors");
     }
 
     /// 测试2: 基本 await 语法
-    #[ignore]
     #[test]
     fn test_basic_await() {
         let code = r#"
@@ -34,13 +32,12 @@ mod tests {
             test();
         "#;
 
-        let runtime = Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, false).expect("Failed to create runtime");
-        let result = runtime.execute_code(code);
+        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let result = runtime.execute_standard(code);
         assert!(result.is_ok(), "Await should work with Promise.resolve");
     }
 
     /// 测试3: Async/await 错误处理
-    #[ignore]
     #[test]
     fn test_async_error_handling() {
         let code = r#"
@@ -54,13 +51,12 @@ mod tests {
             test();
         "#;
 
-        let runtime = Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, false).expect("Failed to create runtime");
-        let result = runtime.execute_code(code);
+        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let result = runtime.execute_standard(code);
         assert!(result.is_ok(), "Async error handling should work");
     }
 
     /// 测试4: Promise.all 支持
-    #[ignore]
     #[test]
     fn test_promise_all() {
         let code = r#"
@@ -76,13 +72,12 @@ mod tests {
             test();
         "#;
 
-        let runtime = Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, false).expect("Failed to create runtime");
-        let result = runtime.execute_code(code);
+        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let result = runtime.execute_standard(code);
         assert!(result.is_ok(), "Promise.all should work");
     }
 
     /// 测试5: 多个 await 操作
-    #[ignore]
     #[test]
     fn test_multiple_awaits() {
         let code = r#"
@@ -95,13 +90,12 @@ mod tests {
             test();
         "#;
 
-        let runtime = Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, false).expect("Failed to create runtime");
-        let result = runtime.execute_code(code);
+        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let result = runtime.execute_standard(code);
         assert!(result.is_ok(), "Multiple awaits should work");
     }
 
     /// 测试6: Async 箭头函数
-    #[ignore]
     #[test]
     fn test_async_arrow_function() {
         let code = r#"
@@ -111,8 +105,8 @@ mod tests {
             add(5, 3);
         "#;
 
-        let runtime = Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, false).expect("Failed to create runtime");
-        let result = runtime.execute_code(code);
+        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let result = runtime.execute_standard(code);
         assert!(result.is_ok(), "Async arrow functions should work");
     }
 }
