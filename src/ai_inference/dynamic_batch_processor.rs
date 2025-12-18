@@ -105,6 +105,7 @@ impl DynamicBatchProcessor {
         let config = self.config.clone();
         let current_batch_size = self.current_batch_size;
         let performance_stats = Arc::clone(&self.performance_stats);
+        let running = Arc::clone(&self.running);
 
         // 启动批处理任务
         tokio::spawn(async move {
@@ -113,8 +114,8 @@ impl DynamicBatchProcessor {
             loop {
                 // 检查是否应该停止
                 {
-                    let running = self.running.lock().await;
-                    if !*running {
+                    let running_guard = running.lock().await;
+                    if !*running_guard {
                         break;
                     }
                 }
