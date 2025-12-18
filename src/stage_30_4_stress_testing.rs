@@ -2,11 +2,11 @@
 /// 提供高并发、内存压力、网络压力等多种压力测试功能
 
 use crate::Runtime;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tokio::time::{sleep, timeout};
+use tokio::time::sleep;
 
 /// 压力测试配置
 #[derive(Debug, Clone)]
@@ -137,7 +137,7 @@ impl StressTester {
         let start_time = Instant::now();
 
         // 简化的内存压力测试
-        for batch_id in 0..self.config.concurrent_tasks / 10 {
+        for _batch_id in 0..self.config.concurrent_tasks / 10 {
             let script = format!(r#"
                 // 内存压力任务
                 let objects = [];
@@ -195,7 +195,7 @@ impl StressTester {
 
         while execution_count < self.config.concurrent_tasks as u64 {
             // 决定是否注入故障
-            use std::sync::atomic::{AtomicBool, Ordering};
+            use std::sync::atomic::AtomicBool;
             static RANDOM_CACHE: AtomicBool = AtomicBool::new(false);
             let should_inject_fault = rand::random::<f64>() < self.config.error_injection_rate;
 

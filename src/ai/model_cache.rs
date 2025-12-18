@@ -5,7 +5,6 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
-use crate::Runtime;
 
 /// 模型缓存配置
 #[derive(Debug, Clone)]
@@ -193,7 +192,7 @@ impl ModelCache {
 
     /// 从 L2 缓存获取
     fn get_from_l2(&self, model_name: &str) -> Option<CacheEntry> {
-        let mut cache = self.l2_cache.lock().unwrap();
+        let cache = self.l2_cache.lock().unwrap();
         if let Some(entry) = cache.get(model_name).cloned() {
             drop(cache);
             self.record_access(model_name);
@@ -205,7 +204,7 @@ impl ModelCache {
 
     /// 从 L3 缓存获取
     fn get_from_l3(&self, model_name: &str) -> Option<CacheEntry> {
-        let mut cache = self.l3_cache.lock().unwrap();
+        let cache = self.l3_cache.lock().unwrap();
         if let Some(entry) = cache.get(model_name).cloned() {
             drop(cache);
             self.record_access(model_name);
@@ -404,7 +403,7 @@ impl ModelCache {
         let mut accurate_predictions = 0;
         let mut total_predictions = 0;
 
-        for (model_name, pattern) in patterns.iter() {
+        for (_model_name, pattern) in patterns.iter() {
             total_predictions += 1;
             if pattern.access_count > 10 {
                 accurate_predictions += 1;

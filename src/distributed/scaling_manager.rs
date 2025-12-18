@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tracing::{info, warn, debug, error};
+use tracing::{info, warn, debug};
 
 use super::{
     autoscaler::{Autoscaler, AutoscalerConfig, ClusterMetrics, ScalingAction},
@@ -312,7 +312,7 @@ impl ScalingManager {
 
     /// 收集集群指标
     fn collect_cluster_metrics(&self) -> ClusterMetrics {
-        let node_count = self.get_current_node_count();
+        let _node_count = self.get_current_node_count();
 
         // 计算资源使用率
         let usage = self.resource_tracker.get_usage();

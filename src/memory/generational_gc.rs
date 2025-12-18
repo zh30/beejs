@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::{Arc, Mutex, RwLock};
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -394,8 +394,8 @@ impl GenerationalGC {
     /// 内部 GC 触发方法
     fn trigger_gc_internal(
         young_gen: Arc<RwLock<YoungGeneration>>,
-        old_gen: Arc<RwLock<OldGeneration>>,
-        stats: Arc<GCStats>,
+        _old_gen: Arc<RwLock<OldGeneration>>,
+        _stats: Arc<GCStats>,
         config: &GCConfig,
     ) {
         // 检查年轻代使用率

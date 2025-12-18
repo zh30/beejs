@@ -3,7 +3,7 @@
 
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
-use tracing::{info, warn, debug};
+use tracing::{info, debug};
 
 /// 集群指标
 #[derive(Debug, Clone)]

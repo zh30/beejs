@@ -1,11 +1,10 @@
 //! 分布式任务执行引擎模块
 //! 提供任务执行、监控、容错和恢复功能
 
-use std::collections::{BinaryHeap, HashMap, VecDeque};
+use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Reverse;
-use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
-use tracing::{info, warn, debug, error};
+use tracing::warn;
 
 use super::{Task, TaskType, TaskStatus, TaskResult};
 
@@ -562,7 +561,7 @@ impl FaultHandler {
     }
 
     /// 处理失败
-    pub fn handle_failure(&mut self, task_id: &str, _error: &ExecutionError, attempt: u32) -> FaultAction {
+    pub fn handle_failure(&mut self, _task_id: &str, _error: &ExecutionError, attempt: u32) -> FaultAction {
         if attempt >= self.config.max_retries {
             FaultAction::Fail
         } else {

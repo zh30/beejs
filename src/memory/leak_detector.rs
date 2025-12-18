@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::{Arc, Mutex, RwLock};
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
@@ -380,7 +380,7 @@ impl MemoryLeakDetector {
     }
 
     /// 计算泄漏严重程度
-    fn calculate_leak_severity(&self, info: &ObjectTrackingInfo, age_seconds: u64, access_count: usize) -> LeakSeverity {
+    fn calculate_leak_severity(&self, info: &ObjectTrackingInfo, age_seconds: u64, _access_count: usize) -> LeakSeverity {
         let size_mb = info.size as f64 / (1024.0 * 1024.0);
         let age_hours = age_seconds as f64 / 3600.0;
 
@@ -410,7 +410,7 @@ impl MemoryLeakDetector {
 
     /// 启动检测线程
     fn start_detection_thread(
-        stats: Arc<LeakDetectionStats>,
+        _stats: Arc<LeakDetectionStats>,
         stop_flag: Arc<AtomicUsize>,
         config: LeakDetectorConfig,
     ) -> std::thread::JoinHandle<()> {

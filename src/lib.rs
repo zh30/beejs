@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 pub mod ai_async_queue;
 pub mod ai_batch_processor;
@@ -96,6 +96,11 @@ pub use flame_graph::{FlameGraph, FrameNode, StackFrame};
 
 // 新增WASM集成模块
 pub mod wasm_integration;
+
+// Stage 31.1: 高性能 WASM 模块缓存系统
+pub mod wasm {
+    pub mod high_performance_cache;
+}
 
 // Stage 27.2: WebAssembly 完整支持模块 (暂时禁用，存在 API 兼容性问题)
 // pub mod wasm {

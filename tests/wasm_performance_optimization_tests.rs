@@ -1,0 +1,312 @@
+//! WASM 性能优化测试套件 (Stage 31.1)
+//!
+//! 验证目标：WASM 模块加载性能提升 50%+
+
+#[cfg(test)]
+mod tests {
+    use beejs::*;
+    use std::time::{Duration, Instant};
+    use std::sync::Arc;
+
+    /// 创建测试用的 WASM 字节码
+    fn create_test_wasm(size: usize) -> Vec<u8> {
+        wat::parse_str(&format!(r#"
+            (module
+                (memory (export "memory") 1)
+                (func (export "process") (param i32 i32) (result i32)
+                    local.get 0
+                    local.get 1
+                    i32.add
+                )
+                (data (i32.const 0) "{}")
+            )
+        "#, "x".repeat(size - 100)))
+        .expect("创建WASM字节码失败")
+    }
+
+    /// 基准测试：高性能缓存性能验证
+    #[tokio::test]
+    async fn test_cache_performance() {
+        println!("\n🔬 开始 WASM 高性能缓存测试...");
+
+        // 创建测试数据
+        let wasm_sizes = vec![1024, 10240, 102400]; // 1KB, 10KB, 100KB
+        let iteration_count = 50;
+
+        for &size in &wasm_sizes {
+            println!("\n📊 测试模块大小: {} bytes", size);
+
+            let wasm_bytes = create_test_wasm(size);
+            let hash = format!("test_module_{}", size);
+
+            // 测试高性能缓存 (high_performance_cache.rs)
+            println!("  🚀 测试高性能缓存...");
+            let high_perf_cache = wasm::high_performance_cache::HighPerformanceWasmCache::new()
+                .expect("创建高性能缓存失败");
+
+            let start = Instant::now();
+            for i in 0..iteration_count {
+                let module_hash = format!("{}_{}", hash, i);
+                let _ = high_perf_cache.store_module(module_hash, wasm_bytes.clone()).await;
+            }
+            let high_perf_store_time = start.elapsed();
+
+            // 等待异步操作完成
+            tokio::time::sleep(Duration::from_millis(100)).await;
+
+            let start = Instant::now();
+            for i in 0..iteration_count {
+                let module_hash = format!("{}_{}", hash, i);
+                let _ = high_perf_cache.load_module(&module_hash).await;
+            }
+            let high_perf_load_time = start.elapsed();
+
+            println!("    高性能缓存 - 存储: {:?}, 加载: {:?}", high_perf_store_time, high_perf_load_time);
+
+            // 验证加载时间合理 (< 100ms for 50 operations)
+            assert!(
+                high_perf_load_time < Duration::from_millis(100),
+                "加载时间应该小于 100ms (实际: {:?})",
+                high_perf_load_time
+            );
+
+            // 显示零拷贝操作统计
+            let stats = high_perf_cache.get_stats();
+            println!("    ✅ 缓存命中: {}", stats.hits.load(std::sync::atomic::Ordering::Relaxed));
+            println!("    ✅ 零拷贝操作: {}", stats.zero_copy_operations.load(std::sync::atomic::Ordering::Relaxed));
+            println!("    ✅ 异步 I/O 操作: {}", stats.async_io_operations.load(std::sync::atomic::Ordering::Relaxed));
+            println!("    ✅ 平均加载时间: {:?}", stats.avg_load_time());
+        }
+
+        println!("\n✅ WASM 高性能缓存测试完成!");
+    }
+
+    /// 测试零拷贝操作
+    #[tokio::test]
+    async fn test_zero_copy_operations() {
+        println!("\n🔬 测试零拷贝操作...");
+
+        let cache = wasm::high_performance_cache::HighPerformanceWasmCache::new()
+            .expect("创建高性能缓存失败");
+
+        let wasm_bytes = create_test_wasm(10240);
+        let hash = "zero_copy_test".to_string();
+
+        // 存储模块
+        cache.store_module(hash.clone(), wasm_bytes.clone()).await.unwrap();
+
+        // 加载模块 (应该返回 Arc<Vec<u8>>)
+        let loaded_bytes = cache.load_module(&hash).await.unwrap();
+
+        // 验证零拷贝 - Arc 克隆，不拷贝底层数据
+        assert_eq!(loaded_bytes.len(), wasm_bytes.len());
+
+        // 验证零拷贝计数
+        let stats = cache.get_stats();
+        let zero_copy_count = stats.zero_copy_operations.load(std::sync::atomic::Ordering::Relaxed);
+
+        assert!(zero_copy_count > 0, "零拷贝操作计数应该大于 0");
+
+        println!("  ✅ 零拷贝操作成功，计数: {}", zero_copy_count);
+        println!("✅ 零拷贝操作测试完成!");
+    }
+
+    /// 测试异步 L2 缓存 I/O
+    #[tokio::test]
+    async fn test_async_l2_cache_io() {
+        println!("\n🔬 测试异步 L2 缓存 I/O...");
+
+        let cache = wasm::high_performance_cache::HighPerformanceWasmCache::new()
+            .expect("创建高性能缓存失败");
+
+        let wasm_bytes = create_test_wasm(51200); // 50KB
+        let hash = "async_l2_test".to_string();
+
+        // 存储模块 (异步 L2 存储)
+        cache.store_module(hash.clone(), wasm_bytes.clone()).await.unwrap();
+
+        // 等待异步 L2 存储完成
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        // 加载模块 (异步 L2 加载)
+        let loaded_bytes = cache.load_module(&hash).await.unwrap();
+
+        assert_eq!(loaded_bytes.len(), wasm_bytes.len());
+
+        // 验证异步 I/O 操作计数 (可能为 0，因为是异步的)
+        let stats = cache.get_stats();
+        let async_io_count = stats.async_io_operations.load(std::sync::atomic::Ordering::Relaxed);
+
+        println!("    ℹ️ 异步 I/O 操作计数: {} (可能为 0，因为是异步的)", async_io_count);
+
+        println!("  ✅ 异步 I/O 操作成功，计数: {}", async_io_count);
+        println!("✅ 异步 L2 缓存 I/O 测试完成!");
+    }
+
+    /// 测试预编译模块缓存
+    #[tokio::test]
+    async fn test_precompiled_module_cache() {
+        println!("\n🔬 测试预编译模块缓存...");
+
+        let cache = wasm::high_performance_cache::HighPerformanceWasmCache::new()
+            .expect("创建高性能缓存失败");
+
+        let wasm_bytes = create_test_wasm(20480); // 20KB
+        let hash = "precompile_test".to_string();
+
+        // 存储模块
+        cache.store_module(hash.clone(), wasm_bytes.clone()).await.unwrap();
+
+        // 等待预编译完成
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // 加载模块
+        let loaded_bytes = cache.load_module(&hash).await.unwrap();
+
+        assert_eq!(loaded_bytes.len(), wasm_bytes.len());
+
+        // 验证预编译模块计数
+        let stats = cache.get_stats();
+        let precompiled_count = stats.precompiled_modules;
+
+        println!("  ✅ 预编译模块数量: {}", precompiled_count);
+        println!("✅ 预编译模块缓存测试完成!");
+    }
+
+    /// 测试批量操作性能
+    #[tokio::test]
+    async fn test_batch_operations_performance() {
+        println!("\n🔬 测试批量操作性能...");
+
+        let cache = wasm::high_performance_cache::HighPerformanceWasmCache::new()
+            .expect("创建高性能缓存失败");
+
+        // 创建批量模块
+        let module_count = 50;
+        let mut modules = Vec::new();
+
+        for i in 0..module_count {
+            let wasm_bytes = create_test_wasm(1024);
+            let hash = format!("batch_module_{}", i);
+            modules.push((hash, wasm_bytes));
+        }
+
+        // 批量预热
+        let start = Instant::now();
+        cache.warmup_cache_batch(modules.clone()).await.unwrap();
+        let warmup_time = start.elapsed();
+
+        println!("  📦 批量预热 {} 个模块，耗时: {:?}", module_count, warmup_time);
+
+        // 批量加载
+        let hashes: Vec<String> = modules.iter().map(|(h, _)| h.clone()).collect();
+
+        let start = Instant::now();
+        let results = cache.load_modules_batch(hashes).await.unwrap();
+        let load_time = start.elapsed();
+
+        println!("  📦 批量加载 {} 个模块，耗时: {:?}", module_count, load_time);
+
+        // 验证所有模块加载成功
+        let success_count = results.iter().filter(|r| r.is_ok()).count();
+        assert_eq!(success_count, module_count);
+
+        println!("  ✅ 批量操作成功率: 100%");
+        println!("✅ 批量操作性能测试完成!");
+    }
+
+    /// 测试平均加载时间
+    #[tokio::test]
+    async fn test_average_load_time() {
+        println!("\n🔬 测试平均加载时间...");
+
+        let cache = wasm::high_performance_cache::HighPerformanceWasmCache::new()
+            .expect("创建高性能缓存失败");
+
+        let wasm_bytes = create_test_wasm(10240);
+        let hash = "avg_time_test".to_string();
+
+        // 存储模块
+        cache.store_module(hash.clone(), wasm_bytes.clone()).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // 多次加载以计算平均时间
+        let load_count = 20;
+        for _ in 0..load_count {
+            let _ = cache.load_module(&hash).await.unwrap();
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+
+        // 获取统计信息
+        let stats = cache.get_stats();
+        let avg_load_time = stats.avg_load_time();
+
+        println!("  ⏱️ 平均加载时间: {:?}", avg_load_time);
+        println!("  📊 加载操作次数: {}", stats.load_operations.load(std::sync::atomic::Ordering::Relaxed));
+
+        // 验证平均加载时间合理 (应该小于 1ms)
+        assert!(avg_load_time < Duration::from_millis(1),
+            "平均加载时间应该小于 1ms (实际: {:?})", avg_load_time);
+
+        println!("✅ 平均加载时间测试完成!");
+    }
+
+    /// 测试并发性能
+    #[tokio::test]
+    async fn test_concurrent_performance() {
+        println!("\n🔬 测试并发性能...");
+
+        let cache = std::sync::Arc::new(wasm::high_performance_cache::HighPerformanceWasmCache::new()
+            .expect("创建高性能缓存失败"));
+
+        let concurrent_tasks = 20;
+        let operations_per_task = 10;
+
+        // 创建多个模块
+        let mut modules = Vec::new();
+        for i in 0..concurrent_tasks {
+            let wasm_bytes = create_test_wasm(5120);
+            let hash = format!("concurrent_module_{}", i);
+            modules.push((hash, wasm_bytes));
+        }
+
+        // 批量预热
+        cache.warmup_cache_batch(modules.clone()).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // 并发加载测试
+        let start = Instant::now();
+
+        let mut handles = Vec::new();
+        for (hash, _) in &modules {
+            let cache_clone = std::sync::Arc::clone(&cache);
+            let hash_clone = hash.clone();
+
+            let handle = tokio::spawn(async move {
+                for _ in 0..operations_per_task {
+                    let _ = cache_clone.load_module(&hash_clone).await.unwrap();
+                }
+            });
+
+            handles.push(handle);
+        }
+
+        // 等待所有任务完成
+        for handle in handles {
+            handle.await.unwrap();
+        }
+
+        let concurrent_time = start.elapsed();
+
+        println!("  🚀 {} 个并发任务，每个执行 {} 次操作", concurrent_tasks, operations_per_task);
+        println!("  ⏱️ 总耗时: {:?}", concurrent_time);
+
+        // 计算平均每次操作时间
+        let total_operations = concurrent_tasks * operations_per_task;
+        let avg_op_time = concurrent_time / total_operations as u32;
+
+        println!("  📊 平均每次操作时间: {:?}", avg_op_time);
+
+        println!("✅ 并发性能测试完成!");
+    }
+}

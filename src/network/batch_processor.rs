@@ -3,7 +3,7 @@
 
 use crate::network::{NetworkConfig, NetworkError};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 /// 批处理请求
 #[derive(Debug, Clone)]

@@ -55,7 +55,7 @@ pub struct ServiceDiscovery {
 
 impl ServiceDiscovery {
     /// 创建新的服务发现实例
-    pub fn new(mut config: DiscoveryConfig) -> Self {
+    pub fn new(config: DiscoveryConfig) -> Self {
         let discovery = Self {
             config: config.clone(),
             nodes: Arc::new(RwLock::new(HashMap::new())),
@@ -146,8 +146,8 @@ impl ServiceDiscovery {
     /// Gossip 协议实现
     async fn gossip_protocol(
         nodes: Arc<RwLock<HashMap<String, NodeMetadata>>>,
-        gossip_history: Arc<RwLock<Vec<GossipMessage>>>,
-        config: &DiscoveryConfig,
+        _gossip_history: Arc<RwLock<Vec<GossipMessage>>>,
+        _config: &DiscoveryConfig,
     ) {
         let known_nodes = {
             let nodes_guard = nodes.read().await;
@@ -159,7 +159,7 @@ impl ServiceDiscovery {
         }
 
         // 随机选择 gossip 目标
-        use rand::Rng;
+        
         let mut rng = rand::thread_rng();
         let target_count = (known_nodes.len() / 3).max(1);
 

@@ -4,7 +4,6 @@
 use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Reverse;
 use std::time::{Duration, Instant};
-use tracing::{info, warn};
 
 /// 任务类型枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

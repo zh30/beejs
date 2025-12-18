@@ -8,12 +8,12 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::{interval, sleep};
-use tracing::{info, warn, error, debug};
+use tracing::{info, warn, debug};
 
 use super::health_monitor::HealthMonitor;
-use super::task_executor::{TaskExecutor, Checkpoint, CheckpointManager, RecoveryManager, FaultHandler};
+use super::task_executor::TaskExecutor;
 use super::node_manager::NodeManager;
-use super::task_scheduler::{TaskScheduler, Task, TaskStatus};
+use super::task_scheduler::{TaskScheduler, Task};
 
 /// 故障检测配置
 #[derive(Debug, Clone)]
@@ -396,12 +396,12 @@ impl FaultDetector {
     }
 
     /// 辅助方法
-    async fn can_restart_node(&self, node_id: &str) -> bool {
+    async fn can_restart_node(&self, _node_id: &str) -> bool {
         // 简化实现：检查节点是否可重启
         true
     }
 
-    async fn can_retry_task(&self, task_id: &str) -> bool {
+    async fn can_retry_task(&self, _task_id: &str) -> bool {
         // 简化实现：检查任务是否可重试
         true
     }

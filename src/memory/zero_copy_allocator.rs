@@ -341,7 +341,7 @@ impl MemoryPool {
         }
     }
 
-    fn allocate(&mut self, requested_size: usize) -> Option<*mut u8> {
+    fn allocate(&mut self, _requested_size: usize) -> Option<*mut u8> {
         self.last_used = Instant::now();
 
         // 优先复用空闲块

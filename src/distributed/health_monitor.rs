@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::{interval, sleep};
-use tracing::{info, warn, error, debug};
+use tracing::{info, warn};
 
 use super::node_manager::{NodeManager, NodeStatus, HealthStatus};
 
@@ -92,7 +92,7 @@ impl HealthMonitor {
 
     /// 检查节点健康状态
     pub async fn check_node_health(&self, node_id: &str) -> Result<HealthCheckResult, String> {
-        let start_time = Instant::now();
+        let _start_time = Instant::now();
 
         // 获取节点元数据
         let metadata = self.node_manager.get_node_metadata(node_id)
@@ -131,7 +131,7 @@ impl HealthMonitor {
     }
 
     /// 执行健康检查
-    async fn perform_health_check(&self, node_id: &str) -> Result<(f64, f64, Duration), String> {
+    async fn perform_health_check(&self, _node_id: &str) -> Result<(f64, f64, Duration), String> {
         let start_time = Instant::now();
 
         // 模拟网络检查延迟
@@ -151,7 +151,7 @@ impl HealthMonitor {
     fn determine_health_status(
         &self,
         metadata: &super::node_manager::NodeMetadata,
-        load: &Option<super::node_manager::NodeLoad>,
+        _load: &Option<super::node_manager::NodeLoad>,
         cpu_usage: f64,
         memory_usage: f64,
     ) -> HealthStatus {

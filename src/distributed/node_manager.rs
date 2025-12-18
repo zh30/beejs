@@ -5,10 +5,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
-use tokio::time::{interval, sleep};
-use tracing::{info, warn, error, debug};
+use tokio::time::interval;
+use tracing::{info, warn};
 
-use super::service_discovery::{ServiceDiscovery, DiscoveryConfig, NodeInfo};
+use super::service_discovery::{ServiceDiscovery, NodeInfo};
 
 /// 节点状态枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -201,7 +201,7 @@ impl NodeManager {
         let nodes = self.nodes.read().await;
         let mut regions = HashMap::new();
 
-        for (id, metadata) in nodes.iter() {
+        for (_id, metadata) in nodes.iter() {
             if metadata.status != NodeStatus::Offline {
                 let region = regions.entry(metadata.location.clone()).or_insert_with(|| RegionInfo {
                     location: metadata.location.clone(),
@@ -302,7 +302,7 @@ impl NodeManager {
     /// 检查心跳
     pub async fn check_heartbeats(
         nodes: Arc<RwLock<HashMap<String, NodeMetadata>>>,
-        service_discovery: ServiceDiscovery,
+        _service_discovery: ServiceDiscovery,
     ) {
         let mut nodes_guard = nodes.write().await;
         let now = Instant::now();
@@ -407,6 +407,7 @@ fn determine_health_status(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::distributed::service_discovery::DiscoveryConfig;
 
     #[tokio::test]
     async fn test_node_registration() {

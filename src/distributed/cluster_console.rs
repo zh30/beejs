@@ -8,10 +8,10 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::interval;
-use tracing::{info, warn, error};
+use tracing::{info, warn};
 
-use super::distributed_metrics::{DistributedMetrics, RealTimeMetrics, MetricType, MetricPoint};
-use super::distributed_tracer::{DistributedTracer, Trace, PerformanceStats};
+use super::distributed_metrics::{DistributedMetrics, RealTimeMetrics};
+use super::distributed_tracer::DistributedTracer;
 use super::node_manager::NodeManager;
 use super::health_monitor::HealthMonitor;
 use super::fault_tolerance::FaultDetector;

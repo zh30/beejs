@@ -284,7 +284,7 @@ impl AccelerationEngine {
 
     /// 处理批处理队列
     fn process_batch(&mut self) -> Result<InferenceResult, String> {
-        let (batch_size, tasks) = {
+        let (_batch_size, tasks) = {
             let mut queue = self.batch_queue.lock().unwrap();
 
             if queue.is_empty() {

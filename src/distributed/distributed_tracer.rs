@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::interval;
-use tracing::{info, debug, warn, error, instrument};
+use tracing::{info, debug, warn, instrument};
 
 use super::node_manager::NodeManager;
 use super::task_executor::TaskExecutor;
@@ -409,7 +409,7 @@ impl DistributedTracer {
     /// 更新性能统计
     async fn update_performance_stats(&self) -> Result<(), String> {
         let completed = self.completed_traces.read().await;
-        let mut traces: Vec<&Trace> = completed.values().collect();
+        let traces: Vec<&Trace> = completed.values().collect();
 
         if traces.is_empty() {
             return Ok(());
