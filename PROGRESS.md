@@ -317,7 +317,6 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 
 **下一步计划**:
 - **阶段 26.0**: 新的优化阶段（待规划）
-- **阶段 26.0**: 新的优化阶段（待规划）
 **成功标准**:
 - [x] 添加 Operator 缓存类型 - ✅ CacheType 枚举扩展完成！
 - [x] 实现预热机制 - ✅ pre_warm_common_operators() 完成！
