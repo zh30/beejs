@@ -10,10 +10,12 @@ use tokio::fs::File;
 /// 零拷贝缓冲区
 /// 包装一个字节切片，允许零拷贝传递
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ZeroCopyBuffer {
     data: Arc<[u8]>,
 }
 
+#[allow(dead_code)]
 impl ZeroCopyBuffer {
     /// 从字节向量创建零拷贝缓冲区
     pub fn new(data: Vec<u8>) -> Self {
@@ -59,12 +61,14 @@ impl ZeroCopyBuffer {
 
 /// 零拷贝数据传输通道
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct ZeroCopyChannel<T> {
     sender: crossbeam::channel::Sender<T>,
     receiver: crossbeam::channel::Receiver<T>,
     _phantom: PhantomData<T>,
 }
 
+#[allow(dead_code)]
 impl<T> ZeroCopyChannel<T> {
     /// 创建新的零拷贝通道
     pub fn new(capacity: usize) -> Self {
@@ -99,10 +103,12 @@ impl<T> ZeroCopyChannel<T> {
 
 /// 零拷贝文件读取器
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct ZeroCopyFileReader {
     file: File,
 }
 
+#[allow(dead_code)]
 impl ZeroCopyFileReader {
     /// 创建新的零拷贝文件读取器
     pub async fn new(path: &str) -> Result<Self, std::io::Error> {
@@ -138,10 +144,12 @@ impl ZeroCopyFileReader {
 
 /// 零拷贝文件写入器
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct ZeroCopyFileWriter {
     file: File,
 }
 
+#[allow(dead_code)]
 impl ZeroCopyFileWriter {
     /// 创建新的零拷贝文件写入器
     pub async fn new(path: &str) -> Result<Self, std::io::Error> {
@@ -177,12 +185,14 @@ use tokio::fs::OpenOptions;
 // Removed unused imports: AsRawFd, RawFd
 
 #[cfg(unix)]
+#[allow(dead_code)]
 pub struct MemoryMappedFile {
     mapping: Arc<memmap2::Mmap>,
     file: File,
 }
 
 #[cfg(unix)]
+#[allow(dead_code)]
 impl MemoryMappedFile {
     /// 创建内存映射文件
     pub async fn open(path: &str) -> Result<Self, std::io::Error> {
@@ -209,7 +219,7 @@ impl MemoryMappedFile {
     /// 同步内存映射
     pub fn sync(&self) -> Result<(), std::io::Error> {
         // Arc<Mmap> dereference to &Mmap, then call sync
-        Arc::as_ptr(&self.mapping);
+        let _ = Arc::as_ptr(&self.mapping);
         // 简化的实现：内存映射通常自动同步
         Ok(())
     }
@@ -217,11 +227,13 @@ impl MemoryMappedFile {
 
 /// 零拷贝数据传输管理器
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct ZeroCopyManager {
     buffer_pool: LockFreeBufferPool,
     channel_stats: Arc<AtomicStats>,
 }
 
+#[allow(dead_code)]
 impl ZeroCopyManager {
     /// 创建新的零拷贝管理器
     pub fn new() -> Self {
@@ -273,18 +285,21 @@ impl ZeroCopyManager {
 
 /// 高性能零拷贝消息传递
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct ZeroCopyMessage<T> {
     data: T,
     metadata: MessageMetadata,
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct MessageMetadata {
     pub timestamp: std::time::Instant,
     pub size: usize,
     pub priority: u8,
 }
 
+#[allow(dead_code)]
 impl<T> ZeroCopyMessage<T> {
     /// 创建新的零拷贝消息
     pub fn new(data: T) -> Self {
@@ -323,6 +338,7 @@ impl<T> ZeroCopyMessage<T> {
 
 /// 零拷贝环形缓冲区
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct ZeroCopyRingBuffer<T> {
     buffer: Vec<Option<T>>,
     write_index: LockFreeCounter,
@@ -330,6 +346,7 @@ pub struct ZeroCopyRingBuffer<T> {
     capacity: usize,
 }
 
+#[allow(dead_code)]
 impl<T> ZeroCopyRingBuffer<T> {
     /// 创建新的零拷贝环形缓冲区
     pub fn new(capacity: usize) -> Self {

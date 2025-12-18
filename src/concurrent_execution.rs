@@ -251,6 +251,7 @@ pub struct WorkStealingScheduler {
     /// 每个线程的本地任务队列
     thread_queues: Vec<Arc<Mutex<VecDeque<Task>>>>,
     /// 工作窃取通道
+    #[allow(dead_code)]
     steal_channels: Vec<ZeroCopyChannel<Task>>,
     /// 窃取统计
     stats: Arc<StealStats>,
@@ -738,6 +739,7 @@ mod tests {
 #[derive(Debug)]
 pub struct BatchExecutor {
     /// 并发配置
+    #[allow(dead_code)]
     config: ConcurrentConfig,
     /// 运行时池
     runtime_pool: Arc<ConcurrentRuntimePool>,
