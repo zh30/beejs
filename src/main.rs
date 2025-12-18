@@ -74,6 +74,160 @@ fn split_simple_expr(expr: &str) -> Option<(&str, char, &str)> {
     None
 }
 
+/// Stage 18 Optimization: Detect super simple expressions for ultra-fast evaluation
+/// Supports: numbers, strings, boolean, null, undefined, simple arithmetic
+fn is_super_simple_expression(code: &str) -> bool {
+    let code = code.trim();
+
+    // Empty or too long
+    if code.is_empty() || code.len() > 50 {
+        return false;
+    }
+
+    // Check for simple literals
+    if is_simple_literal(code) {
+        return true;
+    }
+
+    // Check for simple arithmetic (existing logic)
+    if code.chars().all(|c| c.is_ascii_digit() || "+-*/() ".contains(c)) && code.len() < 20 {
+        return true;
+    }
+
+    // Check for simple string operations
+    if is_simple_string_op(code) {
+        return true;
+    }
+
+    false
+}
+
+/// Check if code is a simple literal value
+fn is_simple_literal(code: &str) -> bool {
+    let code = code.trim();
+
+    // Numbers: 123, 123.45, -123
+    if code.chars().all(|c| c.is_ascii_digit() || c == '.' || c == '-') {
+        return !code.contains(".."); // Avoid ".." which is not a number
+    }
+
+    // Boolean literals
+    if code == "true" || code == "false" {
+        return true;
+    }
+
+    // Null and undefined
+    if code == "null" || code == "undefined" {
+        return true;
+    }
+
+    // String literals (simple quotes)
+    if (code.starts_with('"') && code.ends_with('"')) || (code.starts_with("'") && code.ends_with("'")) {
+        return true;
+    }
+
+    false
+}
+
+/// Check if code is a simple string operation
+fn is_simple_string_op(code: &str) -> bool {
+    let code = code.trim();
+
+    // String concatenation: "hello" + "world"
+    if code.contains("+") {
+        let parts: Vec<&str> = code.split('+').collect();
+        if parts.len() == 2 {
+            return parts.iter().all(|&part| is_simple_literal(part.trim()));
+        }
+    }
+
+    false
+}
+
+/// Stage 18 Optimization: Ultra-fast evaluation without V8
+/// Evaluates simple expressions directly in Rust for maximum speed
+fn super_fast_eval(code: &str) -> Result<String, &'static str> {
+    let code = code.trim();
+
+    // Evaluate simple literals
+    if let Some(value) = eval_simple_literal(code) {
+        return Ok(value);
+    }
+
+    // Evaluate simple arithmetic
+    if let Ok(result) = simple_arithmetic_eval_fast(code) {
+        return Ok(result.to_string());
+    }
+
+    // Evaluate simple string operations
+    if let Some(value) = eval_simple_string_op(code) {
+        return Ok(value);
+    }
+
+    Err("Expression too complex for fast path")
+}
+
+/// Evaluate simple literal values
+fn eval_simple_literal(code: &str) -> Option<String> {
+    let code = code.trim();
+
+    // Numbers
+    if let Ok(num) = code.parse::<f64>() {
+        return Some(num.to_string());
+    }
+
+    // Boolean
+    if code == "true" {
+        return Some("true".to_string());
+    }
+    if code == "false" {
+        return Some("false".to_string());
+    }
+
+    // Null
+    if code == "null" {
+        return Some("null".to_string());
+    }
+
+    // Undefined
+    if code == "undefined" {
+        return Some("undefined".to_string());
+    }
+
+    // Strings (remove quotes)
+    if (code.starts_with('"') && code.ends_with('"')) || (code.starts_with("'") && code.ends_with("'")) {
+        let content = &code[1..code.len()-1];
+        return Some(format!("\"{}\"", content));
+    }
+
+    None
+}
+
+/// Evaluate simple string operations
+fn eval_simple_string_op(code: &str) -> Option<String> {
+    let code = code.trim();
+
+    // String concatenation
+    if code.contains("+") {
+        let parts: Vec<&str> = code.split('+').collect();
+        if parts.len() == 2 {
+            let left = parts[0].trim();
+            let right = parts[1].trim();
+
+            // Concatenate string literals
+            if (left.starts_with('"') && left.ends_with('"')) || (left.starts_with("'") && left.ends_with("'")) {
+                if (right.starts_with('"') && right.ends_with('"')) || (right.starts_with("'") && right.ends_with("'")) {
+                    let left_str = &left[1..left.len()-1];
+                    let right_str = &right[1..right.len()-1];
+                    return Some(format!("\"{}{}\"", left_str, right_str));
+                }
+            }
+        }
+    }
+
+    None
+}
+
 /// Beejs - High-performance JavaScript/TypeScript runtime
 #[derive(Parser, Debug)]
 #[command(name = "beejs")]
