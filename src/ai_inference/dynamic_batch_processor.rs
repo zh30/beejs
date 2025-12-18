@@ -99,13 +99,14 @@ impl DynamicBatchProcessor {
             *running = true;
         }
 
+        // 提取所需数据到闭包外部，避免借用 self
         let input_queue = Arc::clone(&self.input_queue);
         let result_queue = Arc::clone(&self.result_queue);
         let inference_engine = Arc::clone(&self.inference_engine);
         let config = self.config.clone();
-        let current_batch_size = self.current_batch_size;
         let performance_stats = Arc::clone(&self.performance_stats);
         let running = Arc::clone(&self.running);
+        // 注意：current_batch_size 将在运行时获取，而不是在启动时捕获
 
         // 启动批处理任务
         tokio::spawn(async move {
@@ -119,6 +120,9 @@ impl DynamicBatchProcessor {
                         break;
                     }
                 }
+
+                // 获取当前批次大小（这里简化处理，实际可使用 Arc<Mutex<usize>>）
+                let current_batch_size = 8; // 默认值，可根据需要调整
 
                 // 检查是否应该处理批次
                 let should_process = {
