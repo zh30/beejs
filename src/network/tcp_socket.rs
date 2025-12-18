@@ -195,11 +195,6 @@ impl ZeroCopyTcpSocket {
         let mut stats = self.stats.lock().unwrap();
         *stats = ZeroCopyStats::default();
     }
-
-    /// 获取内部 TcpStream 引用
-    pub fn as_tcp_stream(&self) -> &TcpStream {
-        &self.stream.lock().unwrap()
-    }
 }
 
 impl Write for ZeroCopyTcpSocket {

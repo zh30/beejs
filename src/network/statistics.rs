@@ -243,8 +243,8 @@ impl NetworkIoStatistics {
         if let Some(start_time) = stats.start_time {
             let elapsed = stats.last_update.unwrap().duration_since(start_time);
             if elapsed.as_secs() > 0 {
-                stats.qps_sent = stats.total_sent_bytes as f64 / elapsed.as_secs();
-                stats.qps_recv = stats.total_recv_bytes as f64 / elapsed.as_secs();
+                stats.qps_sent = stats.total_sent_bytes as f64 / elapsed.as_secs() as f64;
+                stats.qps_recv = stats.total_recv_bytes as f64 / elapsed.as_secs() as f64;
             }
         }
     }
@@ -296,7 +296,7 @@ impl NetworkIoStatistics {
             let elapsed = stats.last_update.unwrap().duration_since(start_time);
             if elapsed.as_secs() > 0 {
                 return (stats.total_sent_bytes + stats.total_recv_bytes) as f64
-                    / elapsed.as_secs();
+                    / elapsed.as_secs() as f64;
             }
         }
 

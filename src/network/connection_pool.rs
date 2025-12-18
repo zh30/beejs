@@ -182,7 +182,7 @@ impl ConnectionPool {
                 // 查找健康的连接
                 for i in (0..pool.len()).rev() {
                     if pool[i].is_healthy() {
-                        let mut conn = pool.remove(i).unwrap();
+                        let mut conn = pool.remove(i);
                         conn.update_last_used();
 
                         // 更新统计信息
