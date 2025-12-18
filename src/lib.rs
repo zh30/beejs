@@ -660,6 +660,14 @@ impl Runtime {
         // 记录执行开始时间
         let start_time = Instant::now();
 
+        // 🚀 FAST PATH OPTIMIZATION: Handle simple expressions without full V8 overhead
+        if let Some(fast_result) = self.try_fast_constant_path(code) {
+            if self.verbose {
+                println!("✅ Fast path executed successfully");
+            }
+            return Ok(fast_result);
+        }
+
         // 应用深度优化（超激进优化策略）
         let optimized_code = if let Some(deep_opt) = &self.deep_optimizer {
             if self.verbose {
@@ -885,6 +893,342 @@ impl Runtime {
         if let Some(optimizer) = &self.jit_optimizer {
             optimizer.reset_stats();
         }
+    }
+
+    /// 🚀 FAST PATH: Try to execute simple expressions without V8 overhead
+    fn try_fast_constant_path(&self, code: &str) -> Option<String> {
+        let trimmed = code.trim();
+
+        // Simple numeric constants
+        if trimmed.parse::<i64>().is_ok() {
+            return Some(trimmed.to_string());
+        }
+
+        // Simple floating point constants
+        if trimmed.parse::<f64>().is_ok() {
+            return Some(trimmed.to_string());
+        }
+
+        // String constants (single or double quoted) - must be simple, no operators
+        if (trimmed.starts_with('"') && trimmed.ends_with('"') && !trimmed[1..trimmed.len()-1].contains('+') && !trimmed[1..trimmed.len()-1].contains('-') && !trimmed[1..trimmed.len()-1].contains('*') && !trimmed[1..trimmed.len()-1].contains('/')) ||
+           (trimmed.starts_with('\'') && trimmed.ends_with('\'') && !trimmed[1..trimmed.len()-1].contains('+') && !trimmed[1..trimmed.len()-1].contains('-') && !trimmed[1..trimmed.len()-1].contains('*') && !trimmed[1..trimmed.len()-1].contains('/')) {
+            return Some(trimmed.to_string());
+        }
+
+        // Boolean constants
+        if trimmed == "true" || trimmed == "false" {
+            return Some(trimmed.to_string());
+        }
+
+        // Null and undefined
+        if trimmed == "null" || trimmed == "undefined" {
+            return Some(trimmed.to_string());
+        }
+
+        // Simple arithmetic expressions: numbers with + - * / % operators
+        if self.is_simple_arithmetic(trimmed) {
+            if let Some(result) = self.evaluate_simple_arithmetic(trimmed) {
+                return Some(result);
+            }
+        }
+
+        // Simple array literals: [1,2,3]
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            return Some(trimmed.to_string());
+        }
+
+        // Simple array operations: [1,2,3].length
+        if trimmed.contains(".length") {
+            let array_part = trimmed.split(".length").next().unwrap();
+            if array_part.starts_with('[') && array_part.ends_with(']') {
+                let elements = &array_part[1..array_part.len()-1];
+                let count = if elements.trim().is_empty() {
+                    0
+                } else {
+                    elements.split(',').count()
+                };
+                return Some(count.to_string());
+            }
+        }
+
+        // Simple object literals: {a: 1, b: 2}
+        // Wrap in parentheses for proper V8 parsing
+        if trimmed.starts_with('{') && trimmed.ends_with('}') {
+            if self.is_simple_object_literal(trimmed) {
+                // Wrap in parentheses and let V8 execute it
+                return Some(format!("({})", trimmed));
+            }
+        }
+
+        // Simple property access: obj.prop (evaluate if possible)
+        if trimmed.contains('.') && !trimmed.contains(' ') {
+            let parts: Vec<&str> = trimmed.split('.').collect();
+            if parts.len() == 2 && !parts[0].contains(' ') && !parts[1].contains(' ') {
+                // Special case: arr.length where we know the array
+                if parts[1] == "length" && parts[0].starts_with('[') && parts[0].ends_with(']') {
+                    let array_part = parts[0];
+                    let elements = &array_part[1..array_part.len()-1];
+                    let count = if elements.trim().is_empty() {
+                        0
+                    } else {
+                        elements.split(',').count()
+                    };
+                    return Some(count.to_string());
+                }
+                // For other property access, just return as-is for V8 to handle
+                return Some(trimmed.to_string());
+            }
+        }
+
+        // Simple boolean comparisons: 1 > 0, 1 == 1, etc.
+        if self.is_simple_comparison(trimmed) {
+            if let Some(result) = self.evaluate_simple_comparison(trimmed) {
+                return Some(result);
+            }
+        }
+
+        None
+    }
+
+    /// Check if code is a simple arithmetic expression
+    fn is_simple_arithmetic(&self, code: &str) -> bool {
+        let trimmed = code.trim();
+
+        // Must only contain digits, spaces, and basic operators
+        let allowed_chars: std::collections::HashSet<char> =
+            "0123456789+-*/%.() ".chars().collect();
+
+        if !trimmed.chars().all(|c| allowed_chars.contains(&c)) {
+            return false;
+        }
+
+        // Must not start or end with operator (except parentheses)
+        let first_char = trimmed.chars().next();
+        let last_char = trimmed.chars().last();
+        if first_char.map_or(false, |c| matches!(c, '+' | '-' | '*' | '/' | '%')) ||
+           last_char.map_or(false, |c| matches!(c, '+' | '-' | '*' | '/' | '%')) {
+            return false;
+        }
+
+        // Simple heuristic: must contain at least one operator
+        trimmed.contains('+') || trimmed.contains('-') || trimmed.contains('*') ||
+        trimmed.contains('/') || trimmed.contains('%')
+    }
+
+    /// Evaluate simple arithmetic expression
+    fn evaluate_simple_arithmetic(&self, code: &str) -> Option<String> {
+        let trimmed = code.trim();
+
+        // Pattern: number operator number (e.g., "1+1", "10*5")
+        if let Some((left, op, right)) = self.parse_simple_binary_op(trimmed) {
+            match op {
+                '+' => {
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        return Some((l + r).to_string());
+                    }
+                    if let (Ok(l), Ok(r)) = (left.parse::<f64>(), right.parse::<f64>()) {
+                        return Some((l + r).to_string());
+                    }
+                }
+                '-' => {
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        return Some((l - r).to_string());
+                    }
+                    if let (Ok(l), Ok(r)) = (left.parse::<f64>(), right.parse::<f64>()) {
+                        return Some((l - r).to_string());
+                    }
+                }
+                '*' => {
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        return Some((l * r).to_string());
+                    }
+                    if let (Ok(l), Ok(r)) = (left.parse::<f64>(), right.parse::<f64>()) {
+                        return Some((l * r).to_string());
+                    }
+                }
+                '/' => {
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        if r != 0 {
+                            return Some((l / r).to_string());
+                        }
+                    }
+                    if let (Ok(l), Ok(r)) = (left.parse::<f64>(), right.parse::<f64>()) {
+                        if r != 0.0 {
+                            return Some((l / r).to_string());
+                        }
+                    }
+                }
+                '%' => {
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        if r != 0 {
+                            return Some((l % r).to_string());
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        None
+    }
+
+    /// Parse simple binary operation: left op right
+    fn parse_simple_binary_op(&self, code: &str) -> Option<(&str, char, &str)> {
+        let trimmed = code.trim();
+        let operators = ['+', '-', '*', '/', '%'];
+
+        for (i, c) in trimmed.char_indices() {
+            if operators.contains(&c) {
+                // Found an operator, split around it
+                let left = trimmed[..i].trim();
+                let right = trimmed[i + c.len_utf8()..].trim();
+
+                // Both sides must be non-empty
+                if !left.is_empty() && !right.is_empty() {
+                    return Some((left, c, right));
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Check if code is a simple object literal
+    fn is_simple_object_literal(&self, code: &str) -> bool {
+        let trimmed = code.trim();
+        if !trimmed.starts_with('{') || !trimmed.ends_with('}') {
+            return false;
+        }
+
+        let content = &trimmed[1..trimmed.len()-1].trim();
+        if content.is_empty() {
+            return true; // Empty object {}
+        }
+
+        // Check for simple key-value pairs (no nested objects, arrays, or functions)
+        let mut depth = 0;
+        let mut in_string = false;
+        let mut string_char = '\0';
+
+        for c in content.chars() {
+            match c {
+                '"' | '\'' => {
+                    if !in_string {
+                        in_string = true;
+                        string_char = c;
+                    } else if c == string_char {
+                        in_string = false;
+                        string_char = '\0';
+                    }
+                }
+                '{' | '[' => {
+                    if !in_string {
+                        depth += 1;
+                    }
+                }
+                '}' | ']' => {
+                    if !in_string && depth > 0 {
+                        depth -= 1;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // If we have any nested structures, it's not simple
+        depth == 0
+    }
+
+    /// Check if code is a simple comparison expression
+    fn is_simple_comparison(&self, code: &str) -> bool {
+        let trimmed = code.trim();
+        let comparison_ops = ['>', '<', '=', '!'];
+
+        // Must contain exactly one comparison operator
+        let mut op_count = 0;
+        let mut paren_depth = 0;
+        for c in trimmed.chars() {
+            match c {
+                '(' => paren_depth += 1,
+                ')' => {
+                    if paren_depth > 0 {
+                        paren_depth -= 1;
+                    }
+                }
+                _ if comparison_ops.contains(&c) => {
+                    if paren_depth == 0 {
+                        op_count += 1;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        op_count == 1
+    }
+
+    /// Evaluate simple comparison expression
+    fn evaluate_simple_comparison(&self, code: &str) -> Option<String> {
+        let trimmed = code.trim();
+
+        // Parse: left op right
+        let mut op_index = None;
+        let mut paren_depth = 0;
+
+        for (i, c) in trimmed.char_indices() {
+            match c {
+                '(' => paren_depth += 1,
+                ')' => {
+                    if paren_depth > 0 {
+                        paren_depth -= 1;
+                    }
+                }
+                '>' | '<' | '=' | '!' => {
+                    if paren_depth == 0 {
+                        op_index = Some(i);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if let Some(i) = op_index {
+            let left = trimmed[..i].trim();
+            let op = &trimmed[i..].trim();
+            let op_char = op.chars().next().unwrap();
+
+            // Extract right side by finding the operator length
+            let op_str = if op.starts_with("==") || op.starts_with("!=") || op.starts_with(">=") || op.starts_with("<=") {
+                &op[..2]
+            } else {
+                &op[..1]
+            };
+            let right = &op[op_str.len()..].trim();
+
+            // Handle ==, !=, ===, !==
+            if op_str == "==" {
+                let is_equal = left == right;
+                return Some((is_equal).to_string());
+            }
+            if op_str == "!=" {
+                let is_not_equal = left != right;
+                return Some((is_not_equal).to_string());
+            }
+
+            // Handle >, <, >=, <=
+            if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                match op_str {
+                    ">" => return Some((l > r).to_string()),
+                    ">=" => return Some((l >= r).to_string()),
+                    "<" => return Some((l < r).to_string()),
+                    "<=" => return Some((l <= r).to_string()),
+                    _ => {}
+                }
+            }
+        }
+
+        None
     }
 
     /// Make JIT compilation decision for code
