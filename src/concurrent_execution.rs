@@ -699,6 +699,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_runtime_pool_basic() {
+        // 在测试环境中跳过如果 V8 不可用
+        #[cfg(test)]
+        {
+            if !crate::is_v8_available() {
+                println!("⚠️  Skipping test: V8 engine is not available");
+                return;
+            }
+        }
+
         let config = ConcurrentConfig::default();
         let pool = ConcurrentRuntimePool::new(config);
 
@@ -719,3 +728,329 @@ mod tests {
         println!("✅ 并发运行时池基本功能测试通过");
     }
 }
+
+// ============================================================================
+// 第三部分: BatchExecutor - 批量执行处理器（高层API）
+// ============================================================================
+
+/// 批量执行器
+/// 提供高层API来批量执行JavaScript/TypeScript脚本
+#[derive(Debug)]
+pub struct BatchExecutor {
+    /// 并发配置
+    config: ConcurrentConfig,
+    /// 运行时池
+    runtime_pool: Arc<ConcurrentRuntimePool>,
+    /// 工作窃取调度器
+    scheduler: Arc<WorkStealingScheduler>,
+    /// 执行统计
+    stats: Arc<ConcurrentExecutionStats>,
+}
+
+impl BatchExecutor {
+    /// 创建新的批量执行器
+    pub fn new(config: ConcurrentConfig) -> Self {
+        let runtime_pool = Arc::new(ConcurrentRuntimePool::new(config.clone()));
+        let scheduler = Arc::new(WorkStealingScheduler::new(num_cpus::get()));
+        let stats = Arc::new(ConcurrentExecutionStats::new());
+
+        Self {
+            config,
+            runtime_pool,
+            scheduler,
+            stats,
+        }
+    }
+
+    /// 批量执行脚本
+    pub async fn execute_batch(
+        &self,
+        scripts: Vec<(String, usize)>,
+        timeout_duration: Duration,
+    ) -> Result<Vec<ScriptResult>, ConcurrentExecutionError> {
+        let start = Instant::now();
+        let script_count = scripts.len();
+
+        // 将脚本转换为任务
+        let tasks: Vec<Task> = scripts
+            .into_iter()
+            .enumerate()
+            .map(|(index, (code, priority))| Task {
+                id: index,
+                code,
+                priority: priority as u8,
+                estimated_time_ms: 50, // 默认估算时间
+            })
+            .collect();
+
+        // 提交任务到调度器
+        self.scheduler.submit_batch(tasks).await?;
+
+        // 收集结果
+        let mut results = Vec::with_capacity(script_count);
+        let mut completed_count = 0;
+
+        // 并发执行任务
+        while completed_count < script_count {
+            // 检查是否有待处理的任务
+            if !self.scheduler.has_pending_tasks().await {
+                break;
+            }
+
+            // 从调度器获取任务并执行
+            for thread_id in 0..self.scheduler.thread_count {
+                if let Some(task) = self.scheduler.get_task(thread_id).await {
+                    // 记录任务提交
+                    self.stats.record_submission();
+
+                    // 获取 Runtime 实例并执行脚本
+                    if let Some(runtime) = self.runtime_pool.get_runtime() {
+                        let script_start = Instant::now();
+                        let script_result = timeout(timeout_duration, async {
+                            runtime.execute_code(&task.code)
+                        }).await;
+
+                        let execution_time = script_start.elapsed();
+
+                        match script_result {
+                            Ok(Ok(output)) => {
+                                // 归还 Runtime 实例
+                                self.runtime_pool.return_runtime(runtime);
+
+                                // 记录完成
+                                self.stats.record_completion(execution_time.as_millis() as u64);
+
+                                results.push(ScriptResult {
+                                    index: task.id,
+                                    result: Ok(format!("{:?}", output)),
+                                    execution_time,
+                                    memory_used: 8 * 1024 * 1024, // 简化估算
+                                });
+                            }
+                            Ok(Err(e)) => {
+                                // 归还 Runtime 实例
+                                self.runtime_pool.return_runtime(runtime);
+
+                                // 记录失败
+                                self.stats.record_failure();
+
+                                results.push(ScriptResult {
+                                    index: task.id,
+                                    result: Err(e.to_string()),
+                                    execution_time,
+                                    memory_used: 0,
+                                });
+                            }
+                            Err(_) => {
+                                // 归还 Runtime 实例
+                                self.runtime_pool.return_runtime(runtime);
+
+                                // 记录失败（超时）
+                                self.stats.record_failure();
+
+                                results.push(ScriptResult {
+                                    index: task.id,
+                                    result: Err("Execution timeout".to_string()),
+                                    execution_time: timeout_duration,
+                                    memory_used: 0,
+                                });
+                            }
+                        }
+
+                        completed_count += 1;
+
+                        // 如果所有任务完成，退出循环
+                        if completed_count >= script_count {
+                            break;
+                        }
+                    } else {
+                        // 无法获取 Runtime 实例，记录失败
+                        self.stats.record_failure();
+
+                        results.push(ScriptResult {
+                            index: task.id,
+                            result: Err("Failed to get Runtime instance".to_string()),
+                            execution_time: Duration::from_millis(0),
+                            memory_used: 0,
+                        });
+
+                        completed_count += 1;
+                    }
+                }
+            }
+
+            // 短暂休息，避免忙等待
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+
+        let total_time = start.elapsed();
+        let throughput = script_count as f64 / total_time.as_secs_f64();
+
+        println!("✅ 批量执行完成:");
+        println!("  - 脚本数: {}", script_count);
+        println!("  - 总耗时: {:?}", total_time);
+        println!("  - 吞吐量: {:.2} scripts/sec", throughput);
+        println!("  - 平均执行时间: {}ms", self.stats.avg_execution_time_ms.load(Ordering::Relaxed));
+
+        Ok(results)
+    }
+
+    /// 预热执行器（预创建 Runtime 实例）
+    pub async fn prewarm(&self) -> Result<(), ConcurrentExecutionError> {
+        self.runtime_pool.prewarm().await?;
+        println!("✅ BatchExecutor 预热完成");
+        Ok(())
+    }
+
+    /// 获取执行统计
+    pub fn get_stats(&self) -> Arc<ConcurrentExecutionStats> {
+        self.stats.clone()
+    }
+
+    /// 获取调度器统计
+    pub fn get_scheduler_stats(&self) -> Arc<StealStats> {
+        self.scheduler.get_steal_stats()
+    }
+
+    /// 获取队列分布
+    pub async fn get_queue_distribution(&self) -> Vec<usize> {
+        self.scheduler.get_queue_distribution().await
+    }
+}
+
+#[cfg(test)]
+mod batch_executor_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_batch_executor_creation() {
+        // 在测试环境中跳过如果 V8 不可用
+        #[cfg(test)]
+        {
+            if !crate::is_v8_available() {
+                println!("⚠️  Skipping test: V8 engine is not available");
+                return;
+            }
+        }
+
+        let config = ConcurrentConfig::default();
+        let executor = BatchExecutor::new(config);
+
+        // 验证执行器创建成功
+        assert!(executor.get_stats().total_submitted.load() == 0);
+        assert!(executor.get_stats().total_completed.load() == 0);
+
+        println!("✅ BatchExecutor 创建测试通过");
+    }
+
+    #[tokio::test]
+    async fn test_batch_execute_simple_scripts() {
+        // 在测试环境中跳过如果 V8 不可用
+        #[cfg(test)]
+        {
+            if !crate::is_v8_available() {
+                println!("⚠️  Skipping test: V8 engine is not available");
+                return;
+            }
+        }
+
+        let config = ConcurrentConfig::default();
+        let executor = BatchExecutor::new(config);
+
+        // 预热
+        executor.prewarm().await.unwrap();
+
+        // 创建简单的测试脚本
+        let scripts = vec![
+            ("1 + 1".to_string(), 1),
+            ("2 * 3".to_string(), 1),
+            ("10 / 2".to_string(), 1),
+            ("console.log('Hello')".to_string(), 1),
+        ];
+
+        // 执行批量脚本
+        let results = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
+
+        // 验证结果
+        assert_eq!(results.len(), 4);
+        assert!(results[0].result.is_ok());
+        assert!(results[1].result.is_ok());
+        assert!(results[2].result.is_ok());
+        assert!(results[3].result.is_ok());
+
+        println!("✅ 批量执行简单脚本测试通过");
+    }
+
+    #[tokio::test]
+    async fn test_batch_execute_with_priorities() {
+        // 在测试环境中跳过如果 V8 不可用
+        #[cfg(test)]
+        {
+            if !crate::is_v8_available() {
+                println!("⚠️  Skipping test: V8 engine is not available");
+                return;
+            }
+        }
+
+        let config = ConcurrentConfig::default();
+        let executor = BatchExecutor::new(config);
+
+        // 预热
+        executor.prewarm().await.unwrap();
+
+        // 创建不同优先级的测试脚本
+        let scripts = vec![
+            ("1 + 1".to_string(), 1),    // 低优先级
+            ("2 * 3".to_string(), 10),   // 高优先级
+            ("10 / 2".to_string(), 5),   // 中优先级
+            ("5 - 3".to_string(), 1),    // 低优先级
+        ];
+
+        // 执行批量脚本
+        let results = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
+
+        // 验证所有脚本都执行成功
+        assert_eq!(results.len(), 4);
+        for result in results {
+            assert!(result.result.is_ok(), "Script failed: {:?}", result.result);
+        }
+
+        println!("✅ 批量执行优先级脚本测试通过");
+    }
+
+    #[tokio::test]
+    async fn test_batch_executor_stats() {
+        // 在测试环境中跳过如果 V8 不可用
+        #[cfg(test)]
+        {
+            if !crate::is_v8_available() {
+                println!("⚠️  Skipping test: V8 engine is not available");
+                return;
+            }
+        }
+
+        let config = ConcurrentConfig::default();
+        let executor = BatchExecutor::new(config);
+
+        // 预热
+        executor.prewarm().await.unwrap();
+
+        // 创建测试脚本
+        let scripts = vec![
+            ("1 + 1".to_string(), 1),
+            ("2 * 3".to_string(), 1),
+        ];
+
+        // 执行批量脚本
+        let _results = executor.execute_batch(scripts, Duration::from_secs(5)).await.unwrap();
+
+        // 验证统计信息
+        let stats = executor.get_stats();
+        assert_eq!(stats.total_submitted.load(), 2);
+        assert_eq!(stats.total_completed.load(), 2);
+        assert_eq!(stats.total_failed.load(), 0);
+
+        println!("✅ BatchExecutor 统计测试通过");
+    }
+}
+
