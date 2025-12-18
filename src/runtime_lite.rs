@@ -141,7 +141,7 @@ impl RuntimeLite {
     }
 
     /// 🚀 ULTRA-FAST PATH: Direct constant evaluation without V8
-    /// Returns Some(value) for simple constants, None if V8 is needed
+    /// Returns Some(value) for simple constants and expressions, None if V8 is needed
     fn try_fast_constant_path(&self, code: &str) -> Option<String> {
         let trimmed = code.trim();
 
@@ -169,6 +169,134 @@ impl RuntimeLite {
         // Null and undefined
         if trimmed == "null" || trimmed == "undefined" {
             return Some(trimmed.to_string());
+        }
+
+        // Simple arithmetic expressions: numbers with + - * / % operators
+        if self.is_simple_arithmetic(trimmed) {
+            if let Some(result) = self.evaluate_simple_arithmetic(trimmed) {
+                return Some(result);
+            }
+        }
+
+        None
+    }
+
+    /// Check if code is a simple arithmetic expression
+    fn is_simple_arithmetic(&self, code: &str) -> bool {
+        // Must only contain digits, spaces, and basic operators
+        let allowed_chars: std::collections::HashSet<char> =
+            "0123456789+-*/%.() ".chars().collect();
+
+        if !code.chars().all(|c| allowed_chars.contains(&c)) {
+            return false;
+        }
+
+        // Must not start or end with operator (except parentheses)
+        let trimmed = code.trim();
+        let first_char = trimmed.chars().next();
+        let last_char = trimmed.chars().last();
+        if first_char.map_or(false, |c| matches!(c, '+' | '-' | '*' | '/' | '%')) ||
+           last_char.map_or(false, |c| matches!(c, '+' | '-' | '*' | '/' | '%')) {
+            return false;
+        }
+
+        // Simple heuristic: must contain at least one operator
+        trimmed.contains('+') || trimmed.contains('-') || trimmed.contains('*') ||
+        trimmed.contains('/') || trimmed.contains('%')
+    }
+
+    /// Evaluate simple arithmetic expression
+    fn evaluate_simple_arithmetic(&self, code: &str) -> Option<String> {
+        // Use Rust's eval for simple expressions
+        // For safety, only allow specific patterns
+        let trimmed = code.trim();
+
+        // Pattern: number operator number (e.g., "1+1", "10*5")
+        if let Some((left, op, right)) = self.parse_simple_binary_op(trimmed) {
+            match op {
+                '+' => {
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        return Some((l + r).to_string());
+                    }
+                    if let (Ok(l), Ok(r)) = (left.parse::<f64>(), right.parse::<f64>()) {
+                        return Some((l + r).to_string());
+                    }
+                }
+                '-' => {
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        return Some((l - r).to_string());
+                    }
+                    if let (Ok(l), Ok(r)) = (left.parse::<f64>(), right.parse::<f64>()) {
+                        return Some((l - r).to_string());
+                    }
+                }
+                '*' => {
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        return Some((l * r).to_string());
+                    }
+                    if let (Ok(l), Ok(r)) = (left.parse::<f64>(), right.parse::<f64>()) {
+                        return Some((l * r).to_string());
+                    }
+                }
+                '/' => {
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        if r != 0 {
+                            return Some((l / r).to_string());
+                        }
+                    }
+                    if let (Ok(l), Ok(r)) = (left.parse::<f64>(), right.parse::<f64>()) {
+                        if r != 0.0 {
+                            return Some((l / r).to_string());
+                        }
+                    }
+                }
+                '%' => {
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        if r != 0 {
+                            return Some((l % r).to_string());
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // Try parenthesized expressions: (number)
+        if trimmed.starts_with('(') && trimmed.ends_with(')') {
+            let inner = &trimmed[1..trimmed.len()-1];
+            if inner.parse::<i64>().is_ok() || inner.parse::<f64>().is_ok() {
+                return Some(inner.to_string());
+            }
+        }
+
+        None
+    }
+
+    /// Parse simple binary operation: "left op right"
+    fn parse_simple_binary_op<'a>(&self, code: &'a str) -> Option<(&'a str, char, &'a str)> {
+        let trimmed = code.trim();
+
+        // Find first operator (not in parentheses)
+        let mut paren_depth = 0;
+        for (i, c) in trimmed.char_indices() {
+            match c {
+                '(' => paren_depth += 1,
+                ')' => {
+                    if paren_depth > 0 {
+                        paren_depth -= 1;
+                    }
+                }
+                '+' | '-' | '*' | '/' | '%' => {
+                    if paren_depth == 0 {
+                        let left = &trimmed[..i].trim();
+                        let right = &trimmed[i+1..].trim();
+                        if !left.is_empty() && !right.is_empty() {
+                            return Some((left, c, right));
+                        }
+                    }
+                }
+                _ => {}
+            }
         }
 
         None
