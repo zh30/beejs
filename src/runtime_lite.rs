@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
-use crate::v8_snapshot::V8SnapshotManager;
+// use crate::v8_snapshot::V8SnapshotManager; // Temporarily disabled due to V8 API changes
 
 /// Lightweight Runtime - minimal V8 runtime for fast startup
 /// Only initializes essential components needed for basic JS execution
@@ -39,10 +39,11 @@ impl RuntimeLite {
 
         if verbose {
             println!("RuntimeLite: Minimal V8 runtime initialized with script caching");
-            println!("RuntimeLite: Attempting to use V8 snapshot for faster startup...");
+            println!("RuntimeLite: V8 snapshot temporarily disabled due to API changes");
         }
 
-        // Try to use V8 snapshot for faster startup
+        // TODO: Re-enable V8 snapshot once API is updated for rusty_v8 0.22
+        /*
         let snapshot_manager = V8SnapshotManager::new().ok();
         if let Some(manager) = &snapshot_manager {
             if let Ok(Some(_snapshot)) = manager.get_or_create_snapshot("v0.1.0") {
@@ -51,6 +52,7 @@ impl RuntimeLite {
                 }
             }
         }
+        */
 
         Ok(Self {
             execution_count: Arc::new(AtomicUsize::new(0)),
@@ -412,7 +414,7 @@ impl RuntimeLite {
     }
 
     /// Check if code is a simple object literal
-    fn is_simple_object_literal(&self, code: &str) -> bool {
+    pub fn is_simple_object_literal(&self, code: &str) -> bool {
         let trimmed = code.trim();
         if !trimmed.starts_with('{') || !trimmed.ends_with('}') {
             return false;
@@ -458,7 +460,7 @@ impl RuntimeLite {
     }
 
     /// Check if code is a simple comparison expression
-    fn is_simple_comparison(&self, code: &str) -> bool {
+    pub fn is_simple_comparison(&self, code: &str) -> bool {
         let trimmed = code.trim();
         let comparison_ops = ['>', '<', '=', '!'];
 
@@ -486,7 +488,7 @@ impl RuntimeLite {
     }
 
     /// Evaluate simple comparison expression
-    fn evaluate_simple_comparison(&self, code: &str) -> Option<String> {
+    pub fn evaluate_simple_comparison(&self, code: &str) -> Option<String> {
         let trimmed = code.trim();
 
         // Parse: left op right
@@ -526,11 +528,11 @@ impl RuntimeLite {
 
             // Handle ==, !=, ===, !==
             if op_str == "==" {
-                let is_equal = left == right;
+                let is_equal = left == *right;
                 return Some((is_equal).to_string());
             }
             if op_str == "!=" {
-                let is_not_equal = left != right;
+                let is_not_equal = left != *right;
                 return Some((is_not_equal).to_string());
             }
 
@@ -575,7 +577,7 @@ impl RuntimeLite {
     }
 
     /// Standard execution path with full API support
-    fn execute_standard(&self, code: &str) -> Result<String> {
+    pub fn execute_standard(&self, code: &str) -> Result<String> {
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
         let scope = &mut v8::HandleScope::new(&mut isolate);
         let context = v8::Context::new(scope);

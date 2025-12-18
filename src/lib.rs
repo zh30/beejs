@@ -1074,7 +1074,7 @@ impl Runtime {
     }
 
     /// Parse simple binary operation: left op right
-    fn parse_simple_binary_op(&self, code: &str) -> Option<(&str, char, &str)> {
+    fn parse_simple_binary_op<'a>(&self, code: &'a str) -> Option<(&'a str, char, &'a str)> {
         let trimmed = code.trim();
         let operators = ['+', '-', '*', '/', '%'];
 
@@ -1209,11 +1209,11 @@ impl Runtime {
 
             // Handle ==, !=, ===, !==
             if op_str == "==" {
-                let is_equal = left == right;
+                let is_equal = left == *right;
                 return Some((is_equal).to_string());
             }
             if op_str == "!=" {
-                let is_not_equal = left != right;
+                let is_not_equal = left != *right;
                 return Some((is_not_equal).to_string());
             }
 
