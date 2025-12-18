@@ -1401,7 +1401,8 @@ Hello, Beejs!
 - 预热开销：<50ms per isolate
 
 **下一步行动**:
-- Stage 21.4: 零拷贝 I/O 优化
-- Stage 21.5: CLI 启动优化
+- ✅ Stage 21.4: 零拷贝 I/O 优化 (已完成)
+- ✅ Stage 21.5: 创建零拷贝网络 I/O 测试套件 (2025-12-18)
+- Stage 21.6: 实现零拷贝网络 I/O 核心功能
 - 集成到 IsolatePool 实现更智能的池化
 
