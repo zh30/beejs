@@ -3,10 +3,11 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 
     /// 任务类型定义
     #[derive(Debug, Clone)]
+    #[allow(dead_code)]
     pub struct Task {
         pub id: usize,
         pub code: String,
@@ -16,6 +17,7 @@ mod tests {
 
     /// 任务执行结果
     #[derive(Debug, Clone)]
+    #[allow(dead_code)]
     pub struct TaskResult {
         pub task_id: usize,
         pub success: bool,
@@ -24,6 +26,7 @@ mod tests {
 
     /// 工作窃取调度器统计
     #[derive(Debug, Clone, Default)]
+    #[allow(dead_code)]
     pub struct SchedulerStats {
         pub tasks_submitted: usize,
         pub tasks_completed: usize,
@@ -149,6 +152,8 @@ mod tests {
     /// 测试 4: 多线程工作窃取
     #[tokio::test]
     async fn test_multi_thread_work_stealing() {
+        use std::time::Instant;
+
         // TODO: 验证多线程环境下的工作窃取
         // 预期:
         // - 多个线程可以并发窃取
@@ -158,7 +163,7 @@ mod tests {
         let start = Instant::now();
 
         // 创建 4 个线程，每个线程有不同的任务数
-        let thread_tasks = vec![100, 50, 20, 5]; // 总共 175 个任务
+        let _thread_tasks = vec![100, 50, 20, 5]; // 总共 175 个任务
 
         // TODO: 创建多线程调度器
         // let scheduler = WorkStealingScheduler::new(4);
@@ -330,6 +335,8 @@ mod tests {
     /// 测试 8: 性能基准测试
     #[tokio::test]
     async fn test_performance_benchmark() {
+        use std::time::Instant;
+
         // TODO: 性能基准测试
         // 预期:
         // - 1000 个任务 < 1秒
@@ -340,7 +347,7 @@ mod tests {
         let task_count = 1000;
 
         // 生成 1000 个中等复杂度任务
-        let tasks: Vec<Task> = (0..task_count)
+        let _tasks: Vec<Task> = (0..task_count)
             .map(|i| Task {
                 id: i,
                 code: format!("(function() {{ let sum = 0; for(let j=0; j<100; j++) {{ sum += j * {}; }} return sum; }})()", i),
@@ -377,7 +384,7 @@ mod tests {
         // - 失败任务被正确记录
         // - 调度器继续正常工作
 
-        let tasks = vec![
+        let _tasks = vec![
             Task {
                 id: 1,
                 code: "valid_task".to_string(),
@@ -419,7 +426,7 @@ mod tests {
 
         // 创建大任务（1MB 数据）
         let large_data = "x".repeat(1024 * 1024);
-        let tasks = vec![Task {
+        let _tasks = vec![Task {
             id: 1,
             code: large_data,
             priority: 1,
