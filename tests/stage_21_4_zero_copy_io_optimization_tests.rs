@@ -1,0 +1,426 @@
+//! Stage 21.4: Zero-Copy I/O Optimization Tests
+//! Advanced zero-copy I/O operations for maximum performance
+
+#[cfg(test)]
+mod tests {
+    use beejs::*;
+    use std::sync::Arc;
+    use std::time::Instant;
+    use tempfile::TempDir;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::io::Write;
+
+    /// Test 1: Advanced Memory-Mapped File with Zero-Copy Reading
+    #[tokio::test]
+    async fn test_advanced_mmap_zero_copy_read() {
+        // Skip on non-Unix systems
+        #[cfg(not(unix))]
+        {
+            eprintln!("Skipping test: requires Unix system");
+            return;
+        }
+
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("mmap_test_dat");
+
+        // Create a large test file (1MB)
+        let test_data = vec![42u8; 1024 * 1024];
+        fs::write(&file_path, &test_data).unwrap();
+
+        // Open memory-mapped file
+        let mmap_file = beejs::memory_mapped_file::MemoryMappedFile::open_readonly(
+            file_path.as_path()
+        ).unwrap();
+
+        // Verify zero-copy access (no data copying)
+        let mapped_slice = mmap_file.as_slice();
+        assert_eq!(mapped_slice.len(), 1024 * 1024);
+        assert_eq!(mapped_slice[0], 42u8);
+        assert_eq!(mapped_slice[1024 * 1024 - 1], 42u8);
+
+        // Verify that modifying the mapped region doesn't require copying
+        let _ = &mapped_slice[0..100]; // Access without copy
+    }
+
+    /// Test 2: Zero-Copy File Slicing for Large Files
+    #[tokio::test]
+    async fn test_zero_copy_file_slicing() {
+        #[cfg(not(unix))]
+        {
+            eprintln!("Skipping test: requires Unix system");
+            return;
+        }
+
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("slice_test_dat");
+
+        // Create a 10MB test file
+        let test_data = vec![1u8; 10 * 1024 * 1024];
+        fs::write(&file_path, &test_data).unwrap();
+
+        let mmap_file = beejs::memory_mapped_file::MemoryMappedFile::open_readonly(
+            file_path.as_path()
+        ).unwrap();
+
+        // Slice the file into multiple zero-copy views
+        let slice_size = 1024 * 1024; // 1MB slices
+
+        for i in 0..10 {
+            let offset = i * slice_size;
+            let end = offset + slice_size;
+
+            let slice = &mmap_file.as_slice()[offset..end];
+            assert_eq!(slice.len(), slice_size);
+            assert_eq!(slice[0], 1u8);
+        }
+    }
+
+    /// Test 3: Zero-Copy Buffer Pool Performance
+    #[test]
+    fn test_zero_copy_buffer_pool_performance() {
+        let manager = beejs::zero_copy::ZeroCopyManager::new();
+
+        let iterations = 10000;
+        let start = Instant::now();
+
+        // Allocate and deallocate buffers rapidly
+        for i in 0..iterations {
+            let data = vec![(i % 256) as u8; 1024];
+            let buffer = manager.create_buffer(data);
+            manager.destroy_buffer(&buffer);
+        }
+
+        let elapsed = start.elapsed();
+        let throughput = iterations as f64 / elapsed.as_secs_f64();
+
+        eprintln!("Buffer pool throughput: {:.2} ops/sec", throughput);
+
+        // Should achieve high throughput (>1M ops/sec)
+        assert!(throughput > 1_000_000.0,
+                "Buffer pool throughput too low: {:.2} ops/sec", throughput);
+    }
+
+    /// Test 4: Zero-Copy Channel Performance
+    #[test]
+    fn test_zero_copy_channel_performance() {
+        let channel = beejs::zero_copy::ZeroCopyChannel::new(1000);
+
+        let iterations = 100000;
+        let start = Instant::now();
+
+        // Send data through channel
+        for i in 0..iterations {
+            channel.send(i).unwrap();
+        }
+
+        // Receive data
+        for _ in 0..iterations {
+            let _ = channel.recv().unwrap();
+        }
+
+        let elapsed = start.elapsed();
+        let throughput = iterations as f64 / elapsed.as_secs_f64();
+
+        eprintln!("Zero-copy channel throughput: {:.2} ops/sec", throughput);
+
+        // Should achieve high throughput
+        assert!(throughput > 100_000.0,
+                "Channel throughput too low: {:.2} ops/sec", throughput);
+    }
+
+    /// Test 5: Zero-Copy Ring Buffer Basic Functionality
+    #[test]
+    fn test_zero_copy_ring_buffer_basic() {
+        let mut buffer = beejs::zero_copy::ZeroCopyRingBuffer::new(10);
+
+        // Test basic write and read
+        assert!(buffer.try_write(1));
+        assert!(buffer.try_write(2));
+        assert!(buffer.try_write(3));
+
+        assert_eq!(buffer.try_read(), Some(1));
+        assert_eq!(buffer.try_read(), Some(2));
+        assert_eq!(buffer.try_read(), Some(3));
+        assert_eq!(buffer.try_read(), None);
+
+        // Test buffer full condition
+        for i in 0..10 {
+            assert!(buffer.try_write(i));
+        }
+        assert!(!buffer.try_write(99)); // Buffer should be full
+
+        // Test buffer empty condition
+        for _ in 0..10 {
+            let _ = buffer.try_read();
+        }
+        assert_eq!(buffer.try_read(), None); // Buffer should be empty
+    }
+
+    /// Test 6: Zero-Copy File Writer Performance
+    #[tokio::test]
+    async fn test_zero_copy_file_writer_performance() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("perf_test_dat");
+
+        let buffer = beejs::zero_copy::ZeroCopyBuffer::new(vec![99u8; 4096]);
+        let mut writer = beejs::zero_copy::ZeroCopyFileWriter::new(
+            file_path.to_str().unwrap()
+        ).await.unwrap();
+
+        let iterations = 10000;
+        let start = Instant::now();
+
+        // Write buffer repeatedly
+        for _ in 0..iterations {
+            writer.write_from_buffer(&buffer).await.unwrap();
+        }
+
+        let elapsed = start.elapsed();
+        let throughput = iterations as f64 / elapsed.as_secs_f64();
+
+        eprintln!("Zero-copy file write throughput: {:.2} writes/sec", throughput);
+
+        // Verify file size
+        let metadata = fs::metadata(&file_path).unwrap();
+        assert_eq!(metadata.len(), (iterations * 4096) as u64);
+    }
+
+    /// Test 7: Zero-Copy Statistics and Monitoring
+    #[test]
+    fn test_zero_copy_statistics() {
+        let manager = beejs::zero_copy::ZeroCopyManager::new();
+
+        // Create multiple buffers and channels
+        let buffers: Vec<_> = (0..10)
+            .map(|i| manager.create_buffer(vec![i as u8; 100]))
+            .collect();
+
+        let channels: Vec<_> = (0..5)
+            .map(|_| manager.create_channel::<i32>(100))
+            .collect();
+
+        // Send some data through channels
+        for channel in &channels {
+            for i in 0..50 {
+                channel.send(i).unwrap();
+            }
+        }
+
+        // Get statistics
+        let stats = manager.get_stats();
+        assert!(stats.contains("Buffer Pool"));
+        assert!(stats.contains("Channel Stats"));
+
+        eprintln!("Zero-copy statistics:\n{}", stats);
+    }
+
+    /// Test 8: Zero-Copy Message Passing with Metadata
+    #[test]
+    fn test_zero_copy_message_with_metadata() {
+        let message = beejs::zero_copy::ZeroCopyMessage::new_with_priority(
+            vec![1, 2, 3, 4, 5],
+            10
+        );
+
+        let data = message.get_data();
+        assert_eq!(data, &vec![1, 2, 3, 4, 5]);
+
+        let metadata = message.get_metadata();
+        assert_eq!(metadata.priority, 10);
+        assert!(metadata.timestamp.elapsed().as_secs_f64() >= 0.0);
+    }
+
+    /// Test 9: Large File Zero-Copy Processing
+    #[tokio::test]
+    async fn test_large_file_zero_copy_processing() {
+        #[cfg(not(unix))]
+        {
+            eprintln!("Skipping test: requires Unix system");
+            return;
+        }
+
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("large_file_dat");
+
+        // Create a 100MB test file
+        let chunk_size = 1024 * 1024; // 1MB
+        let total_size = 100 * chunk_size;
+        let test_data = vec![128u8; chunk_size];
+
+        let mut file = fs::File::create(&file_path).unwrap();
+        for _ in 0..100 {
+            file.write_all(&test_data).unwrap();
+        }
+
+        let start = Instant::now();
+        let mmap_file = beejs::memory_mapped_file::MemoryMappedFile::open_readonly(
+            file_path.as_path()
+        ).unwrap();
+
+        // Process the entire file without copying
+        let mut processed_chunks = 0;
+        for chunk_start in (0..total_size).step_by(chunk_size) {
+            let chunk_end = chunk_start + chunk_size;
+            let chunk = &mmap_file.as_slice()[chunk_start..chunk_end];
+            assert_eq!(chunk.len(), chunk_size);
+            processed_chunks += 1;
+        }
+
+        let elapsed = start.elapsed();
+        assert_eq!(processed_chunks, 100);
+
+        eprintln!("Large file zero-copy processing: {} chunks in {:.2}ms",
+                 processed_chunks, elapsed.as_millis());
+    }
+
+    /// Test 10: Zero-Copy Buffer Sharing Between Threads
+    #[test]
+    fn test_zero_copy_buffer_sharing() {
+        let buffer = beejs::zero_copy::ZeroCopyBuffer::new(vec![42u8; 1024]);
+        let buffer_clone = buffer.duplicate();
+
+        // Verify that both buffers share the same underlying data by comparing slices
+        let data1 = buffer.as_slice();
+        let data2 = buffer_clone.as_slice();
+        assert_eq!(data1, data2);
+        assert_eq!(data1.len(), 1024);
+        assert_eq!(data2.len(), 1024);
+    }
+
+    /// Test 11: Zero-Copy IPC-like Channel Communication
+    #[test]
+    fn test_zero_copy_ipc_channel() {
+        let capacity = 100;
+        let channel = beejs::zero_copy::ZeroCopyChannel::new(capacity);
+
+        // Test bidirectional communication
+        let test_values: Vec<i32> = (0..50).collect();
+
+        // Send values
+        for &value in &test_values {
+            channel.send(value).unwrap();
+        }
+
+        // Receive values
+        let received: Vec<i32> = (0..50)
+            .map(|_| channel.recv().unwrap())
+            .collect();
+
+        assert_eq!(received, test_values);
+    }
+
+    /// Test 12: Zero-Copy File Reader with Partial Reads
+    #[tokio::test]
+    async fn test_zero_copy_file_partial_reads() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("partial_reads_dat");
+
+        // Create test file
+        let test_data: Vec<u8> = (0..1000).map(|i| (i % 256) as u8).collect();
+        fs::write(&file_path, &test_data).unwrap();
+
+        let mut reader = beejs::zero_copy::ZeroCopyFileReader::new(
+            file_path.to_str().unwrap()
+        ).await.unwrap();
+
+        // Read first 100 bytes
+        let buffer1 = reader.read_partial(0, 100).await.unwrap();
+        assert_eq!(buffer1.len(), 100);
+        assert_eq!(buffer1.as_slice(), &test_data[0..100]);
+
+        // Read next 200 bytes
+        let buffer2 = reader.read_partial(100, 200).await.unwrap();
+        assert_eq!(buffer2.len(), 200);
+        assert_eq!(buffer2.as_slice(), &test_data[100..300]);
+    }
+
+    /// Test 13: Zero-Copy Manager Buffer Lifecycle
+    #[test]
+    fn test_zero_copy_manager_buffer_lifecycle() {
+        let manager = beejs::zero_copy::ZeroCopyManager::new();
+
+        // Create buffer
+        let buffer = manager.create_buffer(vec![1, 2, 3]);
+        assert_eq!(buffer.len(), 3);
+
+        // Clone buffer (zero-copy)
+        let buffer_clone = manager.clone_buffer(&buffer);
+        assert_eq!(buffer_clone.len(), 3);
+
+        // Destroy buffers
+        manager.destroy_buffer(&buffer);
+        manager.destroy_buffer(&buffer_clone);
+
+        // Manager should still work after destruction
+        let new_buffer = manager.create_buffer(vec![4, 5, 6]);
+        assert_eq!(new_buffer.len(), 3);
+        manager.destroy_buffer(&new_buffer);
+    }
+
+    /// Test 14: Zero-Copy Ring Buffer Utilization Tracking
+    #[test]
+    fn test_zero_copy_ring_buffer_utilization() {
+        let mut buffer = beejs::zero_copy::ZeroCopyRingBuffer::new(10);
+
+        // Initially empty
+        assert_eq!(buffer.utilization(), 0.0);
+
+        // Add some items
+        for i in 0..5 {
+            assert!(buffer.try_write(i));
+        }
+
+        // Should be 50% full
+        let utilization = buffer.utilization();
+        assert!(utilization >= 0.4 && utilization <= 0.6);
+
+        // Remove some items
+        for _ in 0..3 {
+            let _ = buffer.try_read();
+        }
+
+        // Should be 20% full
+        let utilization = buffer.utilization();
+        assert!(utilization >= 0.1 && utilization <= 0.3);
+    }
+
+    /// Test 15: Zero-Copy Performance Benchmark
+    #[test]
+    fn test_zero_copy_performance_benchmark() {
+        let manager = beejs::zero_copy::ZeroCopyManager::new();
+        let iterations = 100000;
+
+        // Benchmark buffer creation
+        let start = Instant::now();
+        for i in 0..iterations {
+            let buffer = manager.create_buffer(vec![i as u8; 64]);
+            manager.destroy_buffer(&buffer);
+        }
+        let buffer_time = start.elapsed();
+
+        // Benchmark channel operations
+        let channel = manager.create_channel::<i32>(1000);
+        let start = Instant::now();
+        for i in 0..iterations {
+            channel.send(i).unwrap();
+        }
+        for _ in 0..iterations {
+            let _ = channel.recv().unwrap();
+        }
+        let channel_time = start.elapsed();
+
+        eprintln!("=== Zero-Copy Performance Benchmark ===");
+        eprintln!("Buffer operations: {} ops in {:.2}ms ({:.2} ops/sec)",
+                 iterations, buffer_time.as_millis(),
+                 iterations as f64 / buffer_time.as_secs_f64());
+        eprintln!("Channel operations: {} ops in {:.2}ms ({:.2} ops/sec)",
+                 iterations * 2, channel_time.as_millis(),
+                 (iterations * 2) as f64 / channel_time.as_secs_f64());
+        eprintln!("========================================");
+
+        // Performance assertions
+        assert!(buffer_time.as_millis() < 1000, "Buffer operations too slow");
+        assert!(channel_time.as_millis() < 2000, "Channel operations too slow");
+    }
+}

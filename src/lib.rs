@@ -30,7 +30,7 @@ pub mod process_pool;
 mod runtime_lite;
 pub mod string_interner;
 pub mod v8_heap_config;
-mod zero_copy;
+pub mod zero_copy;
 pub mod v8_snapshot;
 pub mod repl;
 pub mod memory_pool;
@@ -88,6 +88,13 @@ pub use v8_snapshot::V8SnapshotManager;
 
 // Re-export Isolate pre-warming types (Stage 21.3)
 pub use isolate_prewarmer::{IsolatePrewarmer, PrewarmConfig, PrewarmStats};
+
+// Re-export zero-copy types (Stage 21.4)
+pub use zero_copy::{
+    ZeroCopyBuffer, ZeroCopyChannel, ZeroCopyFileReader, ZeroCopyFileWriter,
+    MemoryMappedFile, ZeroCopyManager, ZeroCopyMessage, MessageMetadata,
+    ZeroCopyRingBuffer
+};
 
 // Re-export process pool types
 pub use process_pool::{

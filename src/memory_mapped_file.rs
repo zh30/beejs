@@ -202,10 +202,16 @@ impl MemoryMappedFile {
         self.ref_count.fetch_add(1, Ordering::SeqCst) + 1
     }
 
+    /// 获取整个文件的切片（零拷贝访问）
+    pub fn as_slice(&self) -> &[u8] {
+        &self.mmap
+    }
+
     /// 减少引用计数
     pub fn remove_ref(&self) -> usize {
         self.ref_count.fetch_sub(1, Ordering::SeqCst) - 1
     }
+
 
     /// 获取创建时间
     pub fn get_created_at(&self) -> Instant {
