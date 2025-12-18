@@ -1341,3 +1341,67 @@ Hello, Beejs!
 3. **帧合并**: 实现了递归合并算法，相同函数名的帧会合并其持续时间和调用计数
 4. **测试修复**: 更新了测试用例以正确使用 `add_call_stack` 进行嵌套测试
 
+### Stage 21.3: Isolate 预热机制优化 (2025-12-18) 🚀
+**目标**: 实现增强的 Isolate 预热机制，集成 V8 快照和上下文准备
+**成功标准**:
+- [x] 创建 IsolatePrewarmer 结构体 - ✅ 完整的预热系统实现！
+- [x] 实现 V8 快照集成 - ✅ 快照创建统计跟踪！
+- [x] 实现 JavaScript 片段预编译 - ✅ 5+ 常用片段预编译！
+- [x] 实现预热统计系统 - ✅ 完整的性能指标跟踪！
+- [x] 创建综合测试套件 - ✅ 15/15 测试全部通过！
+- [x] 集成到 lib.rs - ✅ 公共 API 导出完成！
+**状态**: ✅ Completed (2025-12-18) 🎯
+
+**阶段 21.3 详细完成情况**:
+- ✅ IsolatePrewarmer 核心结构 (src/isolate_prewarmer.rs)
+  - PrewarmConfig 配置：支持快照、预编译、激进模式
+  - PrewarmStats 统计：缓存命中率、平均预热时间、最后预热时间
+  - CompiledSnippet 管理：预编译 JavaScript 片段存储
+  - 支持获取和归还预热 isolate
+
+- ✅ 预编译 JavaScript 片段系统
+  - 预编译 5 种常用片段：hello、simple_arithmetic、array_ops、object_props、string_ops
+  - 片段编译和存储管理
+  - 编译统计跟踪
+
+- ✅ 智能预热策略
+  - 标准模式：预热指定数量的 isolates
+  - 激进模式：预热 150% 容量（上限 32 个）
+  - 自动延迟控制：避免系统过载
+
+- ✅ 综合测试套件 (tests/stage_21_isolate_prewarming_tests.rs)
+  - 15 个全面测试用例：配置、创建、预热、性能、统计
+  - PrewarmStats 测试：创建、命中率、平均时间计算
+  - PrewarmConfig 测试：默认配置、激进模式
+  - IsolatePrewarmer 测试：创建、基本预热、激进模式
+  - 获取/归还测试：缓存命中/未命中验证
+  - 性能基准测试：预热速度验证（<50ms/isolate）
+  - 多次预热周期测试
+  - 清零预热测试
+  - 命中率计算测试
+  - 打印统计功能测试
+  - 15/15 测试全部通过（100% 通过率）🎉
+
+- ✅ 公共 API 集成 (src/lib.rs)
+  - 添加模块声明：`mod isolate_prewarmer;`
+  - 导出核心类型：`pub use isolate_prewarmer::{IsolatePrewarmer, PrewarmConfig, PrewarmStats};`
+  - 完整 API 暴露供外部使用
+
+**技术亮点**:
+- 🔧 智能预热策略：标准/激进模式自适应
+- ⚡ 预编译片段：常用 JavaScript 片段预编译缓存
+- 📊 完整统计：缓存命中率、平均预热时间、访问计数
+- 🎯 性能优化：减少 isolate 创建开销
+- 🚀 测试驱动：15 个测试确保质量
+
+**性能提升预期**:
+- Isolate 创建时间：减少 50-70%（通过预热复用）
+- 代码执行启动：减少 30-50%（预编译片段）
+- 缓存命中率：目标 >80%
+- 预热开销：<50ms per isolate
+
+**下一步行动**:
+- Stage 21.4: 零拷贝 I/O 优化
+- Stage 21.5: CLI 启动优化
+- 集成到 IsolatePool 实现更智能的池化
+

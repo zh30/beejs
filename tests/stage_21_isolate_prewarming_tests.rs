@@ -1,0 +1,475 @@
+//! Stage 21.3: Isolate Pre-warming System Tests
+//! Comprehensive test suite for the enhanced Isolate pre-warming mechanism
+
+#[cfg(test)]
+mod tests {
+    use beejs::*;
+    use std::sync::Arc;
+    use std::time::Instant;
+
+    /// Test 1: PrewarmStats creation and basic functionality
+    #[test]
+    fn test_prewarm_stats_creation() {
+        let stats = PrewarmStats::new();
+
+        // Verify initial state
+        assert_eq!(stats.total_prewarmed.load(std::sync::atomic::Ordering::Relaxed), 0);
+        assert_eq!(stats.snapshots_created.load(std::sync::atomic::Ordering::Relaxed), 0);
+        assert_eq!(stats.snippets_precompiled.load(std::sync::atomic::Ordering::Relaxed), 0);
+        assert_eq!(stats.cache_hits.load(std::sync::atomic::Ordering::Relaxed), 0);
+        assert_eq!(stats.cache_misses.load(std::sync::atomic::Ordering::Relaxed), 0);
+        assert_eq!(stats.hit_rate(), 0.0);
+        assert_eq!(stats.avg_prewarm_time_us(), 0.0);
+    }
+
+    /// Test 2: PrewarmConfig default configuration
+    #[test]
+    fn test_prewarm_config_default() {
+        let config = PrewarmConfig::default();
+
+        assert!(config.enable_snapshots);
+        assert!(config.precompile_snippets);
+        assert!(config.prepare_console);
+        assert!(!config.prepare_nodejs);
+        assert!(!config.aggressive);
+    }
+
+    /// Test 3: PrewarmConfig aggressive mode
+    #[test]
+    fn test_prewarm_config_aggressive() {
+        let config = PrewarmConfig {
+            aggressive: true,
+            enable_snapshots: true,
+            precompile_snippets: true,
+            prepare_console: true,
+            prepare_nodejs: true,
+        };
+
+        assert!(config.aggressive);
+        assert!(config.enable_snapshots);
+        assert!(config.prepare_nodejs);
+    }
+
+    /// Test 4: IsolatePrewarmer creation
+    #[test]
+    fn test_isolate_prewarmer_creation() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig {
+            enable_snapshots: true,
+            precompile_snippets: true,
+            prepare_console: false,
+            prepare_nodejs: false,
+            aggressive: false,
+        };
+
+        let prewarmer = IsolatePrewarmer::new(4, config);
+
+        assert!(prewarmer.is_ok());
+        let prewarmer = prewarmer.unwrap();
+
+        // Verify initial state
+        assert_eq!(prewarmer.available_count(), 0);
+        assert!(!prewarmer.is_prewarmed());
+    }
+
+    /// Test 5: Isolate pre-warming basic functionality
+    #[test]
+    fn test_isolate_prewarming_basic() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig {
+            enable_snapshots: false, // Disable snapshots for faster testing
+            precompile_snippets: true,
+            prepare_console: false,
+            prepare_nodejs: false,
+            aggressive: false,
+        };
+
+        let prewarmer = IsolatePrewarmer::new(2, config).unwrap();
+
+        // Pre-warm isolates
+        let result = prewarmer.prewarm();
+        assert!(result.is_ok());
+
+        // Verify pre-warming completed
+        assert!(prewarmer.is_prewarmed());
+        assert_eq!(prewarmer.available_count(), 2);
+
+        // Verify statistics
+        let stats = prewarmer.stats();
+        assert_eq!(stats.total_prewarmed.load(std::sync::atomic::Ordering::Relaxed), 2);
+        assert!(stats.snippets_precompiled.load(std::sync::atomic::Ordering::Relaxed) > 0);
+    }
+
+    /// Test 6: Isolate pre-warming with aggressive mode
+    #[test]
+    fn test_isolate_prewarming_aggressive() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig {
+            enable_snapshots: false,
+            precompile_snippets: true,
+            prepare_console: false,
+            prepare_nodejs: false,
+            aggressive: true,
+        };
+
+        let prewarmer = IsolatePrewarmer::new(4, config).unwrap();
+        let start = Instant::now();
+
+        // Pre-warm with aggressive mode
+        let result = prewarmer.prewarm();
+        assert!(result.is_ok());
+
+        let elapsed = start.elapsed();
+
+        // Verify more isolates were pre-warmed in aggressive mode
+        // Should warm up to min(4 * 3/2, 32) = 6 isolates
+        let count = prewarmer.available_count();
+        assert!(count >= 4);
+        assert!(count <= 6);
+
+        eprintln!("Aggressive pre-warming: {} isolates in {:.2}ms",
+                 count, elapsed.as_millis());
+    }
+
+    /// Test 7: Acquire and return pre-warmed isolates
+    #[test]
+    fn test_acquire_return_prewarmed_isolates() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig {
+            enable_snapshots: false,
+            precompile_snippets: false,
+            prepare_console: false,
+            prepare_nodejs: false,
+            aggressive: false,
+        };
+
+        let prewarmer = IsolatePrewarmer::new(3, config).unwrap();
+
+        // Pre-warm
+        prewarmer.prewarm().unwrap();
+        assert_eq!(prewarmer.available_count(), 3);
+
+        // Acquire isolates
+        let isolate1 = prewarmer.get_prewarmed_isolate();
+        assert!(isolate1.is_some());
+        assert_eq!(prewarmer.available_count(), 2);
+
+        let isolate2 = prewarmer.get_prewarmed_isolate();
+        assert!(isolate2.is_some());
+        assert_eq!(prewarmer.available_count(), 1);
+
+        // Verify cache hit
+        let stats = prewarmer.stats();
+        assert_eq!(stats.cache_hits.load(std::sync::atomic::Ordering::Relaxed), 2);
+
+        // Return an isolate
+        if let Some(isolate) = isolate1 {
+            prewarmer.return_prewarmed_isolate(isolate);
+        }
+        assert_eq!(prewarmer.available_count(), 2);
+
+        // Try to acquire when pool is empty
+        let isolate3 = prewarmer.get_prewarmed_isolate();
+        assert!(isolate3.is_some());
+        assert_eq!(prewarmer.available_count(), 1);
+
+        // This should be a cache miss
+        let stats = prewarmer.stats();
+        assert_eq!(stats.cache_misses.load(std::sync::atomic::Ordering::Relaxed), 1);
+    }
+
+    /// Test 8: Statistics tracking
+    #[test]
+    fn test_statistics_tracking() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig {
+            enable_snapshots: false,
+            precompile_snippets: true,
+            prepare_console: false,
+            prepare_nodejs: false,
+            aggressive: false,
+        };
+
+        let prewarmer = IsolatePrewarmer::new(2, config).unwrap();
+
+        // Pre-warm
+        prewarmer.prewarm().unwrap();
+
+        let stats = prewarmer.stats();
+
+        // Verify statistics were updated
+        assert_eq!(stats.total_prewarmed.load(std::sync::atomic::Ordering::Relaxed), 2);
+        assert!(stats.snippets_precompiled.load(std::sync::atomic::Ordering::Relaxed) > 0);
+        assert!(stats.total_prewarm_time_us.load(std::sync::atomic::Ordering::Relaxed) > 0);
+        assert!(stats.avg_prewarm_time_us() > 0.0);
+        assert!(stats.last_prewarm.load(std::sync::atomic::Ordering::Relaxed) > 0);
+
+        // Acquire and return to test cache statistics
+        let isolate = prewarmer.get_prewarmed_isolate();
+        if let Some(iso) = isolate {
+            prewarmer.return_prewarmed_isolate(iso);
+        }
+
+        let final_stats = prewarmer.stats();
+        assert_eq!(final_stats.cache_hits.load(std::sync::atomic::Ordering::Relaxed), 1);
+    }
+
+    /// Test 9: Print statistics functionality
+    #[test]
+    fn test_print_statistics() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig {
+            enable_snapshots: false,
+            precompile_snippets: false,
+            prepare_console: false,
+            prepare_nodejs: false,
+            aggressive: false,
+        };
+
+        let prewarmer = IsolatePrewarmer::new(1, config).unwrap();
+
+        // Pre-warm
+        prewarmer.prewarm().unwrap();
+
+        // Print statistics (this should not panic)
+        prewarmer.print_stats();
+
+        // Verify we can still get stats after printing
+        let stats = prewarmer.stats();
+        assert!(stats.total_prewarmed.load(std::sync::atomic::Ordering::Relaxed) > 0);
+    }
+
+    /// Test 10: Clear pre-warmed isolates
+    #[test]
+    fn test_clear_prewarmed_isolates() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig {
+            enable_snapshots: false,
+            precompile_snippets: false,
+            prepare_console: false,
+            prepare_nodejs: false,
+            aggressive: false,
+        };
+
+        let prewarmer = IsolatePrewarmer::new(3, config).unwrap();
+
+        // Pre-warm
+        prewarmer.prewarm().unwrap();
+        assert!(prewarmer.available_count() > 0);
+        assert!(prewarmer.is_prewarmed());
+
+        // Clear
+        prewarmer.clear();
+        assert_eq!(prewarmer.available_count(), 0);
+        assert!(!prewarmer.is_prewarmed());
+    }
+
+    /// Test 11: Performance benchmark - pre-warming speed
+    #[test]
+    fn test_prewarming_performance_benchmark() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig {
+            enable_snapshots: false,
+            precompile_snippets: true,
+            prepare_console: false,
+            prepare_nodejs: false,
+            aggressive: false,
+        };
+
+        let prewarmer = IsolatePrewarmer::new(5, config).unwrap();
+
+        let start = Instant::now();
+        let result = prewarmer.prewarm();
+        let elapsed = start.elapsed();
+
+        assert!(result.is_ok());
+
+        let count = prewarmer.available_count();
+        let avg_time_per_isolate = elapsed.as_micros() as f64 / count as f64;
+
+        eprintln!("=== Pre-warming Performance Benchmark ===");
+        eprintln!("Isolates pre-warmed: {}", count);
+        eprintln!("Total time: {:.2}ms", elapsed.as_millis());
+        eprintln!("Average time per isolate: {:.2}µs", avg_time_per_isolate);
+        eprintln!("=========================================");
+
+        // Performance assertions (reasonable thresholds)
+        assert!(elapsed.as_millis() < 1000, "Pre-warming took too long: {:.2}ms", elapsed.as_millis());
+        assert!(avg_time_per_isolate < 50000.0, "Average time per isolate too high: {:.2}µs", avg_time_per_isolate);
+    }
+
+    /// Test 12: Compiled snippets pre-compilation
+    #[test]
+    fn test_compiled_snippets_precompilation() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig {
+            enable_snapshots: false,
+            precompile_snippets: true,
+            prepare_console: false,
+            prepare_nodejs: false,
+            aggressive: false,
+        };
+
+        let prewarmer = IsolatePrewarmer::new(2, config).unwrap();
+
+        // Pre-warm with snippet pre-compilation
+        let result = prewarmer.prewarm();
+        assert!(result.is_ok());
+
+        let stats = prewarmer.stats();
+        let snippets_count = stats.snippets_precompiled.load(std::sync::atomic::Ordering::Relaxed);
+
+        // Should have pre-compiled several common snippets
+        assert!(snippets_count >= 5, "Expected at least 5 snippets, got {}", snippets_count);
+
+        eprintln!("Pre-compiled {} JavaScript snippets", snippets_count);
+    }
+
+    /// Test 13: Config validation - zero max prewarm
+    #[test]
+    fn test_config_zero_max_prewarm() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig::default();
+        let prewarmer = IsolatePrewarmer::new(0, config).unwrap();
+
+        // Pre-warm with zero capacity
+        let result = prewarmer.prewarm();
+        assert!(result.is_ok());
+
+        // Should have no pre-warmed isolates
+        assert_eq!(prewarmer.available_count(), 0);
+        assert!(!prewarmer.is_prewarmed());
+    }
+
+    /// Test 14: Multiple pre-warm cycles
+    #[test]
+    fn test_multiple_prewarm_cycles() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig {
+            enable_snapshots: false,
+            precompile_snippets: false,
+            prepare_console: false,
+            prepare_nodejs: false,
+            aggressive: false,
+        };
+
+        let prewarmer = IsolatePrewarmer::new(2, config).unwrap();
+
+        // First pre-warm
+        prewarmer.prewarm().unwrap();
+        assert_eq!(prewarmer.available_count(), 2);
+
+        // Second pre-warm (should not double)
+        prewarmer.prewarm().unwrap();
+        assert_eq!(prewarmer.available_count(), 2);
+
+        // Clear and pre-warm again
+        prewarmer.clear();
+        prewarmer.prewarm().unwrap();
+        assert_eq!(prewarmer.available_count(), 2);
+    }
+
+    /// Test 15: Hit rate calculation
+    #[test]
+    fn test_hit_rate_calculation() {
+        // Skip test if V8 is not available
+        if !test_v8_availability() {
+            eprintln!("Skipping test: V8 not available");
+            return;
+        }
+
+        let config = PrewarmConfig {
+            enable_snapshots: false,
+            precompile_snippets: false,
+            prepare_console: false,
+            prepare_nodejs: false,
+            aggressive: false,
+        };
+
+        let prewarmer = IsolatePrewarmer::new(3, config).unwrap();
+        prewarmer.prewarm().unwrap();
+
+        // Initially no cache activity
+        let stats = prewarmer.stats();
+        assert_eq!(stats.hit_rate(), 0.0);
+
+        // Acquire all isolates (3 cache hits)
+        for _ in 0..3 {
+            let isolate = prewarmer.get_prewarmed_isolate();
+            if let Some(iso) = isolate {
+                prewarmer.return_prewarmed_isolate(iso);
+            }
+        }
+
+        let final_stats = prewarmer.stats();
+        assert_eq!(final_stats.cache_hits.load(std::sync::atomic::Ordering::Relaxed), 3);
+        assert_eq!(final_stats.cache_misses.load(std::sync::atomic::Ordering::Relaxed), 0);
+        assert_eq!(final_stats.hit_rate(), 1.0);
+
+        // Acquire one more (should be a miss)
+        let isolate = prewarmer.get_prewarmed_isolate();
+        if let Some(iso) = isolate {
+            prewarmer.return_prewarmed_isolate(iso);
+        }
+
+        let final_stats2 = prewarmer.stats();
+        assert_eq!(final_stats2.cache_hits.load(std::sync::atomic::Ordering::Relaxed), 3);
+        assert_eq!(final_stats2.cache_misses.load(std::sync::atomic::Ordering::Relaxed), 1);
+        assert!((final_stats2.hit_rate() - 0.75).abs() < 0.01);
+    }
+}

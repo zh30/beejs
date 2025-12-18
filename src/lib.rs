@@ -23,6 +23,7 @@ mod hot_path_tracker;
 mod inline_cache;
 mod isolate_guard;
 mod isolate_pool;
+mod isolate_prewarmer;
 mod jit_optimizer;
 mod lock_free;
 pub mod process_pool;
@@ -84,6 +85,9 @@ pub use runtime_lite::{RuntimeLite, get_global_lite_runtime};
 
 // Re-export V8 snapshot types
 pub use v8_snapshot::V8SnapshotManager;
+
+// Re-export Isolate pre-warming types (Stage 21.3)
+pub use isolate_prewarmer::{IsolatePrewarmer, PrewarmConfig, PrewarmStats};
 
 // Re-export process pool types
 pub use process_pool::{
