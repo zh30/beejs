@@ -94,7 +94,7 @@ mod consistent_hashing_tests {
         let mut migrated = 0;
         for (key, original_node) in &original_routes {
             if let Some(new_node) = ring.get_node(key) {
-                if new_node != original_node {
+                if new_node != *original_node {
                     migrated += 1;
                 }
             }

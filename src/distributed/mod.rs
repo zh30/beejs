@@ -14,6 +14,9 @@ pub mod autoscaler;
 pub mod scaling_manager;
 pub mod resource_tracker;
 pub mod fault_tolerance;
+pub mod distributed_metrics;
+pub mod distributed_tracer;
+pub mod cluster_console;
 
 // Re-export 主要类型
 pub use service_discovery::{
@@ -139,6 +142,45 @@ pub use fault_tolerance::{
     RecoveryStrategy,
     RecoveryAction,
     FaultStatistics,
+};
+
+pub use distributed_metrics::{
+    DistributedMetrics,
+    MetricsConfig,
+    MetricType,
+    MetricValue,
+    MetricPoint,
+    RealTimeMetrics,
+    ClusterMetricsSummary,
+    NodeMetrics,
+    SystemMetrics,
+    Percentiles,
+};
+
+pub use distributed_tracer::{
+    DistributedTracer,
+    TracingConfig,
+    Trace,
+    Span,
+    TraceEvent,
+    TraceEventType,
+    TraceContext,
+    PerformanceStats,
+};
+
+pub use cluster_console::{
+    ClusterConsole,
+    ConsoleConfig,
+    ClusterOverview,
+    NodeStatusDetail,
+    PerformanceMetricsDetail,
+    ResourceUtilization,
+    TraceAnalysis,
+    SlowTrace,
+    ErrorTrace,
+    OperationPerformance,
+    AlertMessage,
+    AlertLevel,
 };
 
 /// 分布式系统配置
