@@ -26,6 +26,9 @@ memmap2 = "0.9"
 # HTTP Server for Server mode
 tiny_http = "0.12"
 
+# System calls for zero-copy network I/O
+libc = "0.2"
+
 # WebSocket support
 tokio-tungstenite = "0.21"
 tungstenite = "0.21"

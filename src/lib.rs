@@ -53,6 +53,9 @@ pub mod shared_memory;
 pub mod shared_object_cache;
 pub mod memory_mapped_file;
 
+// Stage 21.5: 零拷贝网络 I/O 模块
+pub mod network;
+
 // Re-export profiler types
 pub use profiler::{Profiler, ProfileTarget, ProfilingMode, ProfileResult, ProfilingStats};
 
@@ -88,6 +91,12 @@ pub use v8_snapshot::V8SnapshotManager;
 
 // Re-export Isolate pre-warming types (Stage 21.3)
 pub use isolate_prewarmer::{IsolatePrewarmer, PrewarmConfig, PrewarmStats};
+
+// Re-export zero-copy network I/O types (Stage 21.5)
+pub use network::{
+    ZeroCopyTcpSocket, ZeroCopyUdpSocket, SendFile, Splice,
+    NetworkBufferPool, ConnectionPool, NetworkIoStatistics
+};
 
 // Re-export zero-copy types (Stage 21.4)
 pub use zero_copy::{
