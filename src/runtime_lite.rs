@@ -206,15 +206,28 @@ impl RuntimeLite {
 
         // Simple object literals: {a: 1, b: 2}
         if trimmed.starts_with('{') && trimmed.ends_with('}') {
-            return Some(trimmed.to_string());
+            // Validate it's a simple object literal (no nested objects or functions)
+            if self.is_simple_object_literal(trimmed) {
+                return Some(trimmed.to_string());
+            }
         }
 
-        // Simple property access: obj.prop (just return as-is for now)
+        // Simple property access: obj.prop (evaluate if possible)
         if trimmed.contains('.') && !trimmed.contains(' ') {
-            // Simple property access like "obj.prop" or "arr.length"
-            // For now, just pass through - could be enhanced later
             let parts: Vec<&str> = trimmed.split('.').collect();
             if parts.len() == 2 && !parts[0].contains(' ') && !parts[1].contains(' ') {
+                // Special case: arr.length where we know the array
+                if parts[1] == "length" && parts[0].starts_with('[') && parts[0].ends_with(']') {
+                    let array_part = parts[0];
+                    let elements = &array_part[1..array_part.len()-1];
+                    let count = if elements.trim().is_empty() {
+                        0
+                    } else {
+                        elements.split(',').count()
+                    };
+                    return Some(count.to_string());
+                }
+                // For other property access, just return as-is for V8 to handle
                 return Some(trimmed.to_string());
             }
         }
@@ -380,6 +393,52 @@ impl RuntimeLite {
         }
 
         None
+    }
+
+    /// Check if code is a simple object literal
+    fn is_simple_object_literal(&self, code: &str) -> bool {
+        let trimmed = code.trim();
+        if !trimmed.starts_with('{') || !trimmed.ends_with('}') {
+            return false;
+        }
+
+        let content = &trimmed[1..trimmed.len()-1].trim();
+        if content.is_empty() {
+            return true; // Empty object {}
+        }
+
+        // Check for simple key-value pairs (no nested objects, arrays, or functions)
+        let mut depth = 0;
+        let mut in_string = false;
+        let mut string_char = '\0';
+
+        for c in content.chars() {
+            match c {
+                '"' | '\'' => {
+                    if !in_string {
+                        in_string = true;
+                        string_char = c;
+                    } else if c == string_char {
+                        in_string = false;
+                        string_char = '\0';
+                    }
+                }
+                '{' | '[' => {
+                    if !in_string {
+                        depth += 1;
+                    }
+                }
+                '}' | ']' => {
+                    if !in_string && depth > 0 {
+                        depth -= 1;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // If we have any nested structures, it's not simple
+        depth == 0
     }
 
     /// Check if code is a simple comparison expression

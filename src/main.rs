@@ -141,12 +141,8 @@ fn main() -> Result<()> {
         return run_watch_mode(&args);
     }
 
-    if args.verbose {
-        println!("Beejs Runtime starting...");
-        println!("Stack size: {} bytes", args.stack_size);
-        println!("Max heap size: {} bytes", args.max_heap);
-        println!("V8 optimization mode: {:?}", args.optimize);
-    }
+    // Delay verbose output until runtime is created to reduce startup overhead
+    let verbose = args.verbose;
 
     // 将命令行优化模式转换为beejs优化模式
     let optimize_mode = match args.optimize {
@@ -162,10 +158,18 @@ fn main() -> Result<()> {
         code_to_analyze,
         args.stack_size,
         args.max_heap,
-        args.verbose,
+        verbose,
         optimize_mode,
     )
     .context("Failed to get smart runtime")?;
+
+    // Show verbose info after runtime is ready
+    if verbose {
+        println!("Beejs Runtime started (smart mode)");
+        println!("Stack size: {} bytes", args.stack_size);
+        println!("Max heap size: {} bytes", args.max_heap);
+        println!("V8 optimization mode: {:?}", args.optimize);
+    }
 
     if let Some(ref script) = args.script {
         let result = runtime
