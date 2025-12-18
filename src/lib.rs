@@ -48,6 +48,9 @@ pub mod profiler;
 pub mod flame_graph;
 mod module_loader;
 mod nodejs;
+
+// Stage 30.4: 稳定性增强与压力测试模块
+pub mod stage_30_4_stress_testing;
 mod network_api;
 mod precompiled_cache;
 pub mod package_manager;

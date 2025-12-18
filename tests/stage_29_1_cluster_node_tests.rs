@@ -340,13 +340,13 @@ mod cluster_node_tests {
             nodes.push(node);
         }
 
-        let registration_results = node_manager.register_nodes_batch(nodes).await;
+        let registration_results: Vec<Result<(), String>> = node_manager.register_nodes_batch(nodes).await;
         assert_eq!(registration_results.len(), 10);
         assert!(registration_results.iter().all(|r| r.is_ok()));
 
         // 批量获取节点状态
         let node_ids: Vec<String> = (0..10).map(|i| format!("batch-node-{}", i)).collect();
-        let statuses = node_manager.get_nodes_status_batch(&node_ids).await;
+        let statuses: HashMap<String, NodeStatus> = node_manager.get_nodes_status_batch(&node_ids).await;
         assert_eq!(statuses.len(), 10);
     }
 
@@ -371,7 +371,7 @@ mod cluster_node_tests {
             capabilities: vec!["js-execution".to_string()],
         };
 
-        node_manager.register_node(node).await.unwrap();
+        let _: Result<(), String> = node_manager.register_node(node).await.unwrap();
 
         // 报告负载
         let _report_result: Result<(), String> = node_manager.report_load("node-load", 0.75, 0.60, 100).await;
