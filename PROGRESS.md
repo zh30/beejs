@@ -2270,3 +2270,42 @@ Network.testNetworkAPI();
 **下一步**: Stage 28.0 - 生产环境部署
 
 ---
+
+---
+
+### 阶段 28.0: 生产环境部署 [进行中] (2025-12-19)
+**目标**: 实现生产级配置管理、日志监控、生命周期管理、安全性和部署能力
+**成功标准**: 可在生产环境安全运行的高性能 JS/TS 运行时
+
+**阶段 28.0 测试套件完成** ✅ (2025-12-19 00:30):
+- ✅ **阶段 28.1: 配置管理测试** (tests/stage_28_1_config_tests.rs)
+  - ✅ 15 个测试用例，覆盖环境变量、JSON 配置、验证、敏感信息
+  - ✅ ConfigManager API 设计完成
+  - ✅ 性能测试：1000 项配置读写 < 100ms
+
+- ✅ **阶段 28.2: 日志与监控测试** (tests/stage_28_2_logging_tests.rs)
+  - ✅ 18 个测试用例，覆盖日志、指标、追踪
+  - ✅ Logger + MetricsCollector + Tracer API 设计
+  - ✅ Prometheus 格式导出支持
+  - ✅ 性能测试：10000 条日志 < 500ms
+
+- ✅ **阶段 28.3: 生命周期管理测试** (tests/stage_28_3_lifecycle_tests.rs)
+  - ✅ 12 个测试用例，覆盖健康检查、优雅关闭、启动钩子
+  - ✅ HealthManager + GracefulShutdown + StartupManager API
+  - ✅ 连接排空 RAII 模式
+  - ✅ 多阶段关闭流程
+
+**技术设计**:
+- TDD 方法：先写测试定义 API 行为
+- 自包含测试：测试文件包含类型定义，可独立验证设计
+- 性能优先：所有操作都有性能断言
+
+**当前阻塞**:
+- Stage 27 遗留编译问题（edge/wasm 模块）需要先修复
+- serde 版本已固定到 1.0.215 解决 swc_common 兼容性
+
+**下一步**:
+- 修复 Stage 27 遗留的 edge/wasm 模块编译问题
+- 运行并验证 Stage 28 测试套件
+- 实现 Stage 28.1-28.3 功能模块
+

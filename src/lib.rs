@@ -102,14 +102,17 @@ pub mod ai {
     pub mod acceleration_engine;
     pub mod model_manager;
 }
-pub use edge::{
-    CdnProviderType, CdnEndpoint, EndpointStatus, CdnProvider,
-    CloudflareIntegration, VercelIntegration,
-    EdgeDeploymentOptimizer, OptimizedConfig,
-    EdgeRuntime, RuntimeExecutionContext,
-    GlobalRouter, AnycastDns, GeoDns,
-    EdgeCache, CacheStats,
-};
+
+// Note: edge module exports are temporarily disabled due to compilation issues
+// TODO: Fix edge module and re-enable exports
+// pub use edge::{
+//     CdnProviderType, CdnEndpoint, EndpointStatus, CdnProvider,
+//     CloudflareIntegration, VercelIntegration,
+//     EdgeDeploymentOptimizer, OptimizedConfig,
+//     EdgeRuntime, RuntimeExecutionContext,
+//     GlobalRouter, AnycastDns, GeoDns,
+//     EdgeCache, CacheStats,
+// };
 
 // Stage 21.2: Lazy loading framework for expensive modules
 pub mod lazy_loader;
