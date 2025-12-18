@@ -32,6 +32,12 @@ pub mod string_interner;
 pub mod v8_heap_config;
 pub mod zero_copy;
 pub mod v8_snapshot;
+
+// Stage 27.1: V8 深度优化 - 嵌入式内置函数
+pub mod v8_optimized {
+    pub mod embedded_builtins;
+}
+pub use v8_optimized::embedded_builtins::{EmbeddedBuiltinsManager, BuiltinType, BuiltinStats};
 pub mod repl;
 pub mod memory_pool;
 pub mod error_handler;
