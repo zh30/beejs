@@ -6,13 +6,11 @@
 //! - NetworkIoStatistics: 网络 I/O 统计
 
 use beejs::{
-    NetworkBufferPool, ConnectionPool, NetworkIoStatistics,
-    network::{
-        connection_pool::ConnectionPoolConfig,
-        statistics::StatisticsConfig,
-        buffer_pool::BufferPoolConfig
-    }
+    NetworkBufferPool, NetworkIoStatistics,
 };
+
+use beejs::network::statistics::StatisticsConfig;
+use beejs::network::buffer_pool::BufferPoolConfig;
 
 #[cfg(test)]
 mod tests {

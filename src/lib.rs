@@ -83,9 +83,10 @@ pub use network::{
     Http3Server,
     NetworkStats,
     NetworkEvent,
-    NetworkError,
     NetworkEventHandler,
     NetworkMonitor,
+    NetworkBufferPool,
+    NetworkIoStatistics,
 };
 
 // Re-export profiler types

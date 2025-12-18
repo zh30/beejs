@@ -6,6 +6,8 @@
 pub mod epoll_manager;
 pub mod zero_copy_io;
 pub mod batch_processor;
+pub mod buffer_pool;
+pub mod statistics;
 
 // 重新导出主要类型
 pub use epoll_manager::EpollManager;
@@ -16,6 +18,10 @@ pub use batch_processor::BatchProcessor;
 pub use connection_pool::ConnectionPool;
 pub use http2_server::Http2Server;
 pub use http3_server::Http3Server;
+
+// 网络缓冲区和统计类型
+pub use buffer_pool::NetworkBufferPool;
+pub use statistics::NetworkIoStatistics;
 
 // 内部模块
 mod connection_pool;

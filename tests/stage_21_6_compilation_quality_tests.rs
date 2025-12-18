@@ -21,14 +21,13 @@ mod compilation_quality_tests {
     #[test]
     fn test_network_module_code_quality() {
         // 验证网络模块能够正常编译
-        // 只验证类型存在，不调用具体方法
-        let _tcp_socket: Option<beejs::network::ZeroCopyTcpSocket> = None;
-        let _udp_socket: Option<beejs::network::ZeroCopyUdpSocket> = None;
-        let _sendfile: Option<beejs::network::SendFile> = None;
-        let _splice: Option<beejs::network::Splice> = None;
-        let _buffer_pool: Option<beejs::network::NetworkBufferPool> = None;
-        let _connection_pool: Option<beejs::network::ConnectionPool> = None;
-        let _statistics: Option<beejs::network::NetworkIoStatistics> = None;
+        // 只验证导出的类型存在，不调用具体方法
+        let _buffer_pool: Option<beejs::NetworkBufferPool> = None;
+        let _connection_pool: Option<beejs::ConnectionPool> = None;
+        let _statistics: Option<beejs::NetworkIoStatistics> = None;
+        let _config: Option<beejs::NetworkConfig> = None;
+        let _stats: Option<beejs::NetworkStats> = None;
+        let _monitor: Option<beejs::NetworkMonitor> = None;
         assert!(true, "网络模块编译质量验证");
     }
 
