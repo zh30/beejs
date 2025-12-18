@@ -185,7 +185,7 @@ function IntroductionContent() {
 
       <div className="mt-20 flex justify-end">
         <Link to="/docs/installation" className="px-8 py-4 bg-white text-brand-black font-black uppercase -skew-x-12 hover:bg-brand-yellow transition-all">
-          <span className="inline-block skew-x-12 flex items-center">
+          <span className="skew-x-12 flex items-center">
             Next: Installation <ChevronRight className="w-5 h-5 ml-2" />
           </span>
         </Link>
@@ -221,7 +221,7 @@ function InstallationContent() {
           ← Introduction
         </Link>
         <Link to="/docs/quick-start" className="px-8 py-4 bg-brand-yellow text-brand-black font-black uppercase -skew-x-12 hover:bg-white transition-all">
-          <span className="inline-block skew-x-12 flex items-center">
+          <span className="skew-x-12 flex items-center">
             Next: Quick Start <ChevronRight className="w-5 h-5 ml-2" />
           </span>
         </Link>
@@ -247,7 +247,7 @@ function QuickStartContent() {
           ← Installation
         </Link>
         <Link to="/docs/v8-isolate-pool" className="px-8 py-4 bg-brand-yellow text-brand-black font-black uppercase -skew-x-12 hover:bg-white transition-all">
-          <span className="inline-block skew-x-12 flex items-center">
+          <span className="skew-x-12 flex items-center">
             Next: V8 Isolate Pool <ChevronRight className="w-5 h-5 ml-2" />
           </span>
         </Link>
@@ -283,7 +283,7 @@ function V8IsolatePoolContent() {
           ← Quick Start
         </Link>
         <Link to="/docs/jit-optimization" className="px-8 py-4 bg-brand-yellow text-brand-black font-black uppercase -skew-x-12 hover:bg-white transition-all">
-          <span className="inline-block skew-x-12 flex items-center">
+          <span className="skew-x-12 flex items-center">
             Next: JIT Optimization <ChevronRight className="w-5 h-5 ml-2" />
           </span>
         </Link>
@@ -314,7 +314,7 @@ function JITOptimizationContent() {
           ← V8 Isolate Pool
         </Link>
         <Link to="/docs/memory-management" className="px-8 py-4 bg-brand-yellow text-brand-black font-black uppercase -skew-x-12 hover:bg-white transition-all">
-          <span className="inline-block skew-x-12 flex items-center">
+          <span className="skew-x-12 flex items-center">
             Next: Memory <ChevronRight className="w-5 h-5 ml-2" />
           </span>
         </Link>
@@ -345,7 +345,7 @@ function MemoryManagementContent() {
           ← JIT Optimization
         </Link>
         <Link to="/docs/cli-usage" className="px-8 py-4 bg-brand-yellow text-brand-black font-black uppercase -skew-x-12 hover:bg-white transition-all">
-          <span className="inline-block skew-x-12 flex items-center">
+          <span className="skew-x-12 flex items-center">
             Next: CLI Usage <ChevronRight className="w-5 h-5 ml-2" />
           </span>
         </Link>
@@ -377,7 +377,7 @@ function CLIUsageContent() {
           ← Memory
         </Link>
         <Link to="/docs/api-reference" className="px-8 py-4 bg-brand-yellow text-brand-black font-black uppercase -skew-x-12 hover:bg-white transition-all">
-          <span className="inline-block skew-x-12 flex items-center">
+          <span className="skew-x-12 flex items-center">
             Next: APIs <ChevronRight className="w-5 h-5 ml-2" />
           </span>
         </Link>
@@ -407,7 +407,7 @@ function APIReferenceContent() {
           ← CLI Usage
         </Link>
         <Link to="/docs/modules" className="px-8 py-4 bg-brand-yellow text-brand-black font-black uppercase -skew-x-12 hover:bg-white transition-all">
-          <span className="inline-block skew-x-12 flex items-center">
+          <span className="skew-x-12 flex items-center">
             Next: Modules <ChevronRight className="w-5 h-5 ml-2" />
           </span>
         </Link>

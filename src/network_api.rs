@@ -2,7 +2,7 @@
 //!
 //! 该模块将零拷贝网络功能暴露给 JavaScript
 
-use crate::network::*;
+use crate::network::{NetworkBufferPool, ConnectionPool, NetworkIoStatistics};
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::Arc;
@@ -55,7 +55,7 @@ mod tests {
     #[test]
     fn test_setup_network_apis() {
         let buffer_pool = Arc::new(NetworkBufferPool::default());
-        let connection_pool = Arc::new(ConnectionPool::default());
+        let _connection_pool = Arc::new(ConnectionPool::default());
         let network_statistics = Arc::new(NetworkIoStatistics::default());
 
         // 简化的测试，验证网络模块的基本功能

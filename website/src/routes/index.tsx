@@ -53,7 +53,7 @@ export default function HomeComponent() {
         </div>
 
         {/* Floating Decors */}
-        <div className="absolute bottom-10 left-10 hidden lg:block text-[10px] font-mono text-gray-600 uppercase tracking-[0.5em] vertical-rl">
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 hidden lg:block text-[10px] font-mono text-gray-600 uppercase tracking-[0.5em] vertical-rl">
           System Status: Operational // Core: V8-Rust // Latency: 11ms
         </div>
       </section>
