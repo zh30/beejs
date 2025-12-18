@@ -373,8 +373,7 @@ fn run_server(
     timeout: u64,
     verbose: bool,
 ) -> Result<()> {
-    use beejs::{Server, ServerConfig};
-    use std::sync::Arc;
+    use beejs::Server;
     use tokio::runtime::Runtime;
 
     if verbose {
