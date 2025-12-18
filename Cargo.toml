@@ -22,7 +22,7 @@ wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 
 # WebAssembly binary format
-wasm-encoder = "0.139"
+wasm-encoder = "0.243"
 wasmparser = "0.217"
 
 # Cryptography for module hashing
