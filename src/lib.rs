@@ -65,9 +65,6 @@ pub mod memory_mapped_file;
 
 // Stage 21.5: 零拷贝网络 I/O 模块
 pub mod network;
-pub use network::buffer_pool::BufferPoolConfig;
-pub use network::connection_pool::ConnectionPoolConfig;
-pub use network::statistics::StatisticsConfig;
 
 // Stage 30.3: 网络 I/O 零拷贝优化模块
 pub use network::{
@@ -180,10 +177,7 @@ pub use isolate_prewarmer::{IsolatePrewarmer, PrewarmConfig, PrewarmStats};
 pub use isolate_pool::{IsolatePool, PoolStatistics};
 
 // Re-export zero-copy network I/O types (Stage 21.5)
-pub use network::{
-    ZeroCopyTcpSocket, ZeroCopyUdpSocket, SendFile, Splice,
-    NetworkBufferPool, ConnectionPool, NetworkIoStatistics
-};
+// Note: Updated to use Stage 30.3 types
 
 // Re-export zero-copy types (Stage 21.4)
 pub use zero_copy::{
@@ -642,9 +636,9 @@ pub struct Runtime {
     ai_async_queue: once_cell::sync::OnceCell<Arc<tokio::sync::Mutex<ai_async_queue::AiAsyncQueue>>>,
     ai_model_manager: once_cell::sync::OnceCell<Arc<ai_model_interface::AiModelManager>>,
     // Stage 21.6: Zero-copy network I/O modules - initialized eagerly (critical for network performance)
-    pub network_buffer_pool: once_cell::sync::OnceCell<Arc<network::NetworkBufferPool>>,
+    pub network_buffer_pool: once_cell::sync::OnceCell<Arc<()>>, // TODO: 使用真正的缓冲池类型
     pub network_connection_pool: once_cell::sync::OnceCell<Arc<network::ConnectionPool>>,
-    pub network_statistics: once_cell::sync::OnceCell<Arc<network::NetworkIoStatistics>>,
+    pub network_statistics: once_cell::sync::OnceCell<Arc<network::NetworkStats>>,
 }
 
 /// Compilation statistics for JIT optimization
@@ -793,35 +787,25 @@ impl Runtime {
 
         // === STAGE 21.6: ZERO-COPY NETWORK I/O MODULES (initialized eagerly - critical for network performance) ===
         // Initialize network buffer pool
-        let network_buffer_pool = Arc::new(network::NetworkBufferPool::new(
-            BufferPoolConfig {
-                default_size: 64 * 1024, // 64KB
-                preallocate_count: 100,
-                max_pool_size: 1000,
-                alignment: 64,
-                lru_threshold: Duration::from_secs(60),
-            }
-        ));
+        let network_buffer_pool = Arc::new(());
+        // TODO: 实现真正的缓冲池 (BufferPool)
 
         // Initialize network connection pool
         let network_connection_pool = Arc::new(network::ConnectionPool::new(
-            ConnectionPoolConfig {
-                max_connections_per_addr: 100,
-                idle_timeout: Duration::from_secs(300),
-                health_check_interval: Duration::from_secs(30),
-                warmup_connections: 5,
-                connect_timeout: Duration::from_secs(10),
-            }
-        ));
+            network::NetworkConfig::default()
+        ).unwrap());
 
         // Initialize network statistics
-        let network_statistics = Arc::new(network::NetworkIoStatistics::new(
-            StatisticsConfig {
-                window_size: Duration::from_secs(60),
-                enable_detailed_stats: true,
-                sampling_rate: 1.0,
-            }
-        ));
+        let network_statistics = Arc::new(network::NetworkStats {
+            total_connections: 0,
+            active_connections: 0,
+            zero_copy_operations: 0,
+            total_bytes_sent: 0,
+            total_bytes_received: 0,
+            batch_operations: 0,
+            average_latency_us: 0,
+            memory_usage: 0,
+        });
 
         // === LAZY MODULES (initialized on demand - for faster startup) ===
         // AI modules and precompiled cache are lazily initialized
@@ -1154,13 +1138,22 @@ impl Runtime {
             if needs_network_api || self.verbose {
                 // Initialize network modules
                 let buffer_pool = self.network_buffer_pool.get_or_init(|| {
-                    Arc::new(NetworkBufferPool::default())
+                    Arc::new(()) // TODO: 使用真正的缓冲池类型
                 });
                 let connection_pool = self.network_connection_pool.get_or_init(|| {
-                    Arc::new(ConnectionPool::default())
+                    Arc::new(network::ConnectionPool::new(network::NetworkConfig::default()).unwrap())
                 });
                 let network_statistics = self.network_statistics.get_or_init(|| {
-                    Arc::new(NetworkIoStatistics::default())
+                    Arc::new(network::NetworkStats {
+                        total_connections: 0,
+                        active_connections: 0,
+                        zero_copy_operations: 0,
+                        total_bytes_sent: 0,
+                        total_bytes_received: 0,
+                        batch_operations: 0,
+                        average_latency_us: 0,
+                        memory_usage: 0,
+                    })
                 });
 
                 network_api::setup_network_apis(

@@ -8,7 +8,7 @@ pub mod zero_copy_io;
 pub mod batch_processor;
 
 // 重新导出主要类型
-pub use epoll_manager::{EpollManager, NetworkConfig};
+pub use epoll_manager::EpollManager;
 pub use zero_copy_io::ZeroCopyIO;
 pub use batch_processor::BatchProcessor;
 
@@ -23,6 +23,42 @@ mod http2_server;
 mod http3_server;
 
 use std::time::Duration;
+
+/// 网络配置
+#[derive(Debug, Clone)]
+pub struct NetworkConfig {
+    /// 最大连接数
+    pub max_connections: usize,
+    /// 批处理大小
+    pub batch_size: usize,
+    /// 批处理超时
+    pub batch_timeout: Duration,
+    /// 最大缓冲区大小
+    pub max_buffer_size: usize,
+    /// 启用 HTTP/2
+    pub enable_http2: bool,
+    /// 启用 HTTP/3
+    pub enable_http3: bool,
+    /// 连接池大小
+    pub pool_size: usize,
+    /// UDP 缓冲区大小
+    pub udp_buffer_size: usize,
+}
+
+impl Default for NetworkConfig {
+    fn default() -> Self {
+        Self {
+            max_connections: 10000,
+            batch_size: 100,
+            batch_timeout: Duration::from_millis(10),
+            max_buffer_size: 64 * 1024,
+            enable_http2: false,
+            enable_http3: false,
+            pool_size: 100,
+            udp_buffer_size: 32 * 1024,
+        }
+    }
+}
 
 /// 网络统计信息
 #[derive(Debug, Clone)]
