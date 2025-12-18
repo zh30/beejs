@@ -105,6 +105,7 @@ struct AccessPattern {
 #[derive(Debug, Clone)]
 struct PrefetchEntry {
     data: Vec<u8>,
+    #[allow(dead_code)]
     offset: usize,
     timestamp: Instant,
 }

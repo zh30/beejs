@@ -290,6 +290,7 @@ pub struct StealEvent {
 }
 
 impl StealPredictor {
+    #[allow(dead_code)]
     pub fn new(thread_count: usize) -> Self {
         Self {
             queue_success_rates: vec![0.0; thread_count],
@@ -302,6 +303,7 @@ impl StealPredictor {
     }
 
     /// 记录队列活动（用于预测）
+    #[allow(dead_code)]
     pub fn record_queue_activity(&mut self, queue_id: usize) {
         let now = Instant::now();
 
@@ -319,6 +321,7 @@ impl StealPredictor {
     }
 
     /// 更新队列评分
+    #[allow(dead_code)]
     fn update_queue_score(&mut self, queue_id: usize) {
         let history = &self.queue_activity_history[queue_id];
         let recent_activity = history.iter()
@@ -332,6 +335,7 @@ impl StealPredictor {
     }
 
     /// 记录窃取事件
+    #[allow(dead_code)]
     pub fn record_steal_event(&mut self, source_queue: usize, target_queue: usize, tasks_stolen: usize, success: bool) {
         let event = StealEvent {
             timestamp: Instant::now(),
@@ -359,6 +363,7 @@ impl StealPredictor {
     }
 
     /// 预测窃取目标 - 返回最有可能窃取到任务的队列列表
+    #[allow(dead_code)]
     pub fn predict_steal_targets(&self, thief_thread_id: usize, exclude_queues: &[usize]) -> Vec<(usize, f64)> {
         let mut candidates = Vec::new();
 
@@ -390,6 +395,7 @@ impl StealPredictor {
     }
 
     /// 基于任务模式预测窃取目标
+    #[allow(dead_code)]
     pub fn predict_by_task_pattern(&self, task_type: &str) -> Vec<usize> {
         let mut pattern_queues = Vec::new();
 
@@ -412,6 +418,7 @@ impl StealPredictor {
     }
 
     /// 获取队列窃取成功率
+    #[allow(dead_code)]
     pub fn get_queue_success_rate(&self, queue_id: usize) -> f64 {
         self.queue_success_rates.get(queue_id).copied().unwrap_or(0.0)
     }
@@ -427,6 +434,7 @@ pub struct LoadMonitor {
     /// 每个worker的CPU使用率估算
     cpu_usage: Arc<Vec<AtomicUsize>>,
     /// 负载更新时间
+    #[allow(dead_code)]
     last_update: Arc<Mutex<Instant>>,
 }
 
@@ -468,6 +476,7 @@ impl LoadMonitor {
     }
 
     /// 计算平均执行时间
+    #[allow(dead_code)]
     fn calculate_average_duration(&self, _worker_id: usize) -> Duration {
         // 简化实现：返回默认值
         // 在生产环境中应该从历史记录中计算
@@ -1291,6 +1300,7 @@ impl WorkStealingScheduler {
     }
 
     /// 在队列间移动任务（内部方法）
+    #[allow(dead_code)]
     async fn move_tasks(&self, from_queue: usize, to_queue: usize, count: usize) -> usize {
         let mut moved = 0;
         let source_queue = &self.thread_queues[from_queue];
