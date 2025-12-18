@@ -56,7 +56,7 @@ pub struct WatchConfig {
 
 impl PackageJson {
     /// Load package.json from a directory
-    pub fn load(dir: &Path) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn load(dir: &Path) -> anyhow::Result<Self> {
         let package_path = dir.join("package.json");
 
         if !package_path.exists() {
@@ -70,7 +70,7 @@ impl PackageJson {
     }
 
     /// Load package.json from a specific file path
-    pub fn load_from_path(path: &Path) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn load_from_path(path: &Path) -> anyhow::Result<Self> {
         if !path.exists() {
             return Err(anyhow::anyhow!("package.json not found: {:?}", path).into());
         }
@@ -157,7 +157,7 @@ impl PackageJson {
     }
 
     /// Parse a script command into arguments
-    pub fn parse_script_command(&self, script_name: &str) -> Result<Vec<String>, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn parse_script_command(&self, script_name: &str) -> anyhow::Result<Vec<String>> {
         let script = self.get_script(script_name)
             .ok_or_else(|| anyhow::anyhow!("Script '{}' not found", script_name))?;
 
@@ -196,7 +196,7 @@ impl PackageJson {
     }
 
     /// Validate package.json structure
-    pub fn validate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn validate(&self) -> anyhow::Result<()> {
         if self.name.is_none() {
             return Err(anyhow::anyhow!("package.json missing 'name' field").into());
         }
@@ -239,12 +239,12 @@ impl PackageJson {
     }
 
     /// Convert to JSON string
-    pub fn to_json(&self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn to_json(&self) -> anyhow::Result<String> {
         Ok(serde_json::to_string_pretty(self)?)
     }
 
     /// Save to file
-    pub fn save(&self, path: &Path) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub fn save(&self, path: &Path) -> anyhow::Result<()> {
         let json = self.to_json()?;
         fs::write(path, json)?;
         Ok(())
@@ -267,7 +267,7 @@ impl ScriptExecutor {
     }
 
     /// Execute a script
-    pub async fn run_script(&self, script_name: &str) -> Result<std::process::ExitStatus, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn run_script(&self, script_name: &str) -> anyhow::Result<std::process::ExitStatus> {
         let args = self.package.parse_script_command(script_name)?;
 
         if args.is_empty() {
@@ -282,8 +282,8 @@ impl ScriptExecutor {
         let exec_path = if cmd == "beejs" {
             std::env::current_exe()?
         } else {
-            // Try to find the command in PATH
-            which::which(cmd)?
+            // For now, only support beejs commands
+            return Err(anyhow::anyhow!("Only 'beejs' commands are supported in scripts").into());
         };
 
         // Spawn the process

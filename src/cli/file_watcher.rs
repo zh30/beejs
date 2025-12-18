@@ -43,7 +43,6 @@ impl Default for FileWatcherConfig {
 }
 
 /// File watcher implementation
-#[derive(Debug)]
 pub struct FileWatcher {
     /// Paths to watch
     paths: Vec<PathBuf>,
@@ -74,7 +73,7 @@ impl FileWatcher {
     }
 
     /// Start watching files
-    pub async fn start(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn start(&self) -> anyhow::Result<()> {
         let mut interval = interval(self.config.poll_interval);
         let paths = self.paths.clone();
         let last_modified = Arc::clone(&self.last_modified);
@@ -92,6 +91,9 @@ impl FileWatcher {
                 }
             }
         }
+
+        // Extract config to move into the async block
+        let config = self.config.clone();
 
         // Start watching task
         tokio::spawn(async move {
@@ -117,7 +119,7 @@ impl FileWatcher {
     }
 
     /// Stop watching files
-    pub async fn stop(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn stop(&self) -> anyhow::Result<()> {
         {
             let mut running = self.running.lock().unwrap();
             *running = false;
@@ -137,7 +139,7 @@ async fn scan_path(
     last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime>>>,
     event_sender: &mpsc::UnboundedSender<FileEvent>,
     config: &FileWatcherConfig,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> anyhow::Result<()> {
     let metadata = std::fs::metadata(path)?;
 
     if metadata.is_file() {
@@ -154,7 +156,7 @@ async fn scan_file(
     path: &Path,
     last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime>>>,
     event_sender: &mpsc::UnboundedSender<FileEvent>,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> anyhow::Result<()> {
     // Check file extension
     let extension = path.extension()
         .and_then(|ext| ext.to_str())
@@ -178,14 +180,14 @@ async fn scan_file(
             if current_modified > last_time {
                 // File was modified
                 event_sender.send(FileEvent::Modified(path.to_path_buf()))
-                    .map_err(|e| format!("Failed to send event: {}", e))?;
+                    .map_err(|e| anyhow::anyhow!("Failed to send event: {}", e))?;
                 modified.insert(path.to_path_buf(), current_modified);
             }
         }
         None => {
             // New file
             event_sender.send(FileEvent::Created(path.to_path_buf()))
-                .map_err(|e| format!("Failed to send event: {}", e))?;
+                .map_err(|e| anyhow::anyhow!("Failed to send event: {}", e))?;
             modified.insert(path.to_path_buf(), current_modified);
         }
     }
@@ -199,7 +201,7 @@ async fn scan_directory(
     last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime>>>,
     event_sender: &mpsc::UnboundedSender<FileEvent>,
     config: &FileWatcherConfig,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+) -> anyhow::Result<()> {
     // Check if directory should be ignored
     let dir_name = dir.file_name()
         .and_then(|name| name.to_str())
@@ -224,11 +226,10 @@ async fn scan_directory(
             }
         }
 
+        // Only scan files, not subdirectories (to avoid recursion)
         if let Ok(metadata) = entry.metadata() {
             if metadata.is_file() {
                 scan_file(&path, last_modified, event_sender).await?;
-            } else if metadata.is_dir() {
-                scan_directory(&path, last_modified, event_sender, config).await?;
             }
         }
     }
@@ -244,7 +245,7 @@ fn config_file_extensions() -> &'static [&'static str] {
 /// Create a file watcher with default configuration
 pub async fn create_file_watcher(
     paths: Vec<PathBuf>,
-) -> Result<(FileWatcher, mpsc::UnboundedReceiver<FileEvent>), Box<dyn std::error::Error + Send + Sync>> {
+) -> anyhow::Result<(FileWatcher, mpsc::UnboundedReceiver<FileEvent>)> {
     let config = FileWatcherConfig::default();
     let (event_sender, event_receiver) = mpsc::unbounded_channel();
 

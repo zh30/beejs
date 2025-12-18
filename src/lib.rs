@@ -34,6 +34,7 @@ pub mod module_loader;
 pub mod package_manager;
 pub mod watcher;
 pub mod repl;
+pub mod cli;
 pub mod edge;
 pub mod ai_inference;
 pub mod concurrent_execution;

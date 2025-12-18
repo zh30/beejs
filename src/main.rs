@@ -75,10 +75,8 @@ fn main() -> Result<()> {
     let _ = initialize_v8();
 
     // Try to use enhanced CLI first, fall back to basic CLI
-    let enhanced_result = try_enhanced_cli();
-
-    match enhanced_result {
-        Ok(result) => result,
+    match try_enhanced_cli() {
+        Ok(_) => Ok(()),
         Err(_) => {
             // Fall back to basic CLI
             basic_cli_main()

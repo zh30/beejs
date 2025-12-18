@@ -41,7 +41,6 @@ pub struct ReplResult {
 }
 
 /// REPL (Read-Eval-Print Loop) implementation
-#[derive(Debug)]
 pub struct Repl {
     /// Runtime to execute code
     runtime: Arc<RuntimeLite>,
@@ -83,7 +82,7 @@ impl Repl {
     }
 
     /// Run the REPL
-    pub async fn run(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn run(&mut self) -> anyhow::Result<()> {
         println!("🐝 Beejs REPL - High-performance JavaScript/TypeScript runtime");
         println!("Type JavaScript code and press Enter to execute");
         println!("Type .exit or Ctrl+C to quit");
@@ -153,7 +152,7 @@ impl Repl {
     }
 
     /// Read a line from stdin
-    fn read_line(&self) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    fn read_line(&self) -> anyhow::Result<String> {
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
         Ok(input)
@@ -196,7 +195,7 @@ impl Repl {
     }
 
     /// Execute multiline buffer
-    async fn execute_multiline(&mut self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn execute_multiline(&mut self) -> anyhow::Result<()> {
         let code = self.multiline_buffer.join("\n");
         self.execute_code(&code).await?;
 
@@ -209,7 +208,7 @@ impl Repl {
     }
 
     /// Execute a single line
-    async fn execute_line(&mut self, code: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn execute_line(&mut self, code: &str) -> anyhow::Result<()> {
         self.execute_code(code).await?;
 
         // Add to history
@@ -222,7 +221,7 @@ impl Repl {
     }
 
     /// Execute JavaScript/TypeScript code
-    async fn execute_code(&self, code: &str) -> Result<ReplResult, Box<dyn std::error::Error + Send + Sync>> {
+    async fn execute_code(&self, code: &str) -> anyhow::Result<ReplResult> {
         let start = Instant::now();
 
         match self.runtime.execute_code(code) {
