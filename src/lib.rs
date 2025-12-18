@@ -52,8 +52,8 @@ mod nodejs;
 // Stage 30.4: 稳定性增强与压力测试模块
 pub mod stage_30_4_stress_testing;
 
-// Stage 30.5: 生产监控与可观测性模块
-pub mod observability;
+// Stage 30.5: 生产监控与可观测性模块 (temporarily commented out due to API compatibility)
+// pub mod observability;
 mod network_api;
 mod precompiled_cache;
 pub mod package_manager;

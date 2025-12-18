@@ -5,6 +5,7 @@
 
 use anyhow::{Context, Result};
 use prometheus::proto::MetricFamily;
+use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -126,7 +127,7 @@ impl AlertNotifier for HttpWebhookNotifier {
         let payload = serde_json::to_string(alert)
             .context("Failed to serialize alert")?;
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
 
         let mut request = client.post(&self.url)
             .body(payload)
