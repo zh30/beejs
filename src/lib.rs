@@ -61,6 +61,10 @@ pub use flame_graph::{FlameGraph, FrameNode, StackFrame};
 // 新增WASM集成模块
 pub mod wasm_integration;
 
+// Stage 21.2: Lazy loading framework for expensive modules
+pub mod lazy_loader;
+pub use lazy_loader::{print_stats, reset_stats};
+
 pub use test_runner::{TestCase, TestRunner, TestRunnerConfig, TestStats, TestStatus, TestSuite};
 
 // Re-export AI module types for easier testing
