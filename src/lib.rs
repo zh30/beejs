@@ -34,8 +34,7 @@ pub mod module_loader;
 pub mod package_manager;
 pub mod watcher;
 pub mod repl;
-// Temporary: edge module has compilation issues, will fix in next iteration
-// pub mod edge;
+pub mod edge;
 
 // 重新导出 REPL 相关类型
 pub use repl::{Repl, ReplConfig};

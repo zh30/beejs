@@ -46,12 +46,6 @@ struct RoutingRule {
 impl GlobalRouter {
     /// Create a new global router
     pub fn new() -> Self {
-        let mut router = GlobalRouter {
-            edge_nodes: Arc::new(RwLock::new(Vec::new())),
-            geo_mapping: Arc::new(RwLock::new(HashMap::new())),
-            routing_rules: Arc::new(RwLock::new(Vec::new())),
-        };
-
         // Initialize default edge nodes (major global locations)
         let default_nodes = vec![
             EdgeNode {
@@ -122,12 +116,11 @@ impl GlobalRouter {
             },
         ];
 
-        // Initialize with default nodes - FIXED: use async context properly
-        // In synchronous context, we can't await, so we'll initialize later via add_edge_node
-        // let mut nodes = router.edge_nodes.write().await;
-        // nodes.extend(default_nodes);
-
-        router
+        GlobalRouter {
+            edge_nodes: Arc::new(RwLock::new(default_nodes)),
+            geo_mapping: Arc::new(RwLock::new(HashMap::new())),
+            routing_rules: Arc::new(RwLock::new(Vec::new())),
+        }
     }
 
     /// Add an edge node to the network

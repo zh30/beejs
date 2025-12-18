@@ -1,0 +1,427 @@
+   Compiling beejs v0.1.0 (/Users/henry/code/beejs)
+warning: unused import: `StartupData`
+  --> src/benchmarks/startup.rs:12:25
+   |
+12 | use rusty_v8::{Isolate, StartupData};
+   |                         ^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `MemoryStats`
+  --> src/benchmarks/memory.rs:10:91
+   |
+10 | use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig, MemoryStats};
+   |                                                                                           ^^^^^^^^^^^
+
+warning: unused import: `Instant`
+  --> src/benchmarks/concurrent.rs:11:27
+   |
+11 | use std::time::{Duration, Instant};
+   |                           ^^^^^^^
+
+warning: unused import: `BenchmarkFramework`
+  --> src/performance_regression.rs:12:5
+   |
+12 |     BenchmarkFramework, BenchmarkResult, MetricType, PerformanceDelta,
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::performance_analyzer::PerformanceReport`
+  --> src/performance_regression.rs:15:5
+   |
+15 | use crate::performance_analyzer::PerformanceReport;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Path`
+  --> src/performance_regression.rs:19:17
+   |
+19 | use std::path::{Path, PathBuf};
+   |                 ^^^^
+
+warning: unused import: `Duration`
+  --> src/performance_regression.rs:20:17
+   |
+20 | use std::time::{Duration, SystemTime, UNIX_EPOCH};
+   |                 ^^^^^^^^
+
+warning: unused imports: `concurrent::ConcurrentBenchmark`, `execution::ExecutionBenchmark`, `memory::MemoryBenchmark`, and `startup::StartupBenchmark`
+  --> src/automation/test_runner.rs:12:5
+   |
+12 |     startup::StartupBenchmark,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+13 |     execution::ExecutionBenchmark,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+14 |     memory::MemoryBenchmark,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+15 |     concurrent::ConcurrentBenchmark,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `RegressionError` and `RegressionTestSuite`
+  --> src/automation/test_runner.rs:18:36
+   |
+18 |     PerformanceRegressionDetector, RegressionTestSuite, RegressionError
+   |                                    ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused import: `PerformanceThresholds`
+  --> src/automation/threshold.rs:11:37
+   |
+11 | use crate::performance_regression::{PerformanceThresholds, RegressionSeverity};
+   |                                     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Path`
+  --> src/automation/threshold.rs:15:17
+   |
+15 | use std::path::{Path, PathBuf};
+   |                 ^^^^
+
+warning: unused imports: `BenchmarkFramework` and `MetricType`
+  --> src/automation/report_generator.rs:11:42
+   |
+11 | use crate::benchmarks::{BenchmarkResult, BenchmarkFramework, MetricType};
+   |                                          ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^
+
+warning: unused import: `RegressionDetectionResult`
+  --> src/automation/report_generator.rs:12:58
+   |
+12 | use crate::performance_regression::{RegressionTestSuite, RegressionDetectionResult};
+   |                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `TestExecutionResult`
+  --> src/automation/report_generator.rs:13:56
+   |
+13 | use crate::automation::test_runner::{TestSuiteResults, TestExecutionResult};
+   |                                                        ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Path`
+  --> src/automation/report_generator.rs:17:17
+   |
+17 | use std::path::{Path, PathBuf};
+   |                 ^^^^
+
+warning: unused import: `PerformanceAnalyzer`
+ --> src/analysis/bottleneck_detector.rs:7:35
+  |
+7 | use crate::performance_analyzer::{PerformanceAnalyzer, ExecutionMetrics, PerformanceReport};
+  |                                   ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `BottleneckSeverity`
+ --> src/analysis/optimizer.rs:7:33
+  |
+7 |     Bottleneck, BottleneckType, BottleneckSeverity, BottleneckDetector
+  |                                 ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `ExecutionMetrics` and `PerformanceAnalyzer`
+ --> src/analysis/visualizer.rs:6:35
+  |
+6 | use crate::performance_analyzer::{PerformanceAnalyzer, ExecutionMetrics, PerformanceReport};
+  |                                   ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+
+warning: unused import: `OptimizationCategory`
+ --> src/analysis/visualizer.rs:8:58
+  |
+8 | use crate::analysis::optimizer::{OptimizationSuggestion, OptimizationCategory};
+  |                                                          ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `Write` and `self`
+ --> src/monitor/data_store.rs:6:15
+  |
+6 | use std::io::{self, Write};
+  |               ^^^^  ^^^^^
+
+warning: unused import: `ThresholdSeverity`
+ --> src/monitor/alerts.rs:4:55
+  |
+4 | use crate::monitor::performance_monitor::{MetricType, ThresholdSeverity, ThresholdViolation};
+  |                                                       ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Instant`
+ --> src/monitor/alerts.rs:7:27
+  |
+7 | use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+  |                           ^^^^^^^
+
+warning: unused import: `AlertSeverity`
+ --> src/monitor/dashboard.rs:6:58
+  |
+6 | use crate::monitor::alerts::{AlertSystem, AlertInstance, AlertSeverity};
+  |                                                          ^^^^^^^^^^^^^
+
+warning: unused import: `Context`
+ --> src/edge/cloudflare_integration.rs:6:22
+  |
+6 | use anyhow::{Result, Context};
+  |                      ^^^^^^^
+
+warning: unused imports: `CdnEndpoint`, `CdnProvider`, and `DeploymentStatus`
+ --> src/edge/deployment_optimizer.rs:4:27
+  |
+4 | use super::cdn_provider::{CdnProvider, CdnEndpoint, DeploymentStatus};
+  |                           ^^^^^^^^^^^  ^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+
+warning: unused import: `Context`
+ --> src/edge/deployment_optimizer.rs:8:22
+  |
+8 | use anyhow::{Result, Context};
+  |                      ^^^^^^^
+
+warning: unused imports: `Duration` and `Instant`
+ --> src/edge/deployment_optimizer.rs:9:19
+  |
+9 | use tokio::time::{Duration, Instant};
+  |                   ^^^^^^^^  ^^^^^^^
+
+warning: unused import: `super::cdn_provider::CdnEndpoint`
+ --> src/edge/edge_runtime.rs:4:5
+  |
+4 | use super::cdn_provider::CdnEndpoint;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Context`
+ --> src/edge/cache_strategy.rs:7:22
+  |
+7 | use anyhow::{Result, Context};
+  |                      ^^^^^^^
+
+warning: unused import: `std::time::Duration`
+   --> src/lib.rs:141:5
+    |
+141 | use std::time::Duration;
+    |     ^^^^^^^^^^^^^^^^^^^
+
+error[E0599]: no method named `get_mut` found for struct `tokio::sync::RwLockWriteGuard<'_, L1Cache>` in the current scope
+   --> src/edge/cache_strategy.rs:133:37
+    |
+133 |             if let Some(entry) = l1.get_mut(key)? {
+    |                                     ^^^^^^^ method not found in `tokio::sync::RwLockWriteGuard<'_, L1Cache>`
+    |
+    = help: items from traits can only be used if the trait is implemented and in scope
+    = note: the following trait defines an item `get_mut`, perhaps you need to implement it:
+            candidate #1: `SliceIndex`
+help: some of the expressions' fields have a method of the same name
+    |
+133 |             if let Some(entry) = l1.access_order.get_mut(key)? {
+    |                                     +++++++++++++
+133 |             if let Some(entry) = l1.data.get_mut(key)? {
+    |                                     +++++
+
+warning: unused variable: `producer_handles`
+   --> src/benchmarks/concurrent.rs:238:21
+    |
+238 |                 let producer_handles: Vec<_> = (0..num_producers)
+    |                     ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_producer_handles`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `metric_type`
+   --> src/performance_regression.rs:514:33
+    |
+514 |     fn run_tests_by_type(&self, metric_type: MetricType) -> Result<Vec<BenchmarkResult>, RegressionError> {
+    |                                 ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_metric_type`
+
+warning: unused variable: `task`
+   --> src/automation/test_runner.rs:356:13
+    |
+356 |         for task in tasks {
+    |             ^^^^ help: if this is intentional, prefix it with an underscore: `_task`
+
+warning: value assigned to `status` is never read
+   --> src/automation/test_runner.rs:416:26
+    |
+416 |         let mut status = TestStatus::Running;
+    |                          ^^^^^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `current_regression_percent`
+   --> src/automation/threshold.rs:276:9
+    |
+276 |         current_regression_percent: f64,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_current_regression_percent`
+
+warning: variable does not need to be mutable
+   --> src/monitor/performance_monitor.rs:216:13
+    |
+216 |         let mut raw_metrics = self.raw_metrics.lock().map_err(|e| e.to_string())?;
+    |             ----^^^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `cutoff_time`
+   --> src/monitor/performance_monitor.rs:321:13
+    |
+321 |         let cutoff_time = Instant::now()
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_cutoff_time`
+
+warning: unused variable: `data_point`
+   --> src/monitor/data_store.rs:449:25
+    |
+449 |             if let Some(data_point) = memory_cache.pop_front() {
+    |                         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_data_point`
+
+warning: variable does not need to be mutable
+   --> src/monitor/alerts.rs:324:13
+    |
+324 |         let mut rules = self.rules.lock().map_err(|e| e.to_string())?;
+    |             ----^^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused variable: `channel`
+   --> src/monitor/alerts.rs:519:9
+    |
+519 |         channel: &NotificationChannel,
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_channel`
+
+warning: unused variable: `message`
+   --> src/monitor/alerts.rs:520:9
+    |
+520 |         message: &NotificationMessage,
+    |         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_message`
+
+warning: unused variable: `silence_rule_tags`
+   --> src/monitor/alerts.rs:553:13
+    |
+553 |         let silence_rule_tags: HashMap<String, String> = HashMap::new();
+    |             ^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_silence_rule_tags`
+
+warning: unused variable: `code`
+  --> src/edge/cloudflare_integration.rs:37:47
+   |
+37 |     async fn create_worker(&self, name: &str, code: &[u8]) -> Result<String> {
+   |                                               ^^^^ help: if this is intentional, prefix it with an underscore: `_code`
+
+warning: unused variable: `worker_name`
+  --> src/edge/cloudflare_integration.rs:44:36
+   |
+44 |     async fn publish_worker(&self, worker_name: &str, route_pattern: &str) -> Result<()> {
+   |                                    ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_worker_name`
+
+warning: unused variable: `route_pattern`
+  --> src/edge/cloudflare_integration.rs:44:55
+   |
+44 |     async fn publish_worker(&self, worker_name: &str, route_pattern: &str) -> Result<()> {
+   |                                                       ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_route_pattern`
+
+warning: unused variable: `region`
+   --> src/edge/cloudflare_integration.rs:157:39
+    |
+157 |     pub async fn get_analytics(&self, region: &str, since: std::time::SystemTime) -> Result<CloudflareAnalytics> {
+    |                                       ^^^^^^ help: if this is intentional, prefix it with an underscore: `_region`
+
+warning: unused variable: `since`
+   --> src/edge/cloudflare_integration.rs:157:53
+    |
+157 |     pub async fn get_analytics(&self, region: &str, since: std::time::SystemTime) -> Result<CloudflareAnalytics> {
+    |                                                     ^^^^^ help: if this is intentional, prefix it with an underscore: `_since`
+
+warning: unused variable: `code`
+  --> src/edge/vercel_integration.rs:37:51
+   |
+37 |     async fn create_deployment(&self, name: &str, code: &[u8]) -> Result<String> {
+   |                                                   ^^^^ help: if this is intentional, prefix it with an underscore: `_code`
+
+warning: variable does not need to be mutable
+  --> src/edge/global_router.rs:49:13
+   |
+49 |         let mut router = GlobalRouter {
+   |             ----^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: unused variable: `default_nodes`
+  --> src/edge/global_router.rs:56:13
+   |
+56 |         let default_nodes = vec![
+   |             ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_default_nodes`
+
+warning: unused variable: `domain`
+   --> src/edge/global_router.rs:167:41
+    |
+167 |     pub async fn resolve_anycast(&self, domain: &str) -> Result<Vec<String>> {
+    |                                         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_domain`
+
+warning: unused variable: `failed_node_region`
+   --> src/edge/global_router.rs:262:14
+    |
+262 |         let (failed_node_region, fallback_id) = {
+    |              ^^^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_failed_node_region`
+
+warning: variable does not need to be mutable
+   --> src/edge/cache_strategy.rs:299:21
+    |
+299 |         if let Some(mut entry) = self.data.get_mut(key) {
+    |                     ----^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+error[E0499]: cannot borrow `*self` as mutable more than once at a time
+   --> src/edge/cache_strategy.rs:301:13
+    |
+299 |         if let Some(mut entry) = self.data.get_mut(key) {
+    |                                  --------- first mutable borrow occurs here
+300 |             entry.access_count += 1;
+301 |             self.update_access_order(key);
+    |             ^^^^ second mutable borrow occurs here
+302 |             Ok(Some(entry.clone()))
+    |                     ----- first borrow later used here
+
+warning: unused variable: `pattern`
+   --> src/edge/cache_strategy.rs:428:25
+    |
+428 |             if let Some(pattern) = self.access_patterns.get(key) {
+    |                         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_pattern`
+
+warning: unused variable: `code`
+   --> src/lib.rs:274:5
+    |
+274 |     code: Option<&str>,
+    |     ^^^^ help: if this is intentional, prefix it with an underscore: `_code`
+
+warning: unused variable: `stack_size`
+   --> src/lib.rs:275:5
+    |
+275 |     stack_size: usize,
+    |     ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_stack_size`
+
+warning: unused variable: `config`
+   --> src/lib.rs:317:9
+    |
+317 |     let config = crate::PerformanceConfig::default();
+    |         ^^^^^^ help: if this is intentional, prefix it with an underscore: `_config`
+
+warning: unused variable: `scope`
+   --> src/lib.rs:355:5
+    |
+355 |     scope: &mut v8::HandleScope,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_scope`
+
+warning: unused variable: `scope`
+   --> src/lib.rs:364:5
+    |
+364 |     scope: &mut v8::HandleScope,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_scope`
+
+warning: unused variable: `scope`
+   --> src/lib.rs:372:5
+    |
+372 |     scope: &mut v8::HandleScope,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_scope`
+
+warning: unused variable: `scope`
+   --> src/lib.rs:380:5
+    |
+380 |     scope: &mut v8::HandleScope,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_scope`
+
+warning: unused variable: `scope`
+   --> src/lib.rs:388:5
+    |
+388 |     scope: &mut v8::HandleScope,
+    |     ^^^^^ help: if this is intentional, prefix it with an underscore: `_scope`
+
+Some errors have detailed explanations: E0499, E0599.
+For more information about an error, try `rustc --explain E0499`.
+warning: `beejs` (lib) generated 62 warnings
+error: could not compile `beejs` (lib) due to 2 previous errors; 62 warnings emitted

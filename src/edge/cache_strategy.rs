@@ -130,10 +130,7 @@ impl EdgeCache {
         // Try L1 cache first
         {
             let mut l1 = self.l1_cache.write().await;
-            if let Some(entry) = l1.get_mut(key)? {
-                // Update access stats
-                entry.access_count += 1;
-
+            if let Some(entry) = l1.get(key)? {
                 // Update stats
                 self.update_stats(true, true, false, false, false, false).await;
 
@@ -296,13 +293,11 @@ impl L1Cache {
     }
 
     fn get(&mut self, key: &str) -> Result<Option<CacheEntry>> {
-        if let Some(mut entry) = self.data.get_mut(key) {
+        if let Some(entry) = self.data.get_mut(key) {
             entry.access_count += 1;
-            self.update_access_order(key);
-            Ok(Some(entry.clone()))
-        } else {
-            Ok(None)
         }
+        self.update_access_order(key);
+        Ok(self.data.get(key).cloned())
     }
 
     fn remove(&mut self, key: &str) -> Result<()> {
