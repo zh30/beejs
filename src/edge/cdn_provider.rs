@@ -85,7 +85,6 @@ pub struct ProviderHealth {
 }
 
 /// Smart Router for intelligent CDN selection
-#[derive(Debug)]
 pub struct SmartRouter {
     providers: Arc<RwLock<Vec<Arc<dyn CdnProvider>>>>,
     routing_cache: Arc<RwLock<HashMap<String, CdnEndpoint>>>,

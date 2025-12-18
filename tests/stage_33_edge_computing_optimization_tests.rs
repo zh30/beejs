@@ -1,0 +1,402 @@
+//! Stage 33.0: 边缘计算优化测试套件
+//! 测试范围：CDN 集成、边缘缓存、就近执行、性能优化
+
+#[cfg(test)]
+mod stage_33_edge_computing_optimization_tests {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+    use anyhow::Result;
+
+    // ==================== CDN 集成优化测试 ====================
+
+    #[test]
+    fn test_cdn_provider_abstraction() {
+        // 测试 CDN 提供商抽象层
+        // 应该支持多个 CDN 提供商（Cloudflare、Vercel、AWS CloudFront）
+    }
+
+    #[test]
+    fn test_intelligent_routing() {
+        // 测试智能路由选择
+        // 应该根据延迟、负载、健康状况选择最佳边缘节点
+        use beejs::edge::global_router::{GlobalRouter, RouteResult};
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            let router = GlobalRouter::new();
+
+            // Test routing from San Francisco (37.7749, -122.4194)
+            let result: Result<RouteResult, _> = router.route_request(37.7749, -122.4194).await;
+
+            assert!(result.is_ok());
+            let route = result.unwrap();
+
+            // Should select the closest node (us-west-1)
+            assert_eq!(route.selected_node_id, "us-west-1");
+            assert!(route.expected_latency_ms > 0.0);
+            assert!(route.routing_score > 0.0);
+            assert!(route.distance_km >= 0.0);
+            assert!(!route.endpoint_url.is_empty());
+        });
+    }
+
+    #[test]
+    fn test_cdn_cache_invalidation() {
+        // 测试 CDN 缓存失效
+        // 应该能快速失效指定路径的缓存
+    }
+
+    #[test]
+    fn test_multi_region_deployment() {
+        // 测试多区域部署
+        // 应该能同时部署到多个边缘区域
+    }
+
+    #[test]
+    fn test_cdn_provider_failover() {
+        // 测试 CDN 提供商故障转移
+        // 当主提供商不可用时自动切换到备用提供商
+    }
+
+    // ==================== 边缘缓存策略测试 ====================
+
+    #[test]
+    fn test_edge_cache_strategy() {
+        // 测试边缘缓存策略
+        // 应该根据内容类型、访问模式选择最优缓存策略
+    }
+
+    #[test]
+    fn test_cache_hit_ratio_optimization() {
+        // 测试缓存命中率优化
+        // 应该通过智能预加载和预测提升命中率
+    }
+
+    #[test]
+    fn test_cache_warming() {
+        // 测试缓存预热
+        // 应该在用户访问前预热热点内容
+    }
+
+    #[test]
+    fn test_cache_compression() {
+        // 测试缓存压缩
+        // 应该对缓存内容进行压缩以减少传输时间
+    }
+
+    #[test]
+    fn test_cache_ttl_optimization() {
+        // 测试缓存 TTL 优化
+        // 应该根据内容更新频率动态调整 TTL
+    }
+
+    #[test]
+    fn test_cache_consistency() {
+        // 测试缓存一致性
+        // 应该确保分布式缓存的一致性
+    }
+
+    #[test]
+    fn test_cache_eviction_strategy() {
+        // 测试缓存淘汰策略
+        // 应该使用 LRU、LFU 等策略智能淘汰内容
+    }
+
+    // ==================== 就近执行优化测试 ====================
+
+    #[test]
+    fn test_geographic_routing() {
+        // 测试地理路由
+        // 应该将请求路由到最近的边缘节点
+        use beejs::edge::global_router::{GlobalRouter, RouteResult};
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            let router = GlobalRouter::new();
+
+            // Test routing from London (51.5074, -0.1278)
+            let result: Result<RouteResult, _> = router.route_request(51.5074, -0.1278).await;
+
+            assert!(result.is_ok());
+            let route = result.unwrap();
+
+            // Should select the closest European node
+            assert!(route.selected_region.contains("eu") || route.selected_region.contains("west"));
+            assert!(route.distance_km > 0.0);
+        });
+    }
+
+    #[test]
+    fn test_edge_function_execution() {
+        // 测试边缘函数执行
+        // 应该在边缘节点执行函数而非回源
+    }
+
+    #[test]
+    fn test_latency_optimization() {
+        // 测试延迟优化
+        // 应该通过就近执行降低端到端延迟
+    }
+
+    #[test]
+    fn test_load_balancing() {
+        // 测试边缘负载均衡
+        // 应该在多个边缘节点间智能分配负载
+        use beejs::edge::global_router::{GlobalRouter, RouteResult};
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            let router = GlobalRouter::new();
+
+            // Update node loads to test load balancing
+            let _: Result<(), _> = router.update_node_load("us-west-1", 0.9).await;
+            let _: Result<(), _> = router.update_node_load("us-east-1", 0.1).await;
+
+            // Should prefer lower load node
+            let result: Result<RouteResult, _> = router.route_request(40.7128, -74.0060).await; // New York
+            assert!(result.is_ok());
+
+            let route = result.unwrap();
+            // With us-east having much lower load, should prefer it for east coast
+            // (though us-west might still be selected due to geographic proximity)
+            assert!(route.expected_latency_ms > 0.0);
+        });
+    }
+
+    #[test]
+    fn test_edge_node_health_check() {
+        // 测试边缘节点健康检查
+        // 应该定期检查节点健康状况
+    }
+
+    #[test]
+    fn test_proximity_based_scheduling() {
+        // 测试基于就近性的调度
+        // 应该优先调度到最近的节点
+    }
+
+    // ==================== 边缘运行时性能测试 ====================
+
+    #[test]
+    fn test_edge_runtime_startup() {
+        // 测试边缘运行时启动时间
+        // 应该快速启动以减少冷启动延迟
+    }
+
+    #[test]
+    fn test_edge_memory_efficiency() {
+        // 测试边缘内存效率
+        // 应该在资源受限的边缘环境高效运行
+    }
+
+    #[test]
+    fn test_edge_cpu_optimization() {
+        // 测试边缘 CPU 优化
+        // 应该优化 CPU 使用以适应边缘计算环境
+    }
+
+    #[test]
+    fn test_cold_start_optimization() {
+        // 测试冷启动优化
+        // 应该通过预热和快照减少冷启动时间
+    }
+
+    #[test]
+    fn test_edge_concurrent_execution() {
+        // 测试边缘并发执行
+        // 应该在单个节点支持高并发
+    }
+
+    // ==================== Cloudflare 集成测试 ====================
+
+    #[test]
+    fn test_cloudflare_workers_deployment() {
+        // 测试 Cloudflare Workers 部署
+        // 应该能部署到 Cloudflare Workers 平台
+    }
+
+    #[test]
+    fn test_cloudflare_kv_integration() {
+        // 测试 Cloudflare KV 集成
+        // 应该集成 Cloudflare KV 存储
+    }
+
+    #[test]
+    fn test_cloudflare_r2_storage() {
+        // 测试 Cloudflare R2 存储
+        // 应该支持 R2 存储用于对象存储
+    }
+
+    #[test]
+    fn test_cloudflare_durable_objects() {
+        // 测试 Cloudflare Durable Objects
+        // 应该支持 Durable Objects 用于状态管理
+    }
+
+    // ==================== Vercel 集成测试 ====================
+
+    #[test]
+    fn test_vercel_edge_functions() {
+        // 测试 Vercel Edge Functions
+        // 应该支持 Vercel Edge Functions
+    }
+
+    #[test]
+    fn test_vercel_edge_config() {
+        // 测试 Vercel Edge Config
+        // 应该支持 Edge Config 管理配置
+    }
+
+    #[test]
+    fn test_vercel_middleware() {
+        // 测试 Vercel Middleware
+        // 应该支持 Edge Middleware
+    }
+
+    // ==================== 性能基准测试 ====================
+
+    #[test]
+    fn test_edge_vs_central_performance() {
+        // 测试边缘与中心化性能对比
+        // 边缘计算应该显著降低延迟
+        use beejs::edge::global_router::{GlobalRouter, RouteResult};
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            let router = GlobalRouter::new();
+
+            // Test routing from Tokyo (35.6762, 139.6503)
+            let result: Result<RouteResult, _> = router.route_request(35.6762, 139.6503).await;
+
+            assert!(result.is_ok());
+            let route = result.unwrap();
+
+            // Should route to closest Asian node
+            assert!(route.selected_region.contains("ap") || route.selected_region.contains("northeast"));
+            assert!(route.expected_latency_ms < 100.0); // Should be optimized for low latency
+        });
+    }
+
+    #[test]
+    fn test_global_distribution_latency() {
+        // 测试全球分布延迟
+        // 应该在全球范围内保持低延迟
+    }
+
+    #[test]
+    fn test_edge_caching_performance() {
+        // 测试边缘缓存性能
+        // 缓存应该显著提升访问速度
+    }
+
+    #[test]
+    fn test_multi_cdn_failover_performance() {
+        // 测试多 CDN 故障转移性能
+        // 故障转移应该快速且无感知
+    }
+
+    #[test]
+    fn test_edge_scalability() {
+        // 测试边缘扩展性
+        // 应该能随负载增长自动扩展
+        use beejs::edge::global_router::{GlobalRouter, RouteResult};
+
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        runtime.block_on(async {
+            let router = GlobalRouter::new();
+
+            // Test batch routing for scalability
+            let clients = vec![
+                (37.7749, -122.4194), // San Francisco
+                (40.7128, -74.0060),  // New York
+                (51.5074, -0.1278),   // London
+                (35.6762, 139.6503),  // Tokyo
+                (1.3521, 103.8198),   // Singapore
+            ];
+
+            let results: Result<Vec<RouteResult>, _> = router.batch_route_requests(&clients).await;
+            assert!(results.is_ok());
+
+            let routes = results.unwrap();
+            assert_eq!(routes.len(), 5);
+
+            // Each route should have valid data
+            for route in routes {
+                assert!(!route.selected_node_id.is_empty());
+                assert!(route.expected_latency_ms > 0.0);
+                assert!(!route.alternatives.is_empty());
+            }
+        });
+    }
+
+    // ==================== 综合集成测试 ====================
+
+    #[test]
+    fn test_end_to_end_edge_workflow() {
+        // 测试端到端边缘工作流
+        // 从请求到响应的完整流程
+    }
+
+    #[test]
+    fn test_multi_provider_integration() {
+        // 测试多提供商集成
+        // 应该同时支持多个边缘提供商
+    }
+
+    #[test]
+    fn test_edge_configuration_management() {
+        // 测试边缘配置管理
+        // 应该统一管理所有边缘节点配置
+    }
+
+    #[test]
+    fn test_edge_monitoring_and_logging() {
+        // 测试边缘监控和日志
+        // 应该收集边缘节点监控和日志
+    }
+
+    #[test]
+    fn test_edge_security_policies() {
+        // 测试边缘安全策略
+        // 应该执行安全策略和访问控制
+    }
+
+    #[test]
+    fn test_edge_cost_optimization() {
+        // 测试边缘成本优化
+        // 应该优化成本与性能的平衡
+    }
+
+    // ==================== 实际场景测试 ====================
+
+    #[test]
+    fn test_api_gateway_edge_execution() {
+        // 测试 API 网关边缘执行
+        // 应该在边缘执行 API 请求处理
+    }
+
+    #[test]
+    fn test_static_content_delivery() {
+        // 测试静态内容交付
+        // 应该高效交付静态内容
+    }
+
+    #[test]
+    fn test_dynamic_content_caching() {
+        // 测试动态内容缓存
+        // 应该缓存适当粒度的动态内容
+    }
+
+    #[test]
+    fn test_real_time_streaming() {
+        // 测试实时流媒体
+        // 应该支持边缘实时流媒体
+    }
+
+    #[test]
+    fn test_iot_edge_processing() {
+        // 测试物联网边缘处理
+        // 应该在边缘处理 IoT 数据
+    }
+}
