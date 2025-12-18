@@ -93,6 +93,12 @@ pub use runtime_lite::{RuntimeLite, get_global_lite_runtime};
 // Re-export V8 snapshot types
 pub use v8_snapshot::V8SnapshotManager;
 
+// Re-export JIT optimizer types (Stage 23.1)
+pub use jit_optimizer::{
+    JITOptimizer, JITThresholds, JITStrategy, OptimizationLevel, CodeComplexity,
+    JITDecision, ExecutionStat, CompileEvent, CompileStats
+};
+
 // Re-export Isolate pre-warming types (Stage 21.3)
 pub use isolate_prewarmer::{IsolatePrewarmer, PrewarmConfig, PrewarmStats};
 
