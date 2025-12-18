@@ -130,7 +130,7 @@ mod tests {
         let value = SharedValue::Number(42.0);
 
         // 插入对象
-        let obj = cache.insert(key.clone(), value.clone());
+        let _obj = cache.insert(key.clone(), value.clone());
         // assert_eq!(obj.get_value(), &value); // SharedValue doesn't implement PartialEq
 
         // 获取对象
@@ -152,7 +152,7 @@ mod tests {
         cache.insert("str2".to_string(), SharedValue::String("hello".to_string()));
 
         // 验证字符串interning
-        let string_cache = cache.get_string_cache();
+        let _string_cache = cache.get_string_cache();
         // let stats = string_cache.get_stats(); // StringInterner doesn't have get_stats
         // assert!(stats.total_strings >= 1);
     }
@@ -302,7 +302,7 @@ mod tests {
         assert!(result.is_err());
 
         // 测试空文件
-        let mut empty_file = NamedTempFile::new().unwrap();
+        let empty_file = NamedTempFile::new().unwrap();
         let empty_path = empty_file.path().to_path_buf();
 
         let empty_mmap = MemoryMappedFile::open_readonly(&empty_path).unwrap();

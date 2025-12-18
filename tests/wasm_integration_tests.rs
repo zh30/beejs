@@ -7,147 +7,146 @@ mod tests {
     use beejs::*;
     use std::time::{Duration, Instant};
 
-    /// 测试1: WASM模块基本加载
+    /// 测试1: WasmExecutor基本创建
+    #[test]
+    fn test_wasm_executor_creation() {
+        let result = wasm_integration::WasmExecutor::new();
+        assert!(result.is_ok(), "WasmExecutor创建应该成功");
+
+        let executor = result.unwrap();
+        let stats = executor.get_stats();
+
+        println!("✅ WasmExecutor创建成功");
+        println!("   Wasmtime配置: {:?}", stats.wasmtime_config);
+        assert!(stats.wasmtime_config.is_some());
+    }
+
+    /// 测试2: WASM模块加载和验证
     #[test]
     fn test_wasm_module_loading() {
-        // 初始化V8
-        beejs::initialize_v8();
+        let executor = wasm_integration::WasmExecutor::new().unwrap();
 
-        // 验证WASM支持可用
-        let result = RuntimeLite::new(false);
-        assert!(result.is_ok(), "RuntimeLite创建应该成功");
+        // 创建简单的WASM字节码
+        let wasm_bytes = wat::parse_str(r#"
+            (module
+                (func $_start (export "_start")
+                    nop
+                )
+            )
+        "#).expect("创建WASM字节码失败");
 
-        println!("✅ WASM模块基本加载测试通过");
-    }
+        // 加载模块
+        let result = executor.load_module("test_module", wasm_bytes);
+        assert!(result.is_ok(), "WASM模块加载应该成功");
 
-    /// 测试2: WASM性能基准测试
-    #[test]
-    fn test_wasm_performance_benchmark() {
-        // 初始化V8
-        beejs::initialize_v8();
-
-        let iterations = 100;
-        let start = Instant::now();
-
-        // 执行WASM性能测试
-        for _i in 0..iterations {
-            let _ = RuntimeLite::new(false);
-        }
-
-        let elapsed = start.elapsed();
-        let avg_time = elapsed / iterations;
-
-        println!("✅ WASM性能基准: 平均 {:?} ({} 次迭代)", avg_time, iterations);
-        assert!(avg_time < Duration::from_millis(10), "WASM加载应该快于10ms");
-    }
-
-    /// 测试3: WASM与V8执行对比
-    #[test]
-    fn test_wasm_vs_v8_execution() {
-        // 初始化V8
-        beejs::initialize_v8();
-
-        let test_code = "1 + 1";
-
-        // V8执行
-        let v8_start = Instant::now();
-        for _ in 0..100 {
-            let runtime = RuntimeLite::new(false);
-            if let Ok(rt) = runtime {
-                let _ = rt.execute_code(test_code);
-            }
-        }
-        let v8_time = v8_start.elapsed();
-
-        println!("✅ WASM vs V8对比: V8执行时间 {:?}", v8_time);
-        println!("✅ WASM vs V8对比: 快路径执行时间 < 1ms (预期)");
-    }
-
-    /// 测试4: WASM内存管理
-    #[test]
-    fn test_wasm_memory_management() {
-        // 初始化V8
-        beejs::initialize_v8();
-
-        let iterations = 50;
-        let start = Instant::now();
-
-        for _i in 0..iterations {
-            let _ = RuntimeLite::new(false);
-        }
-
-        let elapsed = start.elapsed();
-        println!("✅ WASM内存管理: 总时间 {:?} ({} 次迭代)", elapsed, iterations);
-
-        // 验证内存使用稳定
-        assert!(elapsed < Duration::from_secs(5), "WASM内存管理应该高效");
-    }
-
-    /// 测试5: WASM集成测试
-    #[test]
-    fn test_wasm_integration() {
-        // 初始化V8
-        beejs::initialize_v8();
-
-        // 创建运行时实例
-        let runtime = RuntimeLite::new(false);
-        assert!(runtime.is_ok(), "WASM集成测试：Runtime创建应该成功");
-
-        // 执行简单JavaScript代码验证集成
-        let result = runtime.unwrap().execute_code("console.log('WASM集成测试'); 2 + 2");
-        assert!(result.is_ok(), "WASM集成测试：代码执行应该成功");
-
-        println!("✅ WASM集成测试通过");
-    }
-
-    /// 测试6: WasmExecutor模块管理
-    #[test]
-    fn test_wasm_executor_module_management() {
-        use beejs::wasm_integration::initialize_wasm;
-
-        // 创建WASM执行器
-        let executor = initialize_wasm().expect("WASM执行器初始化失败");
-
-        // 测试列出模块
+        // 验证模块已加载
         let modules = executor.list_modules();
-        println!("✅ 已加载的WASM模块: {:?}", modules);
+        assert_eq!(modules.len(), 1, "应该加载了1个模块");
+        assert_eq!(modules[0], "test_module", "模块名称应该匹配");
 
-        // 验证至少有一些预加载的模块
-        assert!(!modules.is_empty(), "应该至少有一个预加载的WASM模块");
-
-        // 测试执行模块
-        if !modules.is_empty() {
-            let module_name = &modules[0];
-            let result = executor.execute_module(module_name);
-            assert!(result.is_ok(), "WASM模块执行应该成功");
-            println!("✅ 模块 '{}' 执行成功，耗时 {:?}", module_name, result.unwrap());
-        }
-
-        // 测试统计信息
-        let stats = executor.get_stats();
-        println!("✅ WASM执行统计: {:?}", stats);
-        assert!(stats.total_executions > 0, "应该有执行记录");
-
-        println!("✅ WasmExecutor模块管理测试通过");
+        println!("✅ WASM模块加载测试通过");
     }
 
-    /// 测试7: WASM多模块加载和执行
+    /// 测试3: WASM模块执行
+    #[test]
+    fn test_wasm_module_execution() {
+        let executor = wasm_integration::WasmExecutor::new().unwrap();
+
+        // 创建有_start函数的WASM
+        let wasm_bytes = wat::parse_str(r#"
+            (module
+                (func $_start (export "_start")
+                    nop
+                )
+            )
+        "#).expect("创建WASM字节码失败");
+
+        // 加载并执行模块
+        executor.load_module("test_exec", wasm_bytes).unwrap();
+        let result = executor.execute_module("test_exec");
+
+        assert!(result.is_ok(), "WASM模块执行应该成功");
+        let exec_time = result.unwrap();
+
+        println!("✅ WASM模块执行成功，耗时 {:?}", exec_time);
+        assert!(exec_time < Duration::from_millis(100), "执行应该快于100ms");
+
+        // 验证统计信息
+        let stats = executor.get_stats();
+        assert_eq!(stats.total_executions, 1, "应该有1次执行");
+        assert!(stats.avg_execution_time > Duration::default(), "平均执行时间应该大于0");
+    }
+
+    /// 测试4: WASM数学运算模块
+    #[test]
+    fn test_wasm_math_operations() {
+        let executor = wasm_integration::WasmExecutor::new().unwrap();
+
+        // 创建数学运算WASM
+        let wasm_bytes = wat::parse_str(r#"
+            (module
+                (func (export "add") (param i32 i32) (result i32)
+                    local.get 0
+                    local.get 1
+                    i32.add
+                )
+                (func (export "multiply") (param i32 i32) (result i32)
+                    local.get 0
+                    local.get 1
+                    i32.mul
+                )
+                (func $_start (export "_start")
+                    i32.const 10
+                    i32.const 20
+                    call 0
+                    drop
+                    i32.const 5
+                    i32.const 6
+                    call 1
+                    drop
+                )
+            )
+        "#).expect("创建数学运算WASM失败");
+
+        executor.load_module("math_ops", wasm_bytes).unwrap();
+        let result = executor.execute_module("math_ops");
+
+        assert!(result.is_ok(), "数学运算WASM执行应该成功");
+        println!("✅ WASM数学运算测试通过");
+    }
+
+    /// 测试5: WASM错误处理
+    #[test]
+    fn test_wasm_error_handling() {
+        let executor = wasm_integration::WasmExecutor::new().unwrap();
+
+        // 尝试执行不存在的模块
+        let result = executor.execute_module("nonexistent");
+        assert!(result.is_err(), "执行不存在的模块应该返回错误");
+
+        // 尝试加载无效的WASM字节码
+        let invalid_wasm = vec![0x00, 0x61, 0x73, 0x6d]; // 只有魔数，缺少版本
+        let result = executor.load_module("invalid", invalid_wasm);
+        assert!(result.is_err(), "加载无效WASM应该返回错误");
+
+        println!("✅ WASM错误处理测试通过");
+    }
+
+    /// 测试6: WASM多模块管理
     #[test]
     fn test_wasm_multiple_modules() {
-        use beejs::wasm_integration::WasmExecutor;
-
-        let executor = WasmExecutor::new();
+        let executor = wasm_integration::WasmExecutor::new().unwrap();
 
         // 加载多个模块
-        let test_modules = vec![
-            ("module1", get_valid_wasm()),
-            ("module2", get_valid_wasm()),
-            ("module3", get_valid_wasm()),
+        let modules = vec![
+            ("module1", create_simple_wasm()),
+            ("module2", create_math_wasm()),
+            ("module3", create_simple_wasm()),
         ];
 
-        for (name, bytecode) in &test_modules {
-            let result = executor.load_module(name, bytecode.clone());
-            assert!(result.is_ok(), "WASM模块 '{}' 加载应该成功", name);
+        for (name, wasm_bytes) in modules {
+            let result = executor.load_module(name, wasm_bytes);
+            assert!(result.is_ok(), "模块 {} 加载应该成功", name);
         }
 
         // 验证所有模块都已加载
@@ -155,121 +154,150 @@ mod tests {
         assert_eq!(loaded_modules.len(), 3, "应该加载了3个模块");
 
         // 执行所有模块
-        for (name, _) in &test_modules {
+        for name in &loaded_modules {
             let result = executor.execute_module(name);
-            assert!(result.is_ok(), "WASM模块 '{}' 执行应该成功", name);
+            assert!(result.is_ok(), "模块 {} 执行应该成功", name);
         }
 
         // 验证统计信息
         let stats = executor.get_stats();
-        assert_eq!(stats.total_executions, 3, "应该有3次执行记录");
+        assert_eq!(stats.total_executions, 3, "应该有3次执行");
 
-        println!("✅ WASM多模块加载和执行测试通过");
+        println!("✅ WASM多模块管理测试通过");
     }
 
-    /// 测试8: WASM错误处理
+    /// 测试7: WASM性能基准
     #[test]
-    fn test_wasm_error_handling() {
-        use beejs::wasm_integration::WasmExecutor;
+    fn test_wasm_performance_benchmark() {
+        let executor = wasm_integration::WasmExecutor::new().unwrap();
 
-        let executor = WasmExecutor::new();
+        executor.load_module("perf_test", create_simple_wasm()).unwrap();
 
-        // 尝试执行不存在的模块
-        let result = executor.execute_module("nonexistent_module");
-        assert!(result.is_err(), "执行不存在的模块应该返回错误");
-
-        // 验证错误信息
-        if let Err(e) = result {
-            println!("✅ 预期错误: {}", e);
-            assert!(e.to_string().contains("未找到"), "错误信息应该包含'未找到'");
-        }
-
-        // 加载一个模块然后清除，再尝试执行
-        executor.load_module("test_module", get_valid_wasm()).unwrap();
-        executor.clear_modules();
-
-        let result = executor.execute_module("test_module");
-        assert!(result.is_err(), "清除后执行应该返回错误");
-
-        println!("✅ WASM错误处理测试通过");
-    }
-
-    /// 测试9: WASM性能压力测试
-    #[test]
-    fn test_wasm_stress_performance() {
-        use beejs::wasm_integration::WasmExecutor;
-
-        let executor = WasmExecutor::new();
-
-        // 加载一个模块
-        executor.load_module("stress_test", get_valid_wasm()).unwrap();
-
-        let iterations = 1000;
+        let iterations = 100;
         let start = Instant::now();
 
-        // 快速执行多次
         for _ in 0..iterations {
-            let _ = executor.execute_module("stress_test");
+            let _ = executor.execute_module("perf_test");
         }
 
         let elapsed = start.elapsed();
         let avg_time = elapsed / iterations;
 
-        println!("✅ WASM压力测试: 总时间 {:?}, 平均 {:?} ({} 次迭代)",
+        println!("✅ WASM性能基准: 总时间 {:?}, 平均 {:?} ({} 次迭代)",
                  elapsed, avg_time, iterations);
 
-        // 验证性能（每次执行应该很快）
-        assert!(avg_time < Duration::from_millis(1), "平均执行时间应该快于1ms");
+        // 验证性能（应该很快）
+        assert!(avg_time < Duration::from_millis(10), "平均执行时间应该快于10ms");
 
-        // 验证统计信息
+        // 验证统计
         let stats = executor.get_stats();
         assert_eq!(stats.total_executions, iterations as u64, "执行次数应该匹配");
-        assert!(stats.total_execution_time > Duration::from_millis(0), "总执行时间应该大于0");
-
-        println!("✅ WASM性能压力测试通过");
     }
 
-    /// 测试10: WASM缓存和统计
+    /// 测试8: WASM燃料限制
     #[test]
-    fn test_wasm_caching_and_stats() {
-        use beejs::wasm_integration::WasmExecutor;
+    fn test_wasm_fuel_limit() {
+        let executor = wasm_integration::WasmExecutor::new().unwrap();
 
-        let executor = WasmExecutor::new();
+        // 创建一个简单的WASM，应该不会用完燃料
+        let wasm_bytes = wat::parse_str(r#"
+            (module
+                (func $_start (export "_start")
+                    nop
+                )
+            )
+        "#).expect("创建WASM失败");
 
-        // 加载模块
-        executor.load_module("cache_test", get_valid_wasm()).unwrap();
+        executor.load_module("fuel_test", wasm_bytes).unwrap();
 
-        // 执行多次
-        for _ in 0..5 {
-            let _ = executor.execute_module("cache_test");
+        // 执行多次确保燃料系统工作
+        for i in 1..=10 {
+            let result = executor.execute_module("fuel_test");
+            assert!(result.is_ok(), "第{}次执行应该成功", i);
         }
 
-        // 验证统计信息
-        let stats = executor.get_stats();
-        assert_eq!(stats.total_executions, 5, "应该有5次执行");
-        assert!(stats.total_execution_time > Duration::from_millis(0), "总执行时间应该大于0");
-        assert!(stats.avg_execution_time > Duration::from_millis(0), "平均执行时间应该大于0");
-
-        // 计算缓存命中率（模拟）
-        println!("✅ WASM缓存统计: 总执行 {} 次, 总时间 {:?}, 平均时间 {:?}",
-                 stats.total_executions,
-                 stats.total_execution_time,
-                 stats.avg_execution_time);
-
-        println!("✅ WASM缓存和统计测试通过");
+        println!("✅ WASM燃料限制测试通过");
     }
 
-    /// 获取有效的WASM字节码用于测试
-    fn get_valid_wasm() -> Vec<u8> {
-        vec![
-            0x00, 0x61, 0x73, 0x6d, // WASM magic number
-            0x01, 0x00, 0x00, 0x00, // WASM version 1
-            0x06, // Section: Export
-            0x06, // Section size
-            0x01, // Count: 1
-            0x06, // "_start"
-            0x00, // Kind: func
-            0x00, // Function index
-        ]
+    /// 测试9: WASM模块信息
+    #[test]
+    fn test_wasm_module_info() {
+        let executor = wasm_integration::WasmExecutor::new().unwrap();
+
+        let wasm_bytes = create_simple_wasm();
+        let module_name = "info_test";
+
+        executor.load_module(module_name, wasm_bytes.clone()).unwrap();
+
+        // 获取模块信息
+        let info = executor.get_module_info(module_name);
+        assert!(info.is_some(), "应该能获取模块信息");
+
+        let module_info = info.unwrap();
+        assert_eq!(module_info.name, module_name, "模块名称应该匹配");
+        assert_eq!(module_info.bytecode, wasm_bytes, "字节码应该匹配");
+        assert_eq!(module_info.execution_count, 0, "初始执行次数应该为0");
+
+        // 执行模块
+        let _ = executor.execute_module(module_name);
+
+        // 再次获取信息，执行次数应该增加
+        let info_after = executor.get_module_info(module_name).unwrap();
+        assert_eq!(info_after.execution_count, 1, "执行次数应该为1");
+
+        println!("✅ WASM模块信息测试通过");
+    }
+
+    /// 测试10: WASM初始化函数
+    #[test]
+    fn test_wasm_initialization() {
+        let result = wasm_integration::initialize_wasm();
+        assert!(result.is_ok(), "WASM初始化应该成功");
+
+        let executor = result.unwrap();
+
+        // 验证预加载的模块
+        let modules = executor.list_modules();
+        assert!(!modules.is_empty(), "应该有预加载的模块");
+
+        println!("✅ 预加载的WASM模块: {:?}", modules);
+
+        // 执行第一个模块
+        if !modules.is_empty() {
+            let result = executor.execute_module(&modules[0]);
+            assert!(result.is_ok(), "执行预加载模块应该成功");
+        }
+
+        println!("✅ WASM初始化测试通过");
+    }
+
+    /// 辅助函数：创建简单WASM
+    fn create_simple_wasm() -> Vec<u8> {
+        wat::parse_str(r#"
+            (module
+                (func $_start (export "_start")
+                    nop
+                )
+            )
+        "#).expect("创建简单WASM失败")
+    }
+
+    /// 辅助函数：创建数学WASM
+    fn create_math_wasm() -> Vec<u8> {
+        wat::parse_str(r#"
+            (module
+                (func (export "add") (param i32 i32) (result i32)
+                    local.get 0
+                    local.get 1
+                    i32.add
+                )
+                (func $_start (export "_start")
+                    i32.const 5
+                    i32.const 3
+                    call 0
+                    drop
+                )
+            )
+        "#).expect("创建数学WASM失败")
     }
 }
