@@ -74,7 +74,7 @@ pub use server::{
 pub use concurrent_execution::{
     ConcurrentConfig, ConcurrentRuntimePool, ScriptResult,
     ConcurrentExecutionError, ConcurrentExecutionStats,
-    WorkStealingScheduler, Task, TaskResult, StealStats
+    WorkStealingScheduler, Task, TaskResult, StealStats, BatchExecutor
 };
 
 /// Global V8 initialization
