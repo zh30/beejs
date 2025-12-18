@@ -231,7 +231,7 @@ impl RuntimeLite {
             }
         }
 
-        // Simple arithmetic expressions: numbers with + - * / % operators
+        // Simple arithmetic expressions: numbers with + - * / % & | ^ << >> >>> operators
         if self.is_simple_arithmetic(trimmed) {
             if let Some(result) = self.evaluate_simple_arithmetic(trimmed) {
                 return Some(result);
@@ -318,9 +318,10 @@ impl RuntimeLite {
             return true;
         }
 
-        // Must only contain digits, spaces, and basic operators
+        // Stage 11 Optimization: Support bitwise operations
+        // Must only contain digits, spaces, and basic operators (including bitwise)
         let allowed_chars: std::collections::HashSet<char> =
-            "0123456789+-*/%.() ".chars().collect();
+            "0123456789+-*/%&|^<>(). ".chars().collect();
 
         if !trimmed.chars().all(|c| allowed_chars.contains(&c)) {
             return false;
@@ -329,14 +330,16 @@ impl RuntimeLite {
         // Must not start or end with operator (except parentheses)
         let first_char = trimmed.chars().next();
         let last_char = trimmed.chars().last();
-        if first_char.map_or(false, |c| matches!(c, '+' | '-' | '*' | '/' | '%')) ||
-           last_char.map_or(false, |c| matches!(c, '+' | '-' | '*' | '/' | '%')) {
+        if first_char.map_or(false, |c| matches!(c, '+' | '-' | '*' | '/' | '%' | '&' | '|' | '^' | '<' | '>')) ||
+           last_char.map_or(false, |c| matches!(c, '+' | '-' | '*' | '/' | '%' | '&' | '|' | '^' | '<' | '>')) {
             return false;
         }
 
-        // Simple heuristic: must contain at least one operator
+        // Simple heuristic: must contain at least one operator (including bitwise)
         trimmed.contains('+') || trimmed.contains('-') || trimmed.contains('*') ||
-        trimmed.contains('/') || trimmed.contains('%')
+        trimmed.contains('/') || trimmed.contains('%') || trimmed.contains('&') ||
+        trimmed.contains('|') || trimmed.contains('^') || trimmed.contains('<') ||
+        trimmed.contains('>')
     }
 
     /// Check if code is a simple string concatenation
@@ -345,7 +348,7 @@ impl RuntimeLite {
 
         // Pattern: "..." + "..." or '...' + '...'
         if let Some((left, op, right)) = self.parse_simple_binary_op(trimmed) {
-            if op == '+' {
+            if op == "+" {
                 // Both sides must be strings
                 let left_is_string = (left.starts_with('"') && left.ends_with('"')) ||
                                      (left.starts_with('\'') && left.ends_with('\''));
@@ -359,6 +362,7 @@ impl RuntimeLite {
     }
 
     /// Evaluate simple arithmetic expression
+    /// Stage 11 Optimization: Support bitwise operations (&, |, ^, <<, >>, >>>)
     fn evaluate_simple_arithmetic(&self, code: &str) -> Option<String> {
         // Use Rust's eval for simple expressions
         // For safety, only allow specific patterns
@@ -367,7 +371,7 @@ impl RuntimeLite {
         // Pattern: number operator number (e.g., "1+1", "10*5")
         if let Some((left, op, right)) = self.parse_simple_binary_op(trimmed) {
             match op {
-                '+' => {
+                "+" => {
                     if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
                         return Some((l + r).to_string());
                     }
@@ -382,7 +386,7 @@ impl RuntimeLite {
                         return Some(format!("{}{}", left_str, right_str));
                     }
                 }
-                '-' => {
+                "-" => {
                     if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
                         return Some((l - r).to_string());
                     }
@@ -390,7 +394,7 @@ impl RuntimeLite {
                         return Some((l - r).to_string());
                     }
                 }
-                '*' => {
+                "*" => {
                     if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
                         return Some((l * r).to_string());
                     }
@@ -398,7 +402,7 @@ impl RuntimeLite {
                         return Some((l * r).to_string());
                     }
                 }
-                '/' => {
+                "/" => {
                     if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
                         if r != 0 {
                             return Some((l / r).to_string());
@@ -410,11 +414,42 @@ impl RuntimeLite {
                         }
                     }
                 }
-                '%' => {
+                "%" => {
                     if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
                         if r != 0 {
                             return Some((l % r).to_string());
                         }
+                    }
+                }
+                // Stage 11 Optimization: Add bitwise operations fast path
+                "&" => { // Bitwise AND
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        return Some((l & r).to_string());
+                    }
+                }
+                "|" => { // Bitwise OR
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        return Some((l | r).to_string());
+                    }
+                }
+                "^" => { // Bitwise XOR
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                        return Some((l ^ r).to_string());
+                    }
+                }
+                "<<" => { // Left shift
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<u32>()) {
+                        return Some((l << r).to_string());
+                    }
+                }
+                ">>" => { // Right shift (sign-propagating)
+                    if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<u32>()) {
+                        return Some((l >> r).to_string());
+                    }
+                }
+                ">>>" => { // Right shift (zero-fill)
+                    if let (Ok(l), Ok(r)) = (left.parse::<u64>(), right.parse::<u32>()) {
+                        return Some((l >> r).to_string());
                     }
                 }
                 _ => {}
@@ -433,10 +468,11 @@ impl RuntimeLite {
     }
 
     /// Parse simple binary operation: "left op right"
-    fn parse_simple_binary_op<'a>(&self, code: &'a str) -> Option<(&'a str, char, &'a str)> {
+    /// Stage 11 Optimization: Support multi-character operators like <<, >>, >>>
+    fn parse_simple_binary_op<'a>(&self, code: &'a str) -> Option<(&'a str, &'a str, &'a str)> {
         let trimmed = code.trim();
 
-        // Find first operator (not in parentheses)
+        // Find first operator (not in parentheses) - check multi-char operators first
         let mut paren_depth = 0;
         for (i, c) in trimmed.char_indices() {
             match c {
@@ -446,12 +482,36 @@ impl RuntimeLite {
                         paren_depth -= 1;
                     }
                 }
-                '+' | '-' | '*' | '/' | '%' => {
+                '<' | '>' => {
+                    if paren_depth == 0 {
+                        // Check for << or >> or >>>
+                        let next_char = trimmed.chars().nth(i + 1);
+                        let operator_len = if next_char == Some(c) {
+                            // Check for >>>
+                            if c == '>' && trimmed.chars().nth(i + 2) == Some('>') {
+                                3
+                            } else {
+                                2
+                            }
+                        } else {
+                            1
+                        };
+
+                        let left = &trimmed[..i].trim();
+                        let right = &trimmed[i+operator_len..].trim();
+                        if !left.is_empty() && !right.is_empty() {
+                            let operator = &trimmed[i..i+operator_len];
+                            return Some((left, operator, right));
+                        }
+                    }
+                }
+                '+' | '-' | '*' | '/' | '%' | '&' | '|' | '^' => {
                     if paren_depth == 0 {
                         let left = &trimmed[..i].trim();
                         let right = &trimmed[i+1..].trim();
                         if !left.is_empty() && !right.is_empty() {
-                            return Some((left, c, right));
+                            let operator = &trimmed[i..i+1];
+                            return Some((left, operator, right));
                         }
                     }
                 }
