@@ -9,9 +9,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
-#[allow(dead_code)]
-use crate::v8_snapshot::V8SnapshotManager;
-
 /// Lightweight Runtime - minimal V8 runtime for fast startup
 /// Only initializes essential components needed for basic JS execution
 pub struct RuntimeLite {
@@ -46,7 +43,7 @@ impl RuntimeLite {
         // 注意：在测试环境中V8 SnapshotCreator有生命周期问题
         #[cfg(not(test))]
         {
-            let snapshot_manager = V8SnapshotManager::new().ok();
+            let snapshot_manager = crate::v8_snapshot::V8SnapshotManager::new().ok();
             if let Some(manager) = &snapshot_manager {
                 if let Ok(Some(_snapshot)) = manager.get_or_create_snapshot("v0.1.0") {
                     if verbose {
