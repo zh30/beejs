@@ -47,6 +47,7 @@ impl PoolStatistics {
     }
 
     /// 获取缓存命中率
+    #[allow(dead_code)]
     pub fn hit_rate(&self) -> f64 {
         let hits = self.cache_hits.load(Ordering::Relaxed) as f64;
         let total = hits + self.cache_misses.load(Ordering::Relaxed) as f64;
@@ -54,6 +55,7 @@ impl PoolStatistics {
     }
 
     /// 获取平均创建时间（微秒）
+    #[allow(dead_code)]
     pub fn avg_creation_time_us(&self) -> f64 {
         let total_time = self.total_creation_time_ns.load(Ordering::Relaxed) as f64;
         let count = self.cache_misses.load(Ordering::Relaxed) as f64;
@@ -198,6 +200,7 @@ impl IsolatePool {
     }
 
     /// 获取详细统计信息
+    #[allow(dead_code)]
     pub fn detailed_stats(&self) -> PoolStatistics {
         PoolStatistics {
             total_acquires: Arc::clone(&self.stats.total_acquires),
@@ -211,6 +214,7 @@ impl IsolatePool {
     }
 
     /// 清理池中未使用的Isolates
+    #[allow(dead_code)]
     pub fn shrink_to_fit(&self) -> usize {
         let mut pool = self.available.lock().unwrap();
         let before_len = pool.len();

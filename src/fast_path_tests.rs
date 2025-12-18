@@ -3,7 +3,8 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::runtime_lite::RuntimeLite;
+    #[allow(unused_imports)]
+use crate::runtime_lite::RuntimeLite;
 
     #[test]
     fn test_fast_path_constant_execution() {

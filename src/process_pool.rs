@@ -19,6 +19,10 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixStream, UnixListener};
 use num_cpus;
 
+// Import Runtime for worker execution
+#[allow(unused_imports)]
+use crate::{Runtime, OptimizeMode};
+
 const DEFAULT_POOL_SIZE: usize = 4;
 const MAX_POOL_SIZE: usize = 16;
 const SOCKET_PATH_PREFIX: &str = "/tmp/beejs-pool-";
@@ -384,6 +388,20 @@ pub async fn execute_with_pool(script: &str) -> Result<String> {
     }
 }
 
+/// Execute script in worker process using Runtime
+async fn execute_script_in_worker(script: &str) -> Result<String> {
+    // Create a Runtime instance for this worker
+    // Use default settings optimized for speed
+    let runtime = Runtime::new(67108864, 134217728, false) // 64MB stack, 128MB heap, no verbose
+        .context("Failed to create Runtime in worker")?;
+
+    // Execute the script and capture output
+    let result = runtime.execute_code(script)
+        .context("Worker failed to execute script")?;
+
+    Ok(result)
+}
+
 /// Worker mode entry point (called by spawned worker processes)
 pub async fn worker_main(worker_id: u32, socket_path: String) -> Result<()> {
     // Create Unix socket listener
@@ -410,11 +428,13 @@ pub async fn worker_main(worker_id: u32, socket_path: String) -> Result<()> {
                     break;
                 }
 
-                // Execute the script
-                // TODO: Integrate with Runtime system
-                let result = format!("{}{}", EXEC_SUCCESS_MSG, buffer.len());
+                // Execute the script using Runtime
+                let script_result = match execute_script_in_worker(&buffer).await {
+                    Ok(output) => format!("{}{}", EXEC_SUCCESS_MSG, output),
+                    Err(e) => format!("{}{}", EXEC_ERROR_MSG, e),
+                };
 
-                stream.write_all(result.as_bytes()).await?;
+                stream.write_all(script_result.as_bytes()).await?;
             }
             Err(e) => {
                 eprintln!("[Worker-{}] Error accepting connection: {}", worker_id, e);
@@ -430,6 +450,87 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn test_process_pool_performance() {
+        // Test: Compare process pool vs new process execution
+        let config = ProcessPoolConfig {
+            max_workers: 2,
+            initial_workers: 2,
+            init_timeout_ms: 5000,
+            enabled: true,
+        };
+
+        // Initialize process pool
+        let pool = Arc::new(ProcessPool::new(config).expect("Failed to create pool"));
+
+        // Test script - simple computation
+        let test_script = r#"
+            let sum = 0;
+            for (let i = 0; i < 100; i++) {
+                sum += i;
+            }
+            sum
+        "#;
+
+        // Execute script multiple times through pool
+        let start = Instant::now();
+        for _ in 0..10 {
+            let result = pool.execute_script(test_script).await;
+            assert!(result.is_ok(), "Pool execution failed");
+        }
+        let pool_time = start.elapsed();
+
+        println!("Process pool: 10 executions in {:?}", pool_time);
+
+        // Verify results contain expected output
+        let result = pool.execute_script(test_script).await.unwrap();
+        assert!(result.contains("4950"), "Expected result 4950, got: {}", result);
+
+        // Test that pool is still functional
+        let stats = pool.get_stats();
+        assert!(stats.total_workers > 0, "Pool should have workers");
+        assert!(stats.total_executions >= 10, "Should track executions");
+
+        println!("Pool stats: {:?}", stats);
+    }
+
+    #[tokio::test]
+    async fn test_process_pool_concurrent_execution() {
+        // Test concurrent script execution
+        let config = ProcessPoolConfig {
+            max_workers: 4,
+            initial_workers: 4,
+            init_timeout_ms: 5000,
+            enabled: true,
+        };
+
+        let pool = Arc::new(ProcessPool::new(config).expect("Failed to create pool"));
+
+        // Test multiple concurrent executions
+        let mut handles = vec![];
+        for i in 0..8 {
+            let pool_clone = Arc::clone(&pool);
+            let script = format!(r#"console.log("Task {}");"#, i);
+
+            let handle = tokio::spawn(async move {
+                pool_clone.execute_script(&script).await
+            });
+            handles.push(handle);
+        }
+
+        // Wait for all tasks to complete
+        for (i, handle) in handles.into_iter().enumerate() {
+            let result = handle.await.expect("Task panicked");
+            assert!(result.is_ok(), "Concurrent execution {} failed", i);
+        }
+
+        // Verify all executions were tracked
+        let stats = pool.get_stats();
+        assert!(stats.total_executions >= 8, "Should track all 8 executions");
+
+        println!("Concurrent execution stats: {:?}", stats);
+    }
+
+    #[tokio::test]
     async fn test_process_pool_creation() {
         let config = ProcessPoolConfig {
             max_workers: 2,
@@ -443,7 +544,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore = "Process pool worker mode not fully implemented yet"]
     async fn test_process_pool_stats() {
         let config = ProcessPoolConfig {
             max_workers: 2,

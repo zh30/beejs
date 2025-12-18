@@ -2,7 +2,7 @@
 name = "beejs"
 version = "0.1.0"
 edition = "2021"
-authors = ["Beejs Team"]
+authors = ["Henry Zhang"]
 description = "High-performance JavaScript/TypeScript runtime built with Rust and V8"
 license = "MIT"
 

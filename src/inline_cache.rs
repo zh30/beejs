@@ -1,6 +1,4 @@
-use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
 use std::string::String;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -458,10 +456,13 @@ impl Default for OptimizationResult {
 #[derive(Debug, Clone)]
 pub struct CacheUsageReport {
     pub total_entries: usize,
+    #[allow(dead_code)]
     pub max_entries: usize,
     pub utilization: f64,
     pub hit_rate: f64,
+    #[allow(dead_code)]
     pub total_operations: usize,
+    #[allow(dead_code)]
     pub avg_access_time_ns: u64,
 }
 
