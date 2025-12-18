@@ -124,6 +124,7 @@ pub struct RegressionStats {
     pub minor_regressions: usize,
     pub moderate_regressions: usize,
     pub severe_regressions: usize,
+    pub critical_regressions: usize,
     pub improvement_count: usize,
     pub detection_rate: f64, // 百分比
 }
@@ -200,7 +201,7 @@ impl PerformanceRegressionDetector {
             test_name: result.name.clone(),
             metric_type: result.metric_type,
             avg_duration_ns: result.avg_duration.as_nanos() as u64,
-            std_deviation_ns: (result.std_deviation * 1_000_000_000.0).round() as u64,
+            std_deviation_ns: (result.std_deviation * 1_000_000_000.0).round() as f64,
             operations_per_second: result.operations_per_second,
             memory_stats: result.memory_stats.clone(),
             timestamp: SystemTime::now()
@@ -271,6 +272,12 @@ impl PerformanceRegressionDetector {
                         recommendations.push("Consider reverting recent changes.".to_string());
                         recommendations.push("Run detailed profiling to identify bottlenecks.".to_string());
                     }
+                    RegressionSeverity::Critical => {
+                        recommendations.push("CRITICAL regression detected! System failure or severe performance degradation.".to_string());
+                        recommendations.push("EMERGENCY: Revert all recent changes immediately.".to_string());
+                        recommendations.push("Run comprehensive system diagnostics.".to_string());
+                        recommendations.push("Contact senior engineers for immediate assistance.".to_string());
+                    }
                 }
             } else {
                 if regression_percent < -5.0 {
@@ -325,6 +332,7 @@ impl PerformanceRegressionDetector {
             minor_regressions: 0,
             moderate_regressions: 0,
             severe_regressions: 0,
+            critical_regressions: 0,
             improvement_count: 0,
             detection_rate: 0.0,
         };
@@ -347,6 +355,7 @@ impl PerformanceRegressionDetector {
                 RegressionSeverity::Minor => stats.minor_regressions += 1,
                 RegressionSeverity::Moderate => stats.moderate_regressions += 1,
                 RegressionSeverity::Severe => stats.severe_regressions += 1,
+                RegressionSeverity::Critical => stats.critical_regressions += 1,
             }
 
             if detection.is_regression {

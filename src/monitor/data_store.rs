@@ -288,12 +288,13 @@ impl DataStore {
 
         // 使用简单的 RLE 压缩（实际生产中应使用专业压缩库）
         let compressed = Self::rle_compress(&serialized);
+        let compressed_size = compressed.len();
 
         Ok(CompressedData {
             metric_type,
             data: compressed,
             original_size: serialized.len(),
-            compressed_size: compressed.len(),
+            compressed_size,
             time_range,
         })
     }
@@ -582,6 +583,29 @@ impl DataStore {
         stats.last_cleanup = Some(Instant::now());
 
         Ok(cleaned_count)
+    }
+
+    /// 获取实时指标
+    pub fn get_real_time_metrics(&self) -> Result<Vec<MetricValue>, String> {
+        let memory_cache = self.memory_cache.lock().map_err(|e| e.to_string())?;
+
+        // 获取最近几分钟的数据作为实时指标
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let recent_threshold = now - 300; // 最近5分钟
+
+        let mut real_time_metrics = Vec::new();
+
+        // 从内存缓存中提取最近的指标
+        for data_point in memory_cache.iter() {
+            if data_point.value.timestamp >= recent_threshold {
+                real_time_metrics.push(data_point.value.clone());
+            }
+        }
+
+        Ok(real_time_metrics)
     }
 }
 

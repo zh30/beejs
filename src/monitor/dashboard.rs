@@ -447,7 +447,7 @@ impl WebDashboard {
         html.push_str("<title>Beejs Monitoring Dashboard</title>\n");
         html.push_str("<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>\n");
         html.push_str("<style>\n");
-        html.push_str(Self::generate_css());
+        html.push_str(&Self::generate_css());
         html.push_str("</style>\n");
         html.push_str("</head>\n<body>\n");
 
@@ -502,7 +502,7 @@ impl WebDashboard {
 
         // JavaScript
         html.push_str("<script>\n");
-        html.push_str(Self::generate_javascript(&layout));
+        html.push_str(&Self::generate_javascript(&layout));
         html.push_str("</script>\n");
 
         html.push_str("</body>\n</html>\n");
@@ -714,7 +714,7 @@ updateDashboard(); // 立即更新一次
     /// 更新连接计数
     pub fn update_connection_count(&self, delta: isize) -> Result<(), String> {
         let mut stats = self.connection_stats.lock().map_err(|e| e.to_string())?;
-        stats.current_connections = stats.current_connections.saturating_add(delta);
+        stats.current_connections = stats.current_connections.saturating_add(delta as usize);
 
         if delta > 0 {
             stats.total_connections += delta as u64;

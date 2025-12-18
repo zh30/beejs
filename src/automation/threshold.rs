@@ -281,6 +281,7 @@ impl ThresholdManager {
                 RegressionSeverity::Minor => 0.05, // 5% 放宽
                 RegressionSeverity::Moderate => 0.10, // 10% 放宽
                 RegressionSeverity::Severe => 0.20, // 20% 放宽
+                RegressionSeverity::Critical => 0.30, // 30% 放宽
             };
 
             let adjusted_value = rule.value * (1.0 + adjustment_factor);

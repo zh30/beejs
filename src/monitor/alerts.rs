@@ -550,7 +550,7 @@ impl AlertSystem {
         let mut cleaned_count = 0;
 
         // 清理静默的告警
-        let silence_rule_tags = HashMap::new();
+        let silence_rule_tags: HashMap<String, String> = HashMap::new();
         active_alerts.retain(|_, alert| {
             if alert.status == AlertStatus::Silenced {
                 if current_time - alert.triggered_at > silence_period {

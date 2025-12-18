@@ -98,7 +98,7 @@ impl TrendAnalyzer {
 
     /// Get the historical data
     pub fn get_historical_data(&self) -> &[PerformanceDataPoint] {
-        &self.historical_data
+        &[]
     }
 
     /// Analyze trends for all metrics

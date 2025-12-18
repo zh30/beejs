@@ -505,7 +505,7 @@ impl PerformanceVisualizer {
                     for step in &suggestion.steps {
                         md.push_str(&format!("1. {}\n", step));
                     }
-                    md.push("\n");
+                    md.push('\n');
                 }
 
                 if !suggestion.code_examples.is_empty() {

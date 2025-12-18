@@ -94,7 +94,7 @@ pub fn initialize_v8() -> Result<()> {
 
     // Create platform
     let platform = v8::new_default_platform()
-        .ok_or_else(|| anyhow!("Failed to create V8 platform"))?;
+        .unwrap();
 
     // Initialize V8
     v8::V8::initialize_platform(platform);
@@ -195,7 +195,7 @@ impl Runtime {
 }
 
 /// 运行完整的性能测试套件
-pub fn run_performance_suite() -> Result<TestSuiteResults, Box<dyn std::error::Error>> {
+pub fn run_performance_suite() -> Result<TestSuiteResults, crate::automation::test_runner::TestRunnerError> {
     let config = crate::PerformanceConfig::default();
 
     // 创建回归检测器
@@ -207,7 +207,8 @@ pub fn run_performance_suite() -> Result<TestSuiteResults, Box<dyn std::error::E
     let test_runner = AutomatedTestRunner::new_default(regression_detector);
 
     // 运行测试套件
-    let rt = tokio::runtime::Runtime::new()?;
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| crate::automation::test_runner::TestRunnerError::ExecutionFailed(e.to_string()))?;
     rt.block_on(test_runner.run_full_test_suite())
 }
 
@@ -215,7 +216,7 @@ pub fn run_performance_suite() -> Result<TestSuiteResults, Box<dyn std::error::E
 pub fn generate_performance_report(
     results: &[BenchmarkResult],
     format: ReportFormat,
-) -> Result<std::path::PathBuf, Box<dyn std::error::Error>> {
+) -> Result<std::path::PathBuf, crate::automation::report_generator::ReportError> {
     let output_dir = std::path::PathBuf::from("performance_reports");
     let config = ReportOutput {
         format,

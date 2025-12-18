@@ -375,9 +375,9 @@ impl ReportGenerator {
         // 报告标题和元数据
         html.push_str(&format!("<h1>{}</h1>\n", data.metadata.title));
         html.push_str("<div class='metadata'>\n");
+        let generated_time = UNIX_EPOCH + std::time::Duration::from_secs(data.metadata.generated_at);
         html.push_str(&format!("<p><strong>Generated:</strong> {}</p>\n",
-            SystemTime::fromUNIX_EPOCH(std::time::Duration::from_secs(data.metadata.generated_at))
-                .format("%Y-%m-%d %H:%M:%S")));
+            generated_time.duration_since(UNIX_EPOCH).unwrap().as_secs()));
         html.push_str(&format!("<p><strong>Environment:</strong> {}</p>\n", data.metadata.environment));
         html.push_str(&format!("<p><strong>Version:</strong> {}</p>\n", data.metadata.version));
         html.push_str("</div>\n");
@@ -461,8 +461,9 @@ impl ReportGenerator {
 
         // 元数据
         md.push_str("## Metadata\n\n");
+        let generated_time = UNIX_EPOCH + std::time::Duration::from_secs(data.metadata.generated_at);
         md.push_str(&format!("- **Generated:** {}\n",
-            SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(data.metadata.generated_at)));
+            generated_time.duration_since(UNIX_EPOCH).unwrap().as_secs()));
         md.push_str(&format!("- **Environment:** {}\n", data.metadata.environment));
         md.push_str(&format!("- **Version:** {}\n\n", data.metadata.version));
 

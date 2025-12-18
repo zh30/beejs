@@ -1,6 +1,7 @@
 //! 性能监控器模块
 //! 负责实时收集、聚合和分析性能指标
 
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -31,7 +32,7 @@ pub enum MetricType {
 }
 
 /// 性能指标值
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetricValue {
     /// 指标类型
     pub metric_type: MetricType,
