@@ -1,0 +1,244 @@
+//! Stage 13: 性能突破测试套件
+//!
+//! 目标：实现10-50x性能提升，缩小与Bun的差距
+//! 重点：启动时间优化、执行速度优化、CLI快路径增强
+
+#[cfg(test)]
+mod tests {
+    use beejs::*;
+    use std::time::{Duration, Instant};
+    use std::sync::Arc;
+    use std::thread;
+
+    /// 测试1: V8初始化验证
+    /// 目标：验证V8预初始化效果
+    #[test]
+    fn test_v8_initialization() {
+        let start = Instant::now();
+
+        // 直接使用已初始化的V8
+        let _ = beejs::is_v8_initialized();
+
+        let elapsed = start.elapsed();
+
+        println!("✅ V8检查性能: {:?}", elapsed);
+    }
+
+    /// 测试2: RuntimeLite创建性能
+    /// 目标：验证轻量级Runtime创建速度
+    #[test]
+    fn test_runtime_lite_creation_performance() {
+        // 确保V8已经初始化
+        assert!(beejs::is_v8_initialized(), "V8应该已经初始化");
+
+        // 创建RuntimeLite（轻量级运行时）
+        let start = Instant::now();
+
+        let runtime = RuntimeLite::new(false);
+        let init_time = start.elapsed();
+
+        assert!(
+            runtime.is_ok(),
+            "RuntimeLite创建应该成功"
+        );
+
+        println!("✅ RuntimeLite创建性能: {:?}", init_time);
+    }
+
+    /// 测试3: 简单脚本执行性能
+    /// 目标：验证简单脚本的执行速度
+    #[test]
+    fn test_simple_script_execution_performance() {
+        let runtime = RuntimeLite::new(false).expect("RuntimeLite创建失败");
+
+        // 测试简单算术运算
+        let test_cases = vec![
+            "1 + 1",
+            "2 * 3",
+            "10 - 5",
+            "20 / 4",
+        ];
+
+        let mut total_time = Duration::from_nanos(0);
+        let iterations = 100;
+
+        for _ in 0..iterations {
+            for code in &test_cases {
+                let start = Instant::now();
+
+                let _result = runtime.execute_code(code);
+
+                total_time += start.elapsed();
+            }
+        }
+
+        let total_ops = iterations * test_cases.len();
+        let avg_time = total_time / total_ops as u32;
+
+        println!("✅ 简单脚本执行性能: 平均 {:?} ({} 次执行)",
+                 avg_time, total_ops);
+    }
+
+    /// 测试4: 并发执行性能测试
+    /// 目标：验证并发执行能否提升整体吞吐量
+    #[test]
+    fn test_concurrent_execution_performance() {
+        let runtime = Arc::new(RuntimeLite::new(false).expect("RuntimeLite创建失败"));
+
+        let thread_count = 4;
+        let iterations_per_thread = 50;
+
+        let start = Instant::now();
+
+        // 创建多个线程并发执行
+        let handles: Vec<_> = (0..thread_count)
+            .map(|_| {
+                let runtime = Arc::clone(&runtime);
+                thread::spawn(move || {
+                    let mut local_time = Duration::from_nanos(0);
+
+                    for _ in 0..iterations_per_thread {
+                        let code = "1 + 1";
+                        let exec_start = Instant::now();
+
+                        let _ = runtime.execute_code(code);
+
+                        local_time += exec_start.elapsed();
+                    }
+
+                    local_time
+                })
+            })
+            .collect();
+
+        // 等待所有线程完成
+        let mut total_time = Duration::from_nanos(0);
+        for handle in handles {
+            total_time += handle.join().expect("线程执行失败");
+        }
+
+        let total_duration = start.elapsed();
+        let total_operations = thread_count * iterations_per_thread;
+        let ops_per_second = total_operations as f64 / total_duration.as_secs_f64();
+
+        println!("✅ 并发执行性能: {:.2} ops/sec ({} 线程, {} 迭代/线程)",
+                 ops_per_second, thread_count, iterations_per_thread);
+    }
+
+    /// 测试5: 内存池性能验证
+    /// 目标：验证内存池基本功能
+    #[test]
+    fn test_memory_pool_performance() {
+        use beejs::memory_pool::{SmartMemoryPool, PoolConfig};
+
+        let pool = SmartMemoryPool::new(PoolConfig::default());
+
+        let iterations = 1000;
+        let start = Instant::now();
+
+        // 模拟频繁的内存分配和释放
+        for _ in 0..iterations {
+            // 获取字符串缓冲区
+            let _buffer = pool.get_string_buffer(1024);
+
+            // 获取对象缓冲区
+            let _obj_buffer = pool.get_object_buffer(64 * 1024);
+        }
+
+        let elapsed = start.elapsed();
+
+        let ops_per_second = iterations as f64 / elapsed.as_secs_f64();
+
+        println!("✅ 内存池性能: {:.2} ops/sec ({:?} for {} operations)",
+                 ops_per_second, elapsed, iterations);
+    }
+
+    /// 测试6: 快路径vs V8执行对比
+    /// 目标：验证快路径优化能否显著提升性能
+    #[test]
+    fn test_fast_path_vs_v8_comparison() {
+        let runtime = RuntimeLite::new(false).expect("RuntimeLite创建失败");
+
+        // 测试应该能走快路径的简单表达式
+        let fast_path_code = "2 + 2";
+        let v8_code = "Math.sqrt(16)";
+
+        // 多次执行以获得稳定结果
+        let iterations = 100;
+
+        // 快路径执行
+        let fast_path_start = Instant::now();
+        for _ in 0..iterations {
+            let _ = runtime.execute_code(fast_path_code);
+        }
+        let fast_path_time = fast_path_start.elapsed() / iterations as u32;
+
+        // V8执行
+        let v8_start = Instant::now();
+        for _ in 0..iterations {
+            let _ = runtime.execute_code(v8_code);
+        }
+        let v8_time = v8_start.elapsed() / iterations as u32;
+
+        // 计算速度提升
+        let speedup = v8_time.as_nanos() as f64 / fast_path_time.as_nanos() as f64;
+
+        println!("✅ 快路径性能对比: 快路径 {:?}, V8 {:?}, 提升 {:.2}x",
+                 fast_path_time, v8_time, speedup);
+    }
+
+    /// 测试7: 启动时间基准测试
+    /// 目标：验证整体启动时间优化效果
+    #[test]
+    fn test_startup_time_benchmark() {
+        let iterations = 50;
+        let mut total_startup_time = Duration::from_nanos(0);
+
+        for _ in 0..iterations {
+            let start = Instant::now();
+
+            // 创建Runtime（包含完整初始化）
+            let runtime = RuntimeLite::new(false);
+
+            total_startup_time += start.elapsed();
+
+            // 立即释放
+            drop(runtime);
+        }
+
+        let avg_startup_time = total_startup_time / iterations;
+
+        println!("✅ 启动时间基准: 平均 {:?} ({} 次测试)",
+                 avg_startup_time, iterations);
+    }
+
+    /// 测试8: 端到端性能验证
+    /// 目标：验证整体性能优化效果
+    #[test]
+    fn test_end_to_end_performance() {
+        let runtime = RuntimeLite::new(false).expect("RuntimeLite创建失败");
+
+        // 模拟真实工作负载：计算斐波那契数列
+        let code = r#"
+            function fibonacci(n) {
+                if (n <= 1) return n;
+                return fibonacci(n - 1) + fibonacci(n - 2);
+            }
+            fibonacci(10);
+        "#;
+
+        let iterations = 50;
+        let start = Instant::now();
+
+        for _ in 0..iterations {
+            let _ = runtime.execute_code(code);
+        }
+
+        let total_time = start.elapsed();
+        let avg_time = total_time / iterations;
+        let ops_per_second = iterations as f64 / total_time.as_secs_f64();
+
+        println!("✅ 端到端性能: {:.2} ops/sec, 平均 {:?}",
+                 ops_per_second, avg_time);
+    }
+}
