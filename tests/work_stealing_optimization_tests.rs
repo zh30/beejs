@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use beejs::{
-        WorkStealingScheduler, Task, StealStats
+        WorkStealingScheduler, Task
     };
     use std::sync::Arc;
     use std::time::Duration;

@@ -99,4 +99,177 @@ mod tests {
 
         println!("✅ WASM集成测试通过");
     }
+
+    /// 测试6: WasmExecutor模块管理
+    #[test]
+    fn test_wasm_executor_module_management() {
+        use beejs::wasm_integration::initialize_wasm;
+
+        // 创建WASM执行器
+        let executor = initialize_wasm().expect("WASM执行器初始化失败");
+
+        // 测试列出模块
+        let modules = executor.list_modules();
+        println!("✅ 已加载的WASM模块: {:?}", modules);
+
+        // 验证至少有一些预加载的模块
+        assert!(!modules.is_empty(), "应该至少有一个预加载的WASM模块");
+
+        // 测试执行模块
+        if !modules.is_empty() {
+            let module_name = &modules[0];
+            let result = executor.execute_module(module_name);
+            assert!(result.is_ok(), "WASM模块执行应该成功");
+            println!("✅ 模块 '{}' 执行成功，耗时 {:?}", module_name, result.unwrap());
+        }
+
+        // 测试统计信息
+        let stats = executor.get_stats();
+        println!("✅ WASM执行统计: {:?}", stats);
+        assert!(stats.total_executions > 0, "应该有执行记录");
+
+        println!("✅ WasmExecutor模块管理测试通过");
+    }
+
+    /// 测试7: WASM多模块加载和执行
+    #[test]
+    fn test_wasm_multiple_modules() {
+        use beejs::wasm_integration::WasmExecutor;
+
+        let executor = WasmExecutor::new();
+
+        // 加载多个模块
+        let test_modules = vec![
+            ("module1", get_valid_wasm()),
+            ("module2", get_valid_wasm()),
+            ("module3", get_valid_wasm()),
+        ];
+
+        for (name, bytecode) in &test_modules {
+            let result = executor.load_module(name, bytecode.clone());
+            assert!(result.is_ok(), "WASM模块 '{}' 加载应该成功", name);
+        }
+
+        // 验证所有模块都已加载
+        let loaded_modules = executor.list_modules();
+        assert_eq!(loaded_modules.len(), 3, "应该加载了3个模块");
+
+        // 执行所有模块
+        for (name, _) in &test_modules {
+            let result = executor.execute_module(name);
+            assert!(result.is_ok(), "WASM模块 '{}' 执行应该成功", name);
+        }
+
+        // 验证统计信息
+        let stats = executor.get_stats();
+        assert_eq!(stats.total_executions, 3, "应该有3次执行记录");
+
+        println!("✅ WASM多模块加载和执行测试通过");
+    }
+
+    /// 测试8: WASM错误处理
+    #[test]
+    fn test_wasm_error_handling() {
+        use beejs::wasm_integration::WasmExecutor;
+
+        let executor = WasmExecutor::new();
+
+        // 尝试执行不存在的模块
+        let result = executor.execute_module("nonexistent_module");
+        assert!(result.is_err(), "执行不存在的模块应该返回错误");
+
+        // 验证错误信息
+        if let Err(e) = result {
+            println!("✅ 预期错误: {}", e);
+            assert!(e.to_string().contains("未找到"), "错误信息应该包含'未找到'");
+        }
+
+        // 加载一个模块然后清除，再尝试执行
+        executor.load_module("test_module", get_valid_wasm()).unwrap();
+        executor.clear_modules();
+
+        let result = executor.execute_module("test_module");
+        assert!(result.is_err(), "清除后执行应该返回错误");
+
+        println!("✅ WASM错误处理测试通过");
+    }
+
+    /// 测试9: WASM性能压力测试
+    #[test]
+    fn test_wasm_stress_performance() {
+        use beejs::wasm_integration::WasmExecutor;
+
+        let executor = WasmExecutor::new();
+
+        // 加载一个模块
+        executor.load_module("stress_test", get_valid_wasm()).unwrap();
+
+        let iterations = 1000;
+        let start = Instant::now();
+
+        // 快速执行多次
+        for _ in 0..iterations {
+            let _ = executor.execute_module("stress_test");
+        }
+
+        let elapsed = start.elapsed();
+        let avg_time = elapsed / iterations;
+
+        println!("✅ WASM压力测试: 总时间 {:?}, 平均 {:?} ({} 次迭代)",
+                 elapsed, avg_time, iterations);
+
+        // 验证性能（每次执行应该很快）
+        assert!(avg_time < Duration::from_millis(1), "平均执行时间应该快于1ms");
+
+        // 验证统计信息
+        let stats = executor.get_stats();
+        assert_eq!(stats.total_executions, iterations as u64, "执行次数应该匹配");
+        assert!(stats.total_execution_time > Duration::from_millis(0), "总执行时间应该大于0");
+
+        println!("✅ WASM性能压力测试通过");
+    }
+
+    /// 测试10: WASM缓存和统计
+    #[test]
+    fn test_wasm_caching_and_stats() {
+        use beejs::wasm_integration::WasmExecutor;
+
+        let executor = WasmExecutor::new();
+
+        // 加载模块
+        executor.load_module("cache_test", get_valid_wasm()).unwrap();
+
+        // 执行多次
+        for _ in 0..5 {
+            let _ = executor.execute_module("cache_test");
+        }
+
+        // 验证统计信息
+        let stats = executor.get_stats();
+        assert_eq!(stats.total_executions, 5, "应该有5次执行");
+        assert!(stats.total_execution_time > Duration::from_millis(0), "总执行时间应该大于0");
+        assert!(stats.avg_execution_time > Duration::from_millis(0), "平均执行时间应该大于0");
+
+        // 计算缓存命中率（模拟）
+        println!("✅ WASM缓存统计: 总执行 {} 次, 总时间 {:?}, 平均时间 {:?}",
+                 stats.total_executions,
+                 stats.total_execution_time,
+                 stats.avg_execution_time);
+
+        println!("✅ WASM缓存和统计测试通过");
+    }
+
+    /// 获取有效的WASM字节码用于测试
+    fn get_valid_wasm() -> Vec<u8> {
+        vec![
+            0x00, 0x61, 0x73, 0x6d, // WASM magic number
+            0x01, 0x00, 0x00, 0x00, // WASM version 1
+            0x06, // Section: Export
+            0x06, // Section size
+            0x01, // Count: 1
+            0x06, // "_start"
+            0x00, // Kind: func
+            0x00, // Function index
+        ]
+    }
 }

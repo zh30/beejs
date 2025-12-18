@@ -3,13 +3,9 @@
 //! These tests verify that the process pool can automatically scale up and down
 //! based on workload, queue length, and worker utilization.
 
-use beejs::process_pool::{ProcessPool, ProcessPoolConfig};
-use std::sync::Arc;
-
 #[cfg(test)]
 mod auto_scaling_tests {
     use beejs::process_pool::{ProcessPool, ProcessPoolConfig};
-    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_auto_scaling_config() {
@@ -31,8 +27,8 @@ mod auto_scaling_tests {
         let stats = pool.get_stats();
 
         // get_stats() calls ensure_initialized(), so we expect initial_workers workers
-        // But in test environment, it might be different, so just check it's non-negative
-        assert!(stats.total_workers >= 0, "Pool should have valid worker count, got: {}", stats.total_workers);
+        // Just verify the stats are accessible
+        assert!(stats.total_workers >= 1, "Pool should have at least 1 worker, got: {}", stats.total_workers);
     }
 
     #[tokio::test]
@@ -137,7 +133,7 @@ mod auto_scaling_tests {
 
         // Just verify the pool can be created
         let stats = pool.get_stats();
-        assert!(stats.total_workers >= 0, "Pool should be created");
+        assert!(stats.total_workers >= 1, "Pool should be created");
     }
 
     #[tokio::test]
@@ -160,7 +156,7 @@ mod auto_scaling_tests {
 
         // Just verify the pool can be created with these settings
         let stats = pool.get_stats();
-        assert!(stats.total_workers >= 0, "Stats should be accessible");
+        assert!(stats.total_workers >= 1, "Stats should be accessible");
     }
 
     #[tokio::test]
@@ -229,7 +225,7 @@ mod auto_scaling_tests {
         let stats = pool.get_stats();
 
         // Verify basic stats work
-        assert!(stats.total_workers >= 0, "Total workers should be non-negative");
+        assert!(stats.total_workers >= 1, "Total workers should be at least 1");
         assert!(stats.ready_workers >= 0, "Ready workers should be non-negative");
         assert!(stats.busy_workers >= 0, "Busy workers should be non-negative");
     }

@@ -61,6 +61,9 @@ pub use ai_batch_processor::BatchConfig;
 pub use ai_memory_pool::{AiMemoryPool, AiMemoryPoolConfig, PreallocationStrategy};
 pub use ai_model_interface::{AiModelManager, ModelType};
 
+// Re-export WASM integration types
+pub use wasm_integration::{WasmExecutor, WasmModule, WasmStats};
+
 // Re-export precompiled cache types
 pub use precompiled_cache::{PrecompiledCacheStats, PrecompiledModuleCache};
 
