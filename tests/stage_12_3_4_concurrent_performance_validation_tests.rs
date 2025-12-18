@@ -295,7 +295,7 @@ mod tests {
     /// Test 5: Validate shared object cache effectiveness
     #[tokio::test]
     async fn test_shared_object_cache_effectiveness() {
-        use beejs::string_interner::{StringInterner, GlobalInterner};
+        use beejs::string_interner::GlobalInterner;
 
         // Test string interning
         let interner = Arc::new(GlobalInterner::new());

@@ -3,20 +3,18 @@
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::sync::Arc;
+    
+    
     use std::time::{Duration, Instant};
 
     // 导入测试模块
     use beejs::shared_memory::{
-        SharedMemoryManager, SharedMemoryConfig, SharedMemoryHandle, SharedMemoryStats
+        SharedMemoryManager, SharedMemoryConfig
     };
     use beejs::shared_object_cache::{
         SharedObjectCache, SharedObjectCacheConfig, SharedValue
     };
-    use beejs::memory_mapped_file::{
-        MemoryMappedFileManager, MemoryMappedFile, MemoryMappedFileConfig, AccessMode
-    };
+    use beejs::memory_mapped_file::MemoryMappedFile;
     // Note: concurrent_execution is private, so we'll skip those tests
     // use beejs::concurrent_execution::{
     //     ConcurrentRuntimePool, ConcurrentConfig

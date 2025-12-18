@@ -71,8 +71,9 @@ mod precompiled_modules_tests {
         let stats = cache.get_stats();
 
         assert!(stats.total_modules >= 5); // 至少有5个内置模块
-        assert!(stats.cache_hits >= 0, "Cache hits should be non-negative"); // Always true
-        assert!(stats.cache_misses >= 0, "Cache misses should be non-negative"); // Always true
+        // stats.cache_hits and stats.cache_misses are u64, always >= 0
+        let _ = stats.cache_hits; // Verify field exists
+        let _ = stats.cache_misses; // Verify field exists
         assert!(stats.average_compile_time_ms >= 0.0);
     }
 

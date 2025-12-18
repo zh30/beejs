@@ -121,13 +121,13 @@ mod tests {
         }
 
         let stats = scheduler.get_steal_stats();
-        let initial_attempts = stats.steal_attempts.load();
+        let _initial_attempts = stats.steal_attempts.load();
 
         // 触发窃取检查
         let should_steal = scheduler.should_steal(2, 3).await;
         println!("轻负载下是否应该窃取: {}", should_steal);
 
-        let final_attempts = stats.steal_attempts.load();
+        let _final_attempts = stats.steal_attempts.load();
 
         // 验证窃取决策逻辑
         if should_steal {

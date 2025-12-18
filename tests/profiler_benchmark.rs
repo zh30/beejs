@@ -70,7 +70,7 @@ mod tests {
         // Profile multiple operations concurrently
         let mut profiles = Vec::new();
 
-        for i in 0..10 {
+        for _i in 0..10 {
             let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
             profiles.push(profile_id);
 
