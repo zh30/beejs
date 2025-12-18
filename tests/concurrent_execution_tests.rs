@@ -64,7 +64,7 @@ mod tests {
     #[test]
     fn test_async_io_performance() {
         // 创建Tokio运行时进行异步测试
-        let rt = TokioRuntime::new().unwrap();
+        let rt = TokioRuntime::new();
 
         rt.block_on(async {
             let concurrent_tasks = 500;

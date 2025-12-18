@@ -68,7 +68,7 @@ mod edge_computing_tests {
 
     #[tokio::test]
     async fn test_cold_start_performance() {
-        let runtime = EdgeRuntime::new();
+        let runtime = EdgeRuntime::new(8192 * 1024, 256 * 1024 * 1024, false);
         let start = std::time::Instant::now();
         let result = runtime.initialize().await;
         let elapsed = start.elapsed();
@@ -310,7 +310,7 @@ mod edge_computing_tests {
     /// Performance Target Validation
     #[tokio::test]
     async fn test_cold_start_target() {
-        let runtime = EdgeRuntime::new();
+        let runtime = EdgeRuntime::new(8192 * 1024, 256 * 1024 * 1024, false);
         let start = std::time::Instant::now();
         runtime.initialize().await.unwrap();
         let elapsed = start.elapsed();

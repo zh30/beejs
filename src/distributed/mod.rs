@@ -13,6 +13,7 @@ pub mod task_executor;
 pub mod autoscaler;
 pub mod scaling_manager;
 pub mod resource_tracker;
+pub mod fault_tolerance;
 
 // Re-export 主要类型
 pub use service_discovery::{
@@ -127,6 +128,17 @@ pub use resource_tracker::{
     ResourceAllocation,
     ResourceUsage,
     ResourceStats,
+};
+
+pub use fault_tolerance::{
+    FaultDetector,
+    FaultDetectionConfig,
+    FaultEvent,
+    FaultSeverity,
+    FaultType,
+    RecoveryStrategy,
+    RecoveryAction,
+    FaultStatistics,
 };
 
 /// 分布式系统配置

@@ -13,7 +13,7 @@ mod tests {
 
     #[test]
     fn test_llm_engine_initialization() {
-        let rt = Runtime::new();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false);
         assert!(rt.is_ok());
 
         let runtime = rt.unwrap();
@@ -32,7 +32,7 @@ mod tests {
 
     #[test]
     fn test_token_cache_performance() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let config = LlmConfig {
@@ -61,7 +61,7 @@ mod tests {
 
     #[test]
     fn test_batch_inference_performance() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let config = LlmConfig {
@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn test_memory_optimization() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let config = LlmConfig {
@@ -127,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_inference() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let config = LlmConfig {
@@ -303,7 +303,7 @@ mod tests {
 
     #[test]
     fn test_gpu_acceleration_initialization() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn test_gpu_acceleration_performance() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let mut acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
@@ -352,7 +352,7 @@ mod tests {
 
     #[test]
     fn test_pipeline_parallel_inference() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let mut acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
@@ -377,7 +377,7 @@ mod tests {
 
     #[test]
     fn test_dynamic_batch_processing() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let mut acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
@@ -406,7 +406,7 @@ mod tests {
 
     #[test]
     fn test_acceleration_stability() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let mut acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
@@ -475,7 +475,7 @@ mod tests {
 
     #[test]
     fn test_intelligent_routing() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let mut router = ModelRouter::new(&runtime, RouterConfig {
@@ -511,7 +511,7 @@ mod tests {
 
     #[test]
     fn test_load_balancing() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let mut router = ModelRouter::new(&runtime, RouterConfig {
@@ -547,7 +547,7 @@ mod tests {
 
     #[test]
     fn test_failover_mechanism() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let mut router = ModelRouter::new(&runtime, RouterConfig {
@@ -585,7 +585,7 @@ mod tests {
 
     #[test]
     fn test_concurrent_model_management() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let mut manager = ModelManager::new(&runtime, ManagerConfig {
@@ -631,7 +631,7 @@ mod tests {
 
     #[test]
     fn test_end_to_end_ai_pipeline() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         // 1. 初始化 AI 系统
@@ -673,7 +673,7 @@ mod tests {
 
     #[test]
     fn test_ai_performance_benchmark() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let start = Instant::now();
@@ -726,7 +726,7 @@ mod tests {
 
     #[test]
     fn test_ai_system_stability() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let cache = ModelCache::new(ModelCacheConfig {
@@ -774,7 +774,7 @@ mod tests {
 
     #[test]
     fn test_ai_memory_leak_detection() {
-        let rt = Runtime::new().unwrap();
+        let rt = Runtime::new(8192 * 1024, 256 * 1024 * 1024, false).unwrap();
         let runtime = Arc::new(rt);
 
         let cache = ModelCache::new(ModelCacheConfig {

@@ -75,7 +75,7 @@ pub use flame_graph::{FlameGraph, FrameNode, StackFrame};
 // 新增WASM集成模块
 pub mod wasm_integration;
 
-// Stage 27.2: WebAssembly 完整支持模块 (暂时禁用，存在编译错误)
+// Stage 27.2: WebAssembly 完整支持模块 (暂时禁用，存在 API 兼容性问题)
 // pub mod wasm {
 //     pub mod compiler;
 //     pub mod module_loader;

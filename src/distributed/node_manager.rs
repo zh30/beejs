@@ -374,7 +374,7 @@ impl NodeManager {
 }
 
 /// 健康状态枚举
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HealthStatus {
     Healthy,
     Degraded,

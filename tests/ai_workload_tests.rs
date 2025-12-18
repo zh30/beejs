@@ -119,7 +119,7 @@ mod tests {
     /// 目标：支持10000+并发AI任务
     #[test]
     fn test_ai_async_queue_performance() {
-        let rt = TokioRuntime::new().unwrap();
+        let rt = TokioRuntime::new();
         let concurrent_tasks = 1000; // 测试1000个并发AI任务
 
         rt.block_on(async {
@@ -299,7 +299,7 @@ mod tests {
     #[test]
     fn test_ai_workload_comprehensive_performance() {
         let task_count = 500;
-        let rt = TokioRuntime::new().unwrap();
+        let rt = TokioRuntime::new();
 
         rt.block_on(async {
             let start = Instant::now();

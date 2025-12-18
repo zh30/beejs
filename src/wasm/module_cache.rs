@@ -436,7 +436,7 @@ impl WasmModuleCache {
         // 更新缓存映射
         {
             let mut l2 = self.l2_cache.lock().unwrap();
-            l2.insert(module_hash.to_string(), file_path);
+            l2.insert(module_hash.to_string(), file_path.clone());
         }
 
         // 更新条目信息
