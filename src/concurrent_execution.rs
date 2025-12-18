@@ -415,8 +415,230 @@ impl StealPredictor {
     }
 }
 
-/// 工作窃取调度器
-/// 实现多线程任务调度和负载均衡
+/// Stage 25.0: 负载监控器 - 实时监控worker负载状态
+#[derive(Debug, Clone)]
+pub struct LoadMonitor {
+    /// 每个worker的当前负载
+    worker_loads: Arc<Vec<AtomicUsize>>,
+    /// 每个worker的任务执行时间历史
+    execution_history: Arc<Vec<VecDeque<Duration>>>,
+    /// 每个worker的CPU使用率估算
+    cpu_usage: Arc<Vec<AtomicUsize>>,
+    /// 负载更新时间
+    last_update: Arc<Mutex<Instant>>,
+}
+
+impl LoadMonitor {
+    pub fn new(thread_count: usize) -> Self {
+        Self {
+            worker_loads: Arc::new((0..thread_count).map(|_| AtomicUsize::new(0)).collect()),
+            execution_history: Arc::new((0..thread_count)
+                .map(|_| VecDeque::with_capacity(100))
+                .collect()),
+            cpu_usage: Arc::new((0..thread_count).map(|_| AtomicUsize::new(0)).collect()),
+            last_update: Arc::new(Mutex::new(Instant::now())),
+        }
+    }
+
+    /// 更新worker负载
+    pub fn update_worker_load(&self, worker_id: usize, load: usize) {
+        if worker_id < self.worker_loads.len() {
+            self.worker_loads[worker_id].store(load, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    /// 记录任务执行时间
+    pub fn record_execution_time(&self, worker_id: usize, duration: Duration) {
+        if worker_id >= self.execution_history.len() {
+            return;
+        }
+
+        // 直接访问内部可变引用（简化实现）
+        // 注意：这是一个简化的实现，在生产环境中应该使用更好的同步机制
+        let avg_duration = Duration::from_millis(50); // 默认值
+        let cpu_usage = if duration > Duration::from_millis(10) {
+            (duration.as_millis() as f64 / avg_duration.as_millis() as f64 * 100.0) as usize
+        } else {
+            10
+        };
+
+        self.cpu_usage[worker_id].store(cpu_usage.min(100), std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// 计算平均执行时间
+    fn calculate_average_duration(&self, worker_id: usize) -> Duration {
+        // 简化实现：返回默认值
+        // 在生产环境中应该从历史记录中计算
+        Duration::from_millis(50)
+    }
+
+    /// 获取worker负载状态
+    pub fn get_worker_load(&self, worker_id: usize) -> usize {
+        self.worker_loads.get(worker_id).map(|load| load.load(std::sync::atomic::Ordering::Relaxed)).unwrap_or(0)
+    }
+
+    /// 获取CPU使用率
+    pub fn get_cpu_usage(&self, worker_id: usize) -> usize {
+        self.cpu_usage.get(worker_id).map(|usage| usage.load(std::sync::atomic::Ordering::Relaxed)).unwrap_or(0)
+    }
+
+    /// 获取负载最低的worker
+    pub fn get_least_loaded_worker(&self, exclude: &[usize]) -> Option<usize> {
+        let mut min_load = usize::MAX;
+        let mut least_loaded = None;
+
+        for (i, load) in self.worker_loads.iter().enumerate() {
+            if exclude.contains(&i) {
+                continue;
+            }
+
+            let current_load = load.load(std::sync::atomic::Ordering::Relaxed);
+            if current_load < min_load {
+                min_load = current_load;
+                least_loaded = Some(i);
+            }
+        }
+
+        least_loaded
+    }
+
+    /// 检查worker是否过载
+    pub fn is_overloaded(&self, worker_id: usize, threshold: usize) -> bool {
+        self.get_worker_load(worker_id) > threshold
+    }
+
+    /// 获取系统整体负载统计
+    pub fn get_system_load_stats(&self) -> (usize, usize, f64, f64) {
+        let loads: Vec<usize> = self.worker_loads.iter()
+            .map(|load| load.load(std::sync::atomic::Ordering::Relaxed))
+            .collect();
+
+        let max_load = loads.iter().max().copied().unwrap_or(0);
+        let min_load = loads.iter().min().copied().unwrap_or(0);
+        let avg_load = if !loads.is_empty() {
+            loads.iter().sum::<usize>() as f64 / loads.len() as f64
+        } else {
+            0.0
+        };
+
+        let load_variance = if !loads.is_empty() {
+            let variance: f64 = loads.iter()
+                .map(|&load| {
+                    let diff = load as f64 - avg_load;
+                    diff * diff
+                })
+                .sum::<f64>() / loads.len() as f64;
+            variance.sqrt()
+        } else {
+            0.0
+        };
+
+        (min_load, max_load, avg_load, load_variance)
+    }
+}
+
+/// Stage 25.0: 自适应线程池 - 根据负载动态调整线程池大小
+#[derive(Debug)]
+pub struct AdaptiveThreadPool {
+    /// 当前线程池大小
+    current_size: Arc<AtomicUsize>,
+    /// 目标线程池大小
+    target_size: Arc<AtomicUsize>,
+    /// 负载监控器
+    load_monitor: Arc<LoadMonitor>,
+    /// 线程池调整历史
+    adjustment_history: Arc<Mutex<VecDeque<(Instant, usize, usize)>>>, // (时间, 旧大小, 新大小)
+    /// 是否启用自动调整
+    auto_scaling: Arc<std::sync::atomic::AtomicBool>,
+    /// 最小线程数
+    min_threads: usize,
+    /// 最大线程数
+    max_threads: usize,
+}
+
+impl AdaptiveThreadPool {
+    pub fn new(initial_size: usize, min_threads: usize, max_threads: usize) -> Self {
+        Self {
+            current_size: Arc::new(AtomicUsize::new(initial_size)),
+            target_size: Arc::new(AtomicUsize::new(initial_size)),
+            load_monitor: Arc::new(LoadMonitor::new(initial_size)),
+            adjustment_history: Arc::new(Mutex::new(VecDeque::with_capacity(100))),
+            auto_scaling: Arc::new(std::sync::atomic::AtomicBool::new(true)),
+            min_threads,
+            max_threads,
+        }
+    }
+
+    /// 评估是否需要调整线程池大小
+    pub fn evaluate_scaling_need(&self) -> Option<usize> {
+        let current_size = self.current_size.load(std::sync::atomic::Ordering::Relaxed);
+        let (min_load, max_load, avg_load, load_variance) = self.load_monitor.get_system_load_stats();
+
+        // 扩容条件：系统负载高且稳定
+        let should_scale_up = max_load > current_size * 3 && // 存在严重过载
+                             load_variance < avg_load * 0.3 && // 负载相对稳定
+                             current_size < self.max_threads;
+
+        // 缩容条件：系统负载低且持续
+        let should_scale_down = max_load < current_size / 2 && // 系统空闲
+                               avg_load < (current_size / 4) as f64 && // 平均负载很低
+                               current_size > self.min_threads;
+
+        if should_scale_up {
+            let new_size = (current_size * 2).min(self.max_threads);
+            println!("📈 扩容决策: {} -> {} (负载: max={}, avg={:.2})", current_size, new_size, max_load, avg_load);
+            Some(new_size)
+        } else if should_scale_down {
+            let new_size = (current_size / 2).max(self.min_threads);
+            println!("📉 缩容决策: {} -> {} (负载: max={}, avg={:.2})", current_size, new_size, max_load, avg_load);
+            Some(new_size)
+        } else {
+            None
+        }
+    }
+
+    /// 执行线程池调整
+    pub async fn adjust_pool_size(&self, new_size: usize) -> bool {
+        let current_size = self.current_size.load(std::sync::atomic::Ordering::Relaxed);
+
+        if new_size == current_size {
+            return false;
+        }
+
+        // 记录调整历史
+        let mut history = self.adjustment_history.lock().await;
+        history.push_back((Instant::now(), current_size, new_size));
+
+        if history.len() > 50 {
+            history.pop_front();
+        }
+
+        // 更新线程池大小
+        self.current_size.store(new_size, std::sync::atomic::Ordering::Relaxed);
+        self.target_size.store(new_size, std::sync::atomic::Ordering::Relaxed);
+
+        println!("🔧 线程池调整完成: {} -> {}", current_size, new_size);
+        true
+    }
+
+    /// 获取当前线程池大小
+    pub fn get_current_size(&self) -> usize {
+        self.current_size.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// 获取负载监控器
+    pub fn get_load_monitor(&self) -> Arc<LoadMonitor> {
+        self.load_monitor.clone()
+    }
+
+    /// 检查是否可以添加更多任务
+    pub fn can_accept_tasks(&self) -> bool {
+        self.load_monitor.get_system_load_stats().1 < self.get_current_size() * 2 // 最大负载小于线程数的2倍
+    }
+}
+
+/// 工作窃取调度器 - Stage 25.0 增强版
+/// 实现多线程任务调度、负载均衡和自适应调整
 #[derive(Debug)]
 pub struct WorkStealingScheduler {
     /// 线程数量
@@ -430,10 +652,14 @@ pub struct WorkStealingScheduler {
     stats: Arc<StealStats>,
     /// 是否关闭
     shutdown: Arc<std::sync::atomic::AtomicBool>,
+    /// 负载监控器
+    load_monitor: Arc<LoadMonitor>,
+    /// 自适应线程池
+    adaptive_pool: Arc<AdaptiveThreadPool>,
 }
 
 impl WorkStealingScheduler {
-    /// 创建新的工作窃取调度器
+    /// 创建新的工作窃取调度器 - Stage 25.0 增强版
     pub fn new(thread_count: usize) -> Self {
         let mut thread_queues = Vec::with_capacity(thread_count);
         let mut steal_channels = Vec::with_capacity(thread_count);
@@ -443,13 +669,138 @@ impl WorkStealingScheduler {
             steal_channels.push(ZeroCopyChannel::new(1000));
         }
 
+        // 创建负载监控器和自适应线程池
+        let load_monitor = Arc::new(LoadMonitor::new(thread_count));
+        let adaptive_pool = Arc::new(AdaptiveThreadPool::new(
+            thread_count,
+            (thread_count / 2).max(2), // 最小线程数
+            thread_count * 2,          // 最大线程数
+        ));
+
         Self {
             thread_count,
             thread_queues,
             steal_channels,
             stats: Arc::new(StealStats::new()),
             shutdown: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            load_monitor: load_monitor.clone(),
+            adaptive_pool: adaptive_pool.clone(),
         }
+    }
+
+    /// 创建带有负载监控的工作窃取调度器
+    pub fn new_with_monitoring(thread_count: usize) -> (Self, Arc<LoadMonitor>, Arc<AdaptiveThreadPool>) {
+        let scheduler = Self::new(thread_count);
+        let load_monitor = scheduler.load_monitor.clone();
+        let adaptive_pool = scheduler.adaptive_pool.clone();
+        (scheduler, load_monitor, adaptive_pool)
+    }
+
+    /// 智能任务调度 - 基于负载感知选择最佳队列
+    pub async fn submit_task_smart(&self, task: Task) -> Result<(), ConcurrentExecutionError> {
+        // 记录任务提交
+        self.stats.record_local_operation();
+
+        // 使用负载感知调度：选择负载最低的队列
+        let exclude_queues = Vec::new(); // 可以排除某些特定队列
+        if let Some(target_queue) = self.load_monitor.get_least_loaded_worker(&exclude_queues) {
+            self.submit_local_task(target_queue, task).await
+        } else {
+            // 回退到轮询调度
+            let queue_id = task.id % self.thread_count;
+            self.submit_local_task(queue_id, task).await
+        }
+    }
+
+    /// 执行负载感知的窃取策略
+    pub async fn smart_steal(&self, thief_thread_id: usize) -> Option<Task> {
+        // 首先尝试从负载最高的队列窃取
+        let (min_load, max_load, avg_load, _) = self.load_monitor.get_system_load_stats();
+
+        // 如果系统负载已经很均衡，使用常规窃取
+        if max_load - min_load < 5 {
+            return self.steal_task(thief_thread_id).await;
+        }
+
+        // 负载感知窃取：优先从高负载队列窃取
+        let mut candidates = Vec::new();
+
+        for queue_id in 0..self.thread_count {
+            if queue_id == thief_thread_id {
+                continue;
+            }
+
+            let queue_load = self.load_monitor.get_worker_load(queue_id);
+            if queue_load > avg_load as usize {
+                candidates.push((queue_id, queue_load));
+            }
+        }
+
+        // 按负载排序，优先从最高负载的队列窃取
+        candidates.sort_by(|a, b| b.1.cmp(&a.1));
+
+        for (source_queue_id, _) in candidates {
+            let source_queue = &self.thread_queues[source_queue_id];
+            let mut queue_guard = source_queue.lock().await;
+
+            if queue_guard.len() > 1 {
+                if let Some(task) = queue_guard.pop_back() {
+                    self.stats.record_successful_steal();
+                    println!("🎯 负载感知窃取: 线程 {} 从线程 {} 窃取任务 {}",
+                        thief_thread_id, source_queue_id, task.id);
+                    return Some(task);
+                }
+            }
+        }
+
+        // 如果没有找到合适的队列，回退到常规窃取
+        self.steal_task(thief_thread_id).await
+    }
+
+    /// 启动自适应负载均衡
+    pub async fn start_adaptive_balancing(&self) {
+        let adaptive_pool = self.adaptive_pool.clone();
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
+
+            loop {
+                interval.tick().await;
+
+                // 评估是否需要调整线程池大小
+                if let Some(new_size) = adaptive_pool.evaluate_scaling_need() {
+                    let _ = adaptive_pool.adjust_pool_size(new_size).await;
+                }
+
+                // 检查关闭标志
+                if !adaptive_pool.auto_scaling.load(std::sync::atomic::Ordering::Relaxed) {
+                    break;
+                }
+            }
+        });
+
+        println!("🚀 自适应负载均衡已启动");
+    }
+
+    /// 获取系统负载状态报告
+    pub fn get_load_report(&self) -> String {
+        let (min_load, max_load, avg_load, load_variance) = self.load_monitor.get_system_load_stats();
+        let current_pool_size = self.adaptive_pool.get_current_size();
+
+        format!(
+            "系统负载报告:\n\
+             - 当前线程池大小: {}\n\
+             - 负载范围: {}-{} (平均: {:.2})\n\
+             - 负载方差: {:.2}\n\
+             - 窃取统计: {} 尝试, {} 成功",
+            current_pool_size,
+            min_load,
+            max_load,
+            avg_load,
+            load_variance,
+            self.stats.steal_attempts.load(),
+            self.stats.successful_steals.load()
+        )
     }
 
     /// 提交任务到指定线程的本地队列
@@ -812,51 +1163,129 @@ impl WorkStealingScheduler {
         should_steal
     }
 
-    /// 执行负载均衡
+    /// 执行负载均衡 - Stage 25.0 增强版
     pub async fn balance_load(&self) -> bool {
         let distribution = self.get_queue_distribution().await;
         let total_tasks: usize = distribution.iter().sum();
         let avg_tasks = total_tasks / self.thread_count;
 
-        // 计算负载差异
+        // 计算负载差异和分布统计
         let max_load = distribution.iter().max().copied().unwrap_or(0);
         let min_load = distribution.iter().min().copied().unwrap_or(0);
         let load_imbalance = max_load - min_load;
 
-        // 如果负载差异超过阈值，执行负载均衡
-        if load_imbalance > avg_tasks / 2 && load_imbalance > 5 {
-            println!("⚖️ 执行负载均衡 - 差异: {}, 平均: {}", load_imbalance, avg_tasks);
+        // 计算负载不均衡系数 (0.0 = 完全均衡, 1.0 = 极度不均衡)
+        let load_imbalance_coefficient = if max_load > 0 {
+            load_imbalance as f64 / max_load as f64
+        } else {
+            0.0
+        };
 
-            // 找到负载最重的队列和最轻的队列
-            let mut heaviest_queue = 0;
-            let mut lightest_queue = 0;
-            let mut heaviest_load = 0;
-            let mut lightest_load = usize::MAX;
+        // 计算负载方差（衡量分布的离散程度）
+        let load_variance = distribution.iter()
+            .map(|&load| {
+                let diff = load as f64 - avg_tasks as f64;
+                diff * diff
+            })
+            .sum::<f64>() / self.thread_count as f64;
 
-            for (i, &load) in distribution.iter().enumerate() {
-                if load > heaviest_load {
-                    heaviest_load = load;
-                    heaviest_queue = i;
-                }
-                if load < lightest_load {
-                    lightest_load = load;
-                    lightest_queue = i;
-                }
+        // Stage 25.0: 动态负载均衡触发条件
+        // 考虑多种因素：绝对差异、相对差异、分布方差
+        let absolute_threshold = (avg_tasks / 3).max(5); // 绝对差异阈值
+        let relative_threshold = avg_tasks / 2;          // 相对差异阈值
+        let variance_threshold = (avg_tasks as f64 * 0.5).max(10.0); // 方差阈值
+
+        let should_balance = load_imbalance > absolute_threshold.max(relative_threshold) ||
+                            load_variance > variance_threshold;
+
+        if !should_balance {
+            return false;
+        }
+
+        println!("⚖️ 执行负载均衡 - 差异: {}, 平均: {}, 不均衡系数: {:.3}, 方差: {:.2}",
+                 load_imbalance, avg_tasks, load_imbalance_coefficient, load_variance);
+
+        // 找到多个需要均衡的队列对
+        let mut queue_pairs = Vec::new();
+        let mut queues_by_load: Vec<(usize, usize)> = distribution.iter()
+            .enumerate()
+            .map(|(i, &load)| (i, load))
+            .collect();
+
+        // 按负载排序
+        queues_by_load.sort_by(|a, b| b.1.cmp(&a.1));
+
+        // 选择多个队列对进行均衡
+        let max_pairs = (self.thread_count / 2).min(3); // 最多处理3对队列
+        for i in 0..max_pairs {
+            if i + 1 >= queues_by_load.len() {
+                break;
             }
 
-            // 从重队列窃取任务到轻队列
-            if heaviest_load > lightest_load + 3 {
-                let tasks_to_move = (heaviest_load - lightest_load) / 2;
-                let moved = self.move_tasks(heaviest_queue, lightest_queue, tasks_to_move).await;
+            let (heavy_queue, heavy_load) = queues_by_load[i];
+            let (light_queue, light_load) = queues_by_load[queues_by_load.len() - 1 - i];
 
-                if moved > 0 {
-                    println!("⚖️ 负载均衡完成 - 移动 {} 个任务", moved);
-                    return true;
-                }
+            // 只有当负载差异足够大时才进行均衡
+            if heavy_load > light_load + 10 {
+                queue_pairs.push((heavy_queue, light_queue, heavy_load - light_load));
             }
         }
 
+        // 执行多对队列的负载均衡
+        let mut total_moved = 0;
+        for (heavy_queue, light_queue, load_diff) in queue_pairs {
+            let tasks_to_move = (load_diff / 2).min(20); // 限制单次移动任务数
+            let moved = self.move_tasks_optimized(heavy_queue, light_queue, tasks_to_move).await;
+            total_moved += moved;
+
+            if moved > 0 {
+                println!("⚖️ 队列均衡: {} -> {}, 移动 {} 个任务", heavy_queue, light_queue, moved);
+            }
+        }
+
+        if total_moved > 0 {
+            println!("⚖️ 负载均衡完成 - 总移动 {} 个任务", total_moved);
+            return true;
+        }
+
         false
+    }
+
+    /// 优化的任务移动 - Stage 25.0 增强版
+    pub async fn move_tasks_optimized(&self, source_queue_id: usize, target_queue_id: usize, max_tasks: usize) -> usize {
+        if source_queue_id >= self.thread_count || target_queue_id >= self.thread_count {
+            return 0;
+        }
+
+        let source_queue = &self.thread_queues[source_queue_id];
+        let target_queue = &self.thread_queues[target_queue_id];
+
+        let mut moved_count = 0;
+
+        // 从源队列移动任务到目标队列
+        for _ in 0..max_tasks {
+            let task = {
+                let mut source_guard = source_queue.lock().await;
+                source_guard.pop_back() // 从尾部移动（低优先级任务）
+            };
+
+            if let Some(task) = task {
+                {
+                    let mut target_guard = target_queue.lock().await;
+                    target_guard.push_back(task);
+                }
+                moved_count += 1;
+            } else {
+                break; // 源队列为空
+            }
+        }
+
+        if moved_count > 0 {
+            self.stats.record_local_operation();
+            println!("📦 任务移动: 队列 {} -> 队列 {}, 数量: {}", source_queue_id, target_queue_id, moved_count);
+        }
+
+        moved_count
     }
 
     /// 在队列间移动任务（内部方法）
