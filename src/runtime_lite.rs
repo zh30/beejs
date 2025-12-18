@@ -188,10 +188,30 @@ impl RuntimeLite {
             return Some(trimmed.to_string());
         }
 
-        // String constants (single or double quoted) - must be simple, no operators
-        if (trimmed.starts_with('"') && trimmed.ends_with('"') && !trimmed[1..trimmed.len()-1].contains('+') && !trimmed[1..trimmed.len()-1].contains('-') && !trimmed[1..trimmed.len()-1].contains('*') && !trimmed[1..trimmed.len()-1].contains('/')) ||
-           (trimmed.starts_with('\'') && trimmed.ends_with('\'') && !trimmed[1..trimmed.len()-1].contains('+') && !trimmed[1..trimmed.len()-1].contains('-') && !trimmed[1..trimmed.len()-1].contains('*') && !trimmed[1..trimmed.len()-1].contains('/')) {
-            return Some(trimmed.to_string());
+        // String constants (single or double quoted) - must be simple, no operators or comparisons
+        // Only true if it's a single quoted string with no special characters
+        if (trimmed.starts_with('"') && trimmed.ends_with('"')) ||
+           (trimmed.starts_with('\'') && trimmed.ends_with('\'')) {
+            // Check if the content contains any operators or special characters that would make it an expression
+            let content = &trimmed[1..trimmed.len()-1];
+            let has_operators = content.contains('+') || content.contains('-') || content.contains('*') ||
+                               content.contains('/') || content.contains('=') || content.contains('!') ||
+                               content.contains('>') || content.contains('<') || content.contains('&') ||
+                               content.contains('|') || content.contains('(') || content.contains(')') ||
+                               content.contains('{') || content.contains('}') || content.contains('[') ||
+                               content.contains(']') || content.contains(',') || content.contains(':');
+
+            // Only treat as string constant if content is "simple" (no operators, no spaces in simple cases)
+            // But first, check if it even LOOKS like an expression (contains comparison operators)
+            if content.contains("==") || content.contains("!=") || content.contains(">=") ||
+               content.contains("<=") || content.contains("&&") || content.contains("||") {
+                // This is definitely an expression, not a string constant
+            } else if has_operators {
+                // Has some operators, probably an expression
+            } else {
+                // No operators, likely a simple string constant
+                return Some(trimmed.to_string());
+            }
         }
 
         // Boolean constants
@@ -276,6 +296,17 @@ impl RuntimeLite {
         }
 
         None
+    }
+
+    /// Strip surrounding quotes from a string
+    fn strip_quotes(s: &str) -> &str {
+        let trimmed = s.trim();
+        if (trimmed.starts_with('"') && trimmed.ends_with('"')) ||
+           (trimmed.starts_with('\'') && trimmed.ends_with('\'')) {
+            &trimmed[1..trimmed.len()-1]
+        } else {
+            trimmed
+        }
     }
 
     /// Check if code is a simple arithmetic expression
@@ -444,9 +475,10 @@ impl RuntimeLite {
         }
 
         // Check for simple key-value pairs (no nested objects, arrays, or functions)
-        let mut depth = 0;
+        // Track nesting depth - any nesting beyond the outer object makes it non-simple
         let mut in_string = false;
         let mut string_char = '\0';
+        let mut paren_depth = 0;
 
         for c in content.chars() {
             match c {
@@ -459,33 +491,44 @@ impl RuntimeLite {
                         string_char = '\0';
                     }
                 }
-                '{' | '[' => {
+                '(' => {
                     if !in_string {
-                        depth += 1;
+                        paren_depth += 1;
+                    }
+                }
+                ')' => {
+                    if !in_string && paren_depth > 0 {
+                        paren_depth -= 1;
+                    }
+                }
+                '{' | '[' => {
+                    if !in_string && paren_depth == 0 {
+                        // Found a nested structure - not simple!
+                        return false;
                     }
                 }
                 '}' | ']' => {
-                    if !in_string && depth > 0 {
-                        depth -= 1;
-                    }
+                    // Handled by depth tracking above
                 }
                 _ => {}
             }
         }
 
-        // If we have any nested structures, it's not simple
-        depth == 0
+        // No nested structures found, it's simple
+        true
     }
 
     /// Check if code is a simple comparison expression
     pub fn is_simple_comparison(&self, code: &str) -> bool {
         let trimmed = code.trim();
-        let comparison_ops = ['>', '<', '=', '!'];
 
         // Must contain exactly one comparison operator
         let mut op_count = 0;
         let mut paren_depth = 0;
-        for c in trimmed.chars() {
+        let mut i = 0;
+
+        while i < trimmed.len() {
+            let c = trimmed.chars().nth(i).unwrap();
             match c {
                 '(' => paren_depth += 1,
                 ')' => {
@@ -493,13 +536,26 @@ impl RuntimeLite {
                         paren_depth -= 1;
                     }
                 }
-                _ if comparison_ops.contains(&c) => {
+                '>' | '<' => {
                     if paren_depth == 0 {
                         op_count += 1;
                     }
                 }
+                '=' | '!' => {
+                    if paren_depth == 0 {
+                        // Check for ==, !=, >=, <=
+                        if i + 1 < trimmed.len() {
+                            let next_c = trimmed.chars().nth(i + 1).unwrap();
+                            if next_c == '=' {
+                                op_count += 1;
+                                i += 1; // Skip the next '='
+                            }
+                        }
+                    }
+                }
                 _ => {}
             }
+            i += 1;
         }
 
         op_count == 1
@@ -546,12 +602,28 @@ impl RuntimeLite {
 
             // Handle ==, !=, ===, !==
             if op_str == "==" {
-                let is_equal = left == *right;
-                return Some((is_equal).to_string());
+                // Try numeric comparison first
+                if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                    let is_equal = l == r;
+                    return Some(is_equal.to_string());
+                }
+                // Try string comparison (handle quoted strings)
+                let left_str = Self::strip_quotes(left);
+                let right_str = Self::strip_quotes(right);
+                let is_equal = left_str == right_str;
+                return Some(is_equal.to_string());
             }
             if op_str == "!=" {
-                let is_not_equal = left != *right;
-                return Some((is_not_equal).to_string());
+                // Try numeric comparison first
+                if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                    let is_not_equal = l != r;
+                    return Some(is_not_equal.to_string());
+                }
+                // Try string comparison (handle quoted strings)
+                let left_str = Self::strip_quotes(left);
+                let right_str = Self::strip_quotes(right);
+                let is_not_equal = left_str != right_str;
+                return Some(is_not_equal.to_string());
             }
 
             // Handle >, <, >=, <=
@@ -642,7 +714,16 @@ impl RuntimeLite {
         // Cache miss - compile and cache
         self.cache_misses.fetch_add(1, Ordering::SeqCst);
 
-        let source = match v8::String::new(scope, code) {
+        // 🚀 Fix for object literals: Wrap in parentheses to ensure proper parsing
+        // Object literals like {a: 1} can be ambiguous in JavaScript (could be a labeled statement)
+        // Wrapping in parentheses ({a: 1}) forces it to be interpreted as an expression
+        let code_to_execute = if code.trim().starts_with('{') && code.trim().ends_with('}') {
+            format!("({})", code)
+        } else {
+            code.to_string()
+        };
+
+        let source = match v8::String::new(scope, &code_to_execute) {
             Some(s) => s,
             None => return Err(anyhow::anyhow!("Failed to create string")),
         };
@@ -652,7 +733,8 @@ impl RuntimeLite {
             None => return Err(anyhow::anyhow!("Failed to compile script")),
         };
 
-        // Cache the compiled script for future use
+        // Cache the compiled script using the original code as key
+        // (not the wrapped version) so future calls can find it
         let script_global = v8::Global::new(scope, &script);
         {
             let mut cache = self.script_cache.lock().unwrap();
