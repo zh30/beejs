@@ -19,6 +19,7 @@ pub mod performance_reporter;
 pub mod performance_regression;
 pub mod automation;
 pub mod analysis;
+pub mod monitor;
 
 // 重新导出主要类型
 pub use benchmarks::{
@@ -39,6 +40,30 @@ pub use automation::{
     threshold::{ThresholdManager, ThresholdConfig},
     report_generator::{ReportGenerator, ReportFormat, ReportOutput, ReportType},
 };
+
+pub use monitor::{
+    // 性能监控器
+    PerformanceMonitor, MonitorConfig, MetricValue, AggregatedMetric,
+    CollectionStats, ThresholdViolation, ThresholdSeverity,
+
+    // 数据存储
+    DataStore, DataStoreConfig, DataPoint, QueryCondition, ExportFormat,
+    CompressedData, QueryIndex, DataStoreStats,
+
+    // 告警系统
+    AlertRule, AlertCondition, AlertSeverity, AlertInstance, AlertData,
+    AlertStatus, NotificationChannel, NotificationType, NotificationMessage,
+    AlertStats, AlertSystem, AlertSystemConfig, SilenceRule, NotificationResult,
+
+    // Web 仪表板
+    DashboardConfig, ChartConfig, DashboardLayout, LayoutConfig,
+    BreakpointConfig, WebDashboard, ConnectionStats, DashboardData, ApiResponse,
+    ExportConfig, ChartData, Dataset,
+};
+
+// 重新导出监控相关的 MetricType，避免与 benchmarks 中的冲突
+pub use monitor::MetricType as MonitorMetricType;
+pub use monitor::ThresholdConfig as MonitorThresholdConfig;
 
 // 核心运行时
 use std::time::Duration;
