@@ -75,6 +75,15 @@ pub use flame_graph::{FlameGraph, FrameNode, StackFrame};
 // 新增WASM集成模块
 pub mod wasm_integration;
 
+// Stage 27.2: WebAssembly 完整支持模块
+pub mod wasm {
+    pub mod compiler;
+    pub mod module_loader;
+    pub mod memory_manager;
+    pub mod js_interop;
+    pub mod module_cache;
+}
+
 // Stage 21.2: Lazy loading framework for expensive modules
 pub mod lazy_loader;
 pub use lazy_loader::{print_stats, reset_stats};
