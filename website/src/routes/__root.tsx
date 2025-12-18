@@ -1,5 +1,4 @@
 import { Link, Outlet } from 'react-router-dom'
-import { ReactNode } from 'react'
 import '../global.css'
 
 export default function RootLayout() {
@@ -62,7 +61,7 @@ export default function RootLayout() {
           <div>
             <h4 className="font-bold mb-4 text-white">Contact</h4>
             <p className="text-sm text-gray-400">
-              Email: support@beejs.dev <br />
+              Email: support@beejs.zhanghe.dev <br />
               Discord: discord.gg/beejs
             </p>
           </div>

@@ -71,7 +71,7 @@ mod tests {
 
     #[test]
     fn test_svg_generation() {
-        let mut flame_graph = FlameGraph::new().unwrap();
+        let flame_graph = FlameGraph::new().unwrap();
 
         let frame = StackFrame {
             function_name: "hot_function".to_string(),
@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn test_frame_merging() {
-        let mut flame_graph = FlameGraph::new().unwrap();
+        let flame_graph = FlameGraph::new().unwrap();
 
         // Add same frame twice as separate call stacks
         let stack1 = vec![StackFrame {
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn test_depth_calculation() {
-        let mut flame_graph = FlameGraph::new().unwrap();
+        let flame_graph = FlameGraph::new().unwrap();
 
         // Add frames at different depths
         let stack = vec![

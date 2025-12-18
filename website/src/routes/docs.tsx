@@ -88,7 +88,7 @@ export default function DocsComponent() {
               <button className="hover:text-white transition-colors">Copy</button>
             </div>
             <code className="text-brand-yellow">
-              $ curl -fsSL https://beejs.dev/install.sh | sh
+              $ curl -fsSL https://beejs.zhanghe.dev/install.sh | sh
             </code>
           </div>
           <p className="text-gray-400">

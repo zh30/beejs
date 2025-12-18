@@ -13,7 +13,10 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route element={<RootLayout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/docs" element={<Docs />} />
+          <Route path="/docs" element={<Docs />}>
+            <Route index element={<Docs />} />
+            <Route path=":section" element={<Docs />} />
+          </Route>
           <Route path="/blog" element={<Blog />} />
         </Route>
       </Routes>
