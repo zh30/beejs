@@ -432,6 +432,7 @@ fn analyze_code_complexity(code: &str) -> ComplexityLevel {
 }
 
 /// Determine if code is simple enough for lightweight runtime
+#[allow(dead_code)]
 fn is_simple_script(code: &str) -> bool {
     // Simple heuristics to detect simple scripts
     let complexity_indicators = [

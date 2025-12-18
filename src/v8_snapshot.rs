@@ -146,7 +146,7 @@ impl V8SnapshotManager {
     }
 
     /// 从快照加载V8上下文
-    pub fn load_from_snapshot(&self, snapshot_data: Vec<u8>) -> Result<v8::OwnedIsolate> {
+    pub fn load_from_snapshot(&self, _snapshot_data: Vec<u8>) -> Result<v8::OwnedIsolate> {
         #[cfg(test)]
         {
             // 测试环境：快照加载不受支持
@@ -163,7 +163,7 @@ impl V8SnapshotManager {
 
             // 使用快照数据创建 Isolate
             let create_params = v8::CreateParams::default()
-                .snapshot_blob(snapshot_data);
+                .snapshot_blob(_snapshot_data);
             let isolate = v8::Isolate::new(create_params);
 
             let duration = start.elapsed()
@@ -178,6 +178,7 @@ impl V8SnapshotManager {
     }
 
     /// 在快照中设置 console API
+    #[allow(dead_code)]
     fn setup_console_snapshot(
         scope: &mut v8::ContextScope<v8::HandleScope>,
         context: &v8::Local<v8::Context>,
@@ -201,6 +202,7 @@ impl V8SnapshotManager {
     }
 
     /// 快照中的 console.log 回调
+    #[allow(dead_code)]
     fn console_log_callback_snapshot(
         _scope: &mut v8::HandleScope,
         _args: v8::FunctionCallbackArguments,

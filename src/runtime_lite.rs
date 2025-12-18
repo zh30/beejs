@@ -2,6 +2,7 @@
 //! This module provides a minimal runtime that only initializes essential components
 //! for simple scripts, dramatically reducing startup time.
 
+use crate::memory_pool::{PoolConfig, SmartMemoryPool};
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::HashMap;
@@ -23,6 +24,10 @@ pub struct RuntimeLite {
     /// Cache for pre-compiled scripts to avoid repeated compilation
     /// Less frequently accessed, placed separately
     script_cache: Arc<std::sync::Mutex<HashMap<String, (v8::Global<v8::Script>, Instant)>>>,
+
+    /// Smart memory pool for reducing GC pressure and memory allocation overhead
+    /// Stage 20.4 Optimization: Integrated memory pool for better performance
+    memory_pool: Arc<SmartMemoryPool>,
 }
 
 // Make RuntimeLite Send + Sync for thread-safe global sharing
@@ -49,6 +54,9 @@ impl RuntimeLite {
         // 注意：在测试环境中V8 SnapshotCreator有生命周期问题
         #[cfg(not(test))]
         {
+            // TEMPORARILY DISABLED for debugging
+            // TODO: Re-enable after fixing SnapshotCreator lifecycle issues
+            /*
             let snapshot_manager = crate::v8_snapshot::V8SnapshotManager::new().ok();
             if let Some(manager) = &snapshot_manager {
                 if let Ok(Some(_snapshot)) = manager.get_or_create_snapshot("v0.1.0") {
@@ -60,6 +68,10 @@ impl RuntimeLite {
                 }
             } else if verbose {
                 println!("RuntimeLite: V8 snapshot manager unavailable");
+            }
+            */
+            if verbose {
+                println!("RuntimeLite: V8 snapshot temporarily disabled for debugging");
             }
         }
 
@@ -75,6 +87,7 @@ impl RuntimeLite {
             script_cache: Arc::new(std::sync::Mutex::new(HashMap::new())),
             cache_hits: Arc::new(AtomicUsize::new(0)),
             cache_misses: Arc::new(AtomicUsize::new(0)),
+            memory_pool: Arc::new(SmartMemoryPool::new(PoolConfig::default())),
         })
     }
 
