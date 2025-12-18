@@ -17,7 +17,10 @@ createRoot(document.getElementById('root')!).render(
             <Route index element={<Docs />} />
             <Route path=":section" element={<Docs />} />
           </Route>
-          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog" element={<Blog />}>
+            <Route index element={<Blog />} />
+            <Route path=":slug" element={<Blog />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>
