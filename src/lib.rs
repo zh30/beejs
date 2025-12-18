@@ -31,6 +31,12 @@ pub mod inline_cache;
 pub mod nodejs;
 pub mod code_analyzer;
 pub mod module_loader;
+pub mod package_manager;
+pub mod watcher;
+pub mod repl;
+
+// 重新导出 REPL 相关类型
+pub use repl::{Repl, ReplConfig};
 
 // Define OptimizeMode here since it's used by multiple modules
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -60,6 +66,10 @@ pub use automation::{
     report_generator::{ReportGenerator, ReportFormat, ReportOutput, ReportType},
 };
 
+// 别名
+pub type TestRunner = AutomatedTestRunner;
+pub type TestRunnerConfig = TestPlanConfig;
+
 pub use monitor::{
     // 性能监控器
     PerformanceMonitor, MonitorConfig, MetricValue, AggregatedMetric,
@@ -83,6 +93,48 @@ pub use monitor::{
 // 重新导出监控相关的 MetricType，避免与 benchmarks 中的冲突
 pub use monitor::MetricType as MonitorMetricType;
 pub use monitor::ThresholdConfig as MonitorThresholdConfig;
+
+// 重新导出包管理器相关类型
+pub use package_manager::{
+    PackageManager, PackageManagerConfig, PackageJson, PackageInfo, PackageVersion,
+    PackageDist, Repository, ResolutionResult,
+};
+
+// 重新导出热重载器相关类型
+pub use watcher::{
+    HotReloader, WatcherConfig, WatcherStats, WatcherStatsSummary, WatcherConfigBuilder,
+    FileChange, FileChangeType,
+};
+
+// 测试套件类型
+#[derive(Debug, Clone)]
+pub struct TestSuite {
+    pub name: String,
+    pub passed: u32,
+    pub failed: u32,
+    pub skipped: u32,
+    pub duration_ms: u64,
+    pub file: Option<String>,
+    pub total_duration: Option<std::time::Duration>,
+}
+
+/// HTTP 服务器类型（占位符）
+#[derive(Debug, Clone)]
+pub struct Server {
+    port: u16,
+}
+
+impl Server {
+    /// 创建新的服务器实例
+    pub fn new(port: u16) -> Self {
+        Self { port }
+    }
+
+    /// 获取端口号
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+}
 
 // 核心运行时
 use std::time::Duration;
@@ -157,6 +209,21 @@ impl Runtime {
         )
     }
 
+    /// 创建带优化配置的运行时
+    pub fn new_with_optimization(
+        pool_size: usize,
+        max_memory: usize,
+        optimize_mode: OptimizeMode,
+    ) -> Self {
+        let enable_optimization = match optimize_mode {
+            OptimizeMode::Speed => true,
+            OptimizeMode::Size => false,
+            OptimizeMode::Auto => true,
+        };
+
+        Self::new(pool_size, max_memory, enable_optimization)
+    }
+
     /// 运行基准测试
     pub fn run_benchmarks(&self) -> Vec<BenchmarkResult> {
         let framework = BenchmarkFramework::new_default();
@@ -192,7 +259,57 @@ impl Runtime {
         let lite_runtime = crate::runtime_lite::RuntimeLite::new(false)?;
         lite_runtime.execute_code(code)
     }
+
+    /// 执行 JavaScript 文件
+    pub fn execute_file(&self, path: &std::path::Path) -> Result<String> {
+        let code = std::fs::read_to_string(path)
+            .map_err(|e| anyhow!("Failed to read file {}: {}", path.display(), e))?;
+        self.execute_code(&code)
+    }
 }
+
+/// 获取智能运行时（根据代码特征自动优化）
+pub fn get_smart_runtime(
+    code: Option<&str>,
+    stack_size: usize,
+    max_heap: usize,
+    verbose: bool,
+    optimize_mode: OptimizeMode,
+) -> Result<Runtime> {
+    if verbose {
+        println!("[beejs] Initializing smart runtime...");
+    }
+
+    // TODO: 根据代码特征选择最佳优化策略
+    // 目前使用默认实现
+
+    let enable_optimization = match optimize_mode {
+        OptimizeMode::Speed => true,
+        OptimizeMode::Size => false,
+        OptimizeMode::Auto => true,
+    };
+
+    Ok(Runtime::new(
+        num_cpus::get(),
+        max_heap,
+        enable_optimization,
+    ))
+}
+
+/// 获取全局运行时实例
+pub fn get_global_runtime(
+    stack_size: usize,
+    max_heap: usize,
+    verbose: bool,
+    optimize_mode: OptimizeMode,
+) -> Result<Runtime> {
+    if verbose {
+        println!("[beejs] Initializing global runtime...");
+    }
+
+    get_smart_runtime(None, stack_size, max_heap, verbose, optimize_mode)
+}
+
 
 /// 运行完整的性能测试套件
 pub fn run_performance_suite() -> Result<TestSuiteResults, crate::automation::test_runner::TestRunnerError> {
@@ -304,12 +421,14 @@ mod tests {
 
     #[test]
     fn test_performance_regression_detector() {
-        let detector = PerformanceRegressionDetector::new_default();
+        let detector = std::sync::Arc::new(std::sync::Mutex::new(
+            PerformanceRegressionDetector::new_default()
+        ));
         let baseline = PerformanceBaseline {
             test_name: "test_baseline".to_string(),
             metric_type: MetricType::ExecutionTime,
             avg_duration_ns: 1000000,
-            std_deviation_ns: 100000,
+            std_deviation_ns: 100000.0,
             operations_per_second: 1000.0,
             memory_stats: None,
             timestamp: 1000,
@@ -317,8 +436,10 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         };
 
-        let mut detector_mut = detector;
-        detector_mut.add_baseline(baseline);
+        {
+            let mut detector_mut = detector.lock().unwrap();
+            detector_mut.add_baseline(baseline);
+        }
 
         let test_result = BenchmarkResult {
             name: "test_baseline".to_string(),
@@ -335,7 +456,7 @@ mod tests {
             metadata: std::collections::HashMap::new(),
         };
 
-        let detection = detector.detect_regression(&test_result);
+        let detection = detector.lock().unwrap().detect_regression(&test_result);
         assert_eq!(detection.test_name, "test_baseline");
     }
 
