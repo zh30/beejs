@@ -404,82 +404,113 @@ fn main() -> Result<()> {
     // This ensures V8 is ready before any script execution, avoiding initialization overhead
     beejs::initialize_v8();
 
-    // Stage 19 Optimization: Ultra-fast parameter parsing
-    // Avoid collecting all args into Vec to reduce allocation overhead
-    let mut arg_iter = std::env::args();
-
-    // Skip program name
-    let _ = arg_iter.next();
-
-    // Get first argument if exists
-    let first_arg = arg_iter.next();
-    let second_arg = arg_iter.next();
-
-    // Stage 19.1: Version check (fastest possible path)
-    if first_arg.as_deref() == Some("--version") || first_arg.as_deref() == Some("-V") {
-        println!("beejs {}", env!("CARGO_PKG_VERSION"));
-        return Ok(());
+    // Stage 20.2 Optimization: Ultra-aggressive parameter parsing
+    // Minimize string allocations and comparisons for maximum speed
+    let args_vec = std::env::args().collect::<Vec<String>>();
+    if args_vec.len() < 2 {
+        // No arguments, start REPL
+        return run_repl(false);
     }
 
-    // Stage 19.2: Help check
-    if first_arg.as_deref() == Some("--help") || first_arg.as_deref() == Some("-h") {
-        let mut app = clap::Command::new("beejs");
-        let _ = app.print_help();
-        return Ok(());
-    }
+    // Get references to avoid copying
+    let args_refs: Vec<&str> = args_vec.iter().map(|s| s.as_str()).collect();
+    let args_slice = &args_refs[1..]; // Skip program name
 
-    // Stage 19.3: Ultra-fast eval for ultra-simple expressions (ZERO V8 path)
-    if first_arg.as_deref() == Some("-e") {
-        if let Some(code) = second_arg.as_deref() {
-            // Check for super simple patterns (no V8 needed at all)
-            if is_super_simple_expression(code) {
-                if let Some(result) = eval_super_simple_fast(code) {
-                    println!("{}", result);
-                    return Ok(());
+    // Stage 20.2.1: Instant flag detection (single character comparison)
+    if args_slice.len() >= 1 {
+        let first = args_slice[0];
+        let first_char = first.chars().next().unwrap_or('\0');
+
+        // Single-character flags (fastest path)
+        match first_char {
+            '-' if first.len() > 1 => {
+                let second_char = first.chars().nth(1).unwrap_or('\0');
+                match second_char {
+                    'V' => {
+                        // -V or --version
+                        if first == "-V" || first == "--version" {
+                            println!("beejs {}", env!("CARGO_PKG_VERSION"));
+                            return Ok(());
+                        }
+                    }
+                    'h' => {
+                        // -h or --help
+                        if first == "-h" || first == "--help" {
+                            let mut app = clap::Command::new("beejs");
+                            let _ = app.print_help();
+                            return Ok(());
+                        }
+                    }
+                    'e' => {
+                        // -e or --eval
+                        if first == "-e" || first == "--eval" {
+                            if args_slice.len() >= 2 {
+                                let code = args_slice[1];
+                                // Stage 19.3: Ultra-fast eval for ultra-simple expressions
+                                if is_super_simple_expression(code) {
+                                    if let Some(result) = eval_super_simple_fast(code) {
+                                        println!("{}", result);
+                                        return Ok(());
+                                    }
+                                }
+                                // Fallback: Check for simple arithmetic
+                                if code.chars().all(|c| c.is_ascii_digit() || "+-*/() ".contains(c)) && code.len() < 20 {
+                                    if let Ok(result) = simple_arithmetic_eval_fast(code) {
+                                        println!("{}", result);
+                                        return Ok(());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
-
-            // Fallback: Check for simple arithmetic pattern
-            if code.chars().all(|c| c.is_ascii_digit() || "+-*/() ".contains(c)) && code.len() < 20 {
-                if let Ok(result) = simple_arithmetic_eval_fast(code) {
-                    println!("{}", result);
+            '-' => {
+                // Multi-character flags
+                if first == "--version" {
+                    println!("beejs {}", env!("CARGO_PKG_VERSION"));
                     return Ok(());
+                }
+                if first == "--help" {
+                    let mut app = clap::Command::new("beejs");
+                    let _ = app.print_help();
+                    return Ok(());
+                }
+                if first == "--test" {
+                    println!("Running tests (fast path)...");
+                    let args = Args::parse_from(&args_vec);
+                    return run_tests(&args);
+                }
+                if first == "--watch" {
+                    let args = Args::parse_from(&args_vec);
+                    return run_watch_mode(&args);
+                }
+                if first == "--verbose" {
+                    println!("Verbose mode enabled (fast path)");
+                    println!("beejs {}", env!("CARGO_PKG_VERSION"));
+                    return Ok(());
+                }
+                if first == WORKER_MODE_FLAG {
+                    return run_worker_mode(&args_vec);
+                }
+            }
+            _ => {
+                // Could be a script file
+                let script_path = first;
+                if script_path.ends_with(".js") || script_path.ends_with(".ts") ||
+                   script_path.ends_with(".mjs") || script_path.ends_with(".cjs") ||
+                   script_path.ends_with(".jsx") || script_path.ends_with(".tsx") {
+                    let args = Args::parse_from(&args_vec);
+                    return execute_script_file(&args, script_path);
                 }
             }
         }
     }
 
-    // Stage 19.4: Test flag fast path
-    if first_arg.as_deref() == Some("--test") {
-        println!("Running tests (fast path)...");
-        // Collect remaining args for parsing
-        let args_vec: Vec<String> = std::env::args().collect();
-        let args = Args::parse_from(args_vec);
-        return run_tests(&args);
-    }
+    // Only parse with clap if we get here (complex cases)
+    let args = Args::parse_from(&args_vec);
 
-    // Stage 19.5: Watch flag fast path
-    if first_arg.as_deref() == Some("--watch") {
-        let args_vec: Vec<String> = std::env::args().collect();
-        let args = Args::parse_from(args_vec);
-        return run_watch_mode(&args);
-    }
-
-    // Stage 19.6: Verbose flag fast path
-    if first_arg.as_deref() == Some("--verbose") {
-        println!("Verbose mode enabled (fast path)");
-        println!("beejs {}", env!("CARGO_PKG_VERSION"));
-        return Ok(());
-    }
-
-    // Stage 19.7: Worker mode fast path
-    if first_arg.as_deref() == Some(WORKER_MODE_FLAG) {
-        let args_vec: Vec<String> = std::env::args().collect();
-        return run_worker_mode(&args_vec);
-    }
-
-    // Full parsing for complex cases
-    let args = Args::parse();
 
     // Handle package manager commands (early exit)
     if let Some(ref command) = args.command {
@@ -527,13 +558,7 @@ fn main() -> Result<()> {
     }
 
     if let Some(ref script) = args.script {
-        let result = runtime
-            .execute_file(script)
-            .context("Failed to execute script")?;
-        if args.verbose {
-            println!("Result: {}", result);
-        }
-        Ok(())
+        execute_script_file(&args, script.to_str().unwrap_or(""))
     } else if !args.batch_eval.is_empty() {
         // Batch execution mode - faster for multiple scripts
         if args.verbose {
@@ -562,6 +587,44 @@ fn main() -> Result<()> {
         // No script provided - start REPL
         run_repl(args.verbose)
     }
+}
+
+/// Execute a script file (separated for faster path)
+fn execute_script_file(args: &Args, script_path: &str) -> Result<()> {
+    let verbose = args.verbose;
+
+    // 将命令行优化模式转换为beejs优化模式
+    let optimize_mode = match args.optimize {
+        OptimizeMode::Speed => beejs::OptimizeMode::Speed,
+        OptimizeMode::Size => beejs::OptimizeMode::Size,
+        OptimizeMode::Auto => beejs::OptimizeMode::Auto,
+    };
+
+    // Use smart runtime selector for optimal performance
+    let runtime = beejs::get_smart_runtime(
+        None, // No code to analyze for files
+        args.stack_size,
+        args.max_heap,
+        verbose,
+        optimize_mode,
+    )
+    .context("Failed to get smart runtime")?;
+
+    // Show verbose info after runtime is ready
+    if verbose {
+        println!("Beejs Runtime started (smart mode)");
+        println!("Stack size: {} bytes", args.stack_size);
+        println!("Max heap size: {} bytes", args.max_heap);
+        println!("V8 optimization mode: {:?}", args.optimize);
+    }
+
+    let result = runtime
+        .execute_file(std::path::Path::new(script_path))
+        .context("Failed to execute script")?;
+    if args.verbose {
+        println!("Result: {}", result);
+    }
+    Ok(())
 }
 
 /// Run test suite

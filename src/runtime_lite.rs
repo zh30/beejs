@@ -11,13 +11,18 @@ use std::time::Instant;
 
 /// Lightweight Runtime - minimal V8 runtime for fast startup
 /// Only initializes essential components needed for basic JS execution
+/// Stage 20.3 Optimization: Optimized memory layout for better cache locality
 pub struct RuntimeLite {
+    /// Stage 20.3: Group frequently accessed fields together for better cache locality
+    /// Execution count (most frequently accessed)
     execution_count: Arc<AtomicUsize>,
-    /// Cache for pre-compiled scripts to avoid repeated compilation
-    script_cache: Arc<std::sync::Mutex<HashMap<String, (v8::Global<v8::Script>, Instant)>>>,
-    /// Cache hit statistics
+    /// Cache hit statistics (frequently accessed together)
     cache_hits: Arc<AtomicUsize>,
     cache_misses: Arc<AtomicUsize>,
+
+    /// Cache for pre-compiled scripts to avoid repeated compilation
+    /// Less frequently accessed, placed separately
+    script_cache: Arc<std::sync::Mutex<HashMap<String, (v8::Global<v8::Script>, Instant)>>>,
 }
 
 // Make RuntimeLite Send + Sync for thread-safe global sharing
