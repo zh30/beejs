@@ -19,6 +19,7 @@ pub mod benchmarks;
 pub mod performance_analyzer;
 pub mod performance_reporter;
 pub mod performance_regression;
+pub mod performance_comparison;  // Stage 37.0: 性能对比引擎
 pub mod automation;
 pub mod analysis;
 pub mod monitor;
@@ -71,6 +72,13 @@ pub use benchmarks::{
     execution::ExecutionBenchmark,
     memory::MemoryBenchmark,
     concurrent::ConcurrentBenchmark,
+};
+
+pub use performance_comparison::{
+    BenchmarkRunner, RuntimeConfig, TestCase,
+    ResultCollector, ComparisonResult, BenchmarkComparison,
+    ReportGenerator as ComparisonReportGenerator, ReportFormat as ComparisonReportFormat, ReportConfig,
+    PerformanceComparisonResult, PerformanceSummary,
 };
 
 pub use performance_regression::{
