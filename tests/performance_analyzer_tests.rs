@@ -1,7 +1,7 @@
 //! Tests for performance analyzer module
 
 use beejs::performance_analyzer::{
-    PerformanceAnalyzer, ExecutionMetrics, PerformanceReport,
+    PerformanceAnalyzer,
     analyze_runtime_performance, analyze_lite_runtime_performance
 };
 use beejs::{OptimizeMode, get_global_runtime, get_global_lite_runtime};

@@ -4,12 +4,12 @@
 #[cfg(test)]
 mod tests {
     use std::time::Instant;
-    use beejs::{RuntimeLite, V8SnapshotManager};
+    use beejs::RuntimeLite;
 
     #[test]
     fn test_current_startup_time() {
         let start = Instant::now();
-        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
+        let _runtime = RuntimeLite::new(false).expect("Failed to create runtime");
         let elapsed = start.elapsed();
 
         println!("启动时间: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
@@ -161,8 +161,6 @@ mod tests {
 
     #[test]
     fn test_memory_efficiency() {
-        let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-
         // 创建多个运行时实例测试内存使用
         let instances = 10;
         let start = Instant::now();

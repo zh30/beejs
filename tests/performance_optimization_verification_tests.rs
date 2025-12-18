@@ -276,7 +276,9 @@ mod tests {
     #[ignore = "需要V8隔离修复 - 避免Runtime创建/销毁崩溃"]
     fn test_optimization_verifier_creation() {
         let verifier = OptimizationVerifier::new();
-        assert!(verifier.runtime.execution_count() >= 0); // Always true, but kept for clarity
+        // Verify that execution count is accessible (initial value should be 0)
+        let count = verifier.runtime.execution_count();
+        assert_eq!(count, 0, "Initial execution count should be 0");
     }
 
     #[test]
