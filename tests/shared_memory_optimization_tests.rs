@@ -450,7 +450,7 @@ mod tests {
                             format!("key_{}", rand::random::<usize>()),
                             SharedValue::Number(rand::random::<f64>())
                         )
-                    }.take(10)
+                    }).take(10)
                     .collect()
                 )
             );
