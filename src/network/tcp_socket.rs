@@ -24,6 +24,7 @@ pub struct ZeroCopyTcpSocket {
     send_buffer: Arc<Mutex<Vec<u8>>>,
 
     /// 发送缓冲区大小
+    #[allow(dead_code)]
     buffer_size: usize,
 
     /// 零拷贝统计信息
@@ -128,6 +129,7 @@ impl ZeroCopyTcpSocket {
     /// # 返回值
     /// 返回发送的字节数
     pub fn send_zero_copy(&self, data: &[u8]) -> std::io::Result<usize> {
+        #[allow(unused_assignments)]
         let mut sent_bytes = data.len();
 
         // 使用预分配的缓冲区

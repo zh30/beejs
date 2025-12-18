@@ -44,9 +44,11 @@ struct BufferEntry {
     data: Vec<u8>,
 
     /// 最后访问时间
+    #[allow(dead_code)]
     last_access: Instant,
 
     /// 引用计数
+    #[allow(dead_code)]
     ref_count: usize,
 }
 

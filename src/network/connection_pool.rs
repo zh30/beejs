@@ -116,6 +116,7 @@ impl PooledConnection {
     }
 
     /// 标记连接为不健康
+    #[allow(dead_code)]
     fn mark_unhealthy(&mut self) {
         self.is_healthy = false;
     }

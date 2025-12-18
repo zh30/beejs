@@ -21,6 +21,7 @@ use std::time::{Duration, Instant};
 #[derive(Debug)]
 pub struct SendFile {
     /// 源文件
+    #[allow(dead_code)]
     file: File,
 
     /// 文件描述符
@@ -172,7 +173,7 @@ impl SendFile {
         // 使用 libc::sendfile 系统调用
         #[cfg(unix)]
         {
-            use libc::{off_t, sendfile};
+            use libc::off_t;
 
             let mut offset: off_t = self.current_pos as off_t;
             let result = unsafe {

@@ -107,6 +107,7 @@ impl ZeroCopyUdpSocket {
     }
 
     /// 获取数据包缓冲区
+    #[allow(dead_code)]
     fn get_packet_buffer(&self) -> Vec<u8> {
         let mut buffers = self.packet_buffers.lock().unwrap();
 
@@ -124,6 +125,7 @@ impl ZeroCopyUdpSocket {
     }
 
     /// 归还数据包缓冲区
+    #[allow(dead_code)]
     fn return_packet_buffer(&self, mut buffer: Vec<u8>) {
         buffer.clear();
         let mut buffers = self.packet_buffers.lock().unwrap();

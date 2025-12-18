@@ -25,6 +25,7 @@ pub struct NetworkIoStatistics {
     stats: Arc<Mutex<IoStatisticsData>>,
 
     /// 配置
+    #[allow(dead_code)]
     config: StatisticsConfig,
 }
 
