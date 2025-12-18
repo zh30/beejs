@@ -204,6 +204,28 @@ impl RuntimeLite {
             }
         }
 
+        // Simple object literals: {a: 1, b: 2}
+        if trimmed.starts_with('{') && trimmed.ends_with('}') {
+            return Some(trimmed.to_string());
+        }
+
+        // Simple property access: obj.prop (just return as-is for now)
+        if trimmed.contains('.') && !trimmed.contains(' ') {
+            // Simple property access like "obj.prop" or "arr.length"
+            // For now, just pass through - could be enhanced later
+            let parts: Vec<&str> = trimmed.split('.').collect();
+            if parts.len() == 2 && !parts[0].contains(' ') && !parts[1].contains(' ') {
+                return Some(trimmed.to_string());
+            }
+        }
+
+        // Simple boolean comparisons: 1 > 0, 1 == 1, etc.
+        if self.is_simple_comparison(trimmed) {
+            if let Some(result) = self.evaluate_simple_comparison(trimmed) {
+                return Some(result);
+            }
+        }
+
         None
     }
 
@@ -354,6 +376,98 @@ impl RuntimeLite {
                     }
                 }
                 _ => {}
+            }
+        }
+
+        None
+    }
+
+    /// Check if code is a simple comparison expression
+    fn is_simple_comparison(&self, code: &str) -> bool {
+        let trimmed = code.trim();
+        let comparison_ops = ['>', '<', '=', '!'];
+
+        // Must contain exactly one comparison operator
+        let mut op_count = 0;
+        let mut paren_depth = 0;
+        for c in trimmed.chars() {
+            match c {
+                '(' => paren_depth += 1,
+                ')' => {
+                    if paren_depth > 0 {
+                        paren_depth -= 1;
+                    }
+                }
+                _ if comparison_ops.contains(&c) => {
+                    if paren_depth == 0 {
+                        op_count += 1;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        op_count == 1
+    }
+
+    /// Evaluate simple comparison expression
+    fn evaluate_simple_comparison(&self, code: &str) -> Option<String> {
+        let trimmed = code.trim();
+
+        // Parse: left op right
+        let mut op_index = None;
+        let mut paren_depth = 0;
+
+        for (i, c) in trimmed.char_indices() {
+            match c {
+                '(' => paren_depth += 1,
+                ')' => {
+                    if paren_depth > 0 {
+                        paren_depth -= 1;
+                    }
+                }
+                '>' | '<' | '=' | '!' => {
+                    if paren_depth == 0 {
+                        op_index = Some(i);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if let Some(i) = op_index {
+            let left = trimmed[..i].trim();
+            let op = &trimmed[i..].trim();
+            let op_char = op.chars().next().unwrap();
+
+            // Extract right side by finding the operator length
+            let op_str = if op.starts_with("==") || op.starts_with("!=") || op.starts_with(">=") || op.starts_with("<=") {
+                &op[..2]
+            } else {
+                &op[..1]
+            };
+            let right = &op[op_str.len()..].trim();
+
+            // Handle ==, !=, ===, !==
+            if op_str == "==" {
+                let is_equal = left == right;
+                return Some((is_equal).to_string());
+            }
+            if op_str == "!=" {
+                let is_not_equal = left != right;
+                return Some((is_not_equal).to_string());
+            }
+
+            // Handle >, <, >=, <=
+            if let (Ok(l), Ok(r)) = (left.parse::<i64>(), right.parse::<i64>()) {
+                match op_str {
+                    ">" => return Some((l > r).to_string()),
+                    ">=" => return Some((l >= r).to_string()),
+                    "<" => return Some((l < r).to_string()),
+                    "<=" => return Some((l <= r).to_string()),
+                    _ => {}
+                }
             }
         }
 
