@@ -154,11 +154,11 @@ function InstallationContent() {
 
       <section className="space-y-6">
         <h2 className="text-2xl font-bold border-b border-white/10 pb-2 text-white">Manual Installation</h2>
-        <p>Download the pre-compiled binary for your architecture from the <a href="https://github.com/beejs/beejs/releases" className="text-brand-yellow hover:underline">GitHub Releases</a> page.</p>
+        <p>Download the pre-compiled binary for your architecture from the <a href="https://github.com/zh30/beejs/releases" className="text-brand-yellow hover:underline">GitHub Releases</a> page.</p>
         <div className="glass p-6 rounded-xl border border-white/10 bg-white/5">
           <h4 className="font-bold mb-3">Example for x86_64 Linux:</h4>
           <pre className="text-xs text-gray-400 leading-relaxed font-mono">
-            {`wget https://github.com/beejs/beejs/releases/latest/download/beejs-x86_64.tar.gz
+            {`wget https://github.com/zh30/beejs/releases/latest/download/beejs-x86_64.tar.gz
 tar -xzf beejs-x86_64.tar.gz
 chmod +x beejs
 sudo mv beejs /usr/local/bin/`}

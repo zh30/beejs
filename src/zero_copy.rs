@@ -2,7 +2,8 @@
 //! 通过引用传递和内存映射实现高性能数据传输
 
 use crate::lock_free::{LockFreeBufferPool, AtomicStats, LockFreeCounter};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::marker::PhantomData;
 use tokio::io::AsyncSeekExt;
 use tokio::fs::File;
@@ -599,7 +600,7 @@ impl ZeroCopyFileCache {
 
         // 首先检查缓存
         {
-            let cache = self.cache.lock().unwrap();
+            let mut cache = self.cache.lock().unwrap();
             if let Some(mapping) = cache.get(&path_string) {
                 self.stats.record_operation();
                 return Ok(Arc::clone(mapping));
@@ -630,7 +631,7 @@ impl ZeroCopyFileCache {
     /// 从缓存中移除文件
     pub fn remove(&self, path: &str) -> Option<Arc<memmap2::Mmap>> {
         let mut cache = self.cache.lock().unwrap();
-        cache.remove(path)
+        cache.pop(path)
     }
 
     /// 清空缓存

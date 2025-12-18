@@ -26,7 +26,7 @@ export default function RootLayout() {
 
           <div className="flex items-center space-x-4">
             <a
-              href="https://github.com/beejs/beejs"
+              href="https://github.com/zh30/beejs"
               target="_blank"
               rel="noreferrer"
               className="px-4 py-2 bg-brand-yellow text-brand-black font-bold rounded-lg hover:bg-yellow-400 transition-all text-sm md:text-base"
@@ -55,7 +55,7 @@ export default function RootLayout() {
             <ul className="space-y-2 text-sm text-gray-400">
               <li><Link to="/docs" className="hover:text-white">Documentation</Link></li>
               <li><Link to="/blog" className="hover:text-white">Blog</Link></li>
-              <li><a href="https://github.com/beejs/beejs" className="hover:text-white">GitHub</a></li>
+              <li><a href="https://github.com/zh30/beejs" className="hover:text-white">GitHub</a></li>
             </ul>
           </div>
           <div>
