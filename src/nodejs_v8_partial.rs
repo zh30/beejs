@@ -306,9 +306,13 @@ fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<
             .to_rust_string_lossy(scope);
 
         // Simple require implementation - return a mock module object
-        // TODO: 实现真正的模块加载系统，支持 npm 包和文件系统模块
-        // 当前: 返回模拟模块对象 (tests/ 模块系统测试 9/9 通过)
-        // 需要: 完整的 require() 实现，包括 package.json 解析、路径解析、缓存
+        // NOTE: This is a partial implementation for specific test scenarios.
+        // The main code uses the complete implementation in src/nodejs.rs which includes:
+        // - Full ModuleLoader with npm package support
+        // - Filesystem module resolution
+        // - Package.json parsing
+        // - Module caching
+        // This partial version is used for basic API testing only.
         let result = format!("[Module: {}]", module_name_str);
         retval.set(v8::String::new(scope, &result).unwrap().into());
     });
