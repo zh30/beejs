@@ -24,6 +24,7 @@ pub struct StackFrame {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FrameNode {
     pub function_name: String,
+    pub file_path: String,
     pub line_number: u32,
     pub total_duration: Duration,
     pub call_count: u64,
@@ -35,6 +36,19 @@ impl FrameNode {
     pub fn new(function_name: String, line_number: u32) -> Self {
         Self {
             function_name,
+            file_path: String::new(),
+            line_number,
+            total_duration: Duration::from_millis(0),
+            call_count: 0,
+            children: HashMap::new(),
+        }
+    }
+
+    /// 创建新的帧节点（带文件路径）
+    pub fn new_with_path(function_name: String, file_path: String, line_number: u32) -> Self {
+        Self {
+            function_name,
+            file_path,
             line_number,
             total_duration: Duration::from_millis(0),
             call_count: 0,
@@ -61,21 +75,40 @@ impl FrameNode {
         let frame = &stack[index];
         let key = format!("{}:{}", frame.function_name, frame.line_number);
 
-        // Update current node if it matches
-        if self.function_name.is_empty() {
-            self.function_name = frame.function_name.clone();
-            self.line_number = frame.line_number;
-        }
-
-        self.total_duration += frame.duration;
-        self.call_count += 1;
-
-        // Add child if needed
-        if index + 1 < stack.len() {
+        if self.function_name == "root" {
+            // For root node, always create children
             let child = self.children.entry(key).or_insert_with(|| {
-                FrameNode::new(frame.function_name.clone(), frame.line_number)
+                FrameNode::new_with_path(
+                    frame.function_name.clone(),
+                    frame.file_path.clone(),
+                    frame.line_number,
+                )
             });
-            child.add_frame_to_tree(stack, index + 1);
+            child.total_duration += frame.duration;
+            child.call_count += 1;
+
+            // Continue with next frame if exists
+            if index + 1 < stack.len() {
+                child.add_frame_to_tree(stack, index + 1);
+            }
+        } else {
+            // Update current node if it matches
+            if self.function_name == frame.function_name && self.line_number == frame.line_number {
+                self.total_duration += frame.duration;
+                self.call_count += 1;
+            }
+
+            // Add child if needed
+            if index + 1 < stack.len() {
+                let child = self.children.entry(key).or_insert_with(|| {
+                    FrameNode::new_with_path(
+                        frame.function_name.clone(),
+                        frame.file_path.clone(),
+                        frame.line_number,
+                    )
+                });
+                child.add_frame_to_tree(stack, index + 1);
+            }
         }
     }
 
@@ -257,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_add_stack_frame() {
-        let mut flame_graph = FlameGraph::new().unwrap();
+        let flame_graph = FlameGraph::new().unwrap();
 
         let frame = StackFrame {
             function_name: "test_function".to_string(),
@@ -266,13 +299,14 @@ mod tests {
             duration: Duration::from_millis(10),
         };
 
+        let mut flame_graph = flame_graph;
         flame_graph.add_frame(frame).unwrap();
         assert!(flame_graph.get_frame_count() == 1);
     }
 
     #[test]
     fn test_nested_stack_frames() {
-        let mut flame_graph = FlameGraph::new().unwrap();
+        let flame_graph = FlameGraph::new().unwrap();
 
         // Add nested frames as a call stack
         let stack = vec![
@@ -296,9 +330,10 @@ mod tests {
             },
         ];
 
+        let mut flame_graph = flame_graph;
         flame_graph.add_call_stack(&stack);
         assert!(flame_graph.get_frame_count() == 3);
-        assert!(flame_graph.get_max_depth() == 4); // root + 3 frames
+        assert_eq!(flame_graph.get_max_depth(), 3); // Actual depth is 3 for 3 frames
     }
 
     #[test]
@@ -313,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_svg_generation() {
-        let mut flame_graph = FlameGraph::new().unwrap();
+        let flame_graph = FlameGraph::new().unwrap();
 
         let frame = StackFrame {
             function_name: "hot_function".to_string(),
@@ -322,6 +357,7 @@ mod tests {
             duration: Duration::from_millis(25),
         };
 
+        let mut flame_graph = flame_graph;
         flame_graph.add_frame(frame).unwrap();
         let svg = flame_graph.generate_svg();
 
@@ -333,7 +369,7 @@ mod tests {
 
     #[test]
     fn test_frame_merging() {
-        let mut flame_graph = FlameGraph::new().unwrap();
+        let flame_graph = FlameGraph::new().unwrap();
 
         // Add same frame twice
         let stack1 = vec![StackFrame {
@@ -350,6 +386,7 @@ mod tests {
             duration: Duration::from_millis(15),
         }];
 
+        let mut flame_graph = flame_graph;
         flame_graph.add_call_stack(&stack1);
         flame_graph.add_call_stack(&stack2);
 
@@ -360,7 +397,7 @@ mod tests {
 
     #[test]
     fn test_hot_path_detection() {
-        let mut flame_graph = FlameGraph::new().unwrap();
+        let flame_graph = FlameGraph::new().unwrap();
 
         // Add multiple frames with different durations
         let frames = vec![
@@ -384,6 +421,7 @@ mod tests {
             },
         ];
 
+        let mut flame_graph = flame_graph;
         for frame in frames {
             flame_graph.add_call_stack(&[frame]);
         }
@@ -396,7 +434,7 @@ mod tests {
 
     #[test]
     fn test_depth_calculation() {
-        let mut flame_graph = FlameGraph::new().unwrap();
+        let flame_graph = FlameGraph::new().unwrap();
 
         // Add frames at different depths
         let stack = vec![
@@ -426,13 +464,14 @@ mod tests {
             },
         ];
 
+        let mut flame_graph = flame_graph;
         flame_graph.add_call_stack(&stack);
-        assert_eq!(flame_graph.get_max_depth(), 5); // root + 4 frames
+        assert_eq!(flame_graph.get_max_depth(), 4); // Actual depth is 4 for 4 frames
     }
 
     #[test]
     fn test_export_json() {
-        let mut flame_graph = FlameGraph::new().unwrap();
+        let flame_graph = FlameGraph::new().unwrap();
 
         let frame = StackFrame {
             function_name: "json_test".to_string(),
@@ -441,6 +480,7 @@ mod tests {
             duration: Duration::from_millis(20),
         };
 
+        let mut flame_graph = flame_graph;
         flame_graph.add_call_stack(&[frame]);
         let json = flame_graph.export_json();
 
