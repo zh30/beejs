@@ -265,6 +265,35 @@ impl RuntimeLite {
             }
         }
 
+        // Stage 12.1: 字符串方法快路径优化
+        if let Some(result) = self.evaluate_string_method(trimmed) {
+            return Some(result);
+        }
+
+        // Stage 12.1: 数组方法快路径优化
+        if let Some(result) = self.evaluate_array_method(trimmed) {
+            return Some(result);
+        }
+
+        // Stage 12.1: 对象属性访问快路径优化
+        if let Some(result) = self.evaluate_object_property(trimmed) {
+            return Some(result);
+        }
+
+        // Stage 12.1: 字符串属性访问快路径 (如 "hello".length)
+        if trimmed.contains(".length") && !trimmed.contains(' ') {
+            let parts: Vec<&str> = trimmed.split(".length").collect();
+            if parts.len() == 2 {
+                let obj_part = parts[0];
+                // 检查是否是字符串字面量
+                if (obj_part.starts_with('"') && obj_part.ends_with('"')) ||
+                   (obj_part.starts_with('\'') && obj_part.ends_with('\'')) {
+                    let obj = Self::strip_quotes(obj_part);
+                    return Some(obj.chars().count().to_string());
+                }
+            }
+        }
+
         // Simple property access: obj.prop (evaluate if possible)
         if trimmed.contains('.') && !trimmed.contains(' ') {
             let parts: Vec<&str> = trimmed.split('.').collect();
@@ -381,6 +410,19 @@ impl RuntimeLite {
                         let left_str = &left[1..left.len()-1];
                         let right_str = &right[1..right.len()-1];
                         return Some(format!("{}{}", left_str, right_str));
+                    }
+                    // Mixed type concatenation: "hello" + 5 or 5 + "hello"
+                    if (left.starts_with('"') && left.ends_with('"')) || (left.starts_with('\'') && left.ends_with('\'')) {
+                        let left_str = &left[1..left.len()-1];
+                        if right.parse::<i64>().is_ok() || right.parse::<f64>().is_ok() {
+                            return Some(format!("{}{}", left_str, right));
+                        }
+                    }
+                    if (right.starts_with('"') && right.ends_with('"')) || (right.starts_with('\'') && right.ends_with('\'')) {
+                        let right_str = &right[1..right.len()-1];
+                        if left.parse::<i64>().is_ok() || left.parse::<f64>().is_ok() {
+                            return Some(format!("{}{}", left, right_str));
+                        }
                     }
                 }
                 "-" => {
@@ -850,6 +892,414 @@ impl RuntimeLite {
     pub fn clear_cache(&self) {
         let mut cache = self.script_cache.lock().unwrap();
         cache.clear();
+    }
+
+    /// Stage 12.1: 评估字符串方法快路径
+    /// 支持 .length, .substring, .slice, .indexOf, .split, .toUpperCase, .toLowerCase
+    fn evaluate_string_method(&self, code: &str) -> Option<String> {
+        let trimmed = code.trim();
+
+        // 解析字符串方法调用: "string".method(args)
+        if let Some((obj_str, method_name, args)) = self.parse_method_call(trimmed) {
+            let obj = Self::strip_quotes(obj_str);
+
+            match method_name {
+                "length" => {
+                    // 字符串长度
+                    Some(obj.chars().count().to_string())
+                }
+                "substring" => {
+                    // 子字符串: .substring(start, end)
+                    if args.len() >= 1 {
+                        if let Ok(start) = args[0].parse::<usize>() {
+                            if args.len() >= 2 {
+                                if let Ok(end) = args[1].parse::<usize>() {
+                                    let chars: Vec<char> = obj.chars().collect();
+                                    let end = std::cmp::min(end, chars.len());
+                                    let start = std::cmp::min(start, end);
+                                    Some(chars[start..end].iter().collect())
+                                } else {
+                                    None
+                                }
+                            } else {
+                                // 只有start参数，取到末尾
+                                let chars: Vec<char> = obj.chars().collect();
+                                let start = std::cmp::min(start, chars.len());
+                                Some(chars[start..].iter().collect())
+                            }
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                }
+                "slice" => {
+                    // 字符串切片: .slice(start, end)
+                    if args.len() >= 1 {
+                        if let Ok(start) = args[0].parse::<isize>() {
+                            let chars: Vec<char> = obj.chars().collect();
+                            let len = chars.len() as isize;
+                            let start = if start < 0 { len + start } else { start };
+                            let start = start.max(0) as usize;
+
+                            if args.len() >= 2 {
+                                if let Ok(end) = args[1].parse::<isize>() {
+                                    let end = if end < 0 { len + end } else { end };
+                                    let end = end.max(0) as usize;
+                                    let end = std::cmp::min(end, chars.len());
+                                    let start = std::cmp::min(start, end);
+                                    Some(chars[start..end].iter().collect())
+                                } else {
+                                    None
+                                }
+                            } else {
+                                // 只有start参数，取到末尾
+                                Some(chars[start..].iter().collect())
+                            }
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                }
+                "indexOf" => {
+                    // 查找子字符串位置
+                    if args.len() >= 1 {
+                        let search_str = args[0];
+                        let search_str = Self::strip_quotes(search_str);
+                        if let Some(pos) = obj.find(search_str) {
+                            // 计算字符位置（不是字节位置）
+                            let char_pos = obj.chars().take(pos).count();
+                            Some(char_pos.to_string())
+                        } else {
+                            Some((-1).to_string())
+                        }
+                    } else {
+                        None
+                    }
+                }
+                "split" => {
+                    // 分割字符串
+                    if args.len() >= 1 {
+                        let sep = args[0];
+                        let sep = Self::strip_quotes(sep);
+                        let parts: Vec<&str> = obj.split(sep).collect();
+                        Some(format!("{:?}", parts))
+                    } else {
+                        Some(format!("{:?}", vec![obj]))
+                    }
+                }
+                "toUpperCase" => {
+                    // 转换为大写
+                    Some(obj.to_uppercase())
+                }
+                "toLowerCase" => {
+                    // 转换为小写
+                    Some(obj.to_lowercase())
+                }
+                _ => {
+                    // 不支持的方法，返回None
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    }
+
+    /// 解析方法调用，返回 (对象, 方法名, 参数列表)
+    fn parse_method_call<'a>(&self, code: &'a str) -> Option<(&'a str, &'a str, Vec<&'a str>)> {
+        let trimmed = code.trim();
+
+        // 查找第一个点号
+        if let Some(dot_pos) = trimmed.find('.') {
+            let obj_part = &trimmed[..dot_pos];
+            let method_part = &trimmed[dot_pos + 1..];
+
+            // 检查对象部分是否是字符串字面量
+            if (obj_part.starts_with('"') && obj_part.ends_with('"')) ||
+               (obj_part.starts_with('\'') && obj_part.ends_with('\'')) {
+                // 查找方法名和参数
+                if let Some(bracket_pos) = method_part.find('(') {
+                    let method_name = &method_part[..bracket_pos];
+                    let args_part = &method_part[bracket_pos + 1..];
+
+                    if args_part.ends_with(')') {
+                        let args_str = &args_part[..args_part.len() - 1];
+
+                        // 解析参数
+                        let args = if args_str.trim().is_empty() {
+                            vec![]
+                        } else {
+                            args_str.split(',').map(|s| s.trim()).collect()
+                        };
+
+                        return Some((obj_part, method_name, args));
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Stage 12.1: 评估数组方法快路径
+    /// 支持 .slice, .indexOf, .includes
+    fn evaluate_array_method(&self, code: &str) -> Option<String> {
+        let trimmed = code.trim();
+
+        // 解析数组方法调用: [1,2,3].method(args)
+        if let Some((obj_str, method_name, args)) = self.parse_method_call(trimmed) {
+            // 检查是否是数组字面量
+            if obj_str.starts_with('[') && obj_str.ends_with(']') {
+                let elements_str = &obj_str[1..obj_str.len()-1];
+                let elements: Vec<&str> = if elements_str.trim().is_empty() {
+                    vec![]
+                } else {
+                    elements_str.split(',').map(|s| s.trim()).collect()
+                };
+
+                match method_name {
+                    "slice" => {
+                        // 数组切片: .slice(start, end)
+                        if args.len() >= 1 {
+                            if let Ok(start) = args[0].parse::<isize>() {
+                                let len = elements.len() as isize;
+                                let start = if start < 0 { len + start } else { start };
+                                let start = start.max(0) as usize;
+
+                                if args.len() >= 2 {
+                                    if let Ok(end) = args[1].parse::<isize>() {
+                                        let end = if end < 0 { len + end } else { end };
+                                        let end = end.max(0) as usize;
+                                        let end = std::cmp::min(end, elements.len());
+                                        let start = std::cmp::min(start, end);
+                                        let slice: Vec<&str> = elements[start..end].to_vec();
+                                        return Some(format!("{:?}", slice));
+                                    }
+                                } else {
+                                    // 只有start参数，取到末尾
+                                    let slice: Vec<&str> = elements[start..].to_vec();
+                                    return Some(format!("{:?}", slice));
+                                }
+                            }
+                        }
+                        return None;
+                    }
+                    "indexOf" => {
+                        // 查找元素位置
+                        if args.len() >= 1 {
+                            let search_elem = args[0];
+                            for (i, elem) in elements.iter().enumerate() {
+                                if elem == &search_elem {
+                                    return Some(i.to_string());
+                                }
+                            }
+                            return Some((-1).to_string());
+                        }
+                        return None;
+                    }
+                    "includes" => {
+                        // 检查包含元素
+                        if args.len() >= 1 {
+                            let search_elem = args[0];
+                            for elem in elements.iter() {
+                                if elem == &search_elem {
+                                    return Some("true".to_string());
+                                }
+                            }
+                            return Some("false".to_string());
+                        }
+                        return None;
+                    }
+                    _ => {
+                        // 不支持的方法
+                        return None;
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Stage 12.1: 评估对象属性访问快路径
+    /// 支持对象属性访问、数组元素访问、嵌套访问
+    fn evaluate_object_property(&self, code: &str) -> Option<String> {
+        let trimmed = code.trim();
+
+        // 解析属性访问: obj.prop 或 arr[index]
+        self.parse_and_evaluate_property_access(trimmed)
+    }
+
+    /// 解析并评估属性访问
+    fn parse_and_evaluate_property_access(&self, code: &str) -> Option<String> {
+        // 处理数组元素访问: [1,2,3][0]
+        if code.contains('[') && code.contains(']') {
+            if let Some((obj_part, index_str)) = self.parse_array_access(code) {
+                // 处理数组字面量
+                if obj_part.starts_with('[') && obj_part.ends_with(']') {
+                    let elements_str = &obj_part[1..obj_part.len()-1];
+                    let elements: Vec<&str> = if elements_str.trim().is_empty() {
+                        vec![]
+                    } else {
+                        elements_str.split(',').map(|s| s.trim()).collect()
+                    };
+
+                    if let Ok(index) = index_str.parse::<usize>() {
+                        if index < elements.len() {
+                            return Some(elements[index].to_string());
+                        } else {
+                            return Some("undefined".to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        // 处理对象属性访问: {a: 1}.a
+        if code.contains('.') && !code.contains('[') && !code.contains(']') {
+            if let Some((obj_part, prop_name)) = self.parse_simple_property_access(code) {
+                // 处理对象字面量
+                if obj_part.starts_with('{') && obj_part.ends_with('}') {
+                    return self.find_object_property(obj_part, prop_name);
+                }
+            }
+        }
+
+        // 处理嵌套访问: {a: {b: 1}}.a.b
+        if code.contains('.') && !code.contains(' ') {
+            let parts: Vec<&str> = code.split('.').collect();
+            if parts.len() >= 2 {
+                let obj_part = parts[0];
+                let remaining_props = &parts[1..].join(".");
+
+                // 处理对象字面量
+                if obj_part.starts_with('{') && obj_part.ends_with('}') {
+                    if let Some(value) = self.find_object_property(obj_part, parts[1]) {
+                        // 递归处理嵌套属性
+                        return self.parse_and_evaluate_property_access(&format!("{}.{}", value, remaining_props));
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// 解析数组访问: 返回 (对象, 索引)
+    fn parse_array_access<'a>(&self, code: &'a str) -> Option<(&'a str, &'a str)> {
+        if let Some(bracket_pos) = code.find('[') {
+            let obj_part = &code[..bracket_pos];
+            let index_part = &code[bracket_pos + 1..];
+
+            if let Some(end_bracket) = index_part.find(']') {
+                let index_str = &index_part[..end_bracket];
+                return Some((obj_part, index_str));
+            }
+        }
+
+        None
+    }
+
+    /// 解析简单属性访问: 返回 (对象, 属性名)
+    fn parse_simple_property_access<'a>(&self, code: &'a str) -> Option<(&'a str, &'a str)> {
+        let parts: Vec<&str> = code.split('.').collect();
+        if parts.len() == 2 {
+            return Some((parts[0], parts[1]));
+        }
+
+        None
+    }
+
+    /// 在对象字面量中查找属性
+    fn find_object_property(&self, obj_literal: &str, prop_name: &str) -> Option<String> {
+        let content = &obj_literal[1..obj_literal.len()-1].trim();
+        if content.is_empty() {
+            return None;
+        }
+
+        // 简单的属性解析（不支持嵌套对象）
+        let mut current_prop = String::new();
+        let mut current_value = String::new();
+        let mut in_string = false;
+        let mut string_char = '\0';
+        let mut prop_found = false;
+
+        for c in content.chars() {
+            match c {
+                '"' | '\'' => {
+                    if !in_string {
+                        in_string = true;
+                        string_char = c;
+                    } else if c == string_char {
+                        in_string = false;
+                        string_char = '\0';
+                    }
+                    if prop_found {
+                        current_value.push(c);
+                    } else {
+                        current_prop.push(c);
+                    }
+                }
+                ':' => {
+                    if !in_string {
+                        prop_found = true;
+                        current_prop = current_prop.trim().to_string();
+                        // 移除引号
+                        if (current_prop.starts_with('"') && current_prop.ends_with('"')) ||
+                           (current_prop.starts_with('\'') && current_prop.ends_with('\'')) {
+                            current_prop = current_prop[1..current_prop.len()-1].to_string();
+                        }
+                        if current_prop == prop_name {
+                            // 开始收集值
+                        }
+                    } else {
+                        current_value.push(c);
+                    }
+                }
+                ',' => {
+                    if !in_string {
+                        if prop_found && current_prop == prop_name {
+                            current_value = current_value.trim().to_string();
+                            // 移除值两端的空格和引号
+                            if (current_value.starts_with('"') && current_value.ends_with('"')) ||
+                               (current_value.starts_with('\'') && current_value.ends_with('\'')) {
+                                current_value = current_value[1..current_value.len()-1].to_string();
+                            }
+                            return Some(current_value);
+                        }
+                        // 重置
+                        current_prop = String::new();
+                        current_value = String::new();
+                        prop_found = false;
+                    } else {
+                        current_value.push(c);
+                    }
+                }
+                _ => {
+                    if prop_found {
+                        current_value.push(c);
+                    } else {
+                        current_prop.push(c);
+                    }
+                }
+            }
+        }
+
+        // 检查最后一个属性
+        if prop_found && current_prop == prop_name {
+            current_value = current_value.trim().to_string();
+            if (current_value.starts_with('"') && current_value.ends_with('"')) ||
+               (current_value.starts_with('\'') && current_value.ends_with('\'')) {
+                current_value = current_value[1..current_value.len()-1].to_string();
+            }
+            return Some(current_value);
+        }
+
+        None
     }
 }
 
