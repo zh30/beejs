@@ -39,66 +39,116 @@ mod tests {
     /// 测试 1: 创建WorkStealingScheduler
     #[tokio::test]
     async fn test_work_stealing_scheduler_creation() {
-        // TODO: 实现 WorkStealingScheduler 创建
-        // 预期:
-        // - 能够创建调度器
-        // - 每个线程有本地队列
-        // - 统计信息初始化
+        use beejs::{WorkStealingScheduler};
 
-        unimplemented!("WorkStealingScheduler 尚未实现")
+        // 创建4线程的调度器
+        let scheduler = WorkStealingScheduler::new(4);
+
+        // 验证本地队列已初始化
+        let distribution: Vec<usize> = scheduler.get_queue_distribution().await;
+        assert_eq!(distribution.len(), 4);
+        for len in distribution {
+            assert_eq!(len, 0); // 所有队列初始为空
+        }
+
+        // 验证窃取统计已初始化
+        let stats = scheduler.get_steal_stats();
+        assert_eq!(stats.steal_attempts.load(), 0);
+        assert_eq!(stats.successful_steals.load(), 0);
+
+        println!("✅ WorkStealingScheduler创建测试通过");
     }
 
     /// 测试 2: 本地任务提交和执行
     #[tokio::test]
     async fn test_local_task_submission_and_execution() {
-        // TODO: 验证本地任务队列功能
-        // 预期:
-        // - 能够提交任务到本地队列
-        // - 本地线程优先执行自己的任务
-        // - 任务按优先级排序
+        use beejs::{WorkStealingScheduler, Task};
 
-        let task = Task {
-            id: 1,
-            code: "1 + 1".to_string(),
-            priority: 1,
-            estimated_time_ms: 10,
-        };
+        // 创建2线程的调度器
+        let scheduler = WorkStealingScheduler::new(2);
 
-        // TODO: 提交任务并执行
-        // let result = scheduler.submit_local_task(task).await;
+        // 提交3个不同优先级的任务到线程0
+        let tasks = vec![
+            Task { id: 1, code: "task_1".to_string(), priority: 1, estimated_time_ms: 10 },
+            Task { id: 2, code: "task_2".to_string(), priority: 10, estimated_time_ms: 10 },
+            Task { id: 3, code: "task_3".to_string(), priority: 5, estimated_time_ms: 10 },
+        ];
 
-        unimplemented!("WorkStealingScheduler 尚未实现")
+        for task in tasks {
+            scheduler.submit_local_task(0, task).await.unwrap();
+        }
+
+        // 验证队列中有3个任务
+        let distribution: Vec<usize> = scheduler.get_queue_distribution().await;
+        assert_eq!(distribution[0], 3);
+        assert_eq!(distribution[1], 0);
+
+        // 按优先级顺序获取任务（高优先级优先）
+        let task1 = scheduler.get_local_task(0).await.unwrap();
+        assert_eq!(task1.id, 2); // 最高优先级
+        assert_eq!(task1.priority, 10);
+
+        let task2 = scheduler.get_local_task(0).await.unwrap();
+        assert_eq!(task2.id, 3); // 中等优先级
+        assert_eq!(task2.priority, 5);
+
+        let task3 = scheduler.get_local_task(0).await.unwrap();
+        assert_eq!(task3.id, 1); // 最低优先级
+        assert_eq!(task3.priority, 1);
+
+        // 验证队列已空
+        let distribution: Vec<usize> = scheduler.get_queue_distribution().await;
+        assert_eq!(distribution[0], 0);
+
+        println!("✅ 本地任务提交和执行测试通过");
     }
 
     /// 测试 3: 工作窃取基本功能
     #[tokio::test]
     async fn test_work_stealing_basic() {
-        // TODO: 验证工作窃取机制
-        // 预期:
-        // - 空闲线程能够从忙碌线程窃取任务
-        // - 窃取的任务从源队列移除
-        // - 窃取统计正确记录
+        use beejs::{WorkStealingScheduler, Task};
+        use std::time::Duration;
 
-        // 创建不均匀的任务分布
-        let mut tasks = Vec::new();
+        // 创建2线程的调度器
+        let scheduler = WorkStealingScheduler::new(2);
 
-        // 线程 A: 100 个任务
-        for i in 0..100 {
-            tasks.push(Task {
+        // 提交50个任务到线程0
+        for i in 0..50 {
+            let task = Task {
                 id: i,
-                code: format!("{}", i),
+                code: format!("task_{}", i),
                 priority: 1,
                 estimated_time_ms: 5,
-            });
+            };
+            scheduler.submit_local_task(0, task).await.unwrap();
         }
 
-        // 线程 B: 0 个任务（空闲）
-        // 预期: 线程 B 会从线程 A 窃取任务
+        // 线程1不提交任何任务（空闲）
 
-        // TODO: 执行工作窃取
-        // let stats = scheduler.get_stats();
+        // 验证初始分布
+        let initial_distribution: Vec<usize> = scheduler.get_queue_distribution().await;
+        assert_eq!(initial_distribution[0], 50);
+        assert_eq!(initial_distribution[1], 0);
 
-        unimplemented!("WorkStealingScheduler 尚未实现")
+        // 模拟工作窃取：线程1尝试窃取任务
+        // 由于线程0忙碌，线程1应该能够窃取任务
+        let stolen_task = scheduler.steal_task(1).await;
+        assert!(stolen_task.is_some()); // 应该能窃取到任务
+
+        let stolen_task = stolen_task.unwrap();
+        assert!(stolen_task.id < 50); // 窃取的任务应该来自线程0
+
+        // 验证窃取统计
+        let stats = scheduler.get_steal_stats();
+        assert_eq!(stats.steal_attempts.load(), 1); // 尝试了1次窃取
+        assert_eq!(stats.successful_steals.load(), 1); // 成功1次
+
+        // 验证窃取后队列分布
+        let final_distribution: Vec<usize> = scheduler.get_queue_distribution().await;
+        assert_eq!(final_distribution[0], 49); // 线程0少了一个任务
+        assert_eq!(final_distribution[1], 0); // 线程1窃取后立即执行，队列仍为空
+
+        println!("✅ 工作窃取基本功能测试通过");
     }
 
     /// 测试 4: 多线程工作窃取
@@ -208,43 +258,39 @@ mod tests {
         unimplemented!("WorkStealingScheduler 尚未实现")
     }
 
-    /// 测试 6: 优先级任务调度
+    /// 测试 4: 优先级任务调度
     #[tokio::test]
     async fn test_priority_task_scheduling() {
-        // TODO: 验证优先级调度
-        // 预期:
-        // - 高优先级任务优先执行
-        // - 同优先级任务按提交顺序执行
-        // - 窃取时考虑优先级
+        use beejs::{WorkStealingScheduler, Task};
 
+        // 创建2线程的调度器
+        let scheduler = WorkStealingScheduler::new(2);
+
+        // 提交不同优先级的任务（无序提交）
         let tasks = vec![
-            Task {
-                id: 1,
-                code: "low_priority".to_string(),
-                priority: 1,
-                estimated_time_ms: 100,
-            },
-            Task {
-                id: 2,
-                code: "high_priority".to_string(),
-                priority: 10,
-                estimated_time_ms: 10,
-            },
-            Task {
-                id: 3,
-                code: "medium_priority".to_string(),
-                priority: 5,
-                estimated_time_ms: 50,
-            },
+            Task { id: 1, code: "low_priority".to_string(), priority: 1, estimated_time_ms: 100 },
+            Task { id: 2, code: "high_priority".to_string(), priority: 10, estimated_time_ms: 10 },
+            Task { id: 3, code: "medium_priority".to_string(), priority: 5, estimated_time_ms: 50 },
         ];
 
-        // TODO: 提交并验证执行顺序
-        // let execution_order = scheduler.submit_priority_batch(tasks).await;
+        for task in tasks {
+            scheduler.submit_local_task(0, task).await.unwrap();
+        }
 
-        // 验证高优先级任务先执行
-        // assert_eq!(execution_order[0], 2); // 高优先级任务 ID 为 2
+        // 按优先级顺序获取任务（高优先级优先）
+        let task1 = scheduler.get_local_task(0).await.unwrap();
+        assert_eq!(task1.id, 2); // 最高优先级 (priority: 10)
+        assert_eq!(task1.priority, 10);
 
-        unimplemented!("WorkStealingScheduler 尚未实现")
+        let task2 = scheduler.get_local_task(0).await.unwrap();
+        assert_eq!(task2.id, 3); // 中等优先级 (priority: 5)
+        assert_eq!(task2.priority, 5);
+
+        let task3 = scheduler.get_local_task(0).await.unwrap();
+        assert_eq!(task3.id, 1); // 最低优先级 (priority: 1)
+        assert_eq!(task3.priority, 1);
+
+        println!("✅ 优先级任务调度测试通过");
     }
 
     /// 测试 7: 窃取策略优化
