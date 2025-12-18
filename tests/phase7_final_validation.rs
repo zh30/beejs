@@ -41,7 +41,7 @@ mod tests {
     #[test]
     fn test_phase7_comprehensive_validation() {
         // 创建单个Runtime实例用于所有测试
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
 
         println!("\n");
         println!("╔══════════════════════════════════════════════════════════════╗");

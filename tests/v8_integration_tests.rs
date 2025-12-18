@@ -4,7 +4,7 @@ use tempfile::NamedTempFile;
 
 #[test]
 fn test_v8_hello_world() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
     // Use a calculation that returns a value instead of just console.log
     let result = runtime.execute_code(r#"console.log("Hello, V8!"); 5 + 3;"#);
     assert!(result.is_ok());
@@ -15,7 +15,7 @@ fn test_v8_hello_world() {
 
 #[test]
 fn test_v8_arithmetic() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Test addition
     let result = runtime.execute_code("5 + 3");
@@ -36,7 +36,7 @@ fn test_v8_arithmetic() {
 
 #[test]
 fn test_v8_variables() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         const x = 10;
@@ -51,7 +51,7 @@ fn test_v8_variables() {
 
 #[test]
 fn test_v8_functions() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         function add(a, b) {
@@ -67,7 +67,7 @@ fn test_v8_functions() {
 
 #[test]
 fn test_v8_arrow_functions() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         const multiply = (a, b) => a * b;
@@ -81,7 +81,7 @@ fn test_v8_arrow_functions() {
 
 #[test]
 fn test_v8_objects() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         const person = {
@@ -101,7 +101,7 @@ fn test_v8_objects() {
 
 #[test]
 fn test_v8_arrays() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         const arr = [1, 2, 3, 4, 5];
@@ -115,7 +115,7 @@ fn test_v8_arrays() {
 
 #[test]
 fn test_v8_async_promise() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         Promise.resolve(42).then(value => value * 2);
@@ -130,7 +130,7 @@ fn test_v8_async_promise() {
 
 #[test]
 fn test_v8_error_handling_syntax_error() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let result = runtime.execute_code("const x = ;");
     assert!(result.is_err());
@@ -138,7 +138,7 @@ fn test_v8_error_handling_syntax_error() {
 
 #[test]
 fn test_v8_error_handling_reference_error() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let result = runtime.execute_code("console.log(undefined_variable)");
     assert!(result.is_err());
@@ -146,7 +146,7 @@ fn test_v8_error_handling_reference_error() {
 
 #[test]
 fn test_v8_file_execution() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Create a temporary JavaScript file
     let mut file = NamedTempFile::new().unwrap();
@@ -162,7 +162,7 @@ fn test_v8_file_execution() {
 
 #[test]
 fn test_v8_console_output() {
-    let runtime = Runtime::new(67108864, 1073741824, true).unwrap(); // verbose mode
+    let runtime = Runtime::new(67108864, 1073741824, true); // verbose mode
 
     let code = r#"
         console.log("Test message");
@@ -177,7 +177,7 @@ fn test_v8_console_output() {
 
 #[test]
 fn test_v8_string_operations() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Test string concatenation
     let result = runtime.execute_code(r#""Hello" + " " + "World""#);
@@ -192,7 +192,7 @@ fn test_v8_string_operations() {
 
 #[test]
 fn test_v8_boolean_operations() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Test true
     let result = runtime.execute_code("true");
@@ -212,7 +212,7 @@ fn test_v8_boolean_operations() {
 
 #[test]
 fn test_v8_null_undefined() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Test null
     let result = runtime.execute_code("null");
@@ -227,7 +227,7 @@ fn test_v8_null_undefined() {
 
 #[test]
 fn test_v8_conditional_logic() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         const x = 10;
@@ -245,7 +245,7 @@ fn test_v8_conditional_logic() {
 
 #[test]
 fn test_v8_loops() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         let sum = 0;
@@ -262,7 +262,7 @@ fn test_v8_loops() {
 
 #[test]
 fn test_v8_json() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Test JSON.stringify
     let result = runtime.execute_code(r#"JSON.stringify({name: "test", value: 42})"#);

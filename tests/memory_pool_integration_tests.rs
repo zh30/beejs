@@ -3,7 +3,7 @@ use beejs::memory_pool::PoolConfig;
 
 #[test]
 fn test_memory_pool_integration() {
-    let runtime = Runtime::new(67108864, 1073741824, true).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, true);
 
     // 验证内存池已初始化
     let stats = runtime.get_memory_pool_stats();
@@ -40,7 +40,7 @@ fn test_memory_pool_integration() {
 
 #[test]
 fn test_memory_pool_stats_access() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // 测试内存池统计API
     let stats = runtime.get_memory_pool_stats();

@@ -18,7 +18,7 @@ mod stability_enhancement_tests {
     async fn test_high_concurrency_script_execution_stress() {
         println!("🚀 开始高并发脚本执行压力测试...");
 
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, true).expect("创建运行时失败"));
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, true));
         let results = Arc::new(Mutex::new(Vec::new()));
         let start_time = Instant::now();
 
@@ -77,7 +77,7 @@ mod stability_enhancement_tests {
     async fn test_memory_pressure_stability() {
         println!("🧠 开始内存压力测试...");
 
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, true).expect("创建运行时失败"));
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, true));
         let memory_usage = Arc::new(Mutex::new(Vec::new()));
         let start_time = Instant::now();
 
@@ -142,7 +142,7 @@ mod stability_enhancement_tests {
     async fn test_exception_injection_recovery() {
         println!("💥 开始异常注入恢复测试...");
 
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, true).expect("创建运行时失败"));
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, true));
         let recovery_results = Arc::new(Mutex::new(HashMap::new()));
 
         // 注入各种类型的异常
@@ -235,7 +235,7 @@ mod stability_enhancement_tests {
     async fn test_long_term_stability() {
         println!("⏰ 开始长期稳定性测试 (30秒)...");
 
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, true).expect("创建运行时失败"));
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, true));
         let execution_count = Arc::new(Mutex::new(0u64));
         let error_count = Arc::new(Mutex::new(0u64));
         let start_time = Instant::now();
@@ -322,7 +322,7 @@ mod stability_enhancement_tests {
     async fn test_performance_regression_detection() {
         println!("📊 开始性能回归检测...");
 
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, true).expect("创建运行时失败"));
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 128 * 1024 * 1024, true));
         let mut execution_times = Vec::new();
 
         // 执行基准测试 100 次

@@ -22,7 +22,7 @@ mod stage_33_edge_computing_optimization_tests {
         // 测试智能路由选择
         // 应该根据延迟、负载、健康状况选择最佳边缘节点
 
-        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let runtime = tokio::runtime::Runtime::new();
         runtime.block_on(async {
             let router = GlobalRouter::new();
 
@@ -113,7 +113,7 @@ mod stage_33_edge_computing_optimization_tests {
         // 测试地理路由
         // 应该将请求路由到最近的边缘节点
 
-        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let runtime = tokio::runtime::Runtime::new();
         runtime.block_on(async {
             let router = GlobalRouter::new();
 
@@ -146,7 +146,7 @@ mod stage_33_edge_computing_optimization_tests {
         // 测试边缘负载均衡
         // 应该在多个边缘节点间智能分配负载
 
-        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let runtime = tokio::runtime::Runtime::new();
         runtime.block_on(async {
             let router = GlobalRouter::new();
 
@@ -262,7 +262,7 @@ mod stage_33_edge_computing_optimization_tests {
         // 测试边缘与中心化性能对比
         // 边缘计算应该显著降低延迟
 
-        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let runtime = tokio::runtime::Runtime::new();
         runtime.block_on(async {
             let router = GlobalRouter::new();
 
@@ -301,7 +301,7 @@ mod stage_33_edge_computing_optimization_tests {
         // 测试边缘扩展性
         // 应该能随负载增长自动扩展
 
-        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let runtime = tokio::runtime::Runtime::new();
         runtime.block_on(async {
             let router = GlobalRouter::new();
 

@@ -4,7 +4,7 @@ use tempfile::{NamedTempFile, TempDir};
 
 #[test]
 fn test_process_argv() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
     // Check that process.argv is an array
     let result = runtime.execute_code("Array.isArray(process.argv)");
     assert!(result.is_ok());
@@ -14,7 +14,7 @@ fn test_process_argv() {
 
 #[test]
 fn test_process_version() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
     let result = runtime.execute_code("process.version");
     assert!(result.is_ok());
     let result_str = result.unwrap();
@@ -24,7 +24,7 @@ fn test_process_version() {
 
 #[test]
 fn test_process_cwd() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
     let result = runtime.execute_code("process.cwd()");
     assert!(result.is_ok());
     let result_str = result.unwrap();
@@ -34,7 +34,7 @@ fn test_process_cwd() {
 
 #[test]
 fn test_process_next_tick() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
     let code = r#"
         let executed = false;
         process.nextTick(() => {
@@ -48,7 +48,7 @@ fn test_process_next_tick() {
 
 #[test]
 fn test_path_join() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
     let result = runtime.execute_code(r#"path.join("foo", "bar", "baz")"#);
     assert!(result.is_ok());
     let result_str = result.unwrap();
@@ -57,7 +57,7 @@ fn test_path_join() {
 
 #[test]
 fn test_path_resolve() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
     let result = runtime.execute_code(r#"path.resolve("foo", "bar")"#);
     assert!(result.is_ok());
     let result_str = result.unwrap();
@@ -67,7 +67,7 @@ fn test_path_resolve() {
 
 #[test]
 fn test_path_dirname() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
     let result = runtime.execute_code(r#"path.dirname("/foo/bar/baz")"#);
     assert!(result.is_ok());
     let result_str = result.unwrap();
@@ -76,7 +76,7 @@ fn test_path_dirname() {
 
 #[test]
 fn test_path_basename() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
     let result = runtime.execute_code(r#"path.basename("/foo/bar/baz.txt")"#);
     assert!(result.is_ok());
     let result_str = result.unwrap();
@@ -85,7 +85,7 @@ fn test_path_basename() {
 
 #[test]
 fn test_path_extname() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
     let result = runtime.execute_code(r#"path.extname("foo/bar/baz.txt")"#);
     assert!(result.is_ok());
     let result_str = result.unwrap();
@@ -94,7 +94,7 @@ fn test_path_extname() {
 
 #[test]
 fn test_fs_read_file_sync() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Create a temporary file with content
     let mut file = NamedTempFile::new().unwrap();
@@ -110,7 +110,7 @@ fn test_fs_read_file_sync() {
 
 #[test]
 fn test_fs_write_file_sync() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Create a temp directory
     let temp_dir = TempDir::new().unwrap();
@@ -128,7 +128,7 @@ fn test_fs_write_file_sync() {
 
 #[test]
 fn test_fs_exists_sync() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Create a temporary file
     let file = NamedTempFile::new().unwrap();
@@ -143,7 +143,7 @@ fn test_fs_exists_sync() {
 
 #[test]
 fn test_fs_mkdir_sync() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let temp_dir = TempDir::new().unwrap();
     let new_dir = temp_dir.path().join("new_directory");
@@ -160,7 +160,7 @@ fn test_fs_mkdir_sync() {
 
 #[test]
 fn test_fs_readdir_sync() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let temp_dir = TempDir::new().unwrap();
     // Create some files in the directory
@@ -175,7 +175,7 @@ fn test_fs_readdir_sync() {
 
 #[test]
 fn test_fs_stat_sync() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Create a temporary file
     let file = NamedTempFile::new().unwrap();
@@ -191,7 +191,7 @@ fn test_fs_stat_sync() {
 
 #[test]
 fn test_require_module() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Test that require function exists
     let result = runtime.execute_code("typeof require");
@@ -210,7 +210,7 @@ fn test_require_module() {
 
 #[test]
 fn test_require_builtin_module() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Test that fs module can be required
     let result = runtime.execute_code(
@@ -227,7 +227,7 @@ fn test_require_builtin_module() {
 
 #[test]
 fn test_require_custom_module() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Create a temporary module file
     let temp_file = NamedTempFile::new().unwrap();
@@ -266,7 +266,7 @@ fn test_require_custom_module() {
 
 #[test]
 fn test_module_exports() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         const utils = {

@@ -36,6 +36,21 @@ pub mod watcher;
 pub mod repl;
 pub mod edge;
 pub mod ai_inference;
+pub mod concurrent_execution;
+pub mod shared_memory;
+pub mod shared_object_cache;
+pub mod memory_mapped_file;
+pub mod lock_free;
+pub mod network;
+pub mod zero_copy;
+pub mod string_interner;
+pub mod distributed;
+pub mod isolate_prewarmer;
+pub mod precompiled_cache;
+pub mod ai_batch_processor;
+pub mod ai_memory_pool;
+pub mod profiler;
+pub mod code_cache;
 
 // 重新导出 REPL 相关类型
 pub use repl::{Repl, ReplConfig};
@@ -108,6 +123,46 @@ pub use watcher::{
     FileChange, FileChangeType,
 };
 
+// 重新导出并发执行相关类型
+pub use concurrent_execution::{
+    WorkStealingScheduler, Task, TaskResult, StealStats,
+    ConcurrentConfig, ConcurrentExecutionStats, ScriptResult,
+    ConcurrentExecutionError, BatchExecutor, ConcurrentRuntimePool,
+};
+
+// 重新导出内存共享相关类型
+pub use shared_memory::{
+    SharedMemoryManager, SharedMemoryConfig, SharedMemoryRegion,
+    SharedMemoryHandle, SharedMemoryStats,
+};
+
+// 重新导出网络相关类型
+pub use network::{
+    NetworkBufferPool, ConnectionPool, NetworkIoStatistics,
+};
+
+// 重新导出预热相关类型
+pub use isolate_prewarmer::{
+    IsolatePrewarmer, PrewarmConfig, PrewarmStats,
+};
+
+// 重新导出预编译缓存类型
+pub use precompiled_cache::PrecompiledModuleCache;
+
+// 重新导出运行时精简版
+pub use runtime_lite::RuntimeLite;
+
+// 重新导出 AI 批处理相关类型
+pub use ai_batch_processor::{
+    AiBatchProcessor, BatchConfig,
+    AiTaskType, AiTaskResult,
+};
+
+// 重新导出 AI 内存池相关类型
+pub use ai_memory_pool::{
+    AiMemoryPool, ModelMemoryConfig, create_llm_memory_pool,
+};
+
 // 测试套件类型
 #[derive(Debug, Clone)]
 pub struct TestSuite {
@@ -162,6 +217,23 @@ pub fn is_v8_initialized() -> bool {
     // V8 doesn't provide an is_initialized check in rusty_v8
     // We track this manually
     false
+}
+
+/// Check if V8 is available for use in tests
+/// Returns true if V8 can be safely initialized, false if already poisoned
+pub fn is_v8_available() -> bool {
+    use std::sync::Once;
+    static CHECK: Once = Once::new();
+    static mut AVAILABLE: bool = true;
+
+    CHECK.call_once(|| {
+        // Try to initialize V8 if not already done
+        if let Err(_) = initialize_v8() {
+            unsafe { AVAILABLE = false; }
+        }
+    });
+
+    unsafe { AVAILABLE }
 }
 
 /// 性能配置

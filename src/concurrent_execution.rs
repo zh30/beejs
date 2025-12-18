@@ -1503,16 +1503,12 @@ impl ConcurrentRuntimePool {
 
             // 否则创建新实例
             if pool.len() < self.config.pool_size_per_thread {
-                match Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false) {
-                    Ok(runtime) => {
-                        let current_size = pool.len() + 1;
-                        THREAD_POOL_SIZE.with(|size| {
-                            *size.borrow_mut() = current_size;
-                        });
-                        Some(runtime)
-                    }
-                    Err(_) => None,
-                }
+                let runtime = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false);
+                let current_size = pool.len() + 1;
+                THREAD_POOL_SIZE.with(|size| {
+                    *size.borrow_mut() = current_size;
+                });
+                Some(runtime)
             } else {
                 None
             }
@@ -1590,12 +1586,11 @@ impl ConcurrentRuntimePool {
             THREAD_RUNTIME_POOL.with(|pool| {
                 let mut pool = pool.borrow_mut();
                 if pool.len() < pool_size_per_thread {
-                    if let Ok(runtime) = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false) {
-                        pool.push(runtime);
-                        THREAD_POOL_SIZE.with(|size| {
-                            *size.borrow_mut() = pool.len();
-                        });
-                    }
+                    let runtime = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false);
+                    pool.push(runtime);
+                    THREAD_POOL_SIZE.with(|size| {
+                        *size.borrow_mut() = pool.len();
+                    });
                 }
             });
         }

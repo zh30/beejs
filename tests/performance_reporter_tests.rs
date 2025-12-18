@@ -11,7 +11,7 @@ mod tests {
     /// 测试报告生成器创建
     #[test]
     fn test_reporter_creation() {
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
         let config = ReportConfig::default();
 
         let _reporter = PerformanceReporter::new(runtime, config);
@@ -22,7 +22,7 @@ mod tests {
     #[test]
     #[ignore = "Performance tests may cause SIGTRAP in test environment"]
     fn test_default_config() {
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
         let _reporter = PerformanceReporter::with_default_config(runtime);
 
         // 验证默认配置 - 通过生成报告来间接验证
@@ -34,7 +34,7 @@ mod tests {
     #[test]
     #[ignore = "Performance tests may cause SIGTRAP in test environment"]
     fn test_collect_beejs_metrics() {
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
         let reporter = PerformanceReporter::with_default_config(runtime);
 
         let metrics = reporter.collect_beejs_metrics();
@@ -76,7 +76,7 @@ mod tests {
     #[test]
     #[ignore = "Performance tests may cause SIGTRAP in test environment"]
     fn test_markdown_report_generation() {
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
         let reporter = PerformanceReporter::with_default_config(runtime);
 
         let report = reporter.generate_comparison_report();
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     #[ignore = "Performance tests may cause SIGTRAP in test environment"]
     fn test_json_report_generation() {
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
         let reporter = PerformanceReporter::with_default_config(runtime);
 
         let json_report = reporter.generate_json_report();
@@ -121,7 +121,7 @@ mod tests {
     #[test]
     #[ignore = "Performance tests may cause SIGTRAP in test environment"]
     fn test_comparison_via_report() {
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
         let reporter = PerformanceReporter::with_default_config(runtime);
 
         // 生成报告来验证对比功能
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     #[ignore = "Performance tests may cause SIGTRAP in test environment"]
     fn test_metric_extraction() {
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
         let reporter = PerformanceReporter::with_default_config(runtime);
 
         let metrics = reporter.collect_beejs_metrics();
@@ -170,7 +170,7 @@ mod tests {
         use std::fs;
         use tempfile::NamedTempFile;
 
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
         let reporter = PerformanceReporter::with_default_config(runtime);
 
         let temp_file = NamedTempFile::new().unwrap();

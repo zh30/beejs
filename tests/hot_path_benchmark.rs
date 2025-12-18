@@ -46,7 +46,7 @@ mod benchmarks {
     #[ignore] // 在测试环境中跳过，因为V8 Isolate池在测试中会有问题
     fn benchmark_complex_code_hot_path_detection() {
         let runtime =
-            Runtime::new_with_optimization(67108864, 1073741824, false, OptimizeMode::Auto)
+            Runtime::new_with_optimization(67108864, 1073741824, OptimizeMode::Auto)
                 .unwrap();
 
         let complex_code = r#"
@@ -177,7 +177,7 @@ mod benchmarks {
     #[ignore] // 在测试环境中跳过，因为V8 Isolate池在测试中会有问题
     fn benchmark_multiple_code_hot_paths() {
         let runtime =
-            Runtime::new_with_optimization(67108864, 1073741824, false, OptimizeMode::Auto)
+            Runtime::new_with_optimization(67108864, 1073741824, OptimizeMode::Auto)
                 .unwrap();
 
         // 执行多种不同的代码片段
@@ -248,7 +248,7 @@ mod benchmarks {
     #[ignore] // 在测试环境中跳过，因为V8 Isolate池在测试中会有问题
     fn benchmark_hot_path_stats_accuracy() {
         let runtime =
-            Runtime::new_with_optimization(67108864, 1073741824, false, OptimizeMode::Auto)
+            Runtime::new_with_optimization(67108864, 1073741824, OptimizeMode::Auto)
                 .unwrap();
 
         let code = "let sum = 0; for (let i = 0; i < 100; i++) { sum += i; } sum;";
@@ -293,7 +293,7 @@ mod benchmarks {
     #[ignore] // 在测试环境中跳过，因为V8 Isolate池在测试中会有问题
     fn benchmark_hot_path_reset() {
         let runtime =
-            Runtime::new_with_optimization(67108864, 1073741824, false, OptimizeMode::Auto)
+            Runtime::new_with_optimization(67108864, 1073741824, OptimizeMode::Auto)
                 .unwrap();
 
         // 执行一些代码

@@ -77,7 +77,7 @@ pub struct PerformanceBottleneckAnalyzer {
 impl PerformanceBottleneckAnalyzer {
     pub fn new() -> Self {
         // 使用单例 Runtime，避免 V8 生命周期问题
-        let runtime = Runtime::new(67108864, 1073741824, false).expect("Failed to create runtime");
+        let runtime = Runtime::new(67108864, 1073741824, false);
         Self { runtime }
     }
 

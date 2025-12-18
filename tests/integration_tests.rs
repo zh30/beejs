@@ -4,7 +4,7 @@ use tempfile::NamedTempFile;
 
 #[test]
 fn test_hello_world() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
     let result = runtime.execute_code(r#"console.log("Hello, World!");"#);
     assert!(result.is_ok());
     // console.log returns undefined
@@ -15,7 +15,7 @@ fn test_hello_world() {
 #[test]
 #[ignore = "Known issue: V8 Isolate lifecycle crash when multiple tests create/destroy Runtime instances"]
 fn test_type_execution() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Test number types
     let result = runtime.execute_code("42");
@@ -40,7 +40,7 @@ fn test_type_execution() {
 
 #[test]
 fn test_arithmetic_operations() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Addition
     let result = runtime.execute_code("5 + 3");
@@ -65,7 +65,7 @@ fn test_arithmetic_operations() {
 
 #[test]
 fn test_function_execution() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         function add(a, b) {
@@ -80,7 +80,7 @@ fn test_function_execution() {
 
 #[test]
 fn test_arrow_function() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         const multiply = (a, b) => a * b;
@@ -93,7 +93,7 @@ fn test_arrow_function() {
 
 #[test]
 fn test_class_definition() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         class Calculator {
@@ -127,7 +127,7 @@ fn test_class_definition() {
 #[test]
 #[ignore = "需要修复V8 Isolate在异常情况下的清理问题"]
 fn test_error_handling() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Test undefined variable reference
     let result = runtime.execute_code("undefined_variable");
@@ -144,7 +144,7 @@ fn test_error_handling() {
 #[test]
 #[ignore = "需要实现V8事件循环支持以处理Promise异步执行"]
 fn test_async_execution() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // 注意：当前运行时是同步的，没有事件循环
     // Promise.resolve() 会创建但不会执行，then 回调也不会被调用
@@ -162,7 +162,7 @@ fn test_async_execution() {
 
 #[test]
 fn test_module_exports() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         const utils = {
@@ -180,7 +180,7 @@ fn test_module_exports() {
 
 #[test]
 fn test_file_execution() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Create a temporary JavaScript file
     let mut file = NamedTempFile::new().unwrap();
@@ -196,7 +196,7 @@ fn test_file_execution() {
 #[test]
 #[ignore = "Known issue: V8 Isolate lifecycle crash when multiple tests create/destroy Runtime instances"]
 fn test_performance_sequential_execution() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     let code = r#"
         (function() {
@@ -218,7 +218,7 @@ fn test_performance_sequential_execution() {
 
 #[test]
 fn test_memory_efficient_execution() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Test with large data structures
     let code = r#"
@@ -235,7 +235,7 @@ fn test_memory_efficient_execution() {
 
 #[test]
 fn test_console_api_complete() {
-    let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime = Runtime::new(67108864, 1073741824, false);
 
     // Test console.log
     let result = runtime.execute_code(r#"console.log("test log");"#);

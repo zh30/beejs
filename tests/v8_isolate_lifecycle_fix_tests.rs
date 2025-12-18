@@ -35,8 +35,8 @@ fn test_sequential_isolate_creation() {
 #[test]
 fn test_isolate_reuse_safety() {
     // 验证 Isolate 重用的安全性
-    let runtime1 = Runtime::new(67108864, 1073741824, false).unwrap();
-    let runtime2 = Runtime::new(67108864, 1073741824, false).unwrap();
+    let runtime1 = Runtime::new(67108864, 1073741824, false);
+    let runtime2 = Runtime::new(67108864, 1073741824, false);
 
     // 两个 Runtime 应该能独立工作
     let result1 = runtime1.execute_code("42");
@@ -52,7 +52,7 @@ fn test_isolate_reuse_safety() {
 fn test_runtime_drop_safety() {
     // 验证 Runtime Drop 的安全性
     {
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
         let _ = runtime.execute_code("console.log('test')");
     } // runtime 在这里被 drop，应该不会导致问题
 
