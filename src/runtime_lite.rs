@@ -13,6 +13,7 @@ use std::time::Instant;
 /// Lightweight Runtime - minimal V8 runtime for fast startup
 /// Only initializes essential components needed for basic JS execution
 /// Stage 20.3 Optimization: Optimized memory layout for better cache locality
+/// Stage 21.1 Enhancement: V8 Snapshot integration for faster startup
 pub struct RuntimeLite {
     /// Stage 20.3: Group frequently accessed fields together for better cache locality
     /// Execution count (most frequently accessed)
@@ -24,6 +25,11 @@ pub struct RuntimeLite {
     /// Cache for pre-compiled scripts to avoid repeated compilation
     /// Less frequently accessed, placed separately
     script_cache: Arc<std::sync::Mutex<HashMap<String, (v8::Global<v8::Script>, Instant)>>>,
+
+    /// Stage 21.1: V8 Snapshot data for fast Isolate creation
+    /// Storing snapshot allows reusing it for all Isolate creations
+    #[allow(dead_code)]
+    v8_snapshot: Option<Vec<u8>>,
 
     /// Smart memory pool for reducing GC pressure and memory allocation overhead
     /// Stage 20.4 Optimization: Integrated memory pool for better performance
@@ -51,36 +57,48 @@ impl RuntimeLite {
             println!("RuntimeLite: Minimal V8 runtime initialized with script caching");
         }
 
-        // V8快照功能 - 在生产环境中正常工作，测试环境中禁用
+        // Stage 21.1: V8快照功能 - 在生产环境中正常工作，测试环境中禁用
         // 注意：V8 SnapshotCreator在测试环境中有生命周期问题（V8引擎限制）
         // 使用运行时检查而非编译时cfg，因为集成测试的编译行为不同
         let is_test_mode = std::env::var("CARGO_TEST").is_ok() || std::thread::current().name()
             .map(|name| name.contains("test"))
             .unwrap_or(false);
 
-        if !is_test_mode {
+        let v8_snapshot = if !is_test_mode {
             // Stage 20.1: V8快照系统已启用，提供启动时间优化
             let snapshot_manager = crate::v8_snapshot::V8SnapshotManager::new().ok();
             if let Some(manager) = &snapshot_manager {
-                if let Ok(Some(_snapshot)) = manager.get_or_create_snapshot("v0.1.0") {
+                if let Ok(Some(snapshot_data)) = manager.get_or_create_snapshot("v0.1.0") {
                     if verbose {
-                        println!("RuntimeLite: ✅ V8 snapshot loaded - startup accelerated!");
+                        println!("RuntimeLite: ✅ V8 snapshot loaded - startup accelerated! ({} bytes)",
+                                 snapshot_data.len());
                     }
-                } else if verbose {
-                    println!("RuntimeLite: V8 snapshot creation failed, using standard initialization");
+                    Some(snapshot_data)
+                } else {
+                    if verbose {
+                        println!("RuntimeLite: V8 snapshot creation failed, using standard initialization");
+                    }
+                    None
                 }
-            } else if verbose {
-                println!("RuntimeLite: V8 snapshot manager unavailable");
+            } else {
+                if verbose {
+                    println!("RuntimeLite: V8 snapshot manager unavailable");
+                }
+                None
             }
-        } else if verbose {
-            println!("RuntimeLite: V8 snapshot disabled in test environment to avoid lifecycle issues");
-        }
+        } else {
+            if verbose {
+                println!("RuntimeLite: V8 snapshot disabled in test environment to avoid lifecycle issues");
+            }
+            None
+        };
 
         Ok(Self {
             execution_count: Arc::new(AtomicUsize::new(0)),
             script_cache: Arc::new(std::sync::Mutex::new(HashMap::new())),
             cache_hits: Arc::new(AtomicUsize::new(0)),
             cache_misses: Arc::new(AtomicUsize::new(0)),
+            v8_snapshot,
             memory_pool: Arc::new(SmartMemoryPool::new(PoolConfig::default())),
         })
     }
@@ -761,8 +779,12 @@ impl RuntimeLite {
     /// Optimized execution for simple print statements - reduces V8 binding overhead
     fn execute_simple_print(&self, code: &str) -> Result<String> {
         // 🚀 V8 BINDING LAYER OPTIMIZATION: Ultra-minimal setup for pure print statements
-        // Create Isolate and context in one go
-        let mut isolate = v8::Isolate::new(v8::CreateParams::default());
+        // Stage 21.1: Use V8 snapshot for faster Isolate creation if available
+        let mut isolate = if let Some(ref snapshot_data) = self.v8_snapshot {
+            v8::Isolate::new(v8::CreateParams::default().snapshot_blob(snapshot_data.clone()))
+        } else {
+            v8::Isolate::new(v8::CreateParams::default())
+        };
         let scope = &mut v8::HandleScope::new(&mut isolate);
         let context = v8::Context::new(scope);
         let scope = &mut v8::ContextScope::new(scope, context);
@@ -785,7 +807,12 @@ impl RuntimeLite {
 
     /// Standard execution path with full API support
     pub fn execute_standard(&self, code: &str) -> Result<String> {
-        let mut isolate = v8::Isolate::new(v8::CreateParams::default());
+        // Stage 21.1: Use V8 snapshot for faster Isolate creation if available
+        let mut isolate = if let Some(ref snapshot_data) = self.v8_snapshot {
+            v8::Isolate::new(v8::CreateParams::default().snapshot_blob(snapshot_data.clone()))
+        } else {
+            v8::Isolate::new(v8::CreateParams::default())
+        };
         let scope = &mut v8::HandleScope::new(&mut isolate);
         let context = v8::Context::new(scope);
         let scope = &mut v8::ContextScope::new(scope, context);
