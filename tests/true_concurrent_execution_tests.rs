@@ -1,10 +1,8 @@
 //! 真正的并发执行测试套件 (TDD)
 //! 测试目标：支持 10000+ 并发脚本，吞吐量 50,000 ops/sec
 
-use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
-use tokio::sync::Mutex;
 use tokio::time::sleep;
 
 #[cfg(test)]
@@ -13,6 +11,7 @@ mod tests {
 
     /// 并发执行结果
     #[derive(Debug, Clone)]
+    #[allow(dead_code)]
     pub struct ScriptResult {
         pub index: usize,
         pub result: Result<String, String>,
@@ -21,6 +20,7 @@ mod tests {
 
     /// 并发执行错误类型
     #[derive(Debug, thiserror::Error)]
+    #[allow(dead_code)]
     pub enum ConcurrentExecutionError {
         #[error("任务提交失败: {0}")]
         SubmissionFailed(String),
@@ -37,6 +37,7 @@ mod tests {
 
     /// 并发执行统计
     #[derive(Debug, Clone, Default)]
+    #[allow(dead_code)]
     pub struct ConcurrentExecutionStats {
         pub total_submitted: u64,
         pub total_completed: u64,
@@ -91,7 +92,7 @@ mod tests {
     /// 测试 2: 工作窃取调度器基本功能
     #[tokio::test]
     async fn test_work_stealing_scheduler_basic() {
-        use beejs::{WorkStealingScheduler, Task, ConcurrentExecutionError};
+        use beejs::{WorkStealingScheduler, Task};
 
         // 创建工作窃取调度器（4个线程）
         let scheduler = WorkStealingScheduler::new(4);
@@ -245,7 +246,7 @@ mod tests {
         let start = Instant::now();
 
         // 生成 5000 个脚本
-        let scripts: Vec<String> = (0..5000)
+        let _scripts: Vec<String> = (0..5000)
             .map(|i| format!("Math.sqrt({})", i))
             .collect();
 
@@ -282,7 +283,7 @@ mod tests {
         let start = Instant::now();
 
         // 生成 10000 个复杂脚本
-        let scripts: Vec<String> = (0..10000)
+        let _scripts: Vec<String> = (0..10000)
             .map(|i| {
                 format!(
                     "(function() {{ let sum = 0; for(let j=0; j<100; j++) {{ sum += j * {}; }} return sum; }})()",
@@ -350,13 +351,13 @@ mod tests {
         // - 使用信号量限制并发数
         // - 系统不会过载
 
-        let max_concurrent = 1000;
+        let _max_concurrent = 1000;
 
         // TODO: 创建带背压控制的 BatchExecutor
         // let executor = BatchExecutor::new(max_concurrent);
 
         // 提交 5000 个任务（超过限制）
-        let scripts: Vec<String> = (0..5000)
+        let _scripts: Vec<String> = (0..5000)
             .map(|i| format!("{}", i))
             .collect();
 
@@ -378,7 +379,7 @@ mod tests {
 
         // 创建大型脚本（1MB）
         let large_script = "x".repeat(1024 * 1024);
-        let scripts = vec![large_script; 100];
+        let _scripts = vec![large_script; 100];
 
         // TODO: 执行并验证零拷贝优化
 
@@ -417,7 +418,7 @@ mod tests {
             .collect();
 
         // 执行并获取统计
-        let results = executor.execute_batch(scripts_with_priority, Duration::from_secs(10)).await.unwrap();
+        let _results = executor.execute_batch(scripts_with_priority, Duration::from_secs(10)).await.unwrap();
         let stats = executor.get_stats();
 
         // 验证
@@ -554,7 +555,7 @@ mod tests {
         // - 不需要等待所有任务完成
         // - 实时性好
 
-        let scripts: Vec<String> = (0..1000)
+        let _scripts: Vec<String> = (0..1000)
             .map(|i| {
                 format!(
                     "(function() {{ return new Promise(resolve => setTimeout(() => resolve({}), {})); }})()",
@@ -692,7 +693,8 @@ mod tests {
     }
 
     /// 验证脚本执行结果
-    fn validate_script_result(index: usize, result: &Result<String, String>) -> bool {
+    #[allow(dead_code)]
+    fn validate_script_result(_index: usize, result: &Result<String, String>) -> bool {
         match result {
             Ok(output) => {
                 // 简单验证：检查输出包含数字
@@ -703,6 +705,7 @@ mod tests {
     }
 
     /// 打印测试结果摘要
+    #[allow(dead_code)]
     fn print_test_summary(results: &[ScriptResult]) {
         let total = results.len();
         let successful = results.iter().filter(|r| r.result.is_ok()).count();
