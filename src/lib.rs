@@ -24,7 +24,7 @@ pub mod inline_cache;
 mod isolate_guard;
 mod isolate_pool;
 mod isolate_prewarmer;
-mod jit_optimizer;
+pub mod jit_optimizer;
 mod lock_free;
 pub mod process_pool;
 mod runtime_lite;
