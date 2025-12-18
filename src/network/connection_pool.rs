@@ -294,7 +294,7 @@ impl ConnectionPool {
                 let mut pools = pools.lock().unwrap();
 
                 // 检查所有地址的连接池
-                for (addr, pool) in pools.iter_mut() {
+                for (_addr, pool) in pools.iter_mut() {
                     // 清理不健康和超时的连接
                     pool.retain(|conn| {
                         let should_remove = !conn.is_healthy() || conn.is_idle_timeout(config.idle_timeout);

@@ -315,8 +315,8 @@ impl NetworkBufferPool {
         }
 
         // 清理超时的缓冲区
-        let now = Instant::now();
-        tracker.retain(|&id| {
+        let _now = Instant::now();
+        tracker.retain(|&_id| {
             // 这里简化处理，实际应该根据 ID 查找对应的缓冲区
             // 检查最后访问时间
             true

@@ -63,7 +63,7 @@ impl ZeroCopyUdpSocket {
     /// # 返回值
     /// 返回新的 ZeroCopyUdpSocket 实例
     pub fn new(socket: UdpSocket, buffer_size: usize, pool_size: usize) -> Self {
-        let mut udp_socket = Self {
+        let udp_socket = Self {
             socket: Arc::new(socket),
             packet_buffers: Arc::new(Mutex::new(Vec::with_capacity(pool_size))),
             buffer_size,
@@ -238,7 +238,7 @@ impl ZeroCopyUdpSocket {
 }
 
 impl Write for ZeroCopyUdpSocket {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+    fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
         // 注意：UDP 是无连接的，需要指定目标地址
         // 这里只是一个占位实现，实际使用中应该使用 send_to
         Err(std::io::Error::new(

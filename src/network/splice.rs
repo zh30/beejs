@@ -134,7 +134,7 @@ impl Splice {
         fd_in: RawFd,
         fd_out: RawFd,
         max_bytes: usize,
-        direction: SpliceDirection,
+        _direction: SpliceDirection,
     ) -> io::Result<u64> {
         let start = Instant::now();
         let mut bytes_sent = 0;
@@ -194,7 +194,7 @@ impl Splice {
     }
 
     /// 执行单个 splice 操作
-    fn splice_chunk(&self, fd_in: RawFd, fd_out: RawFd, count: usize) -> io::Result<usize> {
+    fn splice_chunk(&self, _fd_in: RawFd, _fd_out: RawFd, _count: usize) -> io::Result<usize> {
         // splice 系统调用在某些平台上可能不可用
         // 这里提供一个简化实现，实际使用时可能需要平台特定的代码
         Err(io::Error::new(

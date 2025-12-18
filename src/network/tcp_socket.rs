@@ -106,7 +106,7 @@ impl ZeroCopyTcpSocket {
 
     /// 应用 TCP 优化设置
     fn apply_tcp_optimizations(&mut self) {
-        if let Ok(mut stream) = self.stream.lock() {
+        if let Ok(stream) = self.stream.lock() {
             // 启用 TCP_NODELAY，禁用 Nagle 算法
             let _ = stream.set_nodelay(true);
 
@@ -128,7 +128,7 @@ impl ZeroCopyTcpSocket {
     /// # 返回值
     /// 返回发送的字节数
     pub fn send_zero_copy(&self, data: &[u8]) -> std::io::Result<usize> {
-        let mut sent_bytes = 0;
+        let mut sent_bytes = data.len();
 
         // 使用预分配的缓冲区
         {
@@ -179,7 +179,7 @@ impl ZeroCopyTcpSocket {
 
     /// 设置读写超时
     pub fn set_timeout(&self, timeout: Option<Duration>) -> std::io::Result<()> {
-        let mut stream = self.stream.lock().unwrap();
+        let stream = self.stream.lock().unwrap();
         stream.set_read_timeout(timeout)?;
         stream.set_write_timeout(timeout)?;
         Ok(())

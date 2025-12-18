@@ -168,11 +168,11 @@ impl SendFile {
     }
 
     /// 发送单个数据块
-    fn sendfile_chunk(&mut self, out_fd: RawFd, count: u64) -> io::Result<u64> {
+    fn sendfile_chunk(&mut self, out_fd: RawFd, _count: u64) -> io::Result<u64> {
         // 使用 libc::sendfile 系统调用
         #[cfg(unix)]
         {
-            use libc::{sendfile, off_t};
+            use libc::{off_t, sendfile};
 
             let mut offset: off_t = self.current_pos as off_t;
             let result = unsafe {
