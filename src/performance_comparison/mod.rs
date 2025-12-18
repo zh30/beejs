@@ -15,6 +15,7 @@ pub use result_collector::{ResultCollector, ComparisonResult, BenchmarkCompariso
 pub use comparison_report::{ReportGenerator, ReportFormat, ReportConfig};
 
 use crate::benchmarks;
+use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 use std::time::Duration;
@@ -34,7 +35,7 @@ pub struct PerformanceComparisonResult {
 }
 
 /// 性能对比摘要
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceSummary {
     pub total_tests: usize,
     pub beejs_wins: usize,

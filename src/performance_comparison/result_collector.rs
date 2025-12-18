@@ -4,11 +4,12 @@
 //! 该模块实现性能测试结果的收集、分析和对比功能
 
 use crate::benchmarks::BenchmarkResult;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
 
 /// 单个基准测试的对比结果
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkComparison {
     pub test_name: String,
     pub beejs_result: Option<BenchmarkResult>,
@@ -23,7 +24,7 @@ pub struct BenchmarkComparison {
 }
 
 /// 完整的对比结果
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComparisonResult {
     pub test_results: Vec<BenchmarkComparison>,
     pub summary: crate::performance_comparison::PerformanceSummary,
@@ -32,7 +33,7 @@ pub struct ComparisonResult {
 }
 
 /// 测试环境信息
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestEnvironment {
     pub os: String,
     pub cpu: String,
@@ -293,12 +294,12 @@ pub fn determine_winner(
     scores
         .into_iter()
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
-        .map(|(name, _)| name)
+        .map(|(name, _)| name.to_string())
         .unwrap_or_else(|| "unknown".to_string())
 }
 
 /// 计算单个运行时的得分
-fn calculate_runtime_score(result: &benchmarks::BenchmarkResult) -> f64 {
+fn calculate_runtime_score(result: &BenchmarkResult) -> f64 {
     // 基于执行时间计算得分（时间越短得分越高）
     let time_score = if result.avg_duration.as_secs_f64() > 0.0 {
         1.0 / result.avg_duration.as_secs_f64() * 1000000.0

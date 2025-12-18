@@ -360,7 +360,7 @@ impl ReportGenerator {
 "#);
 
             // 添加图表脚本
-            html.push_str(self.generate_chart_scripts(result)?);
+            html.push_str(&self.generate_chart_scripts(result)?);
         }
 
         // HTML 尾部

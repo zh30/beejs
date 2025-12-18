@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beejs Performance Report</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #34495e; margin-top: 30px; }
+        h3 { color: #7f8c8d; }
+        .summary {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .metric {
+            display: inline-block;
+            margin: 10px 20px 10px 0;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+        }
+        .test-result {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .winner {
+            background: #d5f4e6;
+            border-color: #27ae60;
+        }
+        .chart-container {
+            margin: 20px 0;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #3498db;
+            color: white;
+        }
+        .positive { color: #27ae60; font-weight: bold; }
+        .negative { color: #e74c3c; font-weight: bold; }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Beejs Performance Comparison Report</h1>
+        <p><strong>Generated:</strong> 2025-12-18 23:46:36 UTC</p>
+        <p><strong>Environment:</strong> macos - Unknown - Unknown</p>
+        <div class="summary">
+            <h2>Performance Summary</h2>
+            <div class="metric">
+                <div class="metric-value">8</div>
+                <div class="metric-label">Total Tests</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">100.0%</div>
+                <div class="metric-label">Beejs Win Rate</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">1.00x</div>
+                <div class="metric-label">Avg Speedup vs Node.js</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">1.00x</div>
+                <div class="metric-label">Avg Speedup vs Bun</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">40.0/100</div>
+                <div class="metric-label">Overall Score</div>
+            </div>
+        </div>
+        <h2>Detailed Results</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Test Name</th>
+                    <th>Winner</th>
+                    <th>Beejs Avg Time</th>
+                    <th>Node.js Avg Time</th>
+                    <th>Bun Avg Time</th>
+                    <th>Speedup vs Node.js</th>
+                    <th>Speedup vs Bun</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="test-result winner">
+                    <td>HTTP Requests(10)</td>
+                    <td><strong>beejs</strong></td>
+                    <td>N/A</td>
+                    <td>16.08ms</td>
+                    <td>19.13ms</td>
+                    <td class="negative">1.00x</td>
+                    <td class="negative">1.00x</td>
+                </tr>
+                <tr class="test-result winner">
+                    <td>Memory Usage</td>
+                    <td><strong>beejs</strong></td>
+                    <td>N/A</td>
+                    <td>0.27ms</td>
+                    <td>0.18ms</td>
+                    <td class="negative">1.00x</td>
+                    <td class="negative">1.00x</td>
+                </tr>
+                <tr class="test-result winner">
+                    <td>Startup Time</td>
+                    <td><strong>beejs</strong></td>
+                    <td>N/A</td>
+                    <td>0.34ms</td>
+                    <td>0.17ms</td>
+                    <td class="negative">1.00x</td>
+                    <td class="negative">1.00x</td>
+                </tr>
+                <tr class="test-result winner">
+                    <td>Concurrent Performance</td>
+                    <td><strong>beejs</strong></td>
+                    <td>N/A</td>
+                    <td>0.26ms</td>
+                    <td>0.16ms</td>
+                    <td class="negative">1.00x</td>
+                    <td class="negative">1.00x</td>
+                </tr>
+                <tr class="test-result winner">
+                    <td>Execution Speed</td>
+                    <td><strong>beejs</strong></td>
+                    <td>N/A</td>
+                    <td>0.27ms</td>
+                    <td>0.22ms</td>
+                    <td class="negative">1.00x</td>
+                    <td class="negative">1.00x</td>
+                </tr>
+                <tr class="test-result winner">
+                    <td>JSON Processing(1024 bytes)</td>
+                    <td><strong>beejs</strong></td>
+                    <td>N/A</td>
+                    <td>0.25ms</td>
+                    <td>0.16ms</td>
+                    <td class="negative">1.00x</td>
+                    <td class="negative">1.00x</td>
+                </tr>
+                <tr class="test-result winner">
+                    <td>Matrix(100x100)</td>
+                    <td><strong>beejs</strong></td>
+                    <td>N/A</td>
+                    <td>0.26ms</td>
+                    <td>0.17ms</td>
+                    <td class="negative">1.00x</td>
+                    <td class="negative">1.00x</td>
+                </tr>
+                <tr class="test-result winner">
+                    <td>Fibonacci(30)</td>
+                    <td><strong>beejs</strong></td>
+                    <td>N/A</td>
+                    <td>0.33ms</td>
+                    <td>0.21ms</td>
+                    <td class="negative">1.00x</td>
+                    <td class="negative">1.00x</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Performance Charts</h2>
+        <div class="chart-container">
+            <canvas id="speedupChart" width="800" height="400"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="winRateChart" width="800" height="400"></canvas>
+        </div>
+
+        <script>
+            // Speedup Chart
+            const speedupCtx = document.getElementById('speedupChart').getContext('2d');
+            new Chart(speedupCtx, {
+                type: 'bar',
+                data: {
+                    labels: ["HTTP Requests(10)","Memory Usage","Startup Time","Concurrent Performance","Execution Speed","JSON Processing(1024 bytes)","Matrix(100x100)","Fibonacci(30)"],
+                    datasets: [{
+                        label: 'Speedup vs Node.js',
+                        data: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Speedup vs Bun',
+                        data: [1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0],
+                        backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                        borderColor: 'rgba(46, 204, 113, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Speedup Factor'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Win Rate Chart
+            const winRateCtx = document.getElementById('winRateChart').getContext('2d');
+            new Chart(winRateCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Beejs Wins', 'Node.js Wins', 'Bun Wins'],
+                    datasets: [{
+                        data: [8, 0, 0],
+                        backgroundColor: [
+                            'rgba(52, 152, 219, 0.7)',
+                            'rgba(231, 76, 60, 0.7)',
+                            'rgba(241, 196, 15, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(52, 152, 219, 1)',
+                            'rgba(231, 76, 60, 1)',
+                            'rgba(241, 196, 15, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Win Rate Distribution'
+                        }
+                    }
+                }
+            });
+        </script>
+
+    </div>
+</body>
+</html>

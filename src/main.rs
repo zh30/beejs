@@ -71,14 +71,18 @@ impl From<OptimizeModeArg> for OptimizeMode {
 }
 
 fn main() -> Result<()> {
-    // Initialize V8
-    let _ = initialize_v8();
+    eprintln!("=== main() called ===");
 
     // Try to use enhanced CLI first, fall back to basic CLI
     match try_enhanced_cli() {
-        Ok(_) => Ok(()),
-        Err(_) => {
+        Ok(_) => {
+            eprintln!("=== Enhanced CLI succeeded ===");
+            Ok(())
+        },
+        Err(e) => {
             // Fall back to basic CLI
+            eprintln!("=== Enhanced CLI failed, falling back to basic CLI ===");
+            eprintln!("Error: {:?}", e);
             basic_cli_main()
         }
     }
@@ -86,6 +90,10 @@ fn main() -> Result<()> {
 
 fn try_enhanced_cli() -> Result<()> {
     use crate::cli::enhanced_cli::run_enhanced_cli;
+
+    if std::env::var("VERBOSE").is_ok() {
+        eprintln!("Trying enhanced CLI...");
+    }
 
     let rt = tokio::runtime::Runtime::new()?;
     rt.block_on(run_enhanced_cli())

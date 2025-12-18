@@ -309,7 +309,7 @@ impl BenchmarkRunner {
         for runtime in available_runtimes {
             println!("  Testing {}...", runtime.name);
 
-            match self.run_benchmark_for_runtime(&runtime, test_case).await {
+            match self.run_benchmark_for_runtime(&runtime, test_case) {
                 Ok(result) => match runtime.name.as_str() {
                     "beejs" => beejs_result = Some(result),
                     "nodejs" => nodejs_result = Some(result),

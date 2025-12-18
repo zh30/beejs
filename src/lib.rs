@@ -206,26 +206,43 @@ impl Server {
 use std::time::Duration;
 use anyhow::{Result, anyhow};
 
-/// Initialize V8 engine
+/// Global flag to track V8 initialization state
+static V8_INITIALIZED: std::sync::OnceLock<std::sync::atomic::AtomicBool> = std::sync::OnceLock::new();
+
+/// Initialize V8 engine (idempotent - safe to call multiple times)
 pub fn initialize_v8() -> Result<()> {
-    use rusty_v8 as v8;
+    // Check if already initialized
+    let initialized_flag = V8_INITIALIZED.get_or_init(|| {
+        std::sync::atomic::AtomicBool::new(false)
+    });
 
-    // Create platform
-    let platform = v8::new_default_platform()
-        .unwrap();
+    // Only initialize if not already done
+    if !initialized_flag.load(std::sync::atomic::Ordering::SeqCst) {
+        use rusty_v8 as v8;
 
-    // Initialize V8
-    v8::V8::initialize_platform(platform);
-    v8::V8::initialize();
+        // Create platform
+        let platform = v8::new_default_platform()
+            .unwrap();
+
+        // Initialize V8
+        v8::V8::initialize_platform(platform);
+        v8::V8::initialize();
+
+        // Mark as initialized
+        initialized_flag.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
 
     Ok(())
 }
 
 /// Check if V8 is initialized
 pub fn is_v8_initialized() -> bool {
-    // V8 doesn't provide an is_initialized check in rusty_v8
-    // We track this manually
-    false
+    // Check the global flag
+    if let Some(flag) = V8_INITIALIZED.get() {
+        flag.load(std::sync::atomic::Ordering::SeqCst)
+    } else {
+        false
+    }
 }
 
 /// Check if V8 is available for use in tests
