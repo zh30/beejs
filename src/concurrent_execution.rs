@@ -169,7 +169,7 @@ thread_local! {
 // 第二部分: WorkStealingScheduler - 工作窃取调度器
 // ============================================================================
 
-use crate::lock_free::{LockFreeQueue, AtomicStats};
+// Removed unused imports: LockFreeQueue, AtomicStats
 use crate::zero_copy::ZeroCopyChannel;
 
 /// 任务类型
@@ -439,7 +439,7 @@ impl WorkStealingScheduler {
 #[cfg(test)]
 mod work_stealing_tests {
     use super::*;
-    use std::time::Duration;
+    // Removed unused import: std::time::Duration
 
     #[tokio::test]
     async fn test_work_stealing_scheduler_creation() {

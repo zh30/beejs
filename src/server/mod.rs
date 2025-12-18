@@ -187,7 +187,7 @@ impl Server {
     async fn handle_stats(
         &self,
         _runtime: Arc<Mutex<Runtime>>,
-        mut request: Request,
+        request: Request,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let stats = ServerStats::default();
 
@@ -204,7 +204,7 @@ impl Server {
     /// Handle /health endpoint
     async fn handle_health(
         &self,
-        mut request: Request,
+        request: Request,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let response = Response::from_string("OK")
             .with_status_code(200)

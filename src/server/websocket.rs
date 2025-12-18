@@ -10,7 +10,7 @@ use tokio_tungstenite::{accept_async, tungstenite::Message};
 use futures_util::{StreamExt, SinkExt};
 use tracing::{info, warn, error};
 use crate::Runtime;
-use super::{EvalRequest, EvalResponse};
+use super::EvalResponse;
 
 /// WebSocket server configuration
 #[derive(Debug, Clone)]
