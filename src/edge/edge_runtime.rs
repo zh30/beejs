@@ -1,7 +1,7 @@
 //! Edge Runtime Management
 //! High-performance edge runtime with minimal cold start times
 
-use super::CdnEndpoint;
+use super::cdn_provider::CdnEndpoint;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;

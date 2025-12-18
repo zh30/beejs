@@ -1,7 +1,7 @@
 //! Cloudflare Workers Integration
 //! High-performance edge deployment via Cloudflare's global network
 
-use super::{CdnProvider, CdnProviderType, CdnEndpoint, DeploymentResult, DeploymentStatus, ProviderHealth, EndpointStatus};
+use super::cdn_provider::{CdnProvider, CdnProviderType, CdnEndpoint, DeploymentResult, DeploymentStatus, ProviderHealth, EndpointStatus};
 use std::collections::HashMap;
 use anyhow::{Result, Context};
 use tokio::time::Duration;

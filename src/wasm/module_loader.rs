@@ -87,7 +87,7 @@ impl WasmModuleLoader {
         Ok(WasmModuleLoader {
             engine,
             config: LoaderConfig::default(),
-        }
+        })
     }
 
     /// 创建自定义配置的加载器

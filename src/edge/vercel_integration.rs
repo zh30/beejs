@@ -1,7 +1,7 @@
 //! Vercel Edge Runtime Integration
 //! High-performance edge deployment via Vercel's global network
 
-use super::{CdnProvider, CdnProviderType, CdnEndpoint, DeploymentResult, DeploymentStatus, ProviderHealth, EndpointStatus};
+use super::cdn_provider::{CdnProvider, CdnProviderType, CdnEndpoint, DeploymentResult, DeploymentStatus, ProviderHealth, EndpointStatus};
 use std::collections::HashMap;
 use anyhow::Result;
 use tokio::time::Duration;

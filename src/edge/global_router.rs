@@ -1,7 +1,7 @@
 //! Global Distribution Router
 //! Intelligent routing across global edge locations
 
-use super::CdnEndpoint;
+use super::cdn_provider::CdnEndpoint;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;

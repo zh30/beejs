@@ -5,7 +5,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
-use crate::runtime::Runtime;
+use crate::Runtime;
 
 /// 模型管理器配置
 #[derive(Debug, Clone)]

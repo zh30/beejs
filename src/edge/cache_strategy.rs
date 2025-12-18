@@ -55,15 +55,15 @@ struct CachePredictor {
 }
 
 #[derive(Debug, Clone)]
-struct CacheStats {
-    l1_hits: u64,
-    l1_misses: u64,
-    l2_hits: u64,
-    l2_misses: u64,
-    l3_hits: u64,
-    l3_misses: u64,
-    total_operations: u64,
-    hit_ratio: f64,
+pub struct CacheStats {
+    pub l1_hits: u64,
+    pub l1_misses: u64,
+    pub l2_hits: u64,
+    pub l2_misses: u64,
+    pub l3_hits: u64,
+    pub l3_misses: u64,
+    pub total_operations: u64,
+    pub hit_ratio: f64,
 }
 
 impl EdgeCache {

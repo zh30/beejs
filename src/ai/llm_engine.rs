@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
-use crate::runtime::Runtime;
+use crate::Runtime;
 
 /// LLM 配置
 #[derive(Debug, Clone)]
@@ -331,8 +331,8 @@ fn tokens_to_string(tokens: &[u32]) -> String {
     tokens
         .iter()
         .map(|t| format!("token_{}", t))
-<Vec<_>>()
-        .collect::        .join(" ")
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// 字符串到 token 的转换
