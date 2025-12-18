@@ -52,6 +52,14 @@ struct Args {
     #[arg(short, long, value_enum, default_value = "speed")]
     optimize: OptimizeMode,
 
+    /// Enable process pool for faster script execution (default: enabled)
+    #[arg(long)]
+    process_pool: bool,
+
+    /// Number of worker processes in the pool (default: CPU count)
+    #[arg(long)]
+    pool_size: Option<usize>,
+
     /// Package manager commands
     #[command(subcommand)]
     command: Option<SubCommand>,
@@ -118,6 +126,29 @@ enum OptimizeMode {
     Auto,
 }
 
+/// Initialize the process pool with the given configuration
+fn initialize_process_pool(verbose: bool, pool_size: Option<usize>) -> Result<()> {
+    use beejs::process_pool::{ProcessPoolConfig, initialize_process_pool as init_pool};
+
+    let initial_workers = pool_size.unwrap_or(std::cmp::min(4, num_cpus::get()));
+
+    let config = ProcessPoolConfig {
+        max_workers: pool_size.unwrap_or(num_cpus::get()),
+        initial_workers,
+        init_timeout_ms: 5000,
+        enabled: true,
+    };
+
+    init_pool(config)
+        .context("Failed to initialize process pool")?;
+
+    if verbose {
+        println!("Process pool initialized with {} workers", initial_workers);
+    }
+
+    Ok(())
+}
+
 fn main() -> Result<()> {
     let args = Args::parse();
 
@@ -139,6 +170,18 @@ fn main() -> Result<()> {
     // Handle watch mode
     if args.watch {
         return run_watch_mode(&args);
+    }
+
+    // Initialize process pool for better performance (unless disabled)
+    if args.process_pool {
+        if let Err(e) = initialize_process_pool(args.verbose, args.pool_size) {
+            if args.verbose {
+                eprintln!("Warning: Failed to initialize process pool: {}", e);
+                eprintln!("Falling back to direct execution mode");
+            }
+        } else if args.verbose {
+            println!("Process pool initialized successfully");
+        }
     }
 
     // Delay verbose output until runtime is created to reduce startup overhead

@@ -25,6 +25,7 @@ mod isolate_guard;
 mod isolate_pool;
 mod jit_optimizer;
 mod lock_free;
+pub mod process_pool;
 mod runtime_lite;
 mod zero_copy;
 pub mod v8_snapshot;
@@ -58,6 +59,12 @@ pub use runtime_lite::{RuntimeLite, get_global_lite_runtime};
 
 // Re-export V8 snapshot types
 pub use v8_snapshot::V8SnapshotManager;
+
+// Re-export process pool types
+pub use process_pool::{
+    ProcessPool, ProcessPoolConfig, ProcessPoolStats,
+    initialize_process_pool, get_process_pool, execute_with_pool
+};
 
 // Re-export REPL types
 pub use repl::{Repl, ReplConfig};

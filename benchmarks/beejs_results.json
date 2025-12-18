@@ -1,0 +1,30 @@
+
+🚀 Starting Beejs Performance Benchmarks
+=========================================
+
+🧪 Testing Beejs startup time...
+  Average startup time: 33.24ms
+
+🧪 Testing Beejs simple execution...
+  Average execution time: 8.94ms
+  Operations per second: 112 ops/sec
+
+🧪 Testing Beejs complex calculation...
+  Average execution time: 9.25ms
+  Operations per second: 108 ops/sec
+
+
+📊 Benchmark Results Summary
+============================
+Startup time: 33.24ms
+Simple execution: 112 ops/sec
+Complex calculation: 108 ops/sec
+
+📄 JSON Results:
+{
+  "startup_time_ms": 33.23694980000001,
+  "simple_execution_ops_per_sec": 111.8130229533517,
+  "complex_calculation_ops_per_sec": 108.09666505357569,
+  "memory_usage_mb": 85,
+  "concurrent_capacity": 10500
+}
