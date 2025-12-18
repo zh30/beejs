@@ -257,35 +257,40 @@ impl GlobalRouter {
     pub async fn trigger_automatic_failover(&self, failed_node_id: &str) -> Result<String> {
         let mut nodes = self.edge_nodes.write().await;
 
-        // Find the failed node
-        let failed_node = nodes.iter()
-            .find(|n| n.id == failed_node_id)
-            .context("Failed node not found")?;
+        // Find the failed node and fallback in one immutable pass
+        let (failed_node_region, fallback_id) = {
+            let nodes_ref = &*nodes;
+            let failed_node = nodes_ref.iter()
+                .find(|n| n.id == failed_node_id)
+                .context("Failed node not found")?;
 
-        // Find best alternative in same region or nearest region
-        let fallback = nodes.iter()
-            .filter(|n| n.id != failed_node_id && n.status == NodeStatus::Online)
-            .min_by(|a, b| {
-                // Prefer same region
-                if a.region == failed_node.region && b.region != failed_node.region {
-                    std::cmp::Ordering::Less
-                } else if a.region != failed_node.region && b.region == failed_node.region {
-                    std::cmp::Ordering::Greater
-                } else {
-                    // Then by load
-                    a.current_load.partial_cmp(&b.current_load).unwrap_or(std::cmp::Ordering::Equal)
-                }
-            })
-            .context("No fallback node available")?;
+            // Find best alternative in same region or nearest region
+            let fallback = nodes_ref.iter()
+                .filter(|n| n.id != failed_node_id && n.status == NodeStatus::Online)
+                .min_by(|a, b| {
+                    // Prefer same region
+                    if a.region == failed_node.region && b.region != failed_node.region {
+                        std::cmp::Ordering::Less
+                    } else if a.region != failed_node.region && b.region == failed_node.region {
+                        std::cmp::Ordering::Greater
+                    } else {
+                        // Then by load
+                        a.current_load.partial_cmp(&b.current_load).unwrap_or(std::cmp::Ordering::Equal)
+                    }
+                })
+                .context("No fallback node available")?;
+
+            (failed_node.region.clone(), fallback.id.clone())
+        };
 
         // Update failed node status
         if let Some(node) = nodes.iter_mut().find(|n| n.id == failed_node_id) {
             node.status = NodeStatus::Offline;
         }
 
-        println!("Automatic failover: {} -> {}", failed_node_id, fallback.id);
+        println!("Automatic failover: {} -> {}", failed_node_id, fallback_id);
 
-        Ok(fallback.id.clone())
+        Ok(fallback_id)
     }
 
     /// Get network topology

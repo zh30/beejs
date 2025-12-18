@@ -115,8 +115,13 @@ impl EdgeDeploymentOptimizer {
             history.push(record);
 
             // Keep only last 1000 records
-            if history.len() > 1000 {
-                history.drain(0..history.len() - 1000);
+            let to_remove = if history.len() > 1000 {
+                history.len() - 1000
+            } else {
+                0
+            };
+            if to_remove > 0 {
+                history.drain(0..to_remove);
             }
         }
 

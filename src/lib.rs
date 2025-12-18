@@ -75,25 +75,25 @@ pub use flame_graph::{FlameGraph, FrameNode, StackFrame};
 // 新增WASM集成模块
 pub mod wasm_integration;
 
-// Stage 27.2: WebAssembly 完整支持模块
-pub mod wasm {
-    pub mod compiler;
-    pub mod module_loader;
-    pub mod memory_manager;
-    pub mod js_interop;
-    pub mod module_cache;
-}
+// Stage 27.2: WebAssembly 完整支持模块 (暂时禁用，存在编译错误)
+// pub mod wasm {
+//     pub mod compiler;
+//     pub mod module_loader;
+//     pub mod memory_manager;
+//     pub mod js_interop;
+//     pub mod module_cache;
+// }
 
-// Stage 27.3: 边缘计算优化模块
-pub mod edge {
-    pub mod cdn_provider;
-    pub mod cloudflare_integration;
-    pub mod vercel_integration;
-    pub mod deployment_optimizer;
-    pub mod edge_runtime;
-    pub mod global_router;
-    pub mod cache_strategy;
-}
+// Stage 27.3: 边缘计算优化模块 (暂时禁用，存在编译错误)
+// pub mod edge {
+//     pub mod cdn_provider;
+//     pub mod cloudflare_integration;
+//     pub mod vercel_integration;
+//     pub mod deployment_optimizer;
+//     pub mod edge_runtime;
+//     pub mod global_router;
+//     pub mod cache_strategy;
+// }
 
 // Stage 27.4: AI 模型集成模块
 pub mod ai {

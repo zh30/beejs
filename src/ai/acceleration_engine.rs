@@ -240,7 +240,7 @@ impl AccelerationEngine {
         }
 
         let pipeline_stages = 4; // 4 阶段流水线
-        let results = Vec::with_capacity(inputs.len());
+        let mut results = Vec::with_capacity(inputs.len());
 
         // 简化的流水线实现
         for chunk in inputs.chunks(pipeline_stages) {
@@ -255,8 +255,6 @@ impl AccelerationEngine {
 
     /// 动态批处理推理
     fn dynamic_batch_inference(&mut self, task: InferenceTask) -> Result<InferenceResult, String> {
-        let batch_config = self.batch_config.lock().unwrap();
-
         // 添加到批处理队列
         {
             let mut queue = self.batch_queue.lock().unwrap();
@@ -265,6 +263,7 @@ impl AccelerationEngine {
 
         // 检查是否达到批处理大小
         let should_process = {
+            let batch_config = self.batch_config.lock().unwrap();
             let queue = self.batch_queue.lock().unwrap();
             queue.len() >= batch_config.max_batch_size
                 || (queue.len() > 0 && self.should_timeout(&queue, batch_config.batch_timeout_ms))
@@ -274,23 +273,32 @@ impl AccelerationEngine {
             self.process_batch()
         } else {
             // 等待批处理
-            std::thread::sleep(Duration::from_millis(batch_config.batch_timeout_ms));
+            let timeout_ms = {
+                let batch_config = self.batch_config.lock().unwrap();
+                batch_config.batch_timeout_ms
+            };
+            std::thread::sleep(Duration::from_millis(timeout_ms));
             self.process_batch()
         }
     }
 
     /// 处理批处理队列
     fn process_batch(&mut self) -> Result<InferenceResult, String> {
-        let batch_config = self.batch_config.lock().unwrap();
-        let mut queue = self.batch_queue.lock().unwrap();
+        let (batch_size, tasks) = {
+            let mut queue = self.batch_queue.lock().unwrap();
 
-        if queue.is_empty() {
-            return Err("No tasks in batch queue".to_string());
-        }
+            if queue.is_empty() {
+                return Err("No tasks in batch queue".to_string());
+            }
 
-        // 收集批次
-        let batch_size = batch_config.max_batch_size.min(queue.len());
-        let tasks: Vec<_> = queue.drain(..batch_size).collect();
+            // 收集批次
+            let batch_size = {
+                let batch_config = self.batch_config.lock().unwrap();
+                batch_config.max_batch_size.min(queue.len())
+            };
+            let tasks: Vec<_> = queue.drain(..batch_size).collect();
+            (batch_size, tasks)
+        };
 
         let inputs: Vec<Vec<f32>> = tasks.iter().map(|t| t.input_data.clone()).collect();
         let results = self.batch_inference(&inputs)?;
@@ -413,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_acceleration_engine_creation() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let config = AccelerationConfig {
             use_gpu: true,
             use_npu: false,
@@ -427,7 +435,7 @@ mod tests {
 
     #[test]
     fn test_cpu_inference() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let config = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
@@ -445,7 +453,7 @@ mod tests {
 
     #[test]
     fn test_gpu_inference() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let config = AccelerationConfig {
             use_gpu: true,
             use_npu: false,
@@ -462,7 +470,7 @@ mod tests {
 
     #[test]
     fn test_batch_inference() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let config = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
@@ -484,7 +492,7 @@ mod tests {
 
     #[test]
     fn test_pipeline_inference() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let config = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
@@ -507,7 +515,7 @@ mod tests {
 
     #[test]
     fn test_dynamic_batching() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let config = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
@@ -515,7 +523,7 @@ mod tests {
             pipeline_parallel: false,
         };
 
-        let engine = Arc::new(AccelerationEngine::new(&runtime, config).unwrap());
+        let mut engine = AccelerationEngine::new(&runtime, config).unwrap();
         engine.set_dynamic_batching(true);
 
         let input = vec![1.0, 2.0];

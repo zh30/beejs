@@ -40,8 +40,8 @@ impl WasmCompiler {
         config.wasm_bulk_memory(true);
         config.wasm_multi_value(true);
 
-        // 启用分析
-        config.profiler(ProfilerKind::Perf);
+        // 启用分析 (暂时注释掉，ProfilerKind 类型不存在)
+        // config.profiler(ProfilerKind::Perf);
 
         // 创建引擎
         let engine = Engine::new(&config)

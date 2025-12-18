@@ -135,13 +135,13 @@ impl ModelRegistry {
     /// 标记模型为不健康
     pub fn mark_unhealthy(&self, model_name: &str) {
         let mut health = self.health_status.write().unwrap();
-        health.insert(model_name, false);
+        health.insert(model_name.to_string(), false);
     }
 
     /// 标记模型为健康
     pub fn mark_healthy(&self, model_name: &str) {
         let mut health = self.health_status.write().unwrap();
-        health.insert(model_name, true);
+        health.insert(model_name.to_string(), true);
     }
 }
 
@@ -184,8 +184,7 @@ impl ModelRouter {
         }
 
         // 根据负载均衡策略选择模型
-        let selected_model = self.select_model(&available_models)?;
-        let model_name = selected_model.0.clone();
+        let model_name = self.select_model(&available_models)?;
 
         // 更新缓存
         {
@@ -196,32 +195,35 @@ impl ModelRouter {
         Ok(model_name)
     }
 
-    /// 选择模型
-    fn select_model(&self, models: &[(&String, &ModelMetrics)]) -> Result<(&String, &ModelMetrics), String> {
+    /// 选择模型 (返回模型名称而不是引用)
+    fn select_model(&self, models: &[(&String, &ModelMetrics)]) -> Result<String, String> {
         match self.config.load_balancing {
             LoadBalancingStrategy::RoundRobin => {
                 // 简化实现：选择第一个
-                Ok(models[0])
+                Ok(models[0].0.clone())
             }
             LoadBalancingStrategy::LeastConnections => {
-                // 选择负载最低的
+                // 选择负载最低的 (简化比较)
                 Ok(models
                     .iter()
-                    .min_by_key(|(_, metrics)| (metrics.load * 1000.0) as u64)
+                    .min_by(|(_, a), (_, b)| a.load.partial_cmp(&b.load).unwrap_or(std::cmp::Ordering::Equal))
+                    .map(|(name, _)| (*name).clone())
                     .unwrap())
             }
             LoadBalancingStrategy::WeightedRoundRobin => {
-                // 选择吞吐量最高的
+                // 选择吞吐量最高的 (简化比较)
                 Ok(models
                     .iter()
-                    .max_by_key(|(_, metrics)| (metrics.throughput * 1000.0) as u64)
+                    .max_by(|(_, a), (_, b)| a.throughput.partial_cmp(&b.throughput).unwrap_or(std::cmp::Ordering::Equal))
+                    .map(|(name, _)| (*name).clone())
                     .unwrap())
             }
             LoadBalancingStrategy::LatencyBased => {
-                // 选择延迟最低的
+                // 选择延迟最低的 (简化比较)
                 Ok(models
                     .iter()
-                    .min_by_key(|(_, metrics)| metrics.latency.as_millis())
+                    .min_by(|(_, a), (_, b)| a.latency.cmp(&b.latency))
+                    .map(|(name, _)| (*name).clone())
                     .unwrap())
             }
         }
@@ -461,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_model_router_creation() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let config = RouterConfig {
             load_balancing: LoadBalancingStrategy::RoundRobin,
             fallback_enabled: true,
@@ -474,7 +476,7 @@ mod tests {
 
     #[test]
     fn test_intelligent_routing() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let mut router = ModelRouter::new(&runtime, RouterConfig {
             load_balancing: LoadBalancingStrategy::LatencyBased,
             fallback_enabled: true,
@@ -502,7 +504,7 @@ mod tests {
 
     #[test]
     fn test_model_manager_creation() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let config = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_secs(300),
@@ -515,7 +517,7 @@ mod tests {
 
     #[test]
     fn test_model_loading() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let config = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_secs(300),
@@ -530,7 +532,7 @@ mod tests {
 
     #[test]
     fn test_inference() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let config = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_secs(300),
@@ -547,18 +549,17 @@ mod tests {
 
     #[test]
     fn test_model_cleanup() {
-        let runtime = Arc::new(Runtime::new().unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
         let config = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_millis(100), // 短超时
             enable_auto_scaling: true,
         };
 
-        let manager = Arc::new(ModelManager::new(&runtime, config).unwrap());
+        let mut manager = ModelManager::new(&runtime, config).unwrap();
 
         // 加载模型
         let handle = {
-            let mut manager = manager.as_ref();
             manager.load_model("test-model".to_string()).unwrap()
         };
 

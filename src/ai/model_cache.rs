@@ -67,7 +67,6 @@ struct AccessPattern {
 /// 模型缓存管理器
 pub struct ModelCache {
     config: ModelCacheConfig,
-    runtime: Arc<Runtime>,
     l1_cache: Arc<RwLock<HashMap<String, CacheEntry>>>,
     l2_cache: Arc<Mutex<HashMap<String, CacheEntry>>>,
     l3_cache: Arc<Mutex<HashMap<String, CacheEntry>>>,
@@ -99,11 +98,9 @@ pub struct CacheResult {
 impl ModelCache {
     /// 创建新的模型缓存实例
     pub fn new(config: ModelCacheConfig) -> Result<Self, String> {
-        let runtime = Arc::new(Runtime::new().map_err(|e| e.to_string())?);
-
+        // AI 模型缓存不需要 V8 Runtime，移除运行时依赖
         Ok(ModelCache {
             config: config.clone(),
-            runtime,
             l1_cache: Arc::new(RwLock::new(HashMap::new())),
             l2_cache: Arc::new(Mutex::new(HashMap::new())),
             l3_cache: Arc::new(Mutex::new(HashMap::new())),

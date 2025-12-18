@@ -395,21 +395,27 @@ impl WasmModuleCache {
 
     /// 淘汰 L1 缓存
     fn evict_l1_cache(&self) -> Result<()> {
-        let mut l1 = self.l1_cache.lock().unwrap();
-
         // 按使用率排序，淘汰使用率最低的条目
-        let mut entries: Vec<_> = l1.iter().collect();
-        entries.sort_by(|a, b| {
-            let entry_a = a.1.read().unwrap();
-            let entry_b = b.1.read().unwrap();
-            entry_a.usage_score().partial_cmp(&entry_b.usage_score()).unwrap_or(std::cmp::Ordering::Equal)
-        });
+        let hashes_to_evict = {
+            let l1 = self.l1_cache.lock().unwrap();
+            let mut entries: Vec<_> = l1.iter().collect();
+            entries.sort_by(|a, b| {
+                let entry_a = a.1.read().unwrap();
+                let entry_b = b.1.read().unwrap();
+                entry_a.usage_score().partial_cmp(&entry_b.usage_score()).unwrap_or(std::cmp::Ordering::Equal)
+            });
 
-        // 淘汰一半条目
-        let to_evict = entries.len() / 2;
-        for i in 0..to_evict {
-            let (hash, _) = entries[i];
-            l1.remove(hash);
+            // 提取要淘汰的哈希
+            let to_evict = entries.len() / 2;
+            entries.iter().take(to_evict).map(|(hash, _)| hash.clone()).collect::<Vec<_>>()
+        };
+
+        // 移除条目
+        {
+            let mut l1 = self.l1_cache.lock().unwrap();
+            for hash in hashes_to_evict {
+                l1.remove(&hash);
+            }
         }
 
         Ok(())

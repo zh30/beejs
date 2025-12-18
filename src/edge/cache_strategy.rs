@@ -130,7 +130,7 @@ impl EdgeCache {
         // Try L1 cache first
         {
             let mut l1 = self.l1_cache.write().await;
-            if let Some(entry) = l1.get(key)? {
+            if let Some(entry) = l1.get_mut(key)? {
                 // Update access stats
                 entry.access_count += 1;
 
