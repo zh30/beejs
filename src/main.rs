@@ -8,9 +8,21 @@ use std::path::PathBuf;
 #[command(name = "beejs")]
 #[command(about = "High-performance JavaScript/TypeScript runtime")]
 struct Args {
-    /// Script file to execute
-    #[arg(value_name = "FILE")]
-    script: Option<PathBuf>,
+    /// Print version and exit
+    #[arg(short = 'V', long)]
+    version: bool,
+
+    /// Run tests
+    #[arg(long)]
+    test: bool,
+
+    /// Watch mode - auto-reload on file changes
+    #[arg(short, long)]
+    watch: bool,
+
+    /// Enable verbose output
+    #[arg(short, long)]
+    verbose: bool,
 
     /// Evaluate script from command line
     #[arg(short, long)]
@@ -19,26 +31,6 @@ struct Args {
     /// Batch evaluate multiple scripts (faster than multiple --eval calls)
     #[arg(short = 'b', long = "batch-eval", value_delimiter = ',')]
     batch_eval: Vec<String>,
-
-    /// Run tests
-    #[arg(long)]
-    test: bool,
-
-    /// Test pattern to match
-    #[arg(short = 'p', long)]
-    test_pattern: Option<String>,
-
-    /// Watch mode - auto-reload on file changes
-    #[arg(short, long)]
-    watch: bool,
-
-    /// Print version and exit
-    #[arg(short = 'V', long)]
-    version: bool,
-
-    /// Enable verbose output
-    #[arg(short, long)]
-    verbose: bool,
 
     /// Set stack size (default: 64MB)
     #[arg(short, long, default_value = "67108864")]
@@ -52,13 +44,13 @@ struct Args {
     #[arg(short, long, value_enum, default_value = "speed")]
     optimize: OptimizeMode,
 
-    /// Enable process pool for faster script execution (default: enabled)
-    #[arg(long)]
-    process_pool: bool,
+    /// Test pattern to match
+    #[arg(short = 'p', long)]
+    test_pattern: Option<String>,
 
-    /// Number of worker processes in the pool (default: CPU count)
-    #[arg(long)]
-    pool_size: Option<usize>,
+    /// Script file to execute
+    #[arg(value_name = "FILE", last = true)]
+    script: Option<PathBuf>,
 
     /// Package manager commands
     #[command(subcommand)]
@@ -150,38 +142,37 @@ fn initialize_process_pool(verbose: bool, pool_size: Option<usize>) -> Result<()
 }
 
 fn main() -> Result<()> {
-    let args = Args::parse();
+    // Fast path: Check for version flag without full parsing
+    let args_vec: Vec<String> = std::env::args().collect();
 
-    if args.version {
+    // Optimization: Check version first without full parsing
+    if args_vec.len() == 2 && (args_vec[1] == "--version" || args_vec[1] == "-V") {
         println!("beejs {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
 
-    // Handle package manager commands
+    // Optimization: Quick check for help flag
+    if args_vec.len() == 2 && (args_vec[1] == "--help" || args_vec[1] == "-h") {
+        let _args = Args::parse();
+        return Ok(());
+    }
+
+    // Parse all arguments only when we need them
+    let args = Args::parse();
+
+    // Handle package manager commands (early exit)
     if let Some(ref command) = args.command {
         return run_package_manager_command(command, args.verbose);
     }
 
-    // Handle test command
+    // Handle test command (early exit)
     if args.test {
         return run_tests(&args);
     }
 
-    // Handle watch mode
+    // Handle watch mode (early exit)
     if args.watch {
         return run_watch_mode(&args);
-    }
-
-    // Initialize process pool for better performance (unless disabled)
-    if args.process_pool {
-        if let Err(e) = initialize_process_pool(args.verbose, args.pool_size) {
-            if args.verbose {
-                eprintln!("Warning: Failed to initialize process pool: {}", e);
-                eprintln!("Falling back to direct execution mode");
-            }
-        } else if args.verbose {
-            println!("Process pool initialized successfully");
-        }
     }
 
     // Delay verbose output until runtime is created to reduce startup overhead
