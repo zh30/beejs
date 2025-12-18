@@ -375,7 +375,7 @@ mod tests {
     #[test]
     fn test_zero_copy_network_io_statistics() {
         // 创建测试用的统计监控器
-        let stats = NetworkIoStatistics::default();
+        let _stats = NetworkIoStatistics::default();
 
         println!("NetworkIoStatistics test placeholder");
         println!("This test validates statistics collection and reporting");

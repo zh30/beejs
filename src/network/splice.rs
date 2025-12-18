@@ -253,12 +253,13 @@ enum SpliceDirection {
 
 #[cfg(test)]
 mod tests {
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]
     fn test_splice_zero_copy_pipe_transfer() {
         // 创建测试管道
-        let (pipe_in, pipe_out) = std::os::unix::net::UnixStream::pair().unwrap();
+        let (_pipe_in, _pipe_out) = std::os::unix::net::UnixStream::pair().unwrap();
 
         println!("Splice test placeholder");
         println!("This test validates the splice structure and basic functionality");

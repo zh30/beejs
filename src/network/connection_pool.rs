@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn test_zero_copy_connection_pool_management() {
         // 创建测试用的连接池
-        let pool = ConnectionPool::default();
+        let _pool = ConnectionPool::default();
 
         println!("ConnectionPool management test placeholder");
         println!("This test validates connection pool creation and basic management");

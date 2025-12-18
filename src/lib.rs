@@ -39,6 +39,7 @@ pub mod profiler;
 pub mod flame_graph;
 mod module_loader;
 mod nodejs;
+mod network_api;
 mod precompiled_cache;
 pub mod package_manager;
 pub mod performance_reporter;
@@ -55,8 +56,6 @@ pub mod memory_mapped_file;
 
 // Stage 21.5: 零拷贝网络 I/O 模块
 pub mod network;
-
-// Re-export network module types
 pub use network::buffer_pool::BufferPoolConfig;
 pub use network::connection_pool::ConnectionPoolConfig;
 pub use network::statistics::StatisticsConfig;
@@ -1062,6 +1061,36 @@ impl Runtime {
                     &context,
                     file.map(|p| p.as_path()),
                 )?;
+            }
+
+            // Stage 21.8: Setup zero-copy network I/O APIs
+            // Initialize network APIs if network-related keywords are detected
+            let needs_network_api = code.contains("Network") || code.contains("network") ||
+                                   code.contains("tcp") || code.contains("udp") ||
+                                   code.contains("socket") || code.contains("connect");
+            if needs_network_api || self.verbose {
+                // Initialize network modules
+                let buffer_pool = self.network_buffer_pool.get_or_init(|| {
+                    Arc::new(NetworkBufferPool::default())
+                });
+                let connection_pool = self.network_connection_pool.get_or_init(|| {
+                    Arc::new(ConnectionPool::default())
+                });
+                let network_statistics = self.network_statistics.get_or_init(|| {
+                    Arc::new(NetworkIoStatistics::default())
+                });
+
+                network_api::setup_network_apis(
+                    scope,
+                    &context,
+                    buffer_pool.clone(),
+                    connection_pool.clone(),
+                    network_statistics.clone(),
+                )?;
+
+                if self.verbose && needs_network_api {
+                    println!("✅ Zero-copy network I/O APIs initialized");
+                }
             }
 
             // Always set up Beejs API (needed for inline cache and other features)

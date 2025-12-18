@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router-dom'
+import { BeeLogo } from '../components/Logo'
 import '../global.css'
 
 export default function RootLayout() {
@@ -6,21 +7,25 @@ export default function RootLayout() {
     <div className="min-h-screen flex flex-col bg-brand-black text-gray-100 font-sans antialiased">
       <header className="sticky top-0 z-50 glass border-b border-white/10 px-4 py-3 md:px-8">
         <nav className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold bg-linear-to-r from-brand-yellow to-yellow-500 bg-clip-text text-transparent">
+          <Link to="/" className="flex items-center space-x-3 group">
+            <BeeLogo className="w-8 h-8 group-hover:scale-110 transition-transform" />
+            <span className="text-2xl font-black bg-linear-to-r from-brand-yellow to-yellow-500 bg-clip-text text-transparent uppercase italic tracking-tighter">
               Beejs
             </span>
           </Link>
 
-          <div className="hidden md:flex items-center space-x-8 text-sm font-medium">
-            <Link to="/" className="hover:text-brand-yellow transition-colors">
+          <div className="hidden md:flex items-center space-x-8 text-xs font-bold uppercase tracking-widest px-6">
+            <Link to="/" className="hover:text-brand-yellow transition-colors relative group">
               Home
+              <span className="absolute -bottom-1 left-0 w-full h-px bg-brand-yellow scale-x-0 transition-transform group-hover:scale-x-100" />
             </Link>
-            <Link to="/docs" className="hover:text-brand-yellow transition-colors">
+            <Link to="/docs" className="hover:text-brand-yellow transition-colors relative group">
               Docs
+              <span className="absolute -bottom-1 left-0 w-full h-px bg-brand-yellow scale-x-0 transition-transform group-hover:scale-x-100" />
             </Link>
-            <Link to="/blog" className="hover:text-brand-yellow transition-colors">
+            <Link to="/blog" className="hover:text-brand-yellow transition-colors relative group">
               Blog
+              <span className="absolute -bottom-1 left-0 w-full h-px bg-brand-yellow scale-x-0 transition-transform group-hover:scale-x-100" />
             </Link>
           </div>
 
@@ -29,9 +34,9 @@ export default function RootLayout() {
               href="https://github.com/zh30/beejs"
               target="_blank"
               rel="noreferrer"
-              className="px-4 py-2 bg-brand-yellow text-brand-black font-bold rounded-lg hover:bg-yellow-400 transition-all text-sm md:text-base"
+              className="px-6 py-2 bg-brand-yellow text-brand-black font-black text-sm hover:bg-white transition-all -skew-x-12 uppercase"
             >
-              GitHub
+              <span className="inline-block skew-x-12">GitHub</span>
             </a>
           </div>
         </nav>

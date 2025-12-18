@@ -386,7 +386,7 @@ mod tests {
     #[test]
     fn test_zero_copy_network_buffer_pool_performance() {
         // 创建测试用的网络缓冲区池
-        let pool = NetworkBufferPool::default();
+        let _pool = NetworkBufferPool::default();
 
         println!("NetworkBufferPool performance test placeholder");
         println!("This test validates buffer pool allocation and deallocation performance");
