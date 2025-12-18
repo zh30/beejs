@@ -33,7 +33,7 @@ mod tests {
         let handle = manager.create_region("test_region".to_string(), Some(1024)).unwrap();
 
         // 写入数据
-        manager.write(&handle, 0, b"Hello, Shared Memory!").unwrap();
+        manager.write(&mut handle, 0, b"Hello, Shared Memory!").unwrap();
 
         // 读取数据
         let data = manager.read(&handle, 0, 20).unwrap();
@@ -54,7 +54,7 @@ mod tests {
         let handle = manager.create_region("test_region".to_string(), Some(1024)).unwrap();
 
         // 初始化值
-        manager.write(&handle, 0, &[0]).unwrap();
+        manager.write(&mut handle, 0, &[0]).unwrap();
 
         // 成功的CAS操作
         let result = manager.compare_and_swap(&handle, 0, 0, 42).unwrap();
@@ -85,7 +85,7 @@ mod tests {
 
             // 写入数据
             let data = format!("Data for region {}", i);
-            manager.write(&handle, 0, data.as_bytes()).unwrap();
+            manager.write(&mut handle, 0, data.as_bytes()).unwrap();
 
             // 读取验证
             let read_data = manager.read(&handle, 0, data.len()).unwrap();
@@ -104,7 +104,7 @@ mod tests {
 
         // 第一次创建
         let handle1 = manager.get_or_create_region("shared".to_string(), Some(1024)).unwrap();
-        manager.write(&handle1, 0, b"first").unwrap();
+        manager.write(&mut handle1, 0, b"first").unwrap();
 
         // 第二次获取
         let handle2 = manager.get_or_create_region("shared".to_string(), Some(1024)).unwrap();
@@ -365,7 +365,7 @@ mod tests {
 
         let start = Instant::now();
         for _ in 0..1000 {
-            manager.write(&handle, 0, &[42; 1024]).unwrap();
+            manager.write(&mut handle, 0, &[42; 1024]).unwrap();
             let _ = manager.read(&handle, 0, 1024).unwrap();
         }
         let duration = start.elapsed();
@@ -421,7 +421,7 @@ mod tests {
             // 写入和读取多次
             for iteration in 0..10 {
                 let data = format!("Region {} Iteration {}", region_id, iteration);
-                manager.write(&handle, 0, data.as_bytes()).unwrap();
+                manager.write(&mut handle, 0, data.as_bytes()).unwrap();
                 let read_data = manager.read(&handle, 0, data.len()).unwrap();
                 assert_eq!(read_data, data.as_bytes());
             }

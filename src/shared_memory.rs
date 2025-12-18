@@ -630,10 +630,10 @@ mod tests {
         let config = SharedMemoryConfig::default();
         let manager = SharedMemoryManager::new(config);
 
-        let handle = manager.create_region("test".to_string(), Some(1024)).unwrap();
+        let mut handle = manager.create_region("test".to_string(), Some(1024)).unwrap();
 
         // 写入测试数据
-        manager.write(&handle, 0, b"hello world").unwrap();
+        manager.write(&mut handle, 0, b"hello world").unwrap();
 
         // 读取测试数据
         let data = manager.read(&handle, 0, 11).unwrap();
@@ -645,10 +645,10 @@ mod tests {
         let config = SharedMemoryConfig::default();
         let manager = SharedMemoryManager::new(config);
 
-        let handle = manager.create_region("test".to_string(), Some(1024)).unwrap();
+        let mut handle = manager.create_region("test".to_string(), Some(1024)).unwrap();
 
         // 初始值设为0
-        manager.write(&handle, 0, &[0]).unwrap();
+        manager.write(&mut handle, 0, &[0]).unwrap();
 
         // 成功的CAS操作
         let result = manager.compare_and_swap(&handle, 0, 0, 1).unwrap();
@@ -687,10 +687,10 @@ mod tests {
         let config = SharedMemoryConfig::default();
         let manager = SharedMemoryManager::new(config);
 
-        let handle = manager.create_region("test".to_string(), Some(1024)).unwrap();
+        let mut handle = manager.create_region("test".to_string(), Some(1024)).unwrap();
 
         // 执行读写操作
-        manager.write(&handle, 0, b"test").unwrap();
+        manager.write(&mut handle, 0, b"test").unwrap();
         manager.read(&handle, 0, 4).unwrap();
 
         let stats = manager.get_stats();
