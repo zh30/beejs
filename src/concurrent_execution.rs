@@ -265,6 +265,156 @@ impl StealStats {
     }
 }
 
+/// Stage 25.0: 窃取预测器 - 基于历史数据和任务模式预测窃取目标
+#[derive(Debug, Clone)]
+pub struct StealPredictor {
+    /// 每个队列的历史窃取成功率
+    queue_success_rates: Vec<f64>,
+    /// 队列活跃度历史 (最近访问时间)
+    queue_activity_history: Vec<VecDeque<Instant>>,
+    /// 任务类型模式分析
+    task_patterns: std::collections::HashMap<String, usize>,
+    /// 窃取历史记录
+    steal_history: VecDeque<StealEvent>,
+}
+
+#[derive(Debug, Clone)]
+pub struct StealEvent {
+    pub timestamp: Instant,
+    pub source_queue: usize,
+    pub target_queue: usize,
+    pub tasks_stolen: usize,
+    pub success: bool,
+}
+
+impl StealPredictor {
+    pub fn new(thread_count: usize) -> Self {
+        Self {
+            queue_success_rates: vec![0.0; thread_count],
+            queue_activity_history: (0..thread_count)
+                .map(|_| VecDeque::with_capacity(100))
+                .collect(),
+            task_patterns: std::collections::HashMap::new(),
+            steal_history: VecDeque::with_capacity(1000),
+        }
+    }
+
+    /// 记录队列活动（用于预测）
+    pub fn record_queue_activity(&mut self, queue_id: usize) {
+        let now = Instant::now();
+
+        // 记录活动历史
+        let history = &mut self.queue_activity_history[queue_id];
+        history.push_back(now);
+
+        // 保持历史记录大小
+        if history.len() > 50 {
+            history.pop_front();
+        }
+
+        // 更新活跃度评分
+        self.update_queue_score(queue_id);
+    }
+
+    /// 更新队列评分
+    fn update_queue_score(&mut self, queue_id: usize) {
+        let history = &self.queue_activity_history[queue_id];
+        let recent_activity = history.iter()
+            .filter(|&&time| time.elapsed() < Duration::from_secs(10))
+            .count();
+
+        // 基于最近活动时间更新成功率的权重
+        let base_rate = self.queue_success_rates[queue_id];
+        let activity_factor = (recent_activity as f64 / 10.0).min(1.0);
+        self.queue_success_rates[queue_id] = base_rate * 0.7 + activity_factor * 0.3;
+    }
+
+    /// 记录窃取事件
+    pub fn record_steal_event(&mut self, source_queue: usize, target_queue: usize, tasks_stolen: usize, success: bool) {
+        let event = StealEvent {
+            timestamp: Instant::now(),
+            source_queue,
+            target_queue,
+            tasks_stolen,
+            success,
+        };
+
+        self.steal_history.push_back(event);
+
+        // 保持历史记录大小
+        if self.steal_history.len() > 500 {
+            self.steal_history.pop_front();
+        }
+
+        // 更新源队列的成功率
+        if success {
+            let current_rate = self.queue_success_rates[source_queue];
+            self.queue_success_rates[source_queue] = current_rate * 0.9 + 0.1;
+        } else {
+            let current_rate = self.queue_success_rates[source_queue];
+            self.queue_success_rates[source_queue] = current_rate * 0.95;
+        }
+    }
+
+    /// 预测窃取目标 - 返回最有可能窃取到任务的队列列表
+    pub fn predict_steal_targets(&self, thief_thread_id: usize, exclude_queues: &[usize]) -> Vec<(usize, f64)> {
+        let mut candidates = Vec::new();
+
+        for queue_id in 0..self.queue_success_rates.len() {
+            if queue_id == thief_thread_id || exclude_queues.contains(&queue_id) {
+                continue;
+            }
+
+            // 计算窃取可能性评分
+            let success_rate = self.queue_success_rates[queue_id];
+            let history = &self.queue_activity_history[queue_id];
+
+            // 活跃度评分：最近10秒内的活动次数
+            let activity_score = history.iter()
+                .filter(|&&time| time.elapsed() < Duration::from_secs(10))
+                .count() as f64 / 10.0;
+
+            // 综合评分：成功率 * 活跃度
+            let steal_probability = success_rate * (0.5 + activity_score * 0.5);
+
+            candidates.push((queue_id, steal_probability));
+        }
+
+        // 按评分排序
+        candidates.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // 返回前5个最有可能的窃取目标
+        candidates.into_iter().take(5).collect()
+    }
+
+    /// 基于任务模式预测窃取目标
+    pub fn predict_by_task_pattern(&self, task_type: &str) -> Vec<usize> {
+        let mut pattern_queues = Vec::new();
+
+        // 分析历史窃取事件，找出处理特定任务类型最成功的队列
+        for event in &self.steal_history {
+            if event.success && event.tasks_stolen > 0 {
+                // 简化版：假设任务类型与队列ID相关
+                // 实际实现中应该记录更详细的上下文信息
+                let queue_task_type = format!("queue_{}", event.source_queue % 4);
+                if queue_task_type == task_type {
+                    pattern_queues.push(event.source_queue);
+                }
+            }
+        }
+
+        // 去重并返回
+        pattern_queues.sort();
+        pattern_queues.dedup();
+        pattern_queues
+    }
+
+    /// 获取队列窃取成功率
+    pub fn get_queue_success_rate(&self, queue_id: usize) -> f64 {
+        self.queue_success_rates.get(queue_id).copied().unwrap_or(0.0)
+    }
+}
+
 /// 工作窃取调度器
 /// 实现多线程任务调度和负载均衡
 #[derive(Debug)]
@@ -579,7 +729,7 @@ impl WorkStealingScheduler {
         None
     }
 
-    /// 判断是否应该窃取（基于阈值）
+    /// 判断是否应该窃取（基于阈值）- Stage 25.0 优化版
     pub async fn should_steal(&self, thief_thread_id: usize, local_queue_len: usize) -> bool {
         if thief_thread_id >= self.thread_count {
             return false;
@@ -587,10 +737,12 @@ impl WorkStealingScheduler {
 
         self.stats.record_steal_attempt();
 
-        // 计算窃取阈值：基于平均队列长度
+        // 计算窃取阈值：基于平均队列长度和负载不均衡程度
         let mut total_queue_len = 0;
         let mut max_queue_len = 0;
+        let mut min_queue_len = usize::MAX;
         let mut busy_threads = 0;
+        let mut heavy_queues = Vec::new();
 
         for (i, queue) in self.thread_queues.iter().enumerate() {
             if i == thief_thread_id {
@@ -600,9 +752,14 @@ impl WorkStealingScheduler {
             let len = queue_guard.len();
             total_queue_len += len;
             max_queue_len = max_queue_len.max(len);
+            min_queue_len = min_queue_len.min(len);
 
             if len > 5 { // 定义"忙碌"阈值
                 busy_threads += 1;
+            }
+
+            if len > 10 { // 重负载队列
+                heavy_queues.push((i, len));
             }
         }
 
@@ -612,18 +769,44 @@ impl WorkStealingScheduler {
             0
         };
 
-        // 窃取条件：
-        // 1. 本地队列为空或很少
+        // 计算负载不均衡系数 (0.0 = 完全均衡, 1.0 = 极度不均衡)
+        let load_imbalance = if max_queue_len > 0 && min_queue_len != usize::MAX {
+            (max_queue_len - min_queue_len) as f64 / max_queue_len as f64
+        } else {
+            0.0
+        };
+
+        // Stage 25.0 优化的窃取条件：
+        // 1. 本地队列为空或很少 (动态阈值)
         // 2. 其他线程有明显的负载
         // 3. 系统整体负载不均衡
+        // 4. 考虑窃取成本效益
 
-        let should_steal = (local_queue_len < 3) &&
+        let steal_threshold = match load_imbalance {
+            x if x > 0.7 => 1,  // 极度不均衡时，几乎空队列就窃取
+            x if x > 0.5 => 2,  // 高度不均衡时，少量任务就窃取
+            x if x > 0.3 => 3,  // 中度不均衡时，适度窃取
+            _ => 5,             // 轻度不均衡时，需要明显空闲才窃取
+        };
+
+        // 窃取效益评估：平均队列长度与本地队列长度的差异
+        let load_diff = avg_queue_len as isize - local_queue_len as isize;
+        let load_diff_threshold = if heavy_queues.len() > self.thread_count / 2 {
+            1 // 有多个重负载时，更容易触发窃取
+        } else {
+            2
+        };
+
+        let should_steal = (local_queue_len < steal_threshold) &&
             (max_queue_len > 5) &&
-            (avg_queue_len > local_queue_len + 2) &&
-            (busy_threads > 0);
+            (load_diff >= load_diff_threshold) &&
+            (busy_threads > 0) &&
+            (load_imbalance > 0.2); // 只有在明显不均衡时才窃取
 
         if should_steal {
             self.stats.record_successful_steal();
+            println!("🎯 窃取决策: 线程 {}, 本地长度 {}, 平均长度 {}, 不均衡系数 {:.2}",
+                thief_thread_id, local_queue_len, avg_queue_len, load_imbalance);
         }
 
         should_steal
