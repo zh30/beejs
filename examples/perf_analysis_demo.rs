@@ -1,0 +1,70 @@
+// 性能分析脚本 - 使用 Beejs 的性能分析工具
+use beejs::profiler::{Profiler, ProfilingMode, ProfileTarget};
+
+fn main() {
+    println!("🔍 Beejs 性能分析工具演示");
+    println!("=====================================\n");
+
+    // 创建性能分析器
+    let mut profiler = Profiler::new(ProfilingMode::Detailed)
+        .expect("Failed to create profiler");
+
+    println!("✅ 性能分析器已创建\n");
+
+    // 分析 1: 简单算术运算
+    println!("分析 1: 简单算术运算");
+    let profile_id1 = profiler.start_profile(ProfileTarget::Runtime)
+        .expect("Failed to start profile 1");
+
+    // 模拟简单算术运算
+    let result1 = 2 + 2;
+    println!("   结果: {}", result1);
+
+    let profile_result1 = profiler.stop_profile(profile_id1)
+        .expect("Failed to stop profile 1");
+    println!("   执行时间: {:?}", profile_result1.execution_time);
+    println!("   内存使用: {} bytes\n", profile_result1.memory_used);
+
+    // 分析 2: 循环计算
+    println!("分析 2: 循环计算 (10000 次迭代)");
+    let profile_id2 = profiler.start_profile(ProfileTarget::Runtime)
+        .expect("Failed to start profile 2");
+
+    // 模拟循环计算
+    let mut sum = 0;
+    for i in 0..10000 {
+        sum += i * 2;
+    }
+    println!("   结果: {}", sum);
+
+    let profile_result2 = profiler.stop_profile(profile_id2)
+        .expect("Failed to stop profile 2");
+    println!("   执行时间: {:?}", profile_result2.execution_time);
+    println!("   内存使用: {} bytes\n", profile_result2.memory_used);
+
+    // 分析 3: 字符串操作
+    println!("分析 3: 字符串操作");
+    let profile_id3 = profiler.start_profile(ProfileTarget::Runtime)
+        .expect("Failed to start profile 3");
+
+    // 模拟字符串操作
+    let mut s = String::new();
+    for i in 0..1000 {
+        s.push_str(&format!("Item {} ", i));
+    }
+    println!("   字符串长度: {}", s.len());
+
+    let profile_result3 = profiler.stop_profile(profile_id3)
+        .expect("Failed to stop profile 3");
+    println!("   执行时间: {:?}", profile_result3.execution_time);
+    println!("   内存使用: {} bytes\n", profile_result3.memory_used);
+
+    // 显示统计信息
+    println!("📊 性能统计摘要:");
+    let stats = profiler.get_statistics();
+    println!("   总分析次数: {}", stats.total_profiles);
+    println!("   总执行时间: {:?}", stats.total_execution_time);
+    println!("   平均执行时间: {:?}", stats.avg_execution_time);
+    println!("   内存峰值总计: {} bytes", stats.memory_peak_total);
+    println!("\n✅ 性能分析完成！");
+}
