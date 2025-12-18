@@ -278,6 +278,7 @@ pub fn get_smart_runtime(
     verbose: bool,
     optimize_mode: OptimizeMode,
 ) -> Result<std::sync::Arc<dyn RuntimeTrait>> {
+    eprintln!("DEBUG: get_smart_runtime called!");
     // Analyze code complexity to decide which runtime to use
     let is_simple_code = if let Some(code) = code_or_file {
         is_simple_script(code)
@@ -511,9 +512,7 @@ impl Runtime {
                     Some(Arc::new(pool))
                 }
                 Err(e) => {
-                    if verbose {
-                        println!("  Process Pool: disabled (failed to initialize: {})", e);
-                    }
+                    eprintln!("  Process Pool: disabled (failed to initialize: {})", e);
                     None
                 }
             }

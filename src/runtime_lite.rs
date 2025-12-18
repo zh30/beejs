@@ -42,7 +42,9 @@ impl RuntimeLite {
             println!("RuntimeLite: V8 snapshot enabled - using rusty_v8 0.22 API");
         }
 
-        // 重新启用V8快照 - 真正的实现（rusty_v8 0.22）
+        // 临时禁用V8快照以避免生命周期问题
+        // TODO: 修复V8 SnapshotCreator生命周期管理后重新启用
+        /*
         let snapshot_manager = V8SnapshotManager::new().ok();
         if let Some(manager) = &snapshot_manager {
             if let Ok(Some(_snapshot)) = manager.get_or_create_snapshot("v0.1.0") {
@@ -50,6 +52,10 @@ impl RuntimeLite {
                     println!("RuntimeLite: ✅ V8 snapshot loaded - startup accelerated!");
                 }
             }
+        }
+        */
+        if verbose {
+            println!("RuntimeLite: V8 snapshot disabled (lifecycle issue - will be re-enabled after fix)");
         }
 
         Ok(Self {
