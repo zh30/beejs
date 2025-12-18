@@ -1,13 +1,12 @@
 name = "beejs-website"
-main = ".output/server/index.mjs"
 compatibility_date = "2024-11-01"
 
 [site]
-bucket = ".output/public"
+bucket = "./dist"
 
 [build]
 command = "npm run build"
-watch_dir = "app"
+watch_dir = "src"
 
 [env.production]
 vars = { NODE_VERSION = "20" }

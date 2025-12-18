@@ -73,11 +73,10 @@ impl FrameNode {
         }
 
         let frame = &stack[index];
-        let key = format!("{}:{}", frame.function_name, frame.line_number);
 
         if self.function_name == "root" {
-            // For root node, always create children
-            let child = self.children.entry(key).or_insert_with(|| {
+            // For root node, always create children based on function name
+            let child = self.children.entry(frame.function_name.clone()).or_insert_with(|| {
                 FrameNode::new_with_path(
                     frame.function_name.clone(),
                     frame.file_path.clone(),
@@ -92,23 +91,21 @@ impl FrameNode {
                 child.add_frame_to_tree(stack, index + 1);
             }
         } else {
-            // Update current node if it matches
+            // Update current node if it matches the frame
             if self.function_name == frame.function_name && self.line_number == frame.line_number {
                 self.total_duration += frame.duration;
                 self.call_count += 1;
             }
 
-            // Add child if needed
-            if index + 1 < stack.len() {
-                let child = self.children.entry(key).or_insert_with(|| {
-                    FrameNode::new_with_path(
-                        frame.function_name.clone(),
-                        frame.file_path.clone(),
-                        frame.line_number,
-                    )
-                });
-                child.add_frame_to_tree(stack, index + 1);
-            }
+            // Add child (always add, regardless of match)
+            let child = self.children.entry(frame.function_name.clone()).or_insert_with(|| {
+                FrameNode::new_with_path(
+                    frame.function_name.clone(),
+                    frame.file_path.clone(),
+                    frame.line_number,
+                )
+            });
+            child.add_frame_to_tree(stack, index + 1);
         }
     }
 
@@ -158,14 +155,67 @@ impl FlameGraph {
 
     /// 获取最大深度
     pub fn get_max_depth(&self) -> usize {
-        self.root.calculate_max_depth()
+        // Subtract 1 for the root node itself
+        // The root is just a container, so depth is the maximum depth of actual frames
+        self.root.calculate_max_depth().saturating_sub(1)
     }
 
-    /// 合并重复帧（简化实现）
+    /// 合并重复帧
     pub fn merge_duplicate_frames(&mut self) {
-        // Simplified merge implementation
-        // In a production environment, this would be more sophisticated
-        // For now, we just keep the structure as-is
+        // Use unsafe to get around borrow checker for this specific case
+        // We need to temporarily take ownership of root to count after merging
+        let root_ptr = &mut self.root as *mut FrameNode;
+        unsafe {
+            let root = &mut *root_ptr;
+            self.merge_node_recursive(root);
+        }
+        // After merging, recount frames (root doesn't count as a frame)
+        self.frame_count = Self::count_node_recursive(&self.root).saturating_sub(1);
+    }
+
+    /// 递归合并重复帧
+    fn merge_node_recursive(&mut self, node: &mut FrameNode) {
+        // Collect all children first to avoid borrow issues
+        let children: Vec<(String, FrameNode)> = node.children.drain().collect();
+
+        // Merge children with the same function name and line number
+        let mut merged_children: HashMap<String, FrameNode> = HashMap::new();
+
+        for (_, mut child) in children {
+            // Recursively merge this child's children
+            self.merge_node_recursive(&mut child);
+
+            // Create a key based on function name and line number
+            let key = format!("{}:{}", child.function_name, child.line_number);
+
+            // If we already have a child with this key, merge them
+            if let Some(existing) = merged_children.get_mut(&key) {
+                existing.total_duration += child.total_duration;
+                existing.call_count += child.call_count;
+                // Merge children
+                for (child_key, grandchild) in child.children {
+                    if let Some(existing_child) = existing.children.get_mut(&child_key) {
+                        existing_child.total_duration += grandchild.total_duration;
+                        existing_child.call_count += grandchild.call_count;
+                    } else {
+                        existing.children.insert(child_key, grandchild);
+                    }
+                }
+            } else {
+                merged_children.insert(key, child);
+            }
+        }
+
+        node.children = merged_children;
+    }
+
+    /// 递归计算帧数量
+    fn count_node_recursive(node: &FrameNode) -> usize {
+        let mut count = 1; // Count this node
+        for child in node.children.values() {
+            count += Self::count_node_recursive(child);
+        }
+        count
     }
 
     /// 查找热点路径
@@ -195,6 +245,7 @@ impl FlameGraph {
         svg.push_str("    .frame { stroke: #000; stroke-width: 1; }\n");
         svg.push_str("    .label { font-family: Arial; font-size: 10px; fill: #fff; }\n");
         svg.push_str("  </style>\n");
+        svg.push_str("  <title>Flamegraph</title>\n");
 
         self.render_node_svg(&self.root, &mut svg, 0.0, 0.0, 800.0, 400.0);
 
@@ -392,7 +443,7 @@ mod tests {
 
         flame_graph.merge_duplicate_frames();
 
-        assert!(flame_graph.get_frame_count() == 2); // Count remains the same in this simplified implementation
+        assert_eq!(flame_graph.get_frame_count(), 1); // Should merge to 1 unique frame
     }
 
     #[test]

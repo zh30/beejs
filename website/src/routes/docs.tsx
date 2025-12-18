@@ -1,11 +1,7 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { Book, ChevronRight, Code, Terminal, Layers, Cpu } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Book, ChevronRight, Code, Terminal, Layers, Cpu, Zap } from 'lucide-react'
 
-export const Route = createFileRoute('/docs')({
-  component: DocsComponent,
-})
-
-function DocsComponent() {
+export default function DocsComponent() {
   const sections = [
     {
       title: 'Getting Started',
@@ -36,7 +32,7 @@ function DocsComponent() {
   return (
     <div className="max-w-7xl mx-auto flex flex-col md:flex-row py-12 px-4 md:px-8 gap-12">
       {/* Sidebar */}
-      <aside className="w-full md:w-64 flex-shrink-0">
+      <aside className="w-full md:w-64 shrink-0">
         <nav className="sticky top-24 space-y-8">
           {sections.map((section) => (
             <div key={section.title}>
@@ -46,7 +42,7 @@ function DocsComponent() {
               <ul className="space-y-1">
                 {section.items.map((item) => (
                   <li key={item.name}>
-                    <button className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors text-gray-400 hover:text-white hover:bg-white/5 group">
+                    <button className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors text-gray-400 hover:text-white hover:bg-white/5 group text-left">
                       <span className="text-gray-600 group-hover:text-brand-yellow transition-colors">
                         {item.icon}
                       </span>
@@ -61,9 +57,9 @@ function DocsComponent() {
       </aside>
 
       {/* Content */}
-      <main className="flex-grow max-w-3xl prose prose-invert prose-brand">
+      <main className="grow max-w-3xl prose prose-invert prose-brand text-gray-300">
         <div className="mb-12">
-          <h1 className="text-4xl font-bold mb-4">Introduction to Beejs</h1>
+          <h1 className="text-4xl font-bold mb-4 text-white">Introduction to Beejs</h1>
           <p className="text-xl text-gray-400 leading-relaxed">
             Beejs is a high-performance JavaScript/TypeScript runtime built with Rust and V8.
             It's designed to be the fastest engine for executing server-side scripts,
@@ -72,7 +68,7 @@ function DocsComponent() {
         </div>
 
         <section className="mb-12 space-y-6">
-          <h2 className="text-2xl font-bold border-b border-white/10 pb-2">Why Beejs?</h2>
+          <h2 className="text-2xl font-bold border-b border-white/10 pb-2 text-white">Why Beejs?</h2>
           <p className="text-gray-400">
             Current runtimes like Node.js and even Bun have overhead that can be minimized.
             Beejs takes a unique approach to runtime management by:
@@ -85,7 +81,7 @@ function DocsComponent() {
         </section>
 
         <section className="mb-12 space-y-6">
-          <h2 className="text-2xl font-bold border-b border-white/10 pb-2">Basic Installation</h2>
+          <h2 className="text-2xl font-bold border-b border-white/10 pb-2 text-white">Basic Installation</h2>
           <div className="glass rounded-xl p-4 bg-black/40 font-mono text-sm group">
             <div className="flex justify-between items-center text-gray-500 mb-2">
               <span>Terminal</span>
@@ -101,7 +97,7 @@ function DocsComponent() {
         </section>
 
         <section className="mb-12 space-y-6">
-          <h2 className="text-2xl font-bold border-b border-white/10 pb-2">Your First Script</h2>
+          <h2 className="text-2xl font-bold border-b border-white/10 pb-2 text-white">Your First Script</h2>
           <p className="text-gray-400">Create a file named <code className="text-white">hello.ts</code>:</p>
           <div className="glass rounded-xl p-4 bg-black/40 font-mono text-sm leading-relaxed">
             <pre>

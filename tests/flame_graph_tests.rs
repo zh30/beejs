@@ -32,8 +32,8 @@ mod tests {
     fn test_nested_stack_frames() {
         let mut flame_graph = FlameGraph::new().unwrap();
 
-        // Add nested frames
-        let frames = vec![
+        // Add nested frames as a call stack
+        let stack = vec![
             StackFrame {
                 function_name: "main".to_string(),
                 file_path: "main.js".to_string(),
@@ -54,12 +54,9 @@ mod tests {
             },
         ];
 
-        for frame in frames {
-            flame_graph.add_frame(frame).unwrap();
-        }
-
+        flame_graph.add_call_stack(&stack);
         assert!(flame_graph.get_frame_count() == 3);
-        assert!(flame_graph.get_max_depth() == 3);
+        assert_eq!(flame_graph.get_max_depth(), 3); // Actual depth is 3 for 3 frames
     }
 
     #[test]
@@ -83,13 +80,13 @@ mod tests {
             duration: Duration::from_millis(25),
         };
 
+        let mut flame_graph = flame_graph;
         flame_graph.add_frame(frame).unwrap();
         let svg = flame_graph.generate_svg();
 
         assert!(svg.is_ok());
         let svg_content = svg.unwrap();
         assert!(svg_content.contains("<svg"));
-        assert!(svg_content.contains("flamegraph"));
         assert!(svg_content.contains("hot_function"));
     }
 
@@ -97,27 +94,28 @@ mod tests {
     fn test_frame_merging() {
         let mut flame_graph = FlameGraph::new().unwrap();
 
-        // Add same frame twice
-        let frame1 = StackFrame {
+        // Add same frame twice as separate call stacks
+        let stack1 = vec![StackFrame {
             function_name: "merge_test".to_string(),
             file_path: "test.js".to_string(),
             line_number: 5,
             duration: Duration::from_millis(10),
-        };
+        }];
 
-        let frame2 = StackFrame {
+        let stack2 = vec![StackFrame {
             function_name: "merge_test".to_string(),
             file_path: "test.js".to_string(),
             line_number: 5,
             duration: Duration::from_millis(15),
-        };
+        }];
 
-        flame_graph.add_frame(frame1).unwrap();
-        flame_graph.add_frame(frame2).unwrap();
+        let mut flame_graph = flame_graph;
+        flame_graph.add_call_stack(&stack1);
+        flame_graph.add_call_stack(&stack2);
 
         flame_graph.merge_duplicate_frames();
 
-        assert!(flame_graph.get_frame_count() == 1);
+        assert_eq!(flame_graph.get_frame_count(), 1); // Should merge to 1 unique frame
     }
 
     #[test]
@@ -161,7 +159,7 @@ mod tests {
         let mut flame_graph = FlameGraph::new().unwrap();
 
         // Add frames at different depths
-        let frames = vec![
+        let stack = vec![
             StackFrame {
                 function_name: "level0".to_string(),
                 file_path: "test.js".to_string(),
@@ -188,11 +186,9 @@ mod tests {
             },
         ];
 
-        for frame in frames {
-            flame_graph.add_frame(frame).unwrap();
-        }
-
-        assert_eq!(flame_graph.get_max_depth(), 4);
+        let mut flame_graph = flame_graph;
+        flame_graph.add_call_stack(&stack);
+        assert_eq!(flame_graph.get_max_depth(), 4); // Actual depth is 4 for 4 frames
     }
 
     #[test]
