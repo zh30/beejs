@@ -10,6 +10,9 @@ pub mod health_monitor;
 pub mod load_balancer;
 pub mod task_scheduler;
 pub mod task_executor;
+pub mod autoscaler;
+pub mod scaling_manager;
+pub mod resource_tracker;
 
 // Re-export 主要类型
 pub use service_discovery::{
@@ -93,14 +96,37 @@ pub use task_executor::{
     ExecutionMetrics,
     AlertType,
     Alert,
-    ResourceTracker,
-    ResourceConfig,
-    ResourceAllocation,
-    ResourceUsage,
     Checkpoint,
     CheckpointManager,
     RecoveryManager,
     RecoveryConfig,
+};
+
+pub use autoscaler::{
+    Autoscaler,
+    AutoscalerConfig,
+    ClusterMetrics,
+    ScalingStrategy,
+    ScalingAction,
+    ScalingPolicy,
+    AutoscalerStats,
+};
+
+pub use scaling_manager::{
+    ScalingManager,
+    ScalingConfig,
+    ScalingEvent,
+    ScalingNode,
+    ScalingNodeStatus,
+    ScalingStats,
+};
+
+pub use resource_tracker::{
+    ResourceTracker,
+    ResourceConfig,
+    ResourceAllocation,
+    ResourceUsage,
+    ResourceStats,
 };
 
 /// 分布式系统配置
