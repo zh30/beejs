@@ -64,7 +64,7 @@ pub use v8_snapshot::V8SnapshotManager;
 
 // Re-export process pool types
 pub use process_pool::{
-    ProcessPool, ProcessPoolConfig, ProcessPoolStats,
+    ProcessPool, ProcessPoolConfig, ProcessPoolStats, WorkerMetrics, TaskComplexity,
     initialize_process_pool, get_process_pool, execute_with_pool
 };
 
