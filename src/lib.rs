@@ -103,6 +103,9 @@ pub mod wasm {
     pub mod high_performance_cache;
 }
 
+// Stage 31.2: 云原生增强
+pub mod cloud;
+
 // Stage 27.2: WebAssembly 完整支持模块 (暂时禁用，存在 API 兼容性问题)
 // pub mod wasm {
 //     pub mod compiler;
