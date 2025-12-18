@@ -7,11 +7,11 @@
 
 🧪 Testing simple execution...
   Average execution time: 0.00ms
-  Operations per second: 437519 ops/sec
+  Operations per second: 1373885 ops/sec
 
 🧪 Testing complex calculation...
-  Average execution time: 0.01ms
-  Operations per second: 172892 ops/sec
+  Average execution time: 0.00ms
+  Operations per second: 316113 ops/sec
 
 🧪 Testing memory usage...
   Created 10000 objects
@@ -19,22 +19,22 @@
 
 🧪 Testing concurrent execution...
   Max concurrent scripts: 10000
-  Total test time: 168.24ms
+  Total test time: 162.42ms
 
 
 📊 Benchmark Results Summary
 ============================
 Startup time: 0.00ms
-Simple execution: 437519 ops/sec
-Complex calculation: 172892 ops/sec
+Simple execution: 1373885 ops/sec
+Complex calculation: 316113 ops/sec
 Memory usage: 0.23 MB
 Concurrent capacity: 10000 scripts
 
 📄 JSON Results:
 {
-  "startup_time_ms": 0.00023919900000000637,
-  "simple_execution_ops_per_sec": 437518.62188635045,
-  "complex_calculation_ops_per_sec": 172892.28741337458,
-  "memory_usage_mb": 0.2317485809326172,
+  "startup_time_ms": 0.00012415900000000858,
+  "simple_execution_ops_per_sec": 1373884.9206512594,
+  "complex_calculation_ops_per_sec": 316113.3734291541,
+  "memory_usage_mb": 0.22712135314941406,
   "concurrent_capacity": 10000
 }
