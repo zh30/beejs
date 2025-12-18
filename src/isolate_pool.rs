@@ -1,8 +1,12 @@
 use rusty_v8 as v8;
 use std::collections::VecDeque;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
+use std::time::{Duration, Instant};
 
-/// V8 Isolate Pool - 高性能Isolate复用池
+/// V8 Isolate Pool - 高性能Isolate复用池（优化版）
 /// 通过复用预创建的V8 Isolates来减少启动时间
 /// 注意：V8 Isolate不是线程安全的，这个池只能在单线程中使用
 pub struct IsolatePool {
@@ -14,6 +18,47 @@ pub struct IsolatePool {
     max_size: usize,
     /// 是否已初始化
     initialized: bool,
+    /// 池统计信息
+    stats: PoolStatistics,
+}
+
+/// 池统计信息（增强版）
+#[derive(Debug, Default)]
+pub struct PoolStatistics {
+    /// 总获取次数
+    pub total_acquires: Arc<AtomicUsize>,
+    /// 总释放次数
+    pub total_releases: Arc<AtomicUsize>,
+    /// 缓存命中次数（从池中获取）
+    pub cache_hits: Arc<AtomicUsize>,
+    /// 缓存未命中次数（创建新Isolate）
+    pub cache_misses: Arc<AtomicUsize>,
+    /// 预热次数
+    pub warmup_count: Arc<AtomicUsize>,
+    /// 总创建时间（纳秒）
+    pub total_creation_time_ns: Arc<AtomicUsize>,
+    /// 最后预热时间
+    pub last_warmup: Arc<AtomicUsize>,
+}
+
+impl PoolStatistics {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 获取缓存命中率
+    pub fn hit_rate(&self) -> f64 {
+        let hits = self.cache_hits.load(Ordering::Relaxed) as f64;
+        let total = hits + self.cache_misses.load(Ordering::Relaxed) as f64;
+        if total > 0.0 { hits / total } else { 0.0 }
+    }
+
+    /// 获取平均创建时间（微秒）
+    pub fn avg_creation_time_us(&self) -> f64 {
+        let total_time = self.total_creation_time_ns.load(Ordering::Relaxed) as f64;
+        let count = self.cache_misses.load(Ordering::Relaxed) as f64;
+        if count > 0.0 { total_time / count / 1000.0 } else { 0.0 }
+    }
 }
 
 // 确保IsolatePool只在单线程中使用（V8 Isolate的线程限制）
@@ -21,13 +66,14 @@ unsafe impl Sync for IsolatePool {}
 unsafe impl Send for IsolatePool {}
 
 impl IsolatePool {
-    /// 创建新的Isolate池
+    /// 创建新的Isolate池（优化版）
     pub fn new(max_size: usize) -> Self {
         Self {
             available: Mutex::new(VecDeque::new()),
             in_use: Mutex::new(0),
             max_size,
             initialized: false,
+            stats: PoolStatistics::new(),
         }
     }
 
@@ -40,43 +86,69 @@ impl IsolatePool {
         let actual_count = count.min(self.max_size);
         let mut pool = self.available.lock().map_err(|e| e.to_string())?;
 
-        // 超级激进的预热策略：预创建更多Isolates
-        let warmup_count = (actual_count * 2).min(self.max_size);
+        // 智能预热策略：根据池大小自适应
+        let warmup_count = if self.max_size >= 16 {
+            (actual_count * 3 / 2).min(self.max_size)
+        } else {
+            actual_count
+        };
 
         for i in 0..warmup_count {
+            let isolate_start = Instant::now();
             let isolate = v8::Isolate::new(Default::default());
+            let creation_time = isolate_start.elapsed();
+
             pool.push_back(isolate);
 
-            // 每个Isolate创建后稍微延迟，避免瞬时负载过高
-            if i % 4 == 0 {
-                std::thread::sleep(std::time::Duration::from_millis(1));
+            // 记录创建时间
+            self.stats.total_creation_time_ns.fetch_add(
+                creation_time.as_nanos() as usize,
+                Ordering::Relaxed
+            );
+
+            // 渐进式延迟：根据池大小调整延迟
+            if self.max_size >= 16 && i % 4 == 0 {
+                thread::sleep(Duration::from_millis(1));
             }
         }
 
         self.initialized = true;
+        self.stats.warmup_count.fetch_add(1, Ordering::Relaxed);
+        self.stats.last_warmup.store(
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs() as usize,
+            Ordering::Relaxed
+        );
+
         Ok(())
     }
 
     /// 获取一个Isolate（从池中借用）- 优化版
     pub fn acquire(&self) -> Option<v8::OwnedIsolate> {
+        self.stats.total_acquires.fetch_add(1, Ordering::Relaxed);
+
         let mut pool = self.available.lock().unwrap();
         let mut in_use = self.in_use.lock().unwrap();
 
         // 尝试从池中获取
         if let Some(isolate) = pool.pop_front() {
             *in_use += 1;
+            self.stats.cache_hits.fetch_add(1, Ordering::Relaxed);
 
-            // 动态预热：如果池快空了，异步预创建更多Isolates
-            if pool.len() < self.max_size / 4 {
-                let max_size = self.max_size;
-                std::thread::spawn(move || {
-                    // 在后台预热更多Isolates
-                    for _ in 0..(max_size / 4) {
-                        let isolate = v8::Isolate::new(Default::default());
-                        // 这里不能直接修改池，需要通过其他机制
-                        drop(isolate);
+            // 智能预热：如果池快空了，在同一线程快速预创建
+            if pool.len() < self.max_size / 4 && pool.len() + *in_use < self.max_size {
+                let needed = (self.max_size / 4).min(self.max_size - pool.len() - *in_use);
+
+                // 快速创建一些Isolates以补充池
+                for _ in 0..needed {
+                    if pool.len() + *in_use >= self.max_size {
+                        break;
                     }
-                });
+                    let isolate = v8::Isolate::new(Default::default());
+                    pool.push_back(isolate);
+                }
             }
 
             Some(isolate)
@@ -85,6 +157,7 @@ impl IsolatePool {
             let total_in_use = *in_use;
             if total_in_use < self.max_size {
                 *in_use += 1;
+                self.stats.cache_misses.fetch_add(1, Ordering::Relaxed);
                 Some(v8::Isolate::new(Default::default()))
             } else {
                 None
@@ -92,8 +165,10 @@ impl IsolatePool {
         }
     }
 
-    /// 归还一个Isolate到池中
+    /// 归还一个Isolate到池中（优化版）
     pub fn release(&self, mut isolate: v8::OwnedIsolate) {
+        self.stats.total_releases.fetch_add(1, Ordering::Relaxed);
+
         let mut pool = self.available.lock().unwrap();
         let mut in_use = self.in_use.lock().unwrap();
 
@@ -109,7 +184,7 @@ impl IsolatePool {
         *in_use = in_use.saturating_sub(1);
     }
 
-    /// 获取池的统计信息
+    /// 获取池的统计信息（增强版）
     #[allow(dead_code)]
     pub fn stats(&self) -> PoolStats {
         let pool = self.available.lock().unwrap();
@@ -120,6 +195,32 @@ impl IsolatePool {
             in_use: *in_use,
             max_size: self.max_size,
         }
+    }
+
+    /// 获取详细统计信息
+    pub fn detailed_stats(&self) -> PoolStatistics {
+        PoolStatistics {
+            total_acquires: Arc::clone(&self.stats.total_acquires),
+            total_releases: Arc::clone(&self.stats.total_releases),
+            cache_hits: Arc::clone(&self.stats.cache_hits),
+            cache_misses: Arc::clone(&self.stats.cache_misses),
+            warmup_count: Arc::clone(&self.stats.warmup_count),
+            total_creation_time_ns: Arc::clone(&self.stats.total_creation_time_ns),
+            last_warmup: Arc::clone(&self.stats.last_warmup),
+        }
+    }
+
+    /// 清理池中未使用的Isolates
+    pub fn shrink_to_fit(&self) -> usize {
+        let mut pool = self.available.lock().unwrap();
+        let before_len = pool.len();
+
+        // 保留至少一个Isolate以避免完全耗尽
+        while pool.len() > 1 {
+            pool.pop_back();
+        }
+
+        before_len - pool.len()
     }
 }
 
