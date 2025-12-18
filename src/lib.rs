@@ -73,7 +73,8 @@ pub use server::{
 // Re-export concurrent execution types
 pub use concurrent_execution::{
     ConcurrentConfig, ConcurrentRuntimePool, ScriptResult,
-    ConcurrentExecutionError, ConcurrentExecutionStats
+    ConcurrentExecutionError, ConcurrentExecutionStats,
+    WorkStealingScheduler, Task, TaskResult, StealStats
 };
 
 /// Global V8 initialization
