@@ -1,0 +1,670 @@
+//! Stage 28.2: 日志与监控系统测试套件
+//!
+//! 测试覆盖:
+//! - 结构化日志 (JSON 格式)
+//! - 多级日志 (DEBUG/INFO/WARN/ERROR)
+//! - 日志过滤
+//! - 指标收集
+//! - 性能追踪
+
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, Instant, SystemTime};
+
+// =============================================================================
+// 日志系统类型定义
+// =============================================================================
+
+/// 日志级别
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LogLevel {
+    Trace = 0,
+    Debug = 1,
+    Info = 2,
+    Warn = 3,
+    Error = 4,
+}
+
+impl LogLevel {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            LogLevel::Trace => "TRACE",
+            LogLevel::Debug => "DEBUG",
+            LogLevel::Info => "INFO",
+            LogLevel::Warn => "WARN",
+            LogLevel::Error => "ERROR",
+        }
+    }
+}
+
+/// 日志条目
+#[derive(Debug, Clone)]
+pub struct LogEntry {
+    pub timestamp: SystemTime,
+    pub level: LogLevel,
+    pub message: String,
+    pub module: Option<String>,
+    pub fields: HashMap<String, String>,
+}
+
+impl LogEntry {
+    pub fn new(level: LogLevel, message: impl Into<String>) -> Self {
+        Self {
+            timestamp: SystemTime::now(),
+            level,
+            message: message.into(),
+            module: None,
+            fields: HashMap::new(),
+        }
+    }
+
+    pub fn with_module(mut self, module: impl Into<String>) -> Self {
+        self.module = Some(module.into());
+        self
+    }
+
+    pub fn with_field(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.fields.insert(key.into(), value.into());
+        self
+    }
+
+    /// 格式化为 JSON
+    pub fn to_json(&self) -> String {
+        let ts = self.timestamp
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis();
+
+        let mut json = format!(
+            r#"{{"timestamp":{},"level":"{}","message":"{}""#,
+            ts, self.level.as_str(), self.message
+        );
+
+        if let Some(ref module) = self.module {
+            json.push_str(&format!(r#","module":"{}""#, module));
+        }
+
+        if !self.fields.is_empty() {
+            let fields: Vec<String> = self.fields
+                .iter()
+                .map(|(k, v)| format!(r#""{}":"{}""#, k, v))
+                .collect();
+            json.push_str(&format!(r#","fields":{{{}}}"#, fields.join(",")));
+        }
+
+        json.push('}');
+        json
+    }
+
+    /// 格式化为人类可读格式
+    pub fn to_text(&self) -> String {
+        let ts = self.timestamp
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        format!(
+            "[{}] {} - {}",
+            ts, self.level.as_str(), self.message
+        )
+    }
+}
+
+/// 日志记录器
+#[derive(Debug)]
+pub struct Logger {
+    min_level: LogLevel,
+    entries: Vec<LogEntry>,
+    module_filter: Option<String>,
+}
+
+impl Logger {
+    pub fn new(min_level: LogLevel) -> Self {
+        Self {
+            min_level,
+            entries: Vec::new(),
+            module_filter: None,
+        }
+    }
+
+    pub fn with_module_filter(mut self, filter: impl Into<String>) -> Self {
+        self.module_filter = Some(filter.into());
+        self
+    }
+
+    pub fn log(&mut self, entry: LogEntry) {
+        // 级别过滤
+        if entry.level < self.min_level {
+            return;
+        }
+
+        // 模块过滤
+        if let Some(ref filter) = self.module_filter {
+            if let Some(ref module) = entry.module {
+                if !module.starts_with(filter) {
+                    return;
+                }
+            } else {
+                return;
+            }
+        }
+
+        self.entries.push(entry);
+    }
+
+    pub fn trace(&mut self, message: impl Into<String>) {
+        self.log(LogEntry::new(LogLevel::Trace, message));
+    }
+
+    pub fn debug(&mut self, message: impl Into<String>) {
+        self.log(LogEntry::new(LogLevel::Debug, message));
+    }
+
+    pub fn info(&mut self, message: impl Into<String>) {
+        self.log(LogEntry::new(LogLevel::Info, message));
+    }
+
+    pub fn warn(&mut self, message: impl Into<String>) {
+        self.log(LogEntry::new(LogLevel::Warn, message));
+    }
+
+    pub fn error(&mut self, message: impl Into<String>) {
+        self.log(LogEntry::new(LogLevel::Error, message));
+    }
+
+    pub fn entries(&self) -> &[LogEntry] {
+        &self.entries
+    }
+
+    pub fn clear(&mut self) {
+        self.entries.clear();
+    }
+
+    pub fn count(&self) -> usize {
+        self.entries.len()
+    }
+}
+
+// =============================================================================
+// 指标系统类型定义
+// =============================================================================
+
+/// 指标类型
+#[derive(Debug, Clone)]
+pub enum MetricValue {
+    Counter(u64),
+    Gauge(f64),
+    Histogram(Vec<f64>),
+}
+
+/// 指标记录器
+#[derive(Debug, Default)]
+pub struct MetricsCollector {
+    counters: HashMap<String, Arc<AtomicU64>>,
+    gauges: HashMap<String, f64>,
+    histograms: HashMap<String, Vec<f64>>,
+}
+
+impl MetricsCollector {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 递增计数器
+    pub fn increment(&mut self, name: &str) {
+        self.increment_by(name, 1);
+    }
+
+    /// 递增计数器指定值
+    pub fn increment_by(&mut self, name: &str, value: u64) {
+        let counter = self.counters
+            .entry(name.to_string())
+            .or_insert_with(|| Arc::new(AtomicU64::new(0)));
+        counter.fetch_add(value, Ordering::Relaxed);
+    }
+
+    /// 获取计数器值
+    pub fn get_counter(&self, name: &str) -> u64 {
+        self.counters
+            .get(name)
+            .map(|c| c.load(Ordering::Relaxed))
+            .unwrap_or(0)
+    }
+
+    /// 设置 gauge 值
+    pub fn set_gauge(&mut self, name: &str, value: f64) {
+        self.gauges.insert(name.to_string(), value);
+    }
+
+    /// 获取 gauge 值
+    pub fn get_gauge(&self, name: &str) -> Option<f64> {
+        self.gauges.get(name).copied()
+    }
+
+    /// 记录 histogram 值
+    pub fn observe(&mut self, name: &str, value: f64) {
+        self.histograms
+            .entry(name.to_string())
+            .or_insert_with(Vec::new)
+            .push(value);
+    }
+
+    /// 获取 histogram 统计
+    pub fn get_histogram_stats(&self, name: &str) -> Option<HistogramStats> {
+        self.histograms.get(name).map(|values| {
+            if values.is_empty() {
+                return HistogramStats::default();
+            }
+
+            let count = values.len();
+            let sum: f64 = values.iter().sum();
+            let mean = sum / count as f64;
+            let min = values.iter().cloned().fold(f64::INFINITY, f64::min);
+            let max = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+
+            // 计算 p99
+            let mut sorted = values.clone();
+            sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            let p99_idx = ((count as f64) * 0.99).ceil() as usize - 1;
+            let p99 = sorted.get(p99_idx.min(count - 1)).copied().unwrap_or(0.0);
+
+            HistogramStats { count, sum, mean, min, max, p99 }
+        })
+    }
+
+    /// 导出所有指标 (Prometheus 格式)
+    pub fn export_prometheus(&self) -> String {
+        let mut output = String::new();
+
+        for (name, counter) in &self.counters {
+            let value = counter.load(Ordering::Relaxed);
+            output.push_str(&format!("# TYPE {} counter\n", name));
+            output.push_str(&format!("{} {}\n", name, value));
+        }
+
+        for (name, value) in &self.gauges {
+            output.push_str(&format!("# TYPE {} gauge\n", name));
+            output.push_str(&format!("{} {}\n", name, value));
+        }
+
+        for (name, values) in &self.histograms {
+            if let Some(stats) = self.get_histogram_stats(name) {
+                output.push_str(&format!("# TYPE {} histogram\n", name));
+                output.push_str(&format!("{}_count {}\n", name, stats.count));
+                output.push_str(&format!("{}_sum {}\n", name, stats.sum));
+            }
+        }
+
+        output
+    }
+}
+
+/// Histogram 统计
+#[derive(Debug, Default, Clone)]
+pub struct HistogramStats {
+    pub count: usize,
+    pub sum: f64,
+    pub mean: f64,
+    pub min: f64,
+    pub max: f64,
+    pub p99: f64,
+}
+
+// =============================================================================
+// 追踪系统类型定义
+// =============================================================================
+
+/// Span (追踪区间)
+#[derive(Debug)]
+pub struct Span {
+    name: String,
+    start: Instant,
+    duration: Option<Duration>,
+    attributes: HashMap<String, String>,
+}
+
+impl Span {
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            start: Instant::now(),
+            duration: None,
+            attributes: HashMap::new(),
+        }
+    }
+
+    pub fn with_attribute(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
+        self.attributes.insert(key.into(), value.into());
+        self
+    }
+
+    pub fn end(&mut self) {
+        self.duration = Some(self.start.elapsed());
+    }
+
+    pub fn duration(&self) -> Option<Duration> {
+        self.duration
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+/// 追踪器
+#[derive(Debug, Default)]
+pub struct Tracer {
+    spans: Vec<Span>,
+}
+
+impl Tracer {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn start_span(&mut self, name: impl Into<String>) -> &mut Span {
+        self.spans.push(Span::new(name));
+        self.spans.last_mut().unwrap()
+    }
+
+    pub fn spans(&self) -> &[Span] {
+        &self.spans
+    }
+
+    pub fn completed_spans(&self) -> Vec<&Span> {
+        self.spans.iter().filter(|s| s.duration.is_some()).collect()
+    }
+}
+
+// =============================================================================
+// 测试用例
+// =============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -------------------------------------------------------------------------
+    // 日志系统测试
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_logger_creation() {
+        let logger = Logger::new(LogLevel::Info);
+        assert_eq!(logger.count(), 0);
+    }
+
+    #[test]
+    fn test_logger_level_filtering() {
+        let mut logger = Logger::new(LogLevel::Warn);
+
+        logger.debug("debug message"); // 应被过滤
+        logger.info("info message");   // 应被过滤
+        logger.warn("warn message");   // 应记录
+        logger.error("error message"); // 应记录
+
+        assert_eq!(logger.count(), 2);
+    }
+
+    #[test]
+    fn test_logger_module_filtering() {
+        let mut logger = Logger::new(LogLevel::Debug)
+            .with_module_filter("beejs::");
+
+        logger.log(LogEntry::new(LogLevel::Info, "msg1").with_module("beejs::runtime"));
+        logger.log(LogEntry::new(LogLevel::Info, "msg2").with_module("other::module"));
+        logger.log(LogEntry::new(LogLevel::Info, "msg3")); // 无模块
+
+        assert_eq!(logger.count(), 1);
+        assert_eq!(logger.entries()[0].module, Some("beejs::runtime".to_string()));
+    }
+
+    #[test]
+    fn test_log_entry_json_format() {
+        let entry = LogEntry::new(LogLevel::Info, "test message")
+            .with_module("beejs::test")
+            .with_field("request_id", "123");
+
+        let json = entry.to_json();
+        assert!(json.contains(r#""level":"INFO""#));
+        assert!(json.contains(r#""message":"test message""#));
+        assert!(json.contains(r#""module":"beejs::test""#));
+        assert!(json.contains(r#""request_id":"123""#));
+    }
+
+    #[test]
+    fn test_log_entry_text_format() {
+        let entry = LogEntry::new(LogLevel::Error, "something went wrong");
+        let text = entry.to_text();
+
+        assert!(text.contains("ERROR"));
+        assert!(text.contains("something went wrong"));
+    }
+
+    // -------------------------------------------------------------------------
+    // 指标系统测试
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_metrics_counter() {
+        let mut metrics = MetricsCollector::new();
+
+        metrics.increment("requests_total");
+        metrics.increment("requests_total");
+        metrics.increment_by("requests_total", 5);
+
+        assert_eq!(metrics.get_counter("requests_total"), 7);
+    }
+
+    #[test]
+    fn test_metrics_gauge() {
+        let mut metrics = MetricsCollector::new();
+
+        metrics.set_gauge("cpu_usage", 45.5);
+        metrics.set_gauge("cpu_usage", 50.0); // 覆盖
+
+        assert_eq!(metrics.get_gauge("cpu_usage"), Some(50.0));
+        assert_eq!(metrics.get_gauge("nonexistent"), None);
+    }
+
+    #[test]
+    fn test_metrics_histogram() {
+        let mut metrics = MetricsCollector::new();
+
+        for i in 1..=100 {
+            metrics.observe("request_duration", i as f64);
+        }
+
+        let stats = metrics.get_histogram_stats("request_duration").unwrap();
+        assert_eq!(stats.count, 100);
+        assert_eq!(stats.min, 1.0);
+        assert_eq!(stats.max, 100.0);
+        assert!((stats.mean - 50.5).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_metrics_prometheus_export() {
+        let mut metrics = MetricsCollector::new();
+
+        metrics.increment_by("http_requests_total", 100);
+        metrics.set_gauge("memory_bytes", 1024.0);
+
+        let output = metrics.export_prometheus();
+        assert!(output.contains("# TYPE http_requests_total counter"));
+        assert!(output.contains("http_requests_total 100"));
+        assert!(output.contains("# TYPE memory_bytes gauge"));
+        assert!(output.contains("memory_bytes 1024"));
+    }
+
+    // -------------------------------------------------------------------------
+    // 追踪系统测试
+    // -------------------------------------------------------------------------
+
+    #[test]
+    fn test_tracer_span_lifecycle() {
+        let mut tracer = Tracer::new();
+
+        {
+            let span = tracer.start_span("test_operation");
+            span.end();
+        }
+
+        assert_eq!(tracer.spans().len(), 1);
+        assert!(tracer.spans()[0].duration().is_some());
+    }
+
+    #[test]
+    fn test_span_attributes() {
+        let span = Span::new("http_request")
+            .with_attribute("method", "GET")
+            .with_attribute("path", "/api/users");
+
+        assert_eq!(span.name(), "http_request");
+        assert_eq!(span.attributes.get("method"), Some(&"GET".to_string()));
+    }
+
+    #[test]
+    fn test_tracer_completed_spans() {
+        let mut tracer = Tracer::new();
+
+        let span1 = tracer.start_span("completed");
+        span1.end();
+
+        let _span2 = tracer.start_span("in_progress"); // 未结束
+
+        let completed = tracer.completed_spans();
+        assert_eq!(completed.len(), 1);
+        assert_eq!(completed[0].name(), "completed");
+    }
+}
+
+// =============================================================================
+// 集成测试
+// =============================================================================
+
+#[test]
+fn test_stage_28_2_logging_integration() {
+    let mut logger = Logger::new(LogLevel::Debug);
+
+    // 记录不同级别的日志
+    logger.log(
+        LogEntry::new(LogLevel::Info, "Application started")
+            .with_module("beejs::main")
+            .with_field("version", "1.0.0")
+    );
+
+    logger.log(
+        LogEntry::new(LogLevel::Warn, "High memory usage")
+            .with_module("beejs::runtime")
+            .with_field("usage_mb", "512")
+    );
+
+    logger.log(
+        LogEntry::new(LogLevel::Error, "Connection failed")
+            .with_module("beejs::network")
+            .with_field("host", "localhost")
+            .with_field("port", "8080")
+    );
+
+    // 验证日志记录
+    assert_eq!(logger.count(), 3);
+
+    // 验证 JSON 格式
+    for entry in logger.entries() {
+        let json = entry.to_json();
+        assert!(json.starts_with('{'));
+        assert!(json.ends_with('}'));
+        assert!(json.contains("timestamp"));
+        assert!(json.contains("level"));
+    }
+
+    println!("Stage 28.2 Logging Integration Test: PASSED");
+}
+
+#[test]
+fn test_stage_28_2_metrics_integration() {
+    let mut metrics = MetricsCollector::new();
+
+    // 模拟请求处理
+    for i in 0..100 {
+        metrics.increment("http_requests_total");
+        metrics.observe("http_request_duration_ms", (i % 50) as f64 + 10.0);
+    }
+
+    // 设置系统指标
+    metrics.set_gauge("process_memory_bytes", 256.0 * 1024.0 * 1024.0);
+    metrics.set_gauge("process_cpu_percent", 25.5);
+
+    // 验证指标
+    assert_eq!(metrics.get_counter("http_requests_total"), 100);
+    assert!(metrics.get_gauge("process_memory_bytes").is_some());
+
+    let duration_stats = metrics.get_histogram_stats("http_request_duration_ms").unwrap();
+    assert_eq!(duration_stats.count, 100);
+    assert!(duration_stats.p99 > 0.0);
+
+    // 导出 Prometheus 格式
+    let prometheus_output = metrics.export_prometheus();
+    assert!(prometheus_output.contains("http_requests_total 100"));
+
+    println!("Stage 28.2 Metrics Integration Test: PASSED");
+}
+
+#[test]
+fn test_stage_28_2_tracing_integration() {
+    let mut tracer = Tracer::new();
+
+    // 模拟请求追踪
+    {
+        let request_span = tracer.start_span("http_request");
+        std::thread::sleep(Duration::from_micros(100));
+        request_span.end();
+    }
+
+    {
+        let db_span = tracer.start_span("database_query");
+        std::thread::sleep(Duration::from_micros(50));
+        db_span.end();
+    }
+
+    // 验证追踪
+    let completed = tracer.completed_spans();
+    assert_eq!(completed.len(), 2);
+
+    for span in completed {
+        assert!(span.duration().is_some());
+        println!("Span '{}': {:?}", span.name(), span.duration().unwrap());
+    }
+
+    println!("Stage 28.2 Tracing Integration Test: PASSED");
+}
+
+#[test]
+fn test_stage_28_2_logging_performance() {
+    let mut logger = Logger::new(LogLevel::Info);
+
+    let start = Instant::now();
+    for i in 0..10000 {
+        logger.log(
+            LogEntry::new(LogLevel::Info, format!("Log message {}", i))
+                .with_field("iteration", i.to_string())
+        );
+    }
+    let log_time = start.elapsed();
+
+    // JSON 格式化性能
+    let start = Instant::now();
+    for entry in logger.entries() {
+        let _ = entry.to_json();
+    }
+    let format_time = start.elapsed();
+
+    println!("Logging Performance:");
+    println!("  Log 10000 entries: {:?}", log_time);
+    println!("  Format to JSON: {:?}", format_time);
+
+    // 性能断言
+    assert!(log_time.as_millis() < 500, "Logging should be < 500ms");
+    assert!(format_time.as_millis() < 200, "JSON formatting should be < 200ms");
+}
