@@ -172,6 +172,11 @@ impl RuntimeLite {
     fn try_fast_constant_path(&self, code: &str) -> Option<String> {
         let trimmed = code.trim();
 
+        // Skip fast path for function calls (e.g., console.log, require, etc.)
+        if trimmed.contains('(') && trimmed.contains(')') {
+            return None;
+        }
+
         // Simple numeric constants
         if trimmed.parse::<i64>().is_ok() {
             return Some(trimmed.to_string());
