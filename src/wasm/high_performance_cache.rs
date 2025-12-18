@@ -444,7 +444,7 @@ mod tests {
         let cache = HighPerformanceWasmCache::new().unwrap();
 
         let wasm_bytes = vec![0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
-        let hash = cache.calculate_hash(&wasm_bytes).await;
+        let hash = cache.calculate_hash(&wasm_bytes);
 
         cache.store_module(hash.clone(), wasm_bytes.clone()).await.unwrap();
 
@@ -452,7 +452,8 @@ mod tests {
         let loaded_bytes = cache.load_module(&hash).await.unwrap();
 
         // 验证零拷贝 (Arc 克隆，不拷贝数据)
-        assert!(Arc::ptr_eq(&loaded_bytes, &Arc::new(wasm_bytes)) || std::ptr::eq(loaded_bytes.as_ptr(), wasm_bytes.as_ptr()));
+        let wasm_bytes_ref = &wasm_bytes;
+        assert!(Arc::ptr_eq(&loaded_bytes, &Arc::new(wasm_bytes_ref.to_vec())) || std::ptr::eq(loaded_bytes.as_ptr(), wasm_bytes_ref.as_ptr()));
 
         let stats = cache.get_stats();
         assert_eq!(stats.zero_copy_operations.load(Ordering::Relaxed), 1);
@@ -469,7 +470,7 @@ mod tests {
             )
         "#).expect("创建WASM字节码失败");
 
-        let hash = cache.calculate_hash(&wasm_bytes).await;
+        let hash = cache.calculate_hash(&wasm_bytes);
         cache.store_module(hash.clone(), wasm_bytes.clone()).await.unwrap();
 
         // 等待异步 L2 存储完成
@@ -497,7 +498,7 @@ mod tests {
                 )
             "#, i)).expect("创建WASM字节码失败");
 
-            let hash = cache.calculate_hash(&wasm_bytes).await;
+            let hash = cache.calculate_hash(&wasm_bytes);
             modules.push((hash, wasm_bytes));
         }
 
