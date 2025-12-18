@@ -6,11 +6,13 @@ mod model_loader;
 mod tensor_ops;
 mod gpu_accelerate;
 mod model_cache;
+mod dynamic_batch_processor;
 
 pub use ai_inference_engine::*;
 pub use model_loader::*;
 pub use tensor_ops::*;
 pub use model_cache::*;
+pub use dynamic_batch_processor::*;
 
 #[cfg(test)]
 mod tests {

@@ -132,7 +132,7 @@ mod tests {
     #[tokio::test]
     async fn test_isolate_pool_smart_prewarm() {
         // 检查 V8 是否可用
-        if !beejs::test_v8_availability() {
+        if !beejs::is_v8_available() {
             println!("⚠️  V8 不可用，跳过测试");
             return;
         }
@@ -183,7 +183,7 @@ mod tests {
     #[tokio::test]
     async fn test_isolate_pool_auto_scaling() {
         // 检查 V8 是否可用
-        if !beejs::test_v8_availability() {
+        if !beejs::is_v8_available() {
             println!("⚠️  V8 不可用，跳过测试");
             return;
         }
@@ -313,7 +313,7 @@ mod tests {
     #[tokio::test]
     async fn test_comprehensive_startup_benchmark() {
         // 检查 V8 是否可用
-        if !beejs::test_v8_availability() {
+        if !beejs::is_v8_available() {
             println!("⚠️  V8 不可用，跳过测试");
             return;
         }
@@ -404,7 +404,7 @@ mod tests {
     #[tokio::test]
     async fn test_memory_usage_optimization() {
         // 检查 V8 是否可用
-        if !beejs::test_v8_availability() {
+        if !beejs::is_v8_available() {
             println!("⚠️  V8 不可用，跳过测试");
             return;
         }

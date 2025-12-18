@@ -416,7 +416,7 @@ mod tests {
         let start = Instant::now();
         // 模拟连接操作（不实际建立连接）
         for _ in 0..100 {
-            let _ = connection_pool.get_connection("127.0.0.1:8080".parse().unwrap());
+            let _ = connection_pool.get_connection("127.0.0.1:8080");
         }
         let connection_pool_time = start.elapsed();
         println!("   100 次连接操作: {:?}", connection_pool_time);
