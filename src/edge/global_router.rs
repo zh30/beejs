@@ -1,7 +1,7 @@
 //! Global Distribution Router
 //! Intelligent routing across global edge locations
 
-use super::cdn_provider::CdnEndpoint;
+use super::cdn_provider::{CdnEndpoint, EndpointStatus, CdnProviderType};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -123,7 +123,7 @@ impl GlobalRouter {
         ];
 
         // Initialize with default nodes
-        let mut nodes = router.edge_nodes.write().await;
+        let mut nodes = router.edge_nodes.write().unwrap();
         nodes.extend(default_nodes);
 
         router
@@ -200,10 +200,10 @@ impl GlobalRouter {
             region: best_node.region.clone(),
             endpoint_url: format!("https://{}.{}", best_node.id, domain),
             latency: best_node.latency,
-            status: super::EndpointStatus::Healthy,
+            status: EndpointStatus::Healthy,
             capacity: best_node.capacity,
             current_load: best_node.current_load,
-            provider: super::CdnProviderType::Cloudflare,
+            provider: CdnProviderType::Cloudflare,
         })
     }
 

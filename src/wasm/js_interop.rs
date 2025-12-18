@@ -5,7 +5,7 @@
 
 use anyhow::{Result, Context, anyhow};
 use wasmtime::{Instance, Store, Func, Val};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
 
@@ -394,7 +394,7 @@ impl JsWasmInterop {
     /// * `Result<tokio::task::JoinHandle<Result<WasmCallResult>>>` - 异步任务句柄
     pub async fn call_wasm_function_async(
         &self,
-        module: &crate::wasm::module_loader::WasmModule,
+        module: Arc<crate::wasm::module_loader::WasmModule>,
         function_name: &str,
         args: Vec<JsValue>,
     ) -> Result<tokio::task::JoinHandle<Result<WasmCallResult>>> {

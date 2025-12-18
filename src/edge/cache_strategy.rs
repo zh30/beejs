@@ -135,7 +135,7 @@ impl EdgeCache {
                 entry.access_count += 1;
 
                 // Update stats
-                self.update_stats(true, 1, false, false, false, false).await;
+                self.update_stats(true, true, false, false, false, false).await;
 
                 // Record access pattern for prediction
                 {

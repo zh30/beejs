@@ -492,11 +492,11 @@ impl WasmModuleCache {
     /// 清理过期缓存
     pub fn cleanup_expired(&self) -> Result<usize> {
         let mut cleaned = 0;
+        let now = Instant::now();
 
         // 清理 L1 缓存
         {
             let mut l1 = self.l1_cache.lock().unwrap();
-            let now = Instant::now();
 
             let expired_keys: Vec<String> = l1.iter()
                 .filter_map(|(hash, entry)| {

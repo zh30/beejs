@@ -84,10 +84,13 @@ impl EdgeDeploymentOptimizer {
         optimized.insert("static_optimization".to_string(), "true".to_string());
         optimized.insert("code_splitting".to_string(), "true".to_string());
 
+        // Calculate cold start before moving optimized
+        let estimated_cold_start = self.estimate_cold_start(&optimized).await;
+
         Ok(OptimizedConfig {
             region: region.to_string(),
             config: optimized,
-            estimated_cold_start: self.estimate_cold_start(&optimized).await,
+            estimated_cold_start,
         })
     }
 

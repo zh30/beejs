@@ -239,7 +239,7 @@ fn builtin_string_concat(args: &[String]) -> Result<String> {
     if args.len() < 2 {
         return Err(anyhow!("string_concat requires at least 2 arguments"));
     }
-    Ok(args.iter().fold(String::new(), |acc, s| acc + s))
+    Ok(args.iter().fold(String::new(), |acc, s| acc + s.as_str()))
 }
 
 /// 字符串长度

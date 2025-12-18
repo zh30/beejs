@@ -3,7 +3,8 @@
 //! 负责高效加载、验证和实例化 WebAssembly 模块
 
 use wasmtime::{Engine, Module, Instance, Store, Linker, Config};
-use wasmtime_wasi::{WasiCtx, add_to_linker};
+use wasmtime_wasi::{WasiCtx, WasiCtxBuilder};
+use wasmtime_wasi::p1::wasi_snapshot_preview1::add_to_linker;
 use anyhow::{Result, Context, anyhow};
 use std::sync::Arc;
 use std::time::Instant;
@@ -155,7 +156,7 @@ impl WasmModuleLoader {
             .context("Failed to compile WASM module")?;
 
         // 创建 WASI 上下文
-        let wasi = wasmtime_wasi::WasiCtxBuilder::new()
+        let wasi = WasiCtxBuilder::new()
             .build();
 
         // 创建存储
