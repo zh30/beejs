@@ -18,6 +18,7 @@ pub mod performance_analyzer;
 pub mod performance_reporter;
 pub mod performance_regression;
 pub mod automation;
+pub mod analysis;
 
 // 重新导出主要类型
 pub use benchmarks::{

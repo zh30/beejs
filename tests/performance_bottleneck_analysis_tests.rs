@@ -322,3 +322,469 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod bottleneck_detector_tests {
+    use super::*;
+    use beejs::analysis::bottleneck_detector::{
+        BottleneckDetector, BottleneckDetectorConfig, BottleneckType, BottleneckSeverity
+    };
+    use beejs::performance_analyzer::{PerformanceReport, ExecutionMetrics};
+
+    #[test]
+    fn test_bottleneck_detector_default_config() {
+        let detector = BottleneckDetector::new();
+        assert_eq!(detector.config.slow_execution_threshold_ms, 10.0);
+        assert_eq!(detector.config.low_cache_hit_rate_threshold, 50.0);
+        assert_eq!(detector.config.high_memory_usage_threshold_mb, 128.0);
+        assert_eq!(detector.config.event_loop_lag_threshold_ms, 5.0);
+    }
+
+    #[test]
+    fn test_bottleneck_detector_custom_config() {
+        let config = BottleneckDetectorConfig {
+            slow_execution_threshold_ms: 20.0,
+            low_cache_hit_rate_threshold: 60.0,
+            high_memory_usage_threshold_mb: 256.0,
+            event_loop_lag_threshold_ms: 10.0,
+        };
+        let detector = BottleneckDetector::with_config(config.clone());
+        assert_eq!(detector.config.slow_execution_threshold_ms, 20.0);
+        assert_eq!(detector.config.low_cache_hit_rate_threshold, 60.0);
+    }
+
+    #[test]
+    fn test_detect_slow_execution_critical() {
+        let detector = BottleneckDetector::new();
+        let report = PerformanceReport {
+            total_executions: 10,
+            average_time_ms: 25.0, // > 2x threshold
+            min_time_ms: 10.0,
+            max_time_ms: 40.0,
+            cache_hit_rate: 70.0,
+            total_code_executed: 1000,
+        };
+
+        let bottlenecks = detector.detect_bottlenecks(&report);
+        assert_eq!(bottlenecks.len(), 1);
+
+        let bottleneck = &bottlenecks[0];
+        assert!(matches!(bottleneck.bottleneck_type, BottleneckType::SlowExecution));
+        assert!(matches!(bottleneck.severity, BottleneckSeverity::Critical));
+        assert!(bottleneck.description.contains("25.00"));
+    }
+
+    #[test]
+    fn test_detect_slow_execution_high() {
+        let detector = BottleneckDetector::new();
+        let report = PerformanceReport {
+            total_executions: 10,
+            average_time_ms: 17.0, // > 1.5x threshold but < 2x
+            min_time_ms: 10.0,
+            max_time_ms: 30.0,
+            cache_hit_rate: 70.0,
+            total_code_executed: 1000,
+        };
+
+        let bottlenecks = detector.detect_bottlenecks(&report);
+        assert_eq!(bottlenecks.len(), 1);
+
+        let bottleneck = &bottlenecks[0];
+        assert!(matches!(bottleneck.severity, BottleneckSeverity::High));
+    }
+
+    #[test]
+    fn test_detect_slow_execution_medium() {
+        let detector = BottleneckDetector::new();
+        let report = PerformanceReport {
+            total_executions: 10,
+            average_time_ms: 12.0, // > threshold but < 1.5x
+            min_time_ms: 10.0,
+            max_time_ms: 20.0,
+            cache_hit_rate: 70.0,
+            total_code_executed: 1000,
+        };
+
+        let bottlenecks = detector.detect_bottlenecks(&report);
+        assert_eq!(bottlenecks.len(), 1);
+
+        let bottleneck = &bottlenecks[0];
+        assert!(matches!(bottleneck.severity, BottleneckSeverity::Medium));
+    }
+
+    #[test]
+    fn test_detect_low_cache_hit_rate_critical() {
+        let detector = BottleneckDetector::new();
+        let report = PerformanceReport {
+            total_executions: 10,
+            average_time_ms: 5.0,
+            min_time_ms: 3.0,
+            max_time_ms: 8.0,
+            cache_hit_rate: 15.0, // < 20%
+            total_code_executed: 1000,
+        };
+
+        let bottlenecks = detector.detect_bottlenecks(&report);
+        assert_eq!(bottlenecks.len(), 1);
+
+        let bottleneck = &bottlenecks[0];
+        assert!(matches!(bottleneck.bottleneck_type, BottleneckType::LowCacheHitRate));
+        assert!(matches!(bottleneck.severity, BottleneckSeverity::Critical));
+    }
+
+    #[test]
+    fn test_detect_low_cache_hit_rate_high() {
+        let detector = BottleneckDetector::new();
+        let report = PerformanceReport {
+            total_executions: 10,
+            average_time_ms: 5.0,
+            min_time_ms: 3.0,
+            max_time_ms: 8.0,
+            cache_hit_rate: 30.0, // 20-35%
+            total_code_executed: 1000,
+        };
+
+        let bottlenecks = detector.detect_bottlenecks(&report);
+        assert_eq!(bottlenecks.len(), 1);
+
+        let bottleneck = &bottlenecks[0];
+        assert!(matches!(bottleneck.severity, BottleneckSeverity::High));
+    }
+
+    #[test]
+    fn test_detect_low_cache_hit_rate_medium() {
+        let detector = BottleneckDetector::new();
+        let report = PerformanceReport {
+            total_executions: 10,
+            average_time_ms: 5.0,
+            min_time_ms: 3.0,
+            max_time_ms: 8.0,
+            cache_hit_rate: 40.0, // 35-50%
+            total_code_executed: 1000,
+        };
+
+        let bottlenecks = detector.detect_bottlenecks(&report);
+        assert_eq!(bottlenecks.len(), 1);
+
+        let bottleneck = &bottlenecks[0];
+        assert!(matches!(bottleneck.severity, BottleneckSeverity::Medium));
+    }
+
+    #[test]
+    fn test_detect_high_memory_usage() {
+        let detector = BottleneckDetector::new();
+        let report = PerformanceReport {
+            total_executions: 10,
+            average_time_ms: 5.0,
+            min_time_ms: 3.0,
+            max_time_ms: 8.0,
+            cache_hit_rate: 70.0,
+            total_code_executed: 200 * 1024 * 1024, // 200MB
+        };
+
+        let bottlenecks = detector.detect_bottlenecks(&report);
+        assert_eq!(bottlenecks.len(), 1);
+
+        let bottleneck = &bottlenecks[0];
+        assert!(matches!(bottleneck.bottleneck_type, BottleneckType::HighMemoryUsage));
+        assert!(matches!(bottleneck.severity, BottleneckSeverity::Medium));
+    }
+
+    #[test]
+    fn test_no_bottlenecks() {
+        let detector = BottleneckDetector::new();
+        let report = PerformanceReport {
+            total_executions: 10,
+            average_time_ms: 5.0,
+            min_time_ms: 3.0,
+            max_time_ms: 8.0,
+            cache_hit_rate: 80.0,
+            total_code_executed: 1000,
+        };
+
+        let bottlenecks = detector.detect_bottlenecks(&report);
+        assert!(bottlenecks.is_empty());
+    }
+
+    #[test]
+    fn test_detect_multiple_bottlenecks() {
+        let detector = BottleneckDetector::new();
+        let report = PerformanceReport {
+            total_executions: 10,
+            average_time_ms: 15.0, // Slow
+            min_time_ms: 10.0,
+            max_time_ms: 30.0,
+            cache_hit_rate: 30.0, // Low cache
+            total_code_executed: 200 * 1024 * 1024, // High memory
+        };
+
+        let bottlenecks = detector.detect_bottlenecks(&report);
+        assert_eq!(bottlenecks.len(), 3);
+
+        // Check that all three bottlenecks are detected
+        let types: Vec<_> = bottlenecks.iter()
+            .map(|b| &b.bottleneck_type)
+            .collect();
+
+        assert!(types.contains(&BottleneckType::SlowExecution));
+        assert!(types.contains(&BottleneckType::LowCacheHitRate));
+        assert!(types.contains(&BottleneckType::HighMemoryUsage));
+    }
+
+    #[test]
+    fn test_detect_bottlenecks_from_metrics_slow_executions() {
+        let detector = BottleneckDetector::new();
+        let metrics = vec![
+            ExecutionMetrics {
+                execution_time_ms: 20.0, // Slow
+                cache_hit: false,
+                code_length: 100,
+            },
+            ExecutionMetrics {
+                execution_time_ms: 8.0,
+                cache_hit: true,
+                code_length: 100,
+            },
+            ExecutionMetrics {
+                execution_time_ms: 18.0, // Slow
+                cache_hit: false,
+                code_length: 100,
+            },
+            ExecutionMetrics {
+                execution_time_ms: 7.0,
+                cache_hit: true,
+                code_length: 100,
+            },
+            ExecutionMetrics {
+                execution_time_ms: 22.0, // Slow
+                cache_hit: false,
+                code_length: 100,
+            },
+        ];
+
+        let bottlenecks = detector.detect_bottlenecks_from_metrics(&metrics);
+        assert_eq!(bottlenecks.len(), 1);
+
+        let bottleneck = &bottlenecks[0];
+        assert!(matches!(bottleneck.bottleneck_type, BottleneckType::SlowExecution));
+        assert!(bottleneck.description.contains("60.00%")); // 3 out of 5 are slow
+    }
+
+    #[test]
+    fn test_detect_bottlenecks_from_metrics_low_cache_hit_rate() {
+        let detector = BottleneckDetector::new();
+        let metrics = vec![
+            ExecutionMetrics {
+                execution_time_ms: 5.0,
+                cache_hit: true,
+                code_length: 100,
+            },
+            ExecutionMetrics {
+                execution_time_ms: 6.0,
+                cache_hit: true,
+                code_length: 100,
+            },
+            ExecutionMetrics {
+                execution_time_ms: 5.0,
+                cache_hit: false, // Cache miss
+                code_length: 100,
+            },
+        ];
+
+        let bottlenecks = detector.detect_bottlenecks_from_metrics(&metrics);
+        // 2 out of 3 are cache hits = 66.67% which is above 50% threshold, so no bottleneck
+        assert_eq!(bottlenecks.len(), 0);
+    }
+
+    #[test]
+    fn test_detect_bottlenecks_from_metrics_no_bottlenecks() {
+        let detector = BottleneckDetector::new();
+        let metrics = vec![
+            ExecutionMetrics {
+                execution_time_ms: 5.0,
+                cache_hit: true,
+                code_length: 100,
+            },
+            ExecutionMetrics {
+                execution_time_ms: 6.0,
+                cache_hit: true,
+                code_length: 100,
+            },
+            ExecutionMetrics {
+                execution_time_ms: 5.0,
+                cache_hit: true,
+                code_length: 100,
+            },
+        ];
+
+        let bottlenecks = detector.detect_bottlenecks_from_metrics(&metrics);
+        assert!(bottlenecks.is_empty());
+    }
+
+    #[test]
+    fn test_sort_bottlenecks_by_severity() {
+        let mut bottlenecks = vec![
+            Bottleneck {
+                bottleneck_type: BottleneckType::LowCacheHitRate,
+                severity: BottleneckSeverity::Low,
+                description: "Low cache hit rate".to_string(),
+                affected_metrics: vec![],
+                suggestion: "Improve caching".to_string(),
+                code_location: None,
+            },
+            Bottleneck {
+                bottleneck_type: BottleneckType::SlowExecution,
+                severity: BottleneckSeverity::Critical,
+                description: "Slow execution".to_string(),
+                affected_metrics: vec![],
+                suggestion: "Optimize code".to_string(),
+                code_location: None,
+            },
+            Bottleneck {
+                bottleneck_type: BottleneckType::HighMemoryUsage,
+                severity: BottleneckSeverity::High,
+                description: "High memory usage".to_string(),
+                affected_metrics: vec![],
+                suggestion: "Optimize memory".to_string(),
+                code_location: None,
+            },
+            Bottleneck {
+                bottleneck_type: BottleneckType::CPUIntensive,
+                severity: BottleneckSeverity::Medium,
+                description: "CPU intensive".to_string(),
+                affected_metrics: vec![],
+                suggestion: "Use Web Workers".to_string(),
+                code_location: None,
+            },
+        ];
+
+        BottleneckDetector::sort_bottlenecks_by_severity(&mut bottlenecks);
+
+        assert!(matches!(bottlenecks[0].severity, BottleneckSeverity::Critical));
+        assert!(matches!(bottlenecks[1].severity, BottleneckSeverity::High));
+        assert!(matches!(bottlenecks[2].severity, BottleneckSeverity::Medium));
+        assert!(matches!(bottlenecks[3].severity, BottleneckSeverity::Low));
+    }
+
+    #[test]
+    fn test_generate_summary() {
+        let detector = BottleneckDetector::new();
+        let bottlenecks = vec![
+            Bottleneck {
+                bottleneck_type: BottleneckType::SlowExecution,
+                severity: BottleneckSeverity::High,
+                description: "Slow execution 1".to_string(),
+                affected_metrics: vec![],
+                suggestion: "Optimize code".to_string(),
+                code_location: None,
+            },
+            Bottleneck {
+                bottleneck_type: BottleneckType::SlowExecution,
+                severity: BottleneckSeverity::Medium,
+                description: "Slow execution 2".to_string(),
+                affected_metrics: vec![],
+                suggestion: "Optimize code more".to_string(),
+                code_location: None,
+            },
+            Bottleneck {
+                bottleneck_type: BottleneckType::LowCacheHitRate,
+                severity: BottleneckSeverity::High,
+                description: "Low cache hit rate".to_string(),
+                affected_metrics: vec![],
+                suggestion: "Improve caching".to_string(),
+                code_location: None,
+            },
+        ];
+
+        let summary = detector.generate_summary(&bottlenecks);
+        assert_eq!(summary.get("SlowExecution"), Some(&2));
+        assert_eq!(summary.get("LowCacheHitRate"), Some(&1));
+    }
+
+    #[test]
+    fn test_severity_to_value() {
+        assert_eq!(BottleneckDetector::severity_to_value(&BottleneckSeverity::Critical), 5);
+        assert_eq!(BottleneckDetector::severity_to_value(&BottleneckSeverity::High), 4);
+        assert_eq!(BottleneckDetector::severity_to_value(&BottleneckSeverity::Medium), 3);
+        assert_eq!(BottleneckDetector::severity_to_value(&BottleneckSeverity::Low), 2);
+        assert_eq!(BottleneckDetector::severity_to_value(&BottleneckSeverity::Info), 1);
+    }
+
+    #[test]
+    fn test_empty_metrics() {
+        let detector = BottleneckDetector::new();
+        let bottlenecks = detector.detect_bottlenecks_from_metrics(&[]);
+        assert!(bottlenecks.is_empty());
+    }
+
+    #[test]
+    fn test_empty_report() {
+        let detector = BottleneckDetector::new();
+        let report = PerformanceReport {
+            total_executions: 0,
+            average_time_ms: 0.0,
+            min_time_ms: 0.0,
+            max_time_ms: 0.0,
+            cache_hit_rate: 0.0,
+            total_code_executed: 0,
+        };
+
+        let bottlenecks = detector.detect_bottlenecks(&report);
+        assert!(bottlenecks.is_empty());
+    }
+
+    #[test]
+    fn test_custom_threshold_configurations() {
+        // Test with very strict thresholds
+        let config = BottleneckDetectorConfig {
+            slow_execution_threshold_ms: 1.0,
+            low_cache_hit_rate_threshold: 90.0,
+            high_memory_usage_threshold_mb: 1.0,
+            event_loop_lag_threshold_ms: 1.0,
+        };
+        let detector = BottleneckDetector::with_config(config);
+
+        let report = PerformanceReport {
+            total_executions: 10,
+            average_time_ms: 5.0,
+            min_time_ms: 3.0,
+            max_time_ms: 8.0,
+            cache_hit_rate: 85.0,
+            total_code_executed: 10 * 1024 * 1024, // 10MB
+        };
+
+        let bottlenecks = detector.detect_bottlenecks(&report);
+        // Should detect slow execution (5.0 > 1.0), low cache (85.0 < 90.0), and high memory (10MB > 1MB)
+        assert_eq!(bottlenecks.len(), 3);
+    }
+
+    #[test]
+    fn test_bottleneck_type_variants() {
+        // Test all bottleneck type variants
+        let types = vec![
+            BottleneckType::SlowExecution,
+            BottleneckType::HighMemoryUsage,
+            BottleneckType::LowCacheHitRate,
+            BottleneckType::CPUIntensive,
+            BottleneckType::IOBlocking,
+            BottleneckType::HeapPressure,
+            BottleneckType::FrequentGC,
+            BottleneckType::EventLoopLag,
+            BottleneckType::Other("Custom bottleneck".to_string()),
+        ];
+
+        for bottleneck_type in types {
+            let bottleneck = Bottleneck {
+                bottleneck_type,
+                severity: BottleneckSeverity::Low,
+                description: "Test".to_string(),
+                affected_metrics: vec![],
+                suggestion: "Test".to_string(),
+                code_location: None,
+            };
+
+            // Ensure the bottleneck can be created and compared
+            assert!(matches!(bottleneck.severity, BottleneckSeverity::Low));
+        }
+    }
+}
