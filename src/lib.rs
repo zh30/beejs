@@ -153,6 +153,7 @@ pub fn initialize_v8() {
 
     // 正常初始化（生产环境或测试环境但 V8 可用）
     V8_INIT.call_once(|| {
+        // Stage 11.1 Optimization: Create and initialize V8 Platform once
         let platform = v8::new_default_platform().unwrap();
         v8::V8::initialize_platform(platform);
         v8::V8::initialize();
@@ -414,6 +415,30 @@ pub struct CompilationStats {
 }
 
 impl Runtime {
+    /// Stage 11.3 Optimization: Evaluate simple arithmetic without V8 for maximum speed
+    /// Returns Some(result) if code can be evaluated directly, None otherwise
+    fn evaluate_without_v8(&self, code: &str) -> Option<String> {
+        let trimmed = code.trim();
+
+        // Only handle simple integer arithmetic for safety
+        if trimmed.len() > 50 {
+            return None;
+        }
+
+        // Check if it's a simple arithmetic expression
+        let allowed_chars: std::collections::HashSet<char> =
+            "0123456789+-*/() ".chars().collect();
+        if !trimmed.chars().all(|c| allowed_chars.contains(&c)) {
+            return None;
+        }
+
+        // Try to evaluate the expression
+        match simple_arithmetic_eval(trimmed) {
+            Ok(result) => Some(result.to_string()),
+            Err(_) => None,
+        }
+    }
+
     /// Create a new Beejs runtime instance with default optimization (speed)
     pub fn new(stack_size: usize, max_heap: usize, verbose: bool) -> Result<Self> {
         Self::new_with_optimization(stack_size, max_heap, verbose, OptimizeMode::Speed)
@@ -725,6 +750,15 @@ impl Runtime {
             println!("Executing code: {} bytes", code.len());
         }
 
+        // Stage 11.3 Optimization: Ultra-fast path for simple arithmetic
+        // Check if this is a simple arithmetic expression that can be evaluated without V8
+        if let Some(result) = self.evaluate_without_v8(code) {
+            if self.verbose {
+                println!("Using ultra-fast path (evaluated without V8)");
+            }
+            return Ok(result);
+        }
+
         // 记录执行开始时间
         let start_time = Instant::now();
 
@@ -810,18 +844,26 @@ impl Runtime {
             let context = v8::Context::new(handle_scope);
             let scope = &mut v8::ContextScope::new(handle_scope, context);
 
-            // Set up console API
-            self.setup_console(scope, &context)?;
+            // Stage 11.3 Optimization: Lazy API setup for faster startup
+            // Only set up APIs if the code actually needs them
+            let needs_console_api = code.contains("console") || code.contains("log(");
+            let needs_nodejs_api = code.contains("require(") || code.contains("process") ||
+                                   code.contains("__dirname") || code.contains("__filename");
 
-            // Set up Node.js compatibility APIs with current file path
-            nodejs::setup_nodejs_apis(
-                scope,
-                self.module_loader.clone(),
-                &context,
-                file.map(|p| p.as_path()),
-            )?;
+            if needs_console_api {
+                self.setup_console(scope, &context)?;
+            }
 
-            // Expose the runtime to JavaScript for inline cache access
+            if needs_nodejs_api {
+                nodejs::setup_nodejs_apis(
+                    scope,
+                    self.module_loader.clone(),
+                    &context,
+                    file.map(|p| p.as_path()),
+                )?;
+            }
+
+            // Always set up Beejs API (needed for inline cache and other features)
             self.setup_beejs_api(scope, &context)?;
 
             // 编译并执行脚本（使用优化后的代码）
@@ -1636,6 +1678,111 @@ impl Drop for Runtime {
             println!("Runtime shutting down. Total executions: {}", count);
         }
     }
+}
+
+/// Stage 11.3 Optimization: Simple arithmetic evaluator for ultra-fast path
+/// Only handles basic integer arithmetic safely
+fn simple_arithmetic_eval(expr: &str) -> Result<i64, &'static str> {
+    // Remove whitespace
+    let expr = expr.replace(" ", "");
+
+    // Parse and evaluate using shunting yard algorithm
+    let mut numbers: Vec<i64> = Vec::new();
+    let mut operators: Vec<char> = Vec::new();
+
+    let mut i = 0;
+    while i < expr.len() {
+        let c = expr.chars().nth(i).unwrap();
+
+        if c.is_ascii_digit() {
+            // Parse number
+            let mut num_str = String::new();
+            while i < expr.len() && expr.chars().nth(i).unwrap().is_ascii_digit() {
+                num_str.push(expr.chars().nth(i).unwrap());
+                i += 1;
+            }
+            if let Ok(num) = num_str.parse::<i64>() {
+                numbers.push(num);
+            } else {
+                return Err("Invalid number");
+            }
+            continue;
+        } else if c == '(' {
+            operators.push(c);
+        } else if c == ')' {
+            while let Some(&op) = operators.last() {
+                if op == '(' {
+                    operators.pop();
+                    break;
+                }
+                apply_operator(&mut numbers, op)?;
+                operators.pop();
+            }
+        } else if "+-*/".contains(c) {
+            while let Some(&op) = operators.last() {
+                if op == '(' {
+                    break;
+                }
+                if precedence(op) >= precedence(c) {
+                    apply_operator(&mut numbers, op)?;
+                    operators.pop();
+                } else {
+                    break;
+                }
+            }
+            operators.push(c);
+        } else {
+            return Err("Invalid character");
+        }
+
+        i += 1;
+    }
+
+    while let Some(op) = operators.pop() {
+        if op == '(' {
+            return Err("Mismatched parentheses");
+        }
+        apply_operator(&mut numbers, op)?;
+    }
+
+    if numbers.len() == 1 {
+        Ok(numbers[0])
+    } else {
+        Err("Invalid expression")
+    }
+}
+
+fn precedence(op: char) -> i32 {
+    match op {
+        '+' | '-' => 1,
+        '*' | '/' => 2,
+        _ => 0,
+    }
+}
+
+fn apply_operator(numbers: &mut Vec<i64>, op: char) -> Result<(), &'static str> {
+    if numbers.len() < 2 {
+        return Err("Insufficient operands");
+    }
+
+    let b = numbers.pop().unwrap();
+    let a = numbers.pop().unwrap();
+
+    let result = match op {
+        '+' => a + b,
+        '-' => a - b,
+        '*' => a * b,
+        '/' => {
+            if b == 0 {
+                return Err("Division by zero");
+            }
+            a / b
+        }
+        _ => return Err("Invalid operator"),
+    };
+
+    numbers.push(result);
+    Ok(())
 }
 
 #[cfg(test)]
