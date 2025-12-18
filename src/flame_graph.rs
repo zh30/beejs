@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_flame_graph_creation() {
-        let mut flame_graph = FlameGraph::new();
+        let flame_graph = FlameGraph::new();
         assert!(flame_graph.is_ok());
         let flame_graph = flame_graph.unwrap();
         assert!(flame_graph.get_frame_count() == 0);

@@ -321,6 +321,11 @@ impl RuntimeLite {
             }
         }
 
+        // Stage 14: 逻辑运算符快路径优化 (&&, ||, !, ??, ?.)
+        if let Some(result) = self.evaluate_logical_operation(trimmed) {
+            return Some(result);
+        }
+
         None
     }
 
@@ -1300,6 +1305,167 @@ impl RuntimeLite {
         }
 
         None
+    }
+
+    /// Evaluate logical operations (&&, ||, !, ??, ?.)
+    /// Stage 14: 逻辑运算符快路径优化
+    fn evaluate_logical_operation(&self, code: &str) -> Option<String> {
+        let trimmed = code.trim();
+
+        // Logical NOT (!)
+        if trimmed.starts_with('!') {
+            let operand = trimmed[1..].trim();
+            // !true -> false, !false -> true
+            if operand == "true" {
+                return Some("false".to_string());
+            }
+            if operand == "false" {
+                return Some("true".to_string());
+            }
+            // !null -> true, !undefined -> true
+            if operand == "null" || operand == "undefined" {
+                return Some("true".to_string());
+            }
+            // !0 -> true, !1 -> false
+            if operand == "0" {
+                return Some("true".to_string());
+            }
+            if operand == "1" {
+                return Some("false".to_string());
+            }
+            // !"" -> true, !"hello" -> false
+            if (operand.starts_with('"') && operand.ends_with('"')) ||
+               (operand.starts_with('\'') && operand.ends_with('\'')) {
+                let content = &operand[1..operand.len()-1];
+                if content.is_empty() {
+                    return Some("true".to_string());
+                } else {
+                    return Some("false".to_string());
+                }
+            }
+        }
+
+        // Logical AND (&&) - only for simple boolean expressions
+        if trimmed.contains("&&") {
+            let parts: Vec<&str> = trimmed.split("&&").collect();
+            if parts.len() == 2 {
+                let left = parts[0].trim();
+                let right = parts[1].trim();
+
+                // Both must be simple values
+                if self.is_simple_boolean_value(left) && self.is_simple_boolean_value(right) {
+                    let left_bool = self.parse_boolean_value(left)?;
+                    let right_bool = self.parse_boolean_value(right)?;
+                    return Some((left_bool && right_bool).to_string());
+                }
+            }
+        }
+
+        // Logical OR (||) - only for simple boolean expressions
+        if trimmed.contains("||") {
+            let parts: Vec<&str> = trimmed.split("||").collect();
+            if parts.len() == 2 {
+                let left = parts[0].trim();
+                let right = parts[1].trim();
+
+                // Both must be simple values
+                if self.is_simple_boolean_value(left) && self.is_simple_boolean_value(right) {
+                    let left_bool = self.parse_boolean_value(left)?;
+                    let right_bool = self.parse_boolean_value(right)?;
+                    return Some((left_bool || right_bool).to_string());
+                }
+            }
+        }
+
+        // Nullish coalescing (??)
+        if trimmed.contains("??") {
+            let parts: Vec<&str> = trimmed.split("??").collect();
+            if parts.len() == 2 {
+                let left = parts[0].trim();
+                let right = parts[1].trim();
+
+                // Left operand is nullish if it's null or undefined
+                let left_is_nullish = left == "null" || left == "undefined";
+                let right_is_simple = self.is_simple_constant_value(right);
+
+                if left_is_nullish && right_is_simple {
+                    return Some(right.to_string());
+                }
+
+                // If left is not nullish, return it
+                if !left_is_nullish && self.is_simple_constant_value(left) {
+                    return Some(left.to_string());
+                }
+            }
+        }
+
+        // Optional chaining (?.property) - simple cases only
+        if trimmed.contains("?.") {
+            let parts: Vec<&str> = trimmed.split("?.").collect();
+            if parts.len() == 2 {
+                let left = parts[0].trim();
+                let prop = parts[1].trim();
+
+                // If left is null or undefined, return undefined
+                if left == "null" || left == "undefined" {
+                    return Some("undefined".to_string());
+                }
+
+                // For simple object literals, check if property exists
+                if left.starts_with('{') && left.ends_with('}') {
+                    let content = &left[1..left.len()-1];
+                    // Simple property lookup: {a: 1}?.a -> 1
+                    for pair in content.split(',') {
+                        let pair = pair.trim();
+                        if let Some((key, value)) = pair.split_once(':') {
+                            let key = key.trim().trim_matches('"').trim_matches('\'');
+                            if key == prop {
+                                return Some(value.trim().to_string());
+                            }
+                        }
+                    }
+                    // Property doesn't exist
+                    return Some("undefined".to_string());
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Check if value is a simple boolean value
+    fn is_simple_boolean_value(&self, value: &str) -> bool {
+        value == "true" || value == "false" ||
+        value == "0" || value == "1" ||
+        value == "null" || value == "undefined" ||
+        (value.starts_with('"') && value.ends_with('"')) ||
+        (value.starts_with('\'') && value.ends_with('\''))
+    }
+
+    /// Parse boolean value from string
+    fn parse_boolean_value(&self, value: &str) -> Option<bool> {
+        match value {
+            "true" => Some(true),
+            "false" => Some(false),
+            "0" => Some(false),
+            "1" => Some(true),
+            "null" | "undefined" => Some(false),
+            s if (s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')) => {
+                let content = &s[1..s.len()-1];
+                Some(!content.is_empty())
+            },
+            _ => None,
+        }
+    }
+
+    /// Check if value is a simple constant
+    fn is_simple_constant_value(&self, value: &str) -> bool {
+        value.parse::<i64>().is_ok() ||
+        value.parse::<f64>().is_ok() ||
+        value == "true" || value == "false" ||
+        value == "null" || value == "undefined" ||
+        (value.starts_with('"') && value.ends_with('"')) ||
+        (value.starts_with('\'') && value.ends_with('\''))
     }
 }
 
