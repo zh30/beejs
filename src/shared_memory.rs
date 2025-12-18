@@ -6,17 +6,14 @@ use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
 use std::path::PathBuf;
-use std::fs::OpenOptions;
-use std::os::unix::io::AsRawFd;
-use tokio::fs::File;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use anyhow::{Result, Context};
+use anyhow::Result;
 
 /// 共享内存区域
 /// 包装一个可共享的内存区域，支持跨进程/隔离区访问
 #[derive(Debug)]
 pub struct SharedMemoryRegion {
     /// 唯一标识符
+    #[allow(dead_code)]
     id: String,
     /// 内存数据（使用Arc实现共享）
     data: Arc<Mutex<Vec<u8>>>,
@@ -25,12 +22,15 @@ pub struct SharedMemoryRegion {
     /// 写者计数器
     writers: Arc<AtomicUsize>,
     /// 创建时间
+    #[allow(dead_code)]
     created_at: Instant,
     /// 最后访问时间
     last_accessed: Arc<Mutex<Instant>>,
     /// 是否持久化
+    #[allow(dead_code)]
     persistent: bool,
     /// 文件路径（如果是持久化共享）
+    #[allow(dead_code)]
     file_path: Option<PathBuf>,
 }
 
@@ -292,6 +292,7 @@ impl SharedMemoryManager {
     }
 
     /// 清理过期区域
+    #[allow(dead_code)]
     fn cleanup_regions(&self) {
         let mut cleaned = 0;
         let now = Instant::now();
