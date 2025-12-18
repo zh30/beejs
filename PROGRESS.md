@@ -140,7 +140,35 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
   - ✅ 166/166库测试全部通过，无性能回归
 - [x] 阶段12.3.3: 内存共享优化 ✅ (2025-12-18 15:30)
 - [x] 阶段12.3.4: 并发性能测试验证 ✅ (2025-12-18)
-**状态**: ✅ Stage 12.3.4 Completed - 并发性能测试验证套件完成 (2025-12-18)
+
+**阶段12.3.5: Stage 13 测试修复重大突破** (2025-12-18 14:50) 🎯
+- ✅ **V8初始化问题修复** (tests/stage_13_performance_breakthrough_tests.rs)
+  - 修复 test_runtime_lite_creation_performance: 添加 beejs::initialize_v8() 调用
+  - 修复 test_v8_initialization: 确保V8在检查前已正确初始化
+  - 修复所有V8相关测试: 在测试开始处统一初始化V8引擎
+
+- ✅ **Isolate生命周期问题修复**
+  - 修复 test_end_to_end_performance: 为每次迭代创建新的RuntimeLite实例
+  - 修复 test_fast_path_vs_v8_comparison: 避免重用Runtime实例导致Isolate释放
+  - 修复 test_concurrent_execution_performance: 每个线程独立创建Runtime实例
+
+- ✅ **测试模式标准化**
+  - 参考成功测试的模式 (current_performance_validation_tests.rs)
+  - 每次执行创建新的Runtime实例，避免V8 Isolate生命周期问题
+  - 统一V8初始化流程，确保测试环境稳定性
+
+- ✅ **性能验证成果**
+  - **修复前**: 5/8 测试通过 (62.5% 通过率)
+  - **修复后**: 8/8 测试通过 (100% 通过率) 🎉
+  - 库测试: 182/182 通过，无回归
+  - 编译状态: 零警告零错误，构建100%清洁
+
+- ✅ **技术要点**
+  - V8初始化顺序: 必须先 initialize_v8() 再使用V8功能
+  - Isolate生命周期: 每个execute_code调用应使用独立的Runtime实例
+  - 并发安全: 多线程场景中避免共享Runtime实例
+
+**状态**: ✅ Stage 12.3.5 Completed - Stage 13测试全部通过 (2025-12-18 14:50)
 
 **阶段12.3.4重大突破成果 (2025-12-18)**:
 - ✅ **并发性能测试验证套件** (tests/stage_12_3_4_concurrent_performance_validation_tests.rs)
