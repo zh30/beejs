@@ -8,6 +8,31 @@ const WORKER_MODE_FLAG: &str = "--worker-mode";
 const WORKER_ID_FLAG: &str = "--worker-id";
 const SOCKET_PATH_FLAG: &str = "--socket-path";
 
+/// Stage 19 Optimization: Ultra-fast evaluation for super simple expressions
+/// This completely bypasses V8 for the fastest possible startup time
+fn eval_super_simple_fast(code: &str) -> Option<String> {
+    let code = code.trim();
+
+    // Try literal evaluation first
+    if let Some(literal) = eval_simple_literal(code) {
+        return Some(literal);
+    }
+
+    // Try simple arithmetic
+    if code.chars().all(|c| c.is_ascii_digit() || "+-*/() ".contains(c)) && code.len() < 20 {
+        if let Ok(result) = simple_arithmetic_eval_fast(code) {
+            return Some(result.to_string());
+        }
+    }
+
+    // Try simple string operations
+    if let Some(string_result) = eval_simple_string_op(code) {
+        return Some(string_result);
+    }
+
+    None
+}
+
 /// Stage 11.4 Optimization: Ultra-fast arithmetic evaluator for command line
 /// Optimized for simple expressions like "2+2" or "5*3+1"
 fn simple_arithmetic_eval_fast(expr: &str) -> Result<i64, &'static str> {
@@ -379,67 +404,81 @@ fn main() -> Result<()> {
     // This ensures V8 is ready before any script execution, avoiding initialization overhead
     beejs::initialize_v8();
 
-    // Fast path: Check for version flag without full parsing
-    let args_vec: Vec<String> = std::env::args().collect();
+    // Stage 19 Optimization: Ultra-fast parameter parsing
+    // Avoid collecting all args into Vec to reduce allocation overhead
+    let mut arg_iter = std::env::args();
 
-    // Stage 11.4 Optimization: Enhanced fast path checks for parameter parsing
-    // Optimization 1: Check version first without full parsing (ZERO overhead)
-    if args_vec.len() == 2 && (args_vec[1] == "--version" || args_vec[1] == "-V") {
+    // Skip program name
+    let _ = arg_iter.next();
+
+    // Get first argument if exists
+    let first_arg = arg_iter.next();
+    let second_arg = arg_iter.next();
+
+    // Stage 19.1: Version check (fastest possible path)
+    if first_arg.as_deref() == Some("--version") || first_arg.as_deref() == Some("-V") {
         println!("beejs {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
 
-    // Optimization 2: Quick check for help flag (minimal parsing)
-    if args_vec.len() == 2 && (args_vec[1] == "--help" || args_vec[1] == "-h") {
-        // Use print_help instead of full parse to avoid double parsing
+    // Stage 19.2: Help check
+    if first_arg.as_deref() == Some("--help") || first_arg.as_deref() == Some("-h") {
         let mut app = clap::Command::new("beejs");
         let _ = app.print_help();
         return Ok(());
     }
 
-    // Stage 11.4 Optimization: Add fast path for common flags
-    // Check for eval flag with simple code (can skip some parsing)
-    if args_vec.len() == 3 && args_vec[1] == "-e" {
-        // Fast path: Simple arithmetic eval
-        let code = &args_vec[2];
-        if code.chars().all(|c| c.is_ascii_digit() || "+-*/() ".contains(c)) && code.len() < 20 {
-            // Use ultra-fast arithmetic evaluation without V8
-            if let Ok(result) = simple_arithmetic_eval_fast(code) {
-                println!("{}", result);
-                return Ok(());
+    // Stage 19.3: Ultra-fast eval for ultra-simple expressions (ZERO V8 path)
+    if first_arg.as_deref() == Some("-e") {
+        if let Some(code) = second_arg.as_deref() {
+            // Check for super simple patterns (no V8 needed at all)
+            if is_super_simple_expression(code) {
+                if let Some(result) = eval_super_simple_fast(code) {
+                    println!("{}", result);
+                    return Ok(());
+                }
+            }
+
+            // Fallback: Check for simple arithmetic pattern
+            if code.chars().all(|c| c.is_ascii_digit() || "+-*/() ".contains(c)) && code.len() < 20 {
+                if let Ok(result) = simple_arithmetic_eval_fast(code) {
+                    println!("{}", result);
+                    return Ok(());
+                }
             }
         }
     }
 
-    // Optimization 3: Worker mode fast path (internal optimization)
-    if args_vec.len() >= 2 && args_vec[1] == WORKER_MODE_FLAG {
-        return run_worker_mode(&args_vec);
-    }
-
-    // Stage 11.4.5 Optimization: Add fast path for more common flags
-    // Check for test flag without full parsing
-    if args_vec.len() == 2 && args_vec[1] == "--test" {
+    // Stage 19.4: Test flag fast path
+    if first_arg.as_deref() == Some("--test") {
         println!("Running tests (fast path)...");
-        // We still need to parse for full test configuration, but we can optimize the check
-        let args = Args::parse_from(args_vec.clone());
+        // Collect remaining args for parsing
+        let args_vec: Vec<String> = std::env::args().collect();
+        let args = Args::parse_from(args_vec);
         return run_tests(&args);
     }
 
-    // Check for watch flag without full parsing
-    if args_vec.len() == 3 && args_vec[1] == "--watch" {
-        let args = Args::parse_from(args_vec.clone());
+    // Stage 19.5: Watch flag fast path
+    if first_arg.as_deref() == Some("--watch") {
+        let args_vec: Vec<String> = std::env::args().collect();
+        let args = Args::parse_from(args_vec);
         return run_watch_mode(&args);
     }
 
-    // Check for verbose flag (simple check before full parse)
-    if args_vec.len() == 2 && args_vec[1] == "--verbose" {
+    // Stage 19.6: Verbose flag fast path
+    if first_arg.as_deref() == Some("--verbose") {
         println!("Verbose mode enabled (fast path)");
         println!("beejs {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
 
-    // Stage 10.1: Single parse() call - eliminate double parsing overhead
-    // Parse all arguments only when we need them (moved from after help check)
+    // Stage 19.7: Worker mode fast path
+    if first_arg.as_deref() == Some(WORKER_MODE_FLAG) {
+        let args_vec: Vec<String> = std::env::args().collect();
+        return run_worker_mode(&args_vec);
+    }
+
+    // Full parsing for complex cases
     let args = Args::parse();
 
     // Handle package manager commands (early exit)

@@ -180,6 +180,15 @@ pub fn initialize_v8() {
         v8::V8::initialize();
         V8_INITIALIZED.store(true, std::sync::atomic::Ordering::SeqCst);
         V8_AVAILABLE.store(true, std::sync::atomic::Ordering::SeqCst);
+
+        // Stage 19 Optimization: Pre-warm lite runtime for faster startup
+        // This is done in background to avoid blocking main initialization
+        std::thread::spawn(|| {
+            if let Ok(runtime) = crate::runtime_lite::get_global_lite_runtime(false) {
+                // Pre-warm the runtime by executing a simple script
+                let _ = runtime.execute_code("1 + 1");
+            }
+        });
     });
 
     // 完成初始化
@@ -300,27 +309,125 @@ pub fn get_smart_runtime(
     verbose: bool,
     optimize_mode: OptimizeMode,
 ) -> Result<std::sync::Arc<dyn RuntimeTrait>> {
-    // Analyze code complexity to decide which runtime to use
-    let is_simple_code = if let Some(code) = code_or_file {
-        is_simple_script(code)
+    // Stage 19: Lazy loading optimization based on code complexity
+    let complexity_level = if let Some(code) = code_or_file {
+        analyze_code_complexity(code)
     } else {
-        false
+        ComplexityLevel::Unknown
     };
 
-    if is_simple_code {
-        // Use lightweight runtime for simple scripts (much faster startup)
-        if verbose {
-            println!("SmartRuntime: Using lightweight runtime for simple script");
+    match complexity_level {
+        ComplexityLevel::UltraSimple => {
+            // Ultra-fast path: minimal V8 initialization, no extra features
+            if verbose {
+                println!("SmartRuntime: Using ultra-fast path for ultra-simple script");
+            }
+            let lite_runtime = get_global_lite_runtime(verbose)?;
+            Ok(lite_runtime as std::sync::Arc<dyn RuntimeTrait>)
         }
-        let lite_runtime = get_global_lite_runtime(verbose)?;
-        Ok(lite_runtime as std::sync::Arc<dyn RuntimeTrait>)
+        ComplexityLevel::Simple => {
+            // Fast path: lightweight runtime with basic features
+            if verbose {
+                println!("SmartRuntime: Using lightweight runtime for simple script");
+            }
+            let lite_runtime = get_global_lite_runtime(verbose)?;
+            Ok(lite_runtime as std::sync::Arc<dyn RuntimeTrait>)
+        }
+        ComplexityLevel::Complex => {
+            // Full path: load all optimizations and features
+            if verbose {
+                println!("SmartRuntime: Using full runtime for complex script");
+            }
+            let full_runtime = get_global_runtime(stack_size, max_heap, verbose, optimize_mode)?;
+            Ok(full_runtime as std::sync::Arc<dyn RuntimeTrait>)
+        }
+        ComplexityLevel::Unknown => {
+            // Default to lightweight for unknown cases
+            let lite_runtime = get_global_lite_runtime(verbose)?;
+            Ok(lite_runtime as std::sync::Arc<dyn RuntimeTrait>)
+        }
+    }
+}
+
+/// Code complexity analysis levels
+#[derive(Debug, Clone, PartialEq)]
+enum ComplexityLevel {
+    UltraSimple,  // Just numbers, strings, basic operations
+    Simple,       // Simple functions, no async/await
+    Complex,      // Classes, async/await, modules
+    Unknown,
+}
+
+/// Enhanced code complexity analysis with more granular levels
+fn analyze_code_complexity(code: &str) -> ComplexityLevel {
+    let mut ultra_simple_score = 0;
+    let mut simple_score = 0;
+    let mut complex_score = 0;
+
+    // Ultra-simple indicators (no V8 features needed)
+    if code.trim().chars().all(|c| c.is_ascii_digit() || "+-*/() ".contains(c)) && code.len() < 20 {
+        return ComplexityLevel::UltraSimple;
+    }
+
+    // Ultra-simple: only literals and basic operations
+    if code.matches('\'').count() <= 1 && code.matches('\"').count() <= 1 &&
+       !code.contains("function") && !code.contains("=>") &&
+       !code.contains("class") && !code.contains("async") &&
+       !code.contains("await") && !code.contains("import") &&
+       !code.contains("export") && !code.contains("require(") &&
+       !code.contains("Promise") && !code.contains("for(") &&
+       !code.contains("while(") && code.len() < 50 {
+        ultra_simple_score += 1;
+    }
+
+    // Simple indicators
+    let simple_patterns = [
+        ("console.log", 1),
+        ("const ", 1),
+        ("let ", 1),
+        ("var ", 1),
+        ("if(", 1),
+        ("else", 1),
+    ];
+
+    for (pattern, weight) in &simple_patterns {
+        if code.contains(pattern) {
+            simple_score += weight;
+        }
+    }
+
+    // Complex indicators
+    let complex_patterns = [
+        ("class ", 3),
+        ("async ", 3),
+        ("await ", 3),
+        ("import ", 3),
+        ("export ", 3),
+        ("require(", 3),
+        ("Promise", 2),
+        ("for(", 2),
+        ("while(", 2),
+        ("=>", 2),  // arrow functions
+    ];
+
+    for (pattern, weight) in &complex_patterns {
+        if code.contains(pattern) {
+            complex_score += weight;
+        }
+    }
+
+    // Also consider code length
+    let length_score = (code.len() / 100).min(5);
+
+    // Determine complexity level based on scores
+    if ultra_simple_score > 0 && complex_score == 0 && simple_score <= 2 {
+        ComplexityLevel::UltraSimple
+    } else if complex_score >= 5 || length_score >= 3 {
+        ComplexityLevel::Complex
+    } else if simple_score > 0 || length_score >= 1 {
+        ComplexityLevel::Simple
     } else {
-        // Use full runtime for complex scripts (needs all optimizations)
-        if verbose {
-            println!("SmartRuntime: Using full runtime for complex script");
-        }
-        let full_runtime = get_global_runtime(stack_size, max_heap, verbose, optimize_mode)?;
-        Ok(full_runtime as std::sync::Arc<dyn RuntimeTrait>)
+        ComplexityLevel::Unknown
     }
 }
 
