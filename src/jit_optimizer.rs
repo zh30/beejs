@@ -128,46 +128,96 @@ impl JITOptimizer {
         Self::new(JITThresholds::default(), JITStrategy::Adaptive)
     }
 
-    /// 分析代码复杂度（改进版）
+    /// 分析代码复杂度（超级优化版）
     pub fn analyze_code_complexity(code: &str) -> CodeComplexity {
-        let lines: Vec<&str> = code.lines().collect();
-        let line_count = lines.len();
+        // 优化：使用一次性扫描而不是多次matches调用
+        let mut fn_score = 0;
+        let mut loop_score = 0;
+        let mut condition_score = 0;
+        let mut async_score = 0;
+        let mut object_score = 0;
 
-        // 更准确的函数定义统计
-        let fn_count = code.matches("function").count()
-            + code.matches("=>").count()
-            + code.matches("async function").count()
-            + code.matches("() =>").count();
+        // 一次性遍历计算所有指标
+        let bytes = code.as_bytes();
+        let mut i = 0;
 
-        // 更全面的循环统计
-        let loop_count = code.matches("for").count()
-            + code.matches("while").count()
-            + code.matches("forEach").count()
-            + code.matches("map(").count()
-            + code.matches("filter(").count()
-            + code.matches("reduce(").count()
-            + code.matches("for...of").count()
-            + code.matches("for...in").count();
+        while i < bytes.len() {
+            // 检查函数定义
+            if bytes[i] == b'f' {
+                if i + 8 < bytes.len() && &bytes[i..i+8] == b"function" {
+                    fn_score += 3;
+                    i += 8;
+                    continue;
+                }
+                if i + 2 < bytes.len() && &bytes[i..i+2] == b"()=" {
+                    fn_score += 2;
+                    i += 2;
+                    continue;
+                }
+            }
 
-        // 更全面的条件语句统计
-        let condition_count = code.matches("if").count()
-            + code.matches("?").count()
-            + code.matches("switch").count()
-            + code.matches("case ").count()
-            + code.matches("&&").count()
-            + code.matches("||").count()
-            + code.matches("try {").count();
+            // 检查箭头函数
+            if bytes[i] == b'=' && i + 1 < bytes.len() && bytes[i + 1] == b'>' {
+                fn_score += 1;
+                i += 2;
+                continue;
+            }
+
+            // 检查循环
+            if bytes[i] == b'f' {
+                if i + 3 < bytes.len() && &bytes[i..i+3] == b"for" {
+                    loop_score += 2;
+                    i += 3;
+                    continue;
+                }
+            }
+
+            if bytes[i] == b'w' {
+                if i + 5 < bytes.len() && &bytes[i..i+5] == b"while" {
+                    loop_score += 2;
+                    i += 5;
+                    continue;
+                }
+            }
+
+            // 检查条件
+            if bytes[i] == b'i' {
+                if i + 2 < bytes.len() && &bytes[i..i+2] == b"if" {
+                    condition_score += 1;
+                    i += 2;
+                    continue;
+                }
+            }
+
+            // 检查async
+            if bytes[i] == b'a' {
+                if i + 5 < bytes.len() && &bytes[i..i+5] == b"async" {
+                    async_score += 3;
+                    i += 5;
+                    continue;
+                }
+            }
+
+            // 检查对象
+            if bytes[i] == b'{' {
+                object_score += 1;
+            }
+
+            i += 1;
+        }
 
         // 计算复杂度分数（更激进的权重）
-        let complexity_score = (fn_count * 5)        // 函数权重提升
-            + (loop_count * 10)      // 循环权重大幅提升
-            + (condition_count * 3)  // 条件语句权重提升
-            + (line_count / 5);      // 行数权重提升
+        let complexity_score = (fn_score * 5)        // 函数权重提升
+            + (loop_score * 10)      // 循环权重大幅提升
+            + (condition_score * 3)  // 条件语句权重提升
+            + (async_score * 4)      // async 权重提升
+            + (object_score / 2);    // 对象权重适中提升
 
-        // 更激进的阈值
-        if complexity_score < 15 {
+        // 更激进的阈值，确保所有代码都被积极优化
+        // Simple: fn=1, loop=1, condition=1 -> (1*5)+(1*10)+(1*3)=18 -> Simple if < 20
+        if complexity_score < 20 {
             CodeComplexity::Simple
-        } else if complexity_score < 50 {
+        } else if complexity_score <= 60 {
             CodeComplexity::Medium
         } else {
             CodeComplexity::Complex
@@ -175,7 +225,7 @@ impl JITOptimizer {
     }
 
     /// 更新执行统计
-    pub fn update_execution_stats(&self, code_hash: &str, execution_time: Duration) {
+    pub fn update_execution_stats(&self, code_hash: &str, code: &str, execution_time: Duration) {
         let mut stats = self.execution_stats.lock().unwrap();
 
         if let Some(stat) = stats.get_mut(code_hash) {
@@ -184,7 +234,7 @@ impl JITOptimizer {
             stat.avg_time = stat.total_time / stat.execution_count as u32;
             stat.last_execution = Instant::now();
         } else {
-            let complexity = Self::analyze_code_complexity(""); // 需要实际代码
+            let complexity = Self::analyze_code_complexity(code); // 使用实际代码进行分析
             stats.insert(
                 code_hash.to_string(),
                 ExecutionStat {
@@ -436,9 +486,10 @@ mod tests {
     fn test_execution_stats_update() {
         let optimizer = JITOptimizer::new_default();
         let code_hash = "test_code";
+        let code = "let x = 1; let y = 2;";
         let exec_time = Duration::from_millis(10);
 
-        optimizer.update_execution_stats(code_hash, exec_time);
+        optimizer.update_execution_stats(code_hash, code, exec_time);
 
         let stats = optimizer.get_compile_stats();
         // 验证统计已更新 - usize类型确保了值不为负数

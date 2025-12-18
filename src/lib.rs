@@ -1257,9 +1257,9 @@ impl Runtime {
     }
 
     /// Record a code execution for JIT optimization
-    pub fn record_execution(&self, code_hash: &str, execution_time: std::time::Duration) {
+    pub fn record_execution(&self, code_hash: &str, code: &str, execution_time: std::time::Duration) {
         if let Some(optimizer) = &self.jit_optimizer {
-            optimizer.update_execution_stats(code_hash, execution_time);
+            optimizer.update_execution_stats(code_hash, code, execution_time);
         }
     }
 
