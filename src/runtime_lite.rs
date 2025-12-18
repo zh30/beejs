@@ -205,10 +205,13 @@ impl RuntimeLite {
         }
 
         // Simple object literals: {a: 1, b: 2}
+        // NOTE: Object literals should NOT use fast path - they need V8 execution
+        // to properly evaluate and convert to string representation
         if trimmed.starts_with('{') && trimmed.ends_with('}') {
             // Validate it's a simple object literal (no nested objects or functions)
             if self.is_simple_object_literal(trimmed) {
-                return Some(trimmed.to_string());
+                // Let V8 handle the object literal to get proper string representation
+                return None;
             }
         }
 

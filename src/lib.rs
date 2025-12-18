@@ -1495,3 +1495,6 @@ mod tests {
         assert!(stats.hits > 0);
     }
 }
+
+#[cfg(test)]
+mod fast_path_tests;
