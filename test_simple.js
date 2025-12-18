@@ -1,1 +1,1 @@
-console.log("Simple test: " + (10 + 5));
+console.log("Hello from Beejs\!");

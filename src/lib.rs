@@ -35,6 +35,7 @@ pub mod package_manager;
 pub mod watcher;
 pub mod repl;
 pub mod edge;
+pub mod ai_inference;
 
 // 重新导出 REPL 相关类型
 pub use repl::{Repl, ReplConfig};

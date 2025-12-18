@@ -509,7 +509,7 @@ mod tests {
 
         // Access patterns might predict future accesses
         let recent = vec!["user_1".to_string(), "user_2".to_string()];
-        let predictions = cache.predictor.write().await.predict(&recent).await;
+        let predictions = cache.predictor.write().await.predict(&recent);
         assert!(predictions.is_ok());
     }
 
