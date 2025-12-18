@@ -34,7 +34,7 @@ mod precompiled_cache;
 pub mod package_manager;
 pub mod performance_reporter;
 pub mod performance_analyzer;
-mod server;
+pub mod server;
 mod test_runner;
 mod typescript;
 pub mod watcher;
