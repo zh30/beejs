@@ -17,6 +17,11 @@ use tokio::time::timeout;
 use crate::Runtime;
 use crate::lock_free::LockFreeCounter;
 
+// 内存共享模块
+use crate::shared_memory::{SharedMemoryManager, SharedMemoryConfig};
+use crate::shared_object_cache::{SharedObjectCache, SharedObjectCacheConfig};
+use crate::memory_mapped_file::{MemoryMappedFileManager, MemoryMappedFileConfig};
+
 /// 并发执行配置
 #[derive(Debug, Clone)]
 pub struct ConcurrentConfig {
@@ -32,6 +37,14 @@ pub struct ConcurrentConfig {
     pub enable_prewarm: bool,
     /// 预热Runtime数量
     pub prewarm_count: usize,
+    /// 是否启用内存共享
+    pub enable_memory_sharing: bool,
+    /// 共享内存配置
+    pub shared_memory_config: SharedMemoryConfig,
+    /// 共享对象缓存配置
+    pub shared_object_cache_config: SharedObjectCacheConfig,
+    /// 内存映射文件配置
+    pub memory_mapped_file_config: MemoryMappedFileConfig,
 }
 
 impl Default for ConcurrentConfig {
@@ -43,6 +56,10 @@ impl Default for ConcurrentConfig {
             task_timeout: Duration::from_secs(30),
             enable_prewarm: true,
             prewarm_count: 50,
+            enable_memory_sharing: true,
+            shared_memory_config: SharedMemoryConfig::default(),
+            shared_object_cache_config: SharedObjectCacheConfig::default(),
+            memory_mapped_file_config: MemoryMappedFileConfig::default(),
         }
     }
 }
@@ -812,14 +829,41 @@ mod work_stealing_tests {
 pub struct ConcurrentRuntimePool {
     config: ConcurrentConfig,
     stats: Arc<ConcurrentExecutionStats>,
+    /// 共享内存管理器
+    shared_memory_manager: Option<Arc<SharedMemoryManager>>,
+    /// 共享对象缓存
+    shared_object_cache: Option<Arc<SharedObjectCache>>,
+    /// 内存映射文件管理器
+    memory_mapped_file_manager: Option<Arc<MemoryMappedFileManager>>,
 }
 
 impl ConcurrentRuntimePool {
     /// 创建新的并发运行时池
     pub fn new(config: ConcurrentConfig) -> Self {
+        // 初始化内存共享组件
+        let (shared_memory_manager, shared_object_cache, memory_mapped_file_manager) =
+            if config.enable_memory_sharing {
+                println!("🔧 初始化内存共享组件...");
+                (
+                    Some(Arc::new(SharedMemoryManager::new(config.shared_memory_config.clone()))),
+                    Some(Arc::new(SharedObjectCache::new(config.shared_object_cache_config.clone()))),
+                    Some(Arc::new(MemoryMappedFileManager::new(config.memory_mapped_file_config.clone()))),
+                )
+            } else {
+                (None, None, None)
+            };
+
+        println!("✅ 内存共享组件初始化完成");
+        println!("  - 共享内存: {}", shared_memory_manager.is_some());
+        println!("  - 对象缓存: {}", shared_object_cache.is_some());
+        println!("  - 内存映射: {}", memory_mapped_file_manager.is_some());
+
         Self {
             config: config.clone(),
             stats: Arc::new(ConcurrentExecutionStats::new()),
+            shared_memory_manager,
+            shared_object_cache,
+            memory_mapped_file_manager,
         }
     }
 
@@ -860,6 +904,52 @@ impl ConcurrentRuntimePool {
             }
             // 如果池已满，丢弃这个Runtime实例
         });
+    }
+
+    /// 获取共享内存管理器
+    pub fn get_shared_memory_manager(&self) -> Option<&Arc<SharedMemoryManager>> {
+        self.shared_memory_manager.as_ref()
+    }
+
+    /// 获取共享对象缓存
+    pub fn get_shared_object_cache(&self) -> Option<&Arc<SharedObjectCache>> {
+        self.shared_object_cache.as_ref()
+    }
+
+    /// 获取内存映射文件管理器
+    pub fn get_memory_mapped_file_manager(&self) -> Option<&Arc<MemoryMappedFileManager>> {
+        self.memory_mapped_file_manager.as_ref()
+    }
+
+    /// 获取内存共享统计信息
+    pub fn get_memory_sharing_stats(&self) -> String {
+        let mut stats = String::new();
+
+        if let Some(manager) = &self.shared_memory_manager {
+            stats.push_str("Shared Memory:\n");
+            let sm_stats = manager.get_stats();
+            stats.push_str(&format!("  - Regions: {}\n", sm_stats.total_regions));
+            stats.push_str(&format!("  - Reads: {}\n", sm_stats.total_reads));
+            stats.push_str(&format!("  - Writes: {}\n", sm_stats.total_writes));
+        }
+
+        if let Some(cache) = &self.shared_object_cache {
+            stats.push_str("Shared Object Cache:\n");
+            let oc_stats = cache.get_stats();
+            stats.push_str(&format!("  - Objects: {}\n", oc_stats.total_objects));
+            stats.push_str(&format!("  - Hits: {}\n", oc_stats.cache_hits));
+            stats.push_str(&format!("  - Misses: {}\n", oc_stats.cache_misses));
+        }
+
+        if let Some(mgr) = &self.memory_mapped_file_manager {
+            stats.push_str("Memory Mapped Files:\n");
+            let mm_stats = mgr.get_stats();
+            stats.push_str(&format!("  - Mappings: {}\n", mm_stats.total_mappings));
+            stats.push_str(&format!("  - Reads: {}\n", mm_stats.total_reads));
+            stats.push_str(&format!("  - Bytes Read: {}\n", mm_stats.total_bytes_read));
+        }
+
+        stats
     }
 
     /// 预热Runtime池

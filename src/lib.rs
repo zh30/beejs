@@ -45,6 +45,11 @@ mod test_runner;
 mod typescript;
 pub mod watcher;
 
+// 新增内存共享模块
+pub mod shared_memory;
+pub mod shared_object_cache;
+pub mod memory_mapped_file;
+
 pub use test_runner::{TestCase, TestRunner, TestRunnerConfig, TestStats, TestStatus, TestSuite};
 
 // Re-export AI module types for easier testing
