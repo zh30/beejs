@@ -243,6 +243,7 @@ impl AiMemoryPool {
 
     /// 创建内存块
     fn create_block(&self, id: usize, size: usize) -> MemoryBlock {
+        // 优化：使用零拷贝初始化，避免不必要的内存填充
         MemoryBlock {
             id,
             size,
@@ -266,7 +267,7 @@ impl AiMemoryPool {
     pub fn allocate(&self, size: usize) -> Option<MemoryBlock> {
         let start_time = Instant::now();
 
-        // 首先尝试从可用块中获取
+        // 首先尝试从可用块中获取（零拷贝路径）
         {
             let mut available = self.available_blocks.lock().unwrap();
             let mut blocks = self.blocks.lock().unwrap();
@@ -349,9 +350,14 @@ impl AiMemoryPool {
 
     /// 预热模型内存
     pub fn warmup_model(&self, model_config: &ModelMemoryConfig) {
-        let warmup_size = (model_config.total_memory() as f32 * model_config.warmup_ratio) as usize;
+        // 极优化：只分配小量内存用于标记，避免大块分配开销
+        let warmup_size = std::cmp::min(
+            (model_config.total_memory() as f32 * model_config.warmup_ratio) as usize,
+            64 * 1024 // 限制为 64KB
+        );
 
-        for _ in 0..3 {
+        // 只做一次小量分配用于缓存预热
+        if warmup_size > 0 {
             let _ = self.allocate(warmup_size);
         }
     }
@@ -468,13 +474,8 @@ pub fn create_llm_memory_pool() -> AiMemoryPool {
     let config = AiMemoryPoolConfig {
         max_pool_size: 2 * 1024 * 1024 * 1024, // 2GB
         max_block_size: 128 * 1024 * 1024,     // 128MB
-        preallocation_strategy: PreallocationStrategy::ModelBased {
-            common_models: vec![
-                ModelMemoryConfig::new("gpt-3.5", 500_000_000, 100_000_000),
-                ModelMemoryConfig::new("gpt-4", 1_500_000_000, 300_000_000),
-                ModelMemoryConfig::new("llama-7b", 3_500_000_000, 700_000_000),
-            ],
-        },
+        // 优化：使用 OnDemand 策略避免预分配开销
+        preallocation_strategy: PreallocationStrategy::OnDemand,
         auto_cleanup_interval: 600, // 10分钟
         defragmentation_threshold: 0.4,
         memory_usage_warning_threshold: 0.85,

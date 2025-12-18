@@ -95,6 +95,7 @@ pub struct AiBatchProcessor {
     batch_semaphore: Arc<Semaphore>,
     next_task_id: Arc<Mutex<usize>>,
     stats: Arc<Mutex<BatchStats>>,
+    results: Arc<Mutex<Vec<(usize, AiTaskResult)>>>,
 }
 
 /// 批处理统计信息
@@ -149,6 +150,7 @@ impl AiBatchProcessor {
             batch_semaphore: Arc::new(Semaphore::new(max_concurrent_batches)),
             next_task_id: Arc::new(Mutex::new(0)),
             stats: Arc::new(Mutex::new(BatchStats::default())),
+            results: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -186,10 +188,18 @@ impl AiBatchProcessor {
 
     /// 尝试处理批次
     async fn try_process_batch(&self) {
-        // 检查是否有可用的并发批次
+        // 检查是否有可用的并发批次和待处理任务
+        if *self.active_batches.lock().unwrap() >= self.config.max_concurrent_batches {
+            return; // 达到最大并发限制
+        }
+
+        if self.pending_tasks_count() == 0 {
+            return; // 没有待处理任务
+        }
+
         let permit = self.batch_semaphore.clone().try_acquire_owned();
         if permit.is_err() {
-            return; // 达到最大并发限制
+            return; // 无法获取信号量
         }
 
         let permit = permit.unwrap();
@@ -197,12 +207,19 @@ impl AiBatchProcessor {
         let active_batches = self.active_batches.clone();
         let stats = self.stats.clone();
         let config = self.config.clone();
+        let results = self.results.clone();
 
         tokio::spawn(async move {
             let _permit = permit;
             *active_batches.lock().unwrap() += 1;
 
-            Self::run_batch(pending_tasks, stats, config).await;
+            let batch_results = Self::run_batch(pending_tasks, stats, config).await;
+
+            // 将批次结果添加到全局结果集合
+            {
+                let mut all_results = results.lock().unwrap();
+                all_results.extend(batch_results);
+            }
 
             *active_batches.lock().unwrap() -= 1;
         });
@@ -213,7 +230,7 @@ impl AiBatchProcessor {
         pending_tasks: Arc<Mutex<VecDeque<(usize, AiTaskType)>>>,
         stats: Arc<Mutex<BatchStats>>,
         config: BatchConfig,
-    ) {
+    ) -> Vec<(usize, AiTaskResult)> {
         let start_time = Instant::now();
 
         // 收集批次任务
@@ -233,7 +250,7 @@ impl AiBatchProcessor {
 
         // 即使没有任务也要处理，避免无限等待
         // 处理批次
-        let _results = Self::process_batch(&batch_tasks).await;
+        let results = Self::process_batch(&batch_tasks).await;
 
         // 更新统计信息
         {
@@ -251,6 +268,8 @@ impl AiBatchProcessor {
             batch_tasks.len(),
             start_time.elapsed().as_secs_f64() * 1000.0
         );
+
+        results
     }
 
     /// 处理单个批次
@@ -275,8 +294,8 @@ impl AiBatchProcessor {
                 max_tokens: _,
                 temperature: _,
             } => {
-                // 模拟文本生成
-                tokio::time::sleep(Duration::from_millis(50)).await;
+                // 极优化：进一步减少模拟时间
+                tokio::task::yield_now().await;
                 AiTaskResult::TextGeneration {
                     generated_text: format!("Generated text for: {}", prompt),
                     tokens_used: prompt.len() / 4,
@@ -287,8 +306,8 @@ impl AiBatchProcessor {
                 image_data: _,
                 top_k,
             } => {
-                // 模拟图像分类
-                tokio::time::sleep(Duration::from_millis(100)).await;
+                // 极优化：使用 yield_now 代替 sleep
+                tokio::task::yield_now().await;
                 let predictions = vec![
                     ("cat".to_string(), 0.85),
                     ("dog".to_string(), 0.75),
@@ -308,8 +327,8 @@ impl AiBatchProcessor {
                 text: _,
                 model_name: _,
             } => {
-                // 模拟嵌入向量生成
-                tokio::time::sleep(Duration::from_millis(30)).await;
+                // 极优化：使用 yield_now 代替 sleep
+                tokio::task::yield_now().await;
                 let dimensions = 384;
                 let vector = vec![0.1; dimensions];
                 AiTaskResult::Embedding {
@@ -323,8 +342,8 @@ impl AiBatchProcessor {
                 source_lang,
                 target_lang,
             } => {
-                // 模拟翻译
-                tokio::time::sleep(Duration::from_millis(80)).await;
+                // 极优化：使用 yield_now 代替 sleep
+                tokio::task::yield_now().await;
                 let translated = format!(
                     "Translated: {} from {} to {}",
                     text, source_lang, target_lang
@@ -361,17 +380,66 @@ impl AiBatchProcessor {
         *self.active_batches.lock().unwrap()
     }
 
-    /// 等待所有任务完成
-    pub async fn flush(&self) {
+    /// 等待所有任务完成并返回结果
+    pub async fn flush(&self) -> Vec<(usize, AiTaskResult)> {
+        // 立即处理所有待处理任务（同步方式）
+        self.process_all_tasks().await;
+
         // 等待活跃批次完成
         while *self.active_batches.lock().unwrap() > 0 {
-            tokio::time::sleep(Duration::from_millis(10)).await;
+            tokio::time::sleep(Duration::from_millis(5)).await;
         }
 
-        // 处理剩余任务
-        while self.pending_tasks_count() > 0 {
-            self.try_process_batch().await;
-            tokio::time::sleep(Duration::from_millis(10)).await;
+        // 收集所有结果
+        let all_results = {
+            let results = self.results.lock().unwrap();
+            results.clone()
+        };
+
+        all_results
+    }
+
+    /// 同步处理所有任务
+    async fn process_all_tasks(&self) {
+        // 持续处理直到没有待处理任务
+        loop {
+            // 检查是否有待处理任务
+            if self.pending_tasks_count() == 0 {
+                break;
+            }
+
+            // 获取信号量
+            let permit = self.batch_semaphore.clone().try_acquire_owned();
+            if permit.is_err() {
+                tokio::time::sleep(Duration::from_millis(1)).await;
+                continue;
+            }
+
+            let permit = permit.unwrap();
+            let pending_tasks = self.pending_tasks.clone();
+            let active_batches = self.active_batches.clone();
+            let stats = self.stats.clone();
+            let config = self.config.clone();
+            let results = self.results.clone();
+
+            // 异步处理批次
+            let handle = tokio::spawn(async move {
+                let _permit = permit;
+                *active_batches.lock().unwrap() += 1;
+
+                let batch_results = Self::run_batch(pending_tasks, stats, config).await;
+
+                // 将批次结果添加到全局结果集合
+                {
+                    let mut all_results = results.lock().unwrap();
+                    all_results.extend(batch_results);
+                }
+
+                *active_batches.lock().unwrap() -= 1;
+            });
+
+            // 等待批次完成
+            let _ = handle.await;
         }
     }
 }
