@@ -197,6 +197,9 @@ pub struct StealStats {
     pub steal_attempts: Arc<LockFreeCounter>,
     pub successful_steals: Arc<LockFreeCounter>,
     pub local_queue_operations: Arc<LockFreeCounter>,
+    pub batch_steals: Arc<LockFreeCounter>,
+    pub priority_steals: Arc<LockFreeCounter>,
+    pub avg_steal_batch_size: Arc<AtomicUsize>,
 }
 
 impl StealStats {
@@ -206,6 +209,9 @@ impl StealStats {
             steal_attempts: Arc::new(LockFreeCounter::new(0)),
             successful_steals: Arc::new(LockFreeCounter::new(0)),
             local_queue_operations: Arc::new(LockFreeCounter::new(0)),
+            batch_steals: Arc::new(LockFreeCounter::new(0)),
+            priority_steals: Arc::new(LockFreeCounter::new(0)),
+            avg_steal_batch_size: Arc::new(AtomicUsize::new(0)),
         }
     }
 
@@ -434,6 +440,255 @@ impl WorkStealingScheduler {
     /// 获取窃取统计
     pub fn get_steal_stats(&self) -> Arc<StealStats> {
         self.stats.clone()
+    }
+
+    /// 批量窃取任务（优化版本）
+    pub async fn steal_batch_tasks(&self, thief_thread_id: usize, max_count: usize) -> Option<Vec<Task>> {
+        if thief_thread_id >= self.thread_count || max_count == 0 {
+            return None;
+        }
+
+        self.stats.record_steal_attempt();
+
+        let mut stolen_tasks = Vec::with_capacity(max_count);
+        let mut total_stolen = 0;
+
+        // 尝试从负载最重的队列窃取
+        let mut queues_with_load: Vec<(usize, usize)> = Vec::new();
+        for (i, queue) in self.thread_queues.iter().enumerate() {
+            if i == thief_thread_id {
+                continue;
+            }
+            let queue_guard = queue.lock().await;
+            queues_with_load.push((i, queue_guard.len()));
+        }
+
+        // 按负载排序，从最重的开始窃取
+        queues_with_load.sort_by(|a, b| b.1.cmp(&a.1));
+
+        for (source_thread_id, queue_length) in queues_with_load {
+            if total_stolen >= max_count {
+                break;
+            }
+
+            let source_queue = &self.thread_queues[source_thread_id];
+            let mut queue_guard = source_queue.lock().await;
+
+            let can_steal = queue_length.saturating_sub(1); // 至少保留一个
+            let to_steal = max_count.saturating_sub(total_stolen).min(can_steal);
+
+            if to_steal > 0 {
+                for _ in 0..to_steal {
+                    if let Some(task) = queue_guard.pop_back() {
+                        stolen_tasks.push(task);
+                        total_stolen += 1;
+                    }
+                }
+                break; // 从一个队列窃取足够后退出
+            }
+        }
+
+        if !stolen_tasks.is_empty() {
+            self.stats.record_successful_steal();
+            self.stats.batch_steals.increment();
+            self.stats.tasks_stolen.add(total_stolen);
+
+            // 更新平均批量大小
+            let current_avg = self.stats.avg_steal_batch_size.load(std::sync::atomic::Ordering::Relaxed);
+            let new_avg = (current_avg + total_stolen) / 2;
+            self.stats.avg_steal_batch_size.store(new_avg, std::sync::atomic::Ordering::Relaxed);
+
+            println!("🔄 线程 {} 批量窃取 {} 个任务", thief_thread_id, total_stolen);
+            Some(stolen_tasks)
+        } else {
+            None
+        }
+    }
+
+    /// 窃取高优先级任务
+    pub async fn steal_high_priority_task(&self, thief_thread_id: usize) -> Option<Task> {
+        if thief_thread_id >= self.thread_count {
+            return None;
+        }
+
+        self.stats.record_steal_attempt();
+
+        let mut best_task: Option<(usize, Task)> = None; // (priority, task)
+
+        // 寻找优先级最高的任务
+        for attempt in 0..self.thread_count {
+            if attempt == thief_thread_id {
+                continue;
+            }
+
+            let source_queue = &self.thread_queues[attempt];
+            let queue_guard = source_queue.lock().await;
+
+            // 遍历队列找到最高优先级任务
+            for task in queue_guard.iter() {
+                if task.priority >= 5 { // 优先窃取高优先级任务
+                    let priority_usize = task.priority as usize;
+                    if best_task.is_none() || priority_usize > best_task.as_ref().unwrap().0 {
+                        best_task = Some((priority_usize, task.clone()));
+                    }
+                }
+            }
+        }
+
+        if let Some((_, task)) = best_task {
+            // 从原队列移除该任务
+            for attempt in 0..self.thread_count {
+                if attempt == thief_thread_id {
+                    continue;
+                }
+
+                let source_queue = &self.thread_queues[attempt];
+                let mut queue_guard = source_queue.lock().await;
+
+                // 查找并移除任务
+                for i in 0..queue_guard.len() {
+                    if queue_guard[i].id == task.id {
+                        queue_guard.remove(i);
+                        self.stats.record_successful_steal();
+                        self.stats.priority_steals.increment();
+                        self.stats.tasks_stolen.increment();
+                        println!("🔄 线程 {} 窃取高优先级任务 {} (优先级 {})", thief_thread_id, task.id, task.priority);
+                        return Some(task);
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    /// 判断是否应该窃取（基于阈值）
+    pub async fn should_steal(&self, thief_thread_id: usize, local_queue_len: usize) -> bool {
+        if thief_thread_id >= self.thread_count {
+            return false;
+        }
+
+        self.stats.record_steal_attempt();
+
+        // 计算窃取阈值：基于平均队列长度
+        let mut total_queue_len = 0;
+        let mut max_queue_len = 0;
+        let mut busy_threads = 0;
+
+        for (i, queue) in self.thread_queues.iter().enumerate() {
+            if i == thief_thread_id {
+                continue;
+            }
+            let queue_guard = queue.lock().await;
+            let len = queue_guard.len();
+            total_queue_len += len;
+            max_queue_len = max_queue_len.max(len);
+
+            if len > 5 { // 定义"忙碌"阈值
+                busy_threads += 1;
+            }
+        }
+
+        let avg_queue_len = if self.thread_count > 1 {
+            total_queue_len / (self.thread_count - 1)
+        } else {
+            0
+        };
+
+        // 窃取条件：
+        // 1. 本地队列为空或很少
+        // 2. 其他线程有明显的负载
+        // 3. 系统整体负载不均衡
+
+        let should_steal = (local_queue_len < 3) &&
+            (max_queue_len > 5) &&
+            (avg_queue_len > local_queue_len + 2) &&
+            (busy_threads > 0);
+
+        if should_steal {
+            self.stats.record_successful_steal();
+        }
+
+        should_steal
+    }
+
+    /// 执行负载均衡
+    pub async fn balance_load(&self) -> bool {
+        let distribution = self.get_queue_distribution().await;
+        let total_tasks: usize = distribution.iter().sum();
+        let avg_tasks = total_tasks / self.thread_count;
+
+        // 计算负载差异
+        let max_load = distribution.iter().max().copied().unwrap_or(0);
+        let min_load = distribution.iter().min().copied().unwrap_or(0);
+        let load_imbalance = max_load - min_load;
+
+        // 如果负载差异超过阈值，执行负载均衡
+        if load_imbalance > avg_tasks / 2 && load_imbalance > 5 {
+            println!("⚖️ 执行负载均衡 - 差异: {}, 平均: {}", load_imbalance, avg_tasks);
+
+            // 找到负载最重的队列和最轻的队列
+            let mut heaviest_queue = 0;
+            let mut lightest_queue = 0;
+            let mut heaviest_load = 0;
+            let mut lightest_load = usize::MAX;
+
+            for (i, &load) in distribution.iter().enumerate() {
+                if load > heaviest_load {
+                    heaviest_load = load;
+                    heaviest_queue = i;
+                }
+                if load < lightest_load {
+                    lightest_load = load;
+                    lightest_queue = i;
+                }
+            }
+
+            // 从重队列窃取任务到轻队列
+            if heaviest_load > lightest_load + 3 {
+                let tasks_to_move = (heaviest_load - lightest_load) / 2;
+                let moved = self.move_tasks(heaviest_queue, lightest_queue, tasks_to_move).await;
+
+                if moved > 0 {
+                    println!("⚖️ 负载均衡完成 - 移动 {} 个任务", moved);
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    /// 在队列间移动任务（内部方法）
+    async fn move_tasks(&self, from_queue: usize, to_queue: usize, count: usize) -> usize {
+        let mut moved = 0;
+        let source_queue = &self.thread_queues[from_queue];
+        let target_queue = &self.thread_queues[to_queue];
+
+        let mut tasks_to_move = Vec::new();
+
+        // 从源队列窃取任务
+        {
+            let mut source_guard = source_queue.lock().await;
+            for _ in 0..count {
+                if let Some(task) = source_guard.pop_back() {
+                    tasks_to_move.push(task);
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // 添加到目标队列
+        {
+            let mut target_guard = target_queue.lock().await;
+            for task in tasks_to_move {
+                target_guard.push_back(task);
+                moved += 1;
+            }
+        }
+
+        moved
     }
 }
 
