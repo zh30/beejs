@@ -50,7 +50,8 @@ impl StructuredLogger {
     /// Create a new structured logger with file output
     pub fn new_with_file(level: Level, service_name: String, log_file_path: &str) -> Result<Self> {
         let path = Path::new(log_file_path);
-        let file = File::create(path).context("Failed to create log file")?;
+        let file = File::create(path)
+            .map_err(|e| anyhow::anyhow!("Failed to create log file: {}", e))?;
 
         let mut logger = Self::new(level, service_name);
         logger.log_file = Some(Arc::new(Mutex::new(file)));
@@ -123,12 +124,13 @@ impl StructuredLogger {
         }
 
         // Output to stdout using tracing
+        let context_clone = context.clone();
         match level {
-            Level::TRACE => tracing::trace!(message, context = ?context),
-            Level::DEBUG => tracing::debug!(message, context = ?context),
-            Level::INFO => tracing::info!(message, context = ?context),
-            Level::WARN => tracing::warn!(message, context = ?context),
-            Level::ERROR => tracing::error!(message, context = ?context),
+            Level::TRACE => tracing::trace!(message, context = ?context_clone),
+            Level::DEBUG => tracing::debug!(message, context = ?context_clone),
+            Level::INFO => tracing::info!(message, context = ?context_clone),
+            Level::WARN => tracing::warn!(message, context = ?context_clone),
+            Level::ERROR => tracing::error!(message, context = ?context_clone),
         }
     }
 

@@ -136,11 +136,11 @@ impl Default for CustomMetrics {
 /// Runtime metrics tracking
 pub struct RuntimeMetrics {
     /// Active scripts gauge
-    active_scripts: Gauge<u64>,
+    active_scripts: Gauge,
     /// Memory usage gauge
-    memory_usage_bytes: Gauge<f64>,
+    memory_usage_bytes: Gauge,
     /// CPU usage gauge
-    cpu_usage_percent: Gauge<f64>,
+    cpu_usage_percent: Gauge,
     /// Recent execution durations for P95 calculation
     recent_executions: Arc<RwLock<VecDeque<Duration>>>,
 }
@@ -197,7 +197,7 @@ impl RuntimeMetrics {
     }
 
     pub async fn set_active_scripts(&self, count: u64) {
-        self.active_scripts.set(count);
+        self.active_scripts.set(count as f64);
     }
 
     pub async fn set_cpu_usage(&self, percent: f64) {
@@ -343,7 +343,7 @@ impl PerformanceMetrics {
 
         self.network_throughput
             .with_label_values(&[operation, "sent"])
-            .inc_by(bytes as u64);
+            .inc_by(bytes as f64);
     }
 }
 

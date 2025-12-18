@@ -94,13 +94,11 @@ impl PrometheusExporter {
     pub fn gather_metrics(&self) -> Result<String> {
         let metric_families = self.registry.gather();
 
-        let mut buffer = Vec::new();
         let encoder = TextEncoder::new();
-
-        encoder.encode(&metric_families, &mut buffer)
+        let metrics_text = encoder.encode_to_string(&metric_families)
             .context("Failed to encode metrics")?;
 
-        String::from_utf8(buffer).context("Invalid UTF-8 in metrics")
+        Ok(metrics_text)
     }
 
     /// Get the bind address if server is running
@@ -168,13 +166,9 @@ async fn serve_metrics(stream: &mut TcpStream, registry: &Registry) -> Result<()
     let metric_families = registry.gather();
 
     // Encode to Prometheus text format
-    let mut buffer = Vec::new();
     let encoder = prometheus::TextEncoder::new();
-    encoder.encode(&metric_families, &mut buffer)
+    let metrics_text = encoder.encode_to_string(&metric_families)
         .context("Failed to encode metrics")?;
-
-    let metrics_text = String::from_utf8(buffer)
-        .context("Invalid UTF-8 in metrics")?;
 
     // Prepare HTTP response
     let response = format!(
