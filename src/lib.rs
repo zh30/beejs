@@ -16,6 +16,7 @@ mod ai_model_interface;
 mod async_io;
 mod code_analyzer;
 mod code_cache;
+mod concurrent_execution;
 mod deep_optimization;
 mod event_loop;
 mod hot_path_tracker;
@@ -25,6 +26,7 @@ mod isolate_pool;
 mod jit_optimizer;
 mod lock_free;
 mod runtime_lite;
+mod zero_copy;
 pub mod repl;
 pub mod memory_pool;
 pub mod error_handler;
@@ -66,6 +68,12 @@ pub use lock_free::{
 pub use server::{
     Server, ServerConfig, ServerStats,
     EvalRequest, EvalResponse, start_server
+};
+
+// Re-export concurrent execution types
+pub use concurrent_execution::{
+    ConcurrentConfig, ConcurrentRuntimePool, ScriptResult,
+    ConcurrentExecutionError, ConcurrentExecutionStats
 };
 
 /// Global V8 initialization

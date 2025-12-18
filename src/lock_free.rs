@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
 /// 无锁计数器 - 使用原子操作实现高性能计数
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[allow(dead_code)]
 pub struct LockFreeCounter {
     count: CachePadded<AtomicUsize>,
