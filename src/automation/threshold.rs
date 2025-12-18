@@ -33,7 +33,7 @@ pub enum ThresholdError {
 }
 
 /// 阈值级别
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ThresholdLevel {
     Development,   // 开发环境阈值
     Staging,       // 测试环境阈值
@@ -43,7 +43,7 @@ pub enum ThresholdLevel {
 }
 
 /// 阈值类型
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ThresholdType {
     Absolute,      // 绝对阈值 (具体数值)
     Percentage,    // 百分比阈值 (相对变化)

@@ -97,6 +97,7 @@ impl Default for BenchmarkConfig {
 }
 
 /// 基准测试框架
+#[derive(Clone)]
 pub struct BenchmarkFramework {
     config: BenchmarkConfig,
     baseline_results: HashMap<String, BenchmarkResult>,
@@ -323,7 +324,7 @@ impl BenchmarkFramework {
 }
 
 /// 性能变化分析
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceDelta {
     pub name: String,
     pub time_delta_percent: f64,

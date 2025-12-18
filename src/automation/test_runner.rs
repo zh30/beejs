@@ -47,7 +47,7 @@ pub enum TestType {
 }
 
 /// 测试状态
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TestStatus {
     Pending,
     Running,
@@ -57,7 +57,7 @@ pub enum TestStatus {
 }
 
 /// 测试执行结果
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestExecutionResult {
     pub test_name: String,
     pub test_type: TestType,
@@ -110,7 +110,7 @@ pub struct AutomatedTestRunner {
 }
 
 /// 自动化测试运行器统计
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestRunnerStats {
     pub total_tests: usize,
     pub completed_tests: usize,
@@ -588,7 +588,7 @@ pub struct ScheduledTest {
 }
 
 /// 测试套件结果
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestSuiteResults {
     pub results: Vec<TestExecutionResult>,
     pub stats: TestRunnerStats,

@@ -9,6 +9,7 @@
 
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use std::time::{Duration, Instant};
+use rusty_v8::{Isolate, StartupData};
 
 /// 启动时间基准测试套件
 pub struct StartupBenchmark;
@@ -78,7 +79,7 @@ impl StartupBenchmark {
             MetricType::StartupTime,
             || {
                 // 模拟 V8 初始化
-                let _isolate = crate::v8::Isolate::new(Default::default());
+                let _isolate = Isolate::new(Default::default());
             },
         )
     }
@@ -152,7 +153,7 @@ impl StartupBenchmark {
                 let start = Instant::now();
 
                 // 1. 初始化 V8
-                let _isolate = crate::v8::Isolate::new(Default::default());
+                let _isolate = Isolate::new(Default::default());
 
                 // 2. 创建 Runtime
                 let _runtime = crate::Runtime::new(1024, 1024, false);

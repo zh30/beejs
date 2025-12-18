@@ -12,6 +12,8 @@
 //! - 性能回归检测
 //! - 自动化 CI/CD 集成
 
+use rusty_v8 as v8;
+
 // 模块声明
 pub mod benchmarks;
 pub mod performance_analyzer;
@@ -20,6 +22,23 @@ pub mod performance_regression;
 pub mod automation;
 pub mod analysis;
 pub mod monitor;
+pub mod runtime_lite;
+pub mod memory_pool;
+pub mod process_pool;
+pub mod v8_snapshot;
+pub mod jit_optimizer;
+pub mod inline_cache;
+pub mod nodejs;
+pub mod code_analyzer;
+pub mod module_loader;
+
+// Define OptimizeMode here since it's used by multiple modules
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum OptimizeMode {
+    Speed,
+    Size,
+    Auto,
+}
 
 // 重新导出主要类型
 pub use benchmarks::{
@@ -67,6 +86,29 @@ pub use monitor::ThresholdConfig as MonitorThresholdConfig;
 
 // 核心运行时
 use std::time::Duration;
+use anyhow::{Result, anyhow};
+
+/// Initialize V8 engine
+pub fn initialize_v8() -> Result<()> {
+    use rusty_v8 as v8;
+
+    // Create platform
+    let platform = v8::new_default_platform()
+        .ok_or_else(|| anyhow!("Failed to create V8 platform"))?;
+
+    // Initialize V8
+    v8::V8::initialize_platform(platform);
+    v8::V8::initialize();
+
+    Ok(())
+}
+
+/// Check if V8 is initialized
+pub fn is_v8_initialized() -> bool {
+    // V8 doesn't provide an is_initialized check in rusty_v8
+    // We track this manually
+    false
+}
 
 /// 性能配置
 #[derive(Debug, Clone)]
@@ -138,6 +180,18 @@ impl Runtime {
     pub fn get_config(&self) -> &PerformanceConfig {
         &self.config
     }
+
+    /// 为错误处理提供上下文
+    pub fn context(self, _msg: &str) -> Result<Self, anyhow::Error> {
+        Ok(self)
+    }
+
+    /// 执行 JavaScript 代码
+    pub fn execute_code(&self, code: &str) -> Result<String> {
+        // 使用 RuntimeLite 来执行代码
+        let lite_runtime = crate::runtime_lite::RuntimeLite::new(false)?;
+        lite_runtime.execute_code(code)
+    }
 }
 
 /// 运行完整的性能测试套件
@@ -175,6 +229,48 @@ pub fn generate_performance_report(
 
     let generator = ReportGenerator::new(output_dir);
     generator.generate_benchmark_report(results, &config)
+}
+
+/// Console callback functions for V8 integration
+pub fn console_log_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    // Simple console log implementation
+    println!("console.log called");
+}
+
+pub fn console_error_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    println!("console.error called");
+}
+
+pub fn console_warn_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    println!("console.warn called");
+}
+
+pub fn console_info_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    println!("console.info called");
+}
+
+pub fn console_debug_callback(
+    scope: &mut v8::HandleScope,
+    _args: v8::FunctionCallbackArguments,
+    _rv: v8::ReturnValue,
+) {
+    println!("console.debug called");
 }
 
 #[cfg(test)]

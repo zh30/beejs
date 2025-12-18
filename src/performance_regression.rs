@@ -73,7 +73,7 @@ pub struct PerformanceBaseline {
 }
 
 /// 性能回归检测结果
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegressionDetectionResult {
     pub test_name: String,
     pub is_regression: bool,
@@ -87,12 +87,13 @@ pub struct RegressionDetectionResult {
 }
 
 /// 回归严重程度
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RegressionSeverity {
     None,
     Minor,      // < 5% regression
     Moderate,   // 5-15% regression
     Severe,     // > 15% regression
+    Critical,   // > 30% regression or system failure
 }
 
 impl RegressionSeverity {
@@ -116,7 +117,7 @@ pub struct PerformanceRegressionDetector {
 }
 
 /// 性能回归检测统计
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegressionStats {
     pub total_tests: usize,
     pub regressions_detected: usize,
@@ -199,7 +200,7 @@ impl PerformanceRegressionDetector {
             test_name: result.name.clone(),
             metric_type: result.metric_type,
             avg_duration_ns: result.avg_duration.as_nanos() as u64,
-            std_deviation_ns: (result.std_deviation * 1_000_000_000.0) as u64,
+            std_deviation_ns: (result.std_deviation * 1_000_000_000.0).round() as u64,
             operations_per_second: result.operations_per_second,
             memory_stats: result.memory_stats.clone(),
             timestamp: SystemTime::now()
@@ -255,6 +256,9 @@ impl PerformanceRegressionDetector {
             let mut recommendations = Vec::new();
             if is_regression {
                 match severity {
+                    RegressionSeverity::None => {
+                        // No regression, no recommendations needed
+                    }
                     RegressionSeverity::Minor => {
                         recommendations.push("Minor regression detected. Review recent code changes.".to_string());
                     }
@@ -424,6 +428,7 @@ impl PerformanceRegressionDetector {
 }
 
 /// 性能回归测试套件结果
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegressionTestSuite {
     pub results: Vec<RegressionDetectionResult>,
     pub stats: RegressionStats,

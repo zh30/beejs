@@ -2,10 +2,8 @@
 //! This module provides tools to measure execution time, cache hit rates,
 //! and other performance metrics.
 
-use crate::Runtime;
-use crate::runtime_lite::RuntimeLite;
+use serde::{Deserialize, Serialize};
 use std::time::Instant;
-use std::sync::Arc;
 
 /// Performance metrics for a single execution
 #[derive(Debug, Clone)]
@@ -16,7 +14,7 @@ pub struct ExecutionMetrics {
 }
 
 /// Performance analysis results
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceReport {
     pub total_executions: usize,
     pub average_time_ms: f64,
@@ -156,52 +154,4 @@ impl Default for PerformanceAnalyzer {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// Convenience function to analyze runtime performance
-pub fn analyze_runtime_performance(
-    runtime: &Arc<Runtime>,
-    test_codes: Vec<&str>,
-    verbose: bool,
-) -> PerformanceReport {
-    let mut analyzer = PerformanceAnalyzer::new();
-
-    for code in test_codes {
-        analyzer.measure_execution(code, || {
-            let result = runtime.execute_code(code);
-            if verbose && result.is_err() {
-                println!("Error executing code: {:?}", result);
-            }
-        });
-    }
-
-    let report = analyzer.generate_report();
-    if verbose {
-        analyzer.print_report();
-    }
-    report
-}
-
-/// Convenience function to analyze RuntimeLite performance
-pub fn analyze_lite_runtime_performance(
-    runtime: &Arc<RuntimeLite>,
-    test_codes: Vec<&str>,
-    verbose: bool,
-) -> PerformanceReport {
-    let mut analyzer = PerformanceAnalyzer::new();
-
-    for code in test_codes {
-        analyzer.measure_execution(code, || {
-            let result = runtime.execute_code(code);
-            if verbose && result.is_err() {
-                println!("Error executing code: {:?}", result);
-            }
-        });
-    }
-
-    let report = analyzer.generate_report();
-    if verbose {
-        analyzer.print_report();
-    }
-    report
 }
