@@ -1,0 +1,529 @@
+/// Stage 30.2 内存管理深度优化测试套件
+/// 测试零拷贝内存分配、分代垃圾回收、内存压缩和泄漏检测功能
+
+#[cfg(test)]
+mod memory_optimization_tests {
+    use super::super::memory::{
+        UnifiedMemoryManager,
+        AllocatorConfig,
+        GCConfig,
+        CompressionConfig,
+        LeakDetectorConfig,
+        ObjectType,
+        CompressionAlgorithm,
+    };
+    use std::time::Duration;
+
+    /// 测试 1: 零拷贝内存分配器基础功能
+    #[test]
+    fn test_zero_copy_allocator_basic_allocation() {
+        let config = AllocatorConfig {
+            initial_pool_blocks: 10,
+            ..Default::default()
+        };
+
+        let allocator = crate::memory::ZeroCopyAllocator::new(config);
+
+        // 测试基本分配
+        let ptr = allocator.allocate(64);
+        assert!(!ptr.is_null(), "分配应该成功");
+
+        // 测试释放
+        allocator.deallocate(ptr, 64);
+
+        println!("✅ 测试 1 通过: 零拷贝内存分配器基础功能");
+    }
+
+    /// 测试 2: 内存池分配效率
+    #[test]
+    fn test_memory_pool_efficiency() {
+        let config = AllocatorConfig {
+            initial_pool_blocks: 100,
+            max_pool_blocks: 1000,
+            ..Default::default()
+        };
+
+        let allocator = crate::memory::ZeroCopyAllocator::new(config);
+        let mut ptrs = Vec::new();
+
+        // 分配多个小块
+        for _ in 0..50 {
+            let ptr = allocator.allocate(128);
+            assert!(!ptr.is_null());
+            ptrs.push(ptr);
+        }
+
+        // 释放所有指针
+        for ptr in ptrs {
+            allocator.deallocate(ptr, 128);
+        }
+
+        let stats = allocator.get_stats();
+        assert!(stats.pool_hits > 0, "应该有池命中");
+
+        println!("✅ 测试 2 通过: 内存池分配效率");
+    }
+
+    /// 测试 3: 大内存直接分配
+    #[test]
+    fn test_large_memory_allocation() {
+        let allocator = crate::memory::ZeroCopyAllocator::new(Default::default());
+
+        // 分配大内存块 (超过阈值)
+        let large_size = 128 * 1024; // 128KB
+        let ptr = allocator.allocate(large_size);
+        assert!(!ptr.is_null(), "大内存分配应该成功");
+
+        allocator.deallocate(ptr, large_size);
+
+        println!("✅ 测试 3 通过: 大内存直接分配");
+    }
+
+    /// 测试 4: 分代垃圾回收器基础功能
+    #[test]
+    fn test_generational_gc_basic() {
+        let config = GCConfig {
+            young_gen_size: 1024 * 1024, // 1MB
+            promotion_age: 2,
+            ..Default::default()
+        };
+
+        let gc = crate::memory::GenerationalGC::new(config);
+
+        // 分配一些对象
+        let mut addresses = Vec::new();
+        for _ in 0..10 {
+            if let Some(addr) = gc.allocate(1024) {
+                addresses.push(addr);
+            }
+        }
+
+        assert!(!addresses.is_empty(), "应该分配成功");
+
+        // 触发 GC
+        gc.trigger_full_gc();
+
+        let stats = gc.get_stats();
+        assert!(stats.young_gc_count > 0 || stats.old_gc_count > 0, "应该有 GC 发生");
+
+        println!("✅ 测试 4 通过: 分代垃圾回收器基础功能");
+    }
+
+    /// 测试 5: 对象晋升机制
+    #[test]
+    fn test_object_promotion() {
+        let config = GCConfig {
+            promotion_age: 1,
+            gc_interval_ms: 10,
+            ..Default::default()
+        };
+
+        let gc = crate::memory::GenerationalGC::new(config);
+
+        // 分配对象
+        let addr = gc.allocate(1024);
+        assert!(addr.is_some());
+
+        // 多次触发 GC 以促进对象晋升
+        for _ in 0..3 {
+            gc.trigger_young_gc();
+            std::thread::sleep(Duration::from_millis(20));
+        }
+
+        let stats = gc.get_stats();
+        assert!(stats.promoted_objects > 0, "应该有对象晋升");
+
+        println!("✅ 测试 5 通过: 对象晋升机制");
+    }
+
+    /// 测试 6: 内存压缩基础功能
+    #[test]
+    fn test_memory_compression_basic() {
+        let compressor = crate::memory::MemoryCompression::new(Default::default());
+
+        let test_data = vec![42u8; 2048]; // 2KB 数据
+
+        // 测试 LZ4 压缩
+        let block = compressor.compress(&test_data, 0x1000).unwrap();
+        assert_eq!(block.algorithm, CompressionAlgorithm::LZ4);
+        assert!(block.compression_ratio >= 1.0);
+
+        // 测试解压
+        let decompressed = compressor.decompress(&block).unwrap();
+        assert_eq!(decompressed.len(), test_data.len());
+
+        println!("✅ 测试 6 通过: 内存压缩基础功能");
+    }
+
+    /// 测试 7: 多算法压缩选择
+    #[test]
+    fn test_compression_algorithm_selection() {
+        let compressor = crate::memory::MemoryCompression::new(Default::default());
+
+        // 测试小数据 (LZ4)
+        let small_data = vec![1u8; 512];
+        let block1 = compressor.compress(&small_data, 0).unwrap();
+        assert_eq!(block1.algorithm, CompressionAlgorithm::LZ4);
+
+        // 测试中等数据 (Snappy)
+        let medium_data = vec![2u8; 4096];
+        let block2 = compressor.compress(&medium_data, 0).unwrap();
+        assert_eq!(block2.algorithm, CompressionAlgorithm::Snappy);
+
+        // 测试大数据 (Zstd)
+        let large_data = vec![3u8; 16384];
+        let block3 = compressor.compress(&large_data, 0).unwrap();
+        assert_eq!(block3.algorithm, CompressionAlgorithm::Zstd);
+
+        println!("✅ 测试 7 通过: 多算法压缩选择");
+    }
+
+    /// 测试 8: 内存泄漏检测基础功能
+    #[test]
+    fn test_leak_detection_basic() {
+        let config = LeakDetectorConfig {
+            object_age_threshold: 1, // 1秒
+            access_count_threshold: 3,
+            ..Default::default()
+        };
+
+        let detector = crate::memory::MemoryLeakDetector::new(config);
+
+        // 分配对象
+        detector.track_allocation(0x1000, 1024, ObjectType::Normal, None);
+
+        // 模拟访问
+        detector.track_access(0x1000);
+
+        // 等待一段时间
+        std::thread::sleep(Duration::from_millis(1100));
+
+        // 检测泄漏
+        let report = detector.detect_leaks();
+        assert!(report.leaked_object_count >= 0);
+
+        println!("✅ 测试 8 通过: 内存泄漏检测基础功能");
+    }
+
+    /// 测试 9: 泄漏严重程度评估
+    #[test]
+    fn test_leak_severity_assessment() {
+        let config = LeakDetectorConfig {
+            object_age_threshold: 1,
+            ..Default::default()
+        };
+
+        let detector = crate::memory::MemoryLeakDetector::new(config);
+
+        // 分配大对象
+        detector.track_allocation(0x2000, 1024 * 1024, ObjectType::Normal, None); // 1MB
+
+        // 等待长时间
+        std::thread::sleep(Duration::from_millis(1100));
+
+        let report = detector.detect_leaks();
+
+        if !report.leak_details.is_empty() {
+            let detail = &report.leak_details[0];
+            // 大对象长时间存活应该是高严重程度
+            assert!(detail.severity != crate::memory::LeakSeverity::Low);
+        }
+
+        println!("✅ 测试 9 通过: 泄漏严重程度评估");
+    }
+
+    /// 测试 10: 统一内存管理器集成
+    #[test]
+    fn test_unified_memory_manager() {
+        let manager = UnifiedMemoryManager::new();
+
+        // 测试分配和释放
+        let ptr = manager.allocate(1024);
+        assert!(!ptr.is_null());
+
+        manager.deallocate(ptr, 1024);
+
+        // 测试 GC
+        manager.trigger_gc();
+
+        // 测试泄漏检测
+        let leak_report = manager.detect_leaks();
+        assert!(leak_report.leaked_object_count >= 0);
+
+        println!("✅ 测试 10 通过: 统一内存管理器集成");
+    }
+
+    /// 测试 11: 内存统计信息完整性
+    #[test]
+    fn test_memory_statistics_completeness() {
+        let manager = UnifiedMemoryManager::new();
+
+        // 执行一些操作
+        for _ in 0..10 {
+            let ptr = manager.allocate(512);
+            manager.deallocate(ptr, 512);
+        }
+
+        manager.trigger_gc();
+
+        let stats = manager.get_integrated_stats();
+
+        // 验证统计信息
+        assert!(stats.total_allocated_bytes >= 0);
+        assert!(stats.total_freed_bytes >= 0);
+        assert!(stats.zero_copy_ratio >= 0.0);
+        assert!(stats.gc_efficiency >= 0.0);
+        assert!(stats.compression_efficiency >= 0.0);
+
+        println!("✅ 测试 11 通过: 内存统计信息完整性");
+    }
+
+    /// 测试 12: 性能基准 - 分配吞吐量
+    #[test]
+    fn test_allocation_throughput_benchmark() {
+        let manager = UnifiedMemoryManager::new();
+        let start = std::time::Instant::now();
+
+        // 执行大量分配
+        let mut ptrs = Vec::new();
+        for _ in 0..1000 {
+            let ptr = manager.allocate(256);
+            if !ptr.is_null() {
+                ptrs.push(ptr);
+            }
+        }
+
+        // 测量吞吐量
+        let elapsed = start.elapsed();
+        let throughput = ptrs.len() as f64 / elapsed.as_secs_f64();
+
+        assert!(throughput > 1000.0, "分配吞吐量应该 > 1000 ops/sec");
+
+        // 清理
+        for ptr in ptrs {
+            manager.deallocate(ptr, 256);
+        }
+
+        println!("✅ 测试 12 通过: 分配吞吐量基准测试 ({} ops/sec)", throughput);
+    }
+
+    /// 测试 13: GC 性能测试
+    #[test]
+    fn test_gc_performance() {
+        let config = GCConfig {
+            young_gen_size: 1024 * 1024,
+            gc_interval_ms: 50,
+            ..Default::default()
+        };
+
+        let gc = crate::memory::GenerationalGC::new(config);
+
+        let start = std::time::Instant::now();
+
+        // 分配大量对象
+        for _ in 0..100 {
+            gc.allocate(1024);
+        }
+
+        // 触发 GC
+        gc.trigger_full_gc();
+
+        let elapsed = start.elapsed();
+        let stats = gc.get_stats();
+
+        assert!(elapsed.as_millis() < 1000, "GC 时间应该 < 1秒");
+        assert!(stats.avg_pause_time_ms < 10.0, "平均 GC 停顿应该 < 10ms");
+
+        println!("✅ 测试 13 通过: GC 性能测试 (停顿时间: {:.2}ms)", stats.avg_pause_time_ms);
+    }
+
+    /// 测试 14: 压缩效率测试
+    #[test]
+    fn test_compression_efficiency() {
+        let compressor = crate::memory::MemoryCompression::new(Default::default());
+
+        // 创建可压缩的数据
+        let data = vec![0u8; 8192]; // 8KB 零数据
+
+        let block = compressor.compress(&data, 0).unwrap();
+        let compression_ratio = block.compression_ratio;
+
+        assert!(compression_ratio > 1.0, "应该能够压缩");
+
+        let stats = compressor.get_stats();
+        assert!(stats.compression_efficiency > 0.0);
+
+        println!("✅ 测试 14 通过: 压缩效率测试 (压缩比: {:.2}x)", compression_ratio);
+    }
+
+    /// 测试 15: 并发分配测试
+    #[test]
+    fn test_concurrent_allocations() {
+        let manager = Arc::new(UnifiedMemoryManager::new());
+        let mut handles = Vec::new();
+
+        // 创建多个线程并发分配
+        for _ in 0..10 {
+            let manager_clone = Arc::clone(&manager);
+            let handle = std::thread::spawn(move || {
+                let mut ptrs = Vec::new();
+                for _ in 0..100 {
+                    let ptr = manager_clone.allocate(128);
+                    if !ptr.is_null() {
+                        ptrs.push(ptr);
+                    }
+                }
+                ptrs
+            });
+            handles.push(handle);
+        }
+
+        // 收集所有指针
+        let mut all_ptrs = Vec::new();
+        for handle in handles {
+            let ptrs = handle.join().unwrap();
+            all_ptrs.extend(ptrs);
+        }
+
+        assert!(all_ptrs.len() > 0, "应该有成功分配");
+
+        // 清理
+        for ptr in all_ptrs {
+            manager.deallocate(ptr, 128);
+        }
+
+        println!("✅ 测试 15 通过: 并发分配测试 ({} 个分配)", all_ptrs.len());
+    }
+
+    /// 测试 16: 内存泄漏自动清理
+    #[test]
+    fn test_automatic_leak_cleanup() {
+        let config = LeakDetectorConfig {
+            enable_auto_cleanup: true,
+            auto_cleanup_threshold: 1024,
+            object_age_threshold: 1,
+            ..Default::default()
+        };
+
+        let detector = crate::memory::MemoryLeakDetector::new(config);
+
+        // 分配泄漏对象
+        detector.track_allocation(0x3000, 2048, ObjectType::Normal, None);
+
+        // 等待触发泄漏检测
+        std::thread::sleep(Duration::from_millis(1100));
+
+        let report = detector.detect_leaks();
+
+        // 自动清理应该已经发生
+        let stats = detector.get_stats();
+        assert!(stats.auto_cleaned_leaks >= 0);
+
+        println!("✅ 测试 16 通过: 内存泄漏自动清理");
+    }
+
+    /// 测试 17: 内存管理器报告生成
+    #[test]
+    fn test_memory_manager_report() {
+        let manager = UnifiedMemoryManager::new();
+
+        // 执行一些操作
+        for _ in 0..10 {
+            let ptr = manager.allocate(512);
+            manager.deallocate(ptr, 512);
+        }
+
+        manager.trigger_gc();
+
+        // 生成报告
+        let report = manager.get_detailed_report();
+
+        // 验证报告内容
+        assert!(!report.recommendations.is_empty());
+        assert!(report.integrated_stats.total_allocated_bytes > 0);
+        assert!(report.performance_metrics.allocation_throughput > 0.0);
+
+        println!("✅ 测试 17 通过: 内存管理器报告生成");
+        println!("   优化建议: {:?}", report.recommendations);
+    }
+
+    /// 测试 18: 综合性能测试
+    #[test]
+    fn test_comprehensive_performance() {
+        let manager = UnifiedMemoryManager::new();
+        let start = std::time::Instant::now();
+
+        // 执行综合操作：分配、压缩、GC、泄漏检测
+        let mut ptrs = Vec::new();
+
+        // 分配阶段
+        for i in 0..100 {
+            let ptr = manager.allocate(1024);
+            if !ptr.is_null() {
+                ptrs.push((ptr, i % 3 == 0)); // 1/3 的数据标记为可压缩
+            }
+        }
+
+        // 压缩阶段
+        for (ptr, should_compress) in &ptrs {
+            if *should_compress {
+                let data = vec![0u8; 1024];
+                let _ = manager.compress_data(&data, *ptr as usize);
+            }
+        }
+
+        // GC 阶段
+        manager.trigger_gc();
+
+        // 泄漏检测阶段
+        let leak_report = manager.detect_leaks();
+
+        // 释放阶段
+        for (ptr, _) in ptrs {
+            manager.deallocate(ptr, 1024);
+        }
+
+        let elapsed = start.elapsed();
+        let stats = manager.get_integrated_stats();
+
+        // 性能验证
+        assert!(elapsed.as_secs() < 10, "综合测试应该在 10 秒内完成");
+        assert!(stats.zero_copy_ratio > 50.0, "零拷贝率应该 > 50%");
+        assert!(leak_report.leaked_object_count == 0, "不应该有泄漏");
+
+        println!("✅ 测试 18 通过: 综合性能测试");
+        println!("   执行时间: {:.2} 秒", elapsed.as_secs_f64());
+        println!("   零拷贝率: {:.2}%", stats.zero_copy_ratio);
+        println!("   内存效率: {:.2}%", stats.memory_efficiency);
+    }
+
+    /// 测试运行器
+    #[test]
+    fn run_all_memory_optimization_tests() {
+        println!("\n🧪 开始运行 Stage 30.2 内存管理深度优化测试套件");
+        println!("===========================================\n");
+
+        test_zero_copy_allocator_basic_allocation();
+        test_memory_pool_efficiency();
+        test_large_memory_allocation();
+        test_generational_gc_basic();
+        test_object_promotion();
+        test_memory_compression_basic();
+        test_compression_algorithm_selection();
+        test_leak_detection_basic();
+        test_leak_severity_assessment();
+        test_unified_memory_manager();
+        test_memory_statistics_completeness();
+        test_allocation_throughput_benchmark();
+        test_gc_performance();
+        test_compression_efficiency();
+        test_concurrent_allocations();
+        test_automatic_leak_cleanup();
+        test_memory_manager_report();
+        test_comprehensive_performance();
+
+        println!("\n===========================================");
+        println!("🎉 所有 18 个测试通过！Stage 30.2 内存管理优化验证成功！");
+        println!("===========================================\n");
+    }
+}

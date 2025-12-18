@@ -41,6 +41,9 @@ pub use v8_optimized::embedded_builtins::{EmbeddedBuiltinsManager, BuiltinType, 
 pub mod repl;
 pub mod memory_pool;
 pub mod error_handler;
+
+// Stage 30.2: 内存管理深度优化模块
+pub mod memory;
 pub mod profiler;
 pub mod flame_graph;
 mod module_loader;
