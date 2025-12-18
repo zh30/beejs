@@ -1,10 +1,6 @@
 //! WorkStealingScheduler 测试套件 (TDD)
 //! 测试工作窃取调度器的核心功能
 
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-use tokio::task;
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -107,7 +103,6 @@ mod tests {
     #[tokio::test]
     async fn test_work_stealing_basic() {
         use beejs::{WorkStealingScheduler, Task};
-        use std::time::Duration;
 
         // 创建2线程的调度器
         let scheduler = WorkStealingScheduler::new(2);
