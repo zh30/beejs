@@ -64,10 +64,9 @@ export default function RootLayout() {
             </ul>
           </div>
           <div>
-            <h4 className="font-bold mb-4 text-white">Contact</h4>
-            <p className="text-sm text-gray-400">
-              Email: support@beejs.zhanghe.dev <br />
-              Discord: discord.gg/beejs
+            <h4 className="font-bold mb-4 text-white uppercase tracking-widest text-xs">Contact</h4>
+            <p className="text-sm text-gray-500 font-mono">
+              Email: support@beejs.zhanghe.dev
             </p>
           </div>
         </div>
