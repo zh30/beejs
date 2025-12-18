@@ -15,8 +15,6 @@ pub mod cloudflare;
 pub mod vercel;
 
 use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 /// 云平台类型
 #[derive(Debug, Clone, PartialEq)]
@@ -58,31 +56,8 @@ pub struct CloudFeatures {
     pub persistent_storage: bool,
 }
 
-/// 云平台适配器特征
-#[async_trait::async_trait]
-pub trait CloudAdapter: Send + Sync {
-    /// 获取云平台类型
-    fn get_provider(&self) -> CloudProvider;
-
-    /// 检查云平台特性
-    async fn check_features(&self) -> Result<CloudFeatures, Box<dyn std::error::Error>>;
-
-    /// 部署应用到云平台
-    async fn deploy(&self, config: &CloudConfig) -> Result<String, Box<dyn std::error::Error>>;
-
-    /// 获取应用状态
-    async fn get_status(&self, deployment_id: &str) -> Result<String, Box<dyn std::error::Error>>;
-
-    /// 扩缩容
-    async fn scale(&self, deployment_id: &str, replicas: u32) -> Result<(), Box<dyn std::error::Error>>;
-
-    /// 删除部署
-    async fn delete(&self, deployment_id: &str) -> Result<(), Box<dyn std::error::Error>>;
-}
-
 /// 云平台管理器
 pub struct CloudManager {
-    adapters: HashMap<CloudProvider, Box<dyn CloudAdapter>>,
     current_provider: CloudProvider,
 }
 
@@ -90,15 +65,8 @@ impl CloudManager {
     /// 创建新的云平台管理器
     pub fn new() -> Self {
         Self {
-            adapters: HashMap::new(),
             current_provider: CloudProvider::None,
         }
-    }
-
-    /// 注册云平台适配器
-    pub fn register_adapter(&mut self, adapter: Box<dyn CloudAdapter>) {
-        let provider = adapter.get_provider();
-        self.adapters.insert(provider, adapter);
     }
 
     /// 设置当前云平台
@@ -106,18 +74,13 @@ impl CloudManager {
         self.current_provider = provider;
     }
 
-    /// 获取当前适配器
-    pub fn get_adapter(&self) -> Option<&Box<dyn CloudAdapter>> {
-        self.adapters.get(&self.current_provider)
-    }
-
-    /// 获取所有可用的云平台
-    pub fn list_providers(&self) -> Vec<CloudProvider> {
-        self.adapters.keys().cloned().collect()
+    /// 获取当前云平台
+    pub fn get_provider(&self) -> CloudProvider {
+        self.current_provider.clone()
     }
 
     /// 检查是否为云环境
-    pub async fn is_cloud_environment(&self) -> bool {
+    pub fn is_cloud_environment() -> bool {
         // 检查环境变量
         if let Ok(provider_name) = std::env::var("CLOUD_PROVIDER") {
             return provider_name.parse::<CloudProvider>().is_ok();
@@ -144,48 +107,41 @@ impl CloudManager {
     }
 
     /// 自动检测云平台
-    pub async fn detect_provider(&mut self) -> CloudProvider {
-        if self.is_cloud_environment().await {
+    pub fn detect_provider() -> CloudProvider {
+        if Self::is_cloud_environment() {
             // 从环境变量检测
             if let Ok(provider_name) = std::env::var("CLOUD_PROVIDER") {
                 if let Ok(provider) = provider_name.parse::<CloudProvider>() {
-                    self.current_provider = provider;
                     return provider;
                 }
             }
 
             // AWS
             if std::env::var("AWS_LAMBDA_FUNCTION_NAME").is_ok() {
-                self.current_provider = CloudProvider::AWS;
                 return CloudProvider::AWS;
             }
 
             // Azure
             if std::env::var("AZURE_FUNCTIONS_ENVIRONMENT").is_ok() {
-                self.current_provider = CloudProvider::Azure;
                 return CloudProvider::Azure;
             }
 
             // GCP
             if std::env::var("FUNCTION_NAME").is_ok() && std::env::var("GCP_PROJECT").is_ok() {
-                self.current_provider = CloudProvider::GCP;
                 return CloudProvider::GCP;
             }
 
             // Cloudflare
             if std::env::var("CF_PAGES").is_ok() || std::env::var("CF_WORKERS").is_ok() {
-                self.current_provider = CloudProvider::Cloudflare;
                 return CloudProvider::Cloudflare;
             }
 
             // Vercel
             if std::env::var("VERCEL").is_ok() {
-                self.current_provider = CloudProvider::Vercel;
                 return CloudProvider::Vercel;
             }
         }
 
-        self.current_provider = CloudProvider::None;
         CloudProvider::None
     }
 }
