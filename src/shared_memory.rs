@@ -83,6 +83,8 @@ pub struct SharedMemoryStats {
 pub struct SharedMemoryHandle {
     region: Arc<SharedMemoryRegion>,
     is_writer: bool,
+    /// COW 副本数据（仅在写入时创建）
+    cow_copy: Option<Arc<Mutex<Vec<u8>>>>,
 }
 
 /// 共享内存管理器
@@ -165,6 +167,7 @@ impl SharedMemoryManager {
         Ok(SharedMemoryHandle {
             region,
             is_writer: true,
+            cow_copy: None,
         })
     }
 
@@ -184,6 +187,7 @@ impl SharedMemoryManager {
             return Ok(SharedMemoryHandle {
                 region,
                 is_writer: false,
+                cow_copy: None,
             });
         }
 
@@ -191,7 +195,7 @@ impl SharedMemoryManager {
         self.create_region(id, size)
     }
 
-    /// 读取数据
+    /// 读取数据（支持 COW）
     pub fn read(&self, handle: &SharedMemoryHandle, offset: usize, size: usize) -> Result<Vec<u8>> {
         // 更新访问时间
         {
@@ -202,8 +206,11 @@ impl SharedMemoryManager {
         // 增加读者计数
         handle.region.readers.fetch_add(1, Ordering::SeqCst);
 
-        // 读取数据
-        let data = {
+        // 读取数据（从 COW 副本或原始数据）
+        let data = if let Some(cow_copy) = &handle.cow_copy {
+            let cow_data = cow_copy.lock().unwrap();
+            cow_data[offset..offset + size].to_vec()
+        } else {
             let data = handle.region.data.lock().unwrap();
             data[offset..offset + size].to_vec()
         };
@@ -220,17 +227,13 @@ impl SharedMemoryManager {
         Ok(data)
     }
 
-    /// 写入数据（仅限写者）
+    /// 写入数据（自动处理 COW）
     pub fn write(
         &self,
-        handle: &SharedMemoryHandle,
+        handle: &mut SharedMemoryHandle,
         offset: usize,
         data: &[u8],
     ) -> Result<()> {
-        if !handle.is_writer {
-            return Err(anyhow::anyhow!("Only writers can write to shared memory"));
-        }
-
         // 更新访问时间
         {
             let mut last_accessed = handle.region.last_accessed.lock().unwrap();
@@ -240,8 +243,28 @@ impl SharedMemoryManager {
         // 增加写者计数
         handle.region.writers.fetch_add(1, Ordering::SeqCst);
 
-        // 写入数据
-        {
+        // 检查是否需要创建 COW 副本
+        if !handle.is_writer && handle.cow_copy.is_none() {
+            // 创建 COW 副本
+            let original_data = {
+                let region_data = handle.region.data.lock().unwrap();
+                region_data.clone()
+            };
+            handle.cow_copy = Some(Arc::new(Mutex::new(original_data)));
+        }
+
+        // 写入数据（到 COW 副本或原始数据）
+        if let Some(cow_copy) = &handle.cow_copy {
+            let mut cow_data = cow_copy.lock().unwrap();
+            if offset + data.len() > cow_data.len() {
+                return Err(anyhow::anyhow!("Write would exceed region size"));
+            }
+            cow_data[offset..offset + data.len()].copy_from_slice(data);
+        } else {
+            // 写入到原始数据（仅限写者）
+            if !handle.is_writer {
+                return Err(anyhow::anyhow!("Only writers can write to shared memory"));
+            }
             let mut region_data = handle.region.data.lock().unwrap();
             if offset + data.len() > region_data.len() {
                 return Err(anyhow::anyhow!("Write would exceed region size"));
@@ -257,6 +280,26 @@ impl SharedMemoryManager {
             let mut stats = self.stats.lock().unwrap();
             stats.total_writes += 1;
         }
+
+        Ok(())
+    }
+
+    /// 创建 COW 副本（仅限非写者）
+    pub fn create_cow_copy(&self, handle: &mut SharedMemoryHandle) -> Result<()> {
+        if handle.is_writer {
+            return Err(anyhow::anyhow!("Writers don't need COW copies"));
+        }
+
+        if handle.cow_copy.is_some() {
+            return Ok(()); // 已经创建了副本
+        }
+
+        // 创建 COW 副本
+        let original_data = {
+            let region_data = handle.region.data.lock().unwrap();
+            region_data.clone()
+        };
+        handle.cow_copy = Some(Arc::new(Mutex::new(original_data)));
 
         Ok(())
     }
