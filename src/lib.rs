@@ -104,11 +104,8 @@ pub mod ai {
 }
 
 // Stage 29.0: 分布式运行时模块
-pub mod distributed {
-    pub mod service_discovery;
-    pub mod node_manager;
-    pub mod health_monitor;
-}
+#[path = "distributed/mod.rs"]
+pub mod distributed;
 
 // Note: edge module exports are temporarily disabled due to compilation issues
 // TODO: Fix edge module and re-enable exports

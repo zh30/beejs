@@ -1,9 +1,13 @@
 //! 分布式运行时模块
 //! 提供集群管理、负载均衡、任务调度等分布式功能
 
+use std::sync::Arc;
+use tracing::info;
+
 pub mod service_discovery;
 pub mod node_manager;
 pub mod health_monitor;
+pub mod load_balancer;
 
 // Re-export 主要类型
 pub use service_discovery::{
@@ -33,6 +37,24 @@ pub use health_monitor::{
     HealthStatistics,
 };
 
+pub use load_balancer::{
+    ConsistentHashRing,
+    HashRingConfig,
+    IntelligentRouter,
+    RouterConfig,
+    RoutingStrategy,
+    CircuitBreaker,
+    CircuitBreakerConfig,
+    CircuitBreakerStats,
+    CircuitBreakerRegistry,
+    CircuitState,
+    LoadBalancer,
+    LoadBalancerConfig,
+    LoadBalancerStats,
+    Backend,
+    Request,
+};
+
 /// 分布式系统配置
 #[derive(Debug, Clone)]
 pub struct DistributedConfig {
@@ -45,11 +67,12 @@ pub struct DistributedConfig {
 impl DistributedConfig {
     /// 创建默认配置
     pub fn default(cluster_name: String, node_id: String) -> Self {
+        let cluster_name_clone = cluster_name.clone();
         Self {
             cluster_name,
             node_id,
             discovery_config: DiscoveryConfig {
-                cluster_name: cluster_name.clone(),
+                cluster_name: cluster_name_clone,
                 gossip_interval: std::time::Duration::from_millis(100),
                 node_timeout: std::time::Duration::from_secs(30),
             },
