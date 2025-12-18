@@ -8,6 +8,7 @@ pub mod service_discovery;
 pub mod node_manager;
 pub mod health_monitor;
 pub mod load_balancer;
+pub mod task_scheduler;
 
 // Re-export 主要类型
 pub use service_discovery::{
@@ -53,6 +54,21 @@ pub use load_balancer::{
     LoadBalancerStats,
     Backend,
     Request,
+};
+
+pub use task_scheduler::{
+    TaskScheduler,
+    TaskDistributor,
+    ResultAggregator,
+    SchedulerConfig,
+    DistributorConfig,
+    AggregatorConfig,
+    TaskType,
+    TaskStatus,
+    Task,
+    TaskResult,
+    SchedulerNodeInfo,
+    SchedulerStats,
 };
 
 /// 分布式系统配置
