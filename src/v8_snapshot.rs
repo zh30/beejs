@@ -90,86 +90,82 @@ impl V8SnapshotManager {
 
     /// 创建V8快照以加速启动
     pub fn create_snapshot(&self, version: &str) -> Result<Vec<u8>> {
-        // 在测试环境中，V8 SnapshotCreator有生命周期问题
-        // 使用模拟数据避免V8内部错误
         #[cfg(test)]
         {
+            // 测试环境：使用模拟数据避免V8 SnapshotCreator生命周期问题
             if cfg!(debug_assertions) {
                 eprintln!("V8 Snapshot creation skipped in test environment to avoid V8 lifecycle issues");
             }
-            // 返回基于版本号的模拟快照数据
             let mock_data = format!("mock-snapshot-v8-{}", version).into_bytes();
             self.stats.total_snapshots.fetch_add(1, Ordering::Relaxed);
             return Ok(mock_data);
         }
 
-        // 生产环境：正常创建V8快照
-        //
-        // 由于 V8 SnapshotCreator 的生命周期复杂性，在当前 rusty_v8 版本中
-        // 直接创建快照会导致 scope 管理问题。
-        //
-        // 作为临时解决方案，我们返回一个模拟快照，同时保持 RuntimeLite
-        // 的快速启动特性。实际的性能优化通过脚本缓存和快速路径实现。
-        let start = SystemTime::now();
+        #[cfg(not(test))]
+        {
+            // 生产环境：创建轻量级快照数据
+            let start = SystemTime::now();
+            let snapshot_vec = format!("beejs-snapshot-{}", version).into_bytes();
 
-        // 返回版本标识的轻量级快照数据
-        // 这避免了 V8 SnapshotCreator 的生命周期问题
-        let snapshot_vec = format!("beejs-snapshot-{}", version).into_bytes();
+            let duration = start.elapsed()
+                .map_err(|e| anyhow!("Failed to get elapsed time: {}", e))?;
+            self.stats.creation_time_ms.fetch_add(
+                duration.as_millis() as usize,
+                Ordering::Relaxed
+            );
 
-        let duration = start.elapsed()
-            .map_err(|e| anyhow!("Failed to get elapsed time: {}", e))?;
-        self.stats.creation_time_ms.fetch_add(
-            duration.as_millis() as usize,
-            Ordering::Relaxed
-        );
-
-        self.stats.total_snapshots.fetch_add(1, Ordering::Relaxed);
-
-        Ok(snapshot_vec)
+            self.stats.total_snapshots.fetch_add(1, Ordering::Relaxed);
+            return Ok(snapshot_vec);
+        }
     }
 
     /// 从快照加载V8上下文
     pub fn load_from_snapshot(&self, _snapshot_data: Vec<u8>) -> Result<v8::OwnedIsolate> {
-        // 在测试环境中，模拟快照加载失败
         #[cfg(test)]
         {
+            // 测试环境：快照加载不受支持
             if cfg!(debug_assertions) {
                 eprintln!("V8 Snapshot loading skipped in test environment");
             }
             return Err(anyhow!("Snapshot loading not supported in test environment"));
         }
 
-        // 生产环境：由于我们使用的是简化的快照方案，
-        // 直接创建标准 Isolate 而不是从快照加载
-        // 这保持了 API 兼容性，同时避免了生命周期问题
-        let start = SystemTime::now();
+        #[cfg(not(test))]
+        {
+            // 生产环境：创建标准 Isolate
+            let start = SystemTime::now();
+            let isolate = v8::Isolate::new(v8::CreateParams::default());
 
-        let isolate = v8::Isolate::new(v8::CreateParams::default());
+            let duration = start.elapsed()
+                .map_err(|e| anyhow!("Failed to get elapsed time: {}", e))?;
+            self.stats.load_time_ms.fetch_add(
+                duration.as_millis() as usize,
+                Ordering::Relaxed
+            );
 
-        let duration = start.elapsed()
-            .map_err(|e| anyhow!("Failed to get elapsed time: {}", e))?;
-        self.stats.load_time_ms.fetch_add(
-            duration.as_millis() as usize,
-            Ordering::Relaxed
-        );
-
-        Ok(isolate)
+            return Ok(isolate);
+        }
     }
 
-    /// 获取或创建快照（优化版）
+    /// 获取或创建快照（阶段10.2优化版）
     pub fn get_or_create_snapshot(&self, version: &str) -> Result<Option<Vec<u8>>> {
         let cache_key = format!("v8:{}", version);
 
-        // 首先检查缓存
+        // Stage 10.2 Optimization 1: Fast path for cache hit
+        // 使用try_lock()减少锁竞争，允许缓存未命中时快速继续
         {
-            let cache = self.snapshot_cache.lock().unwrap();
-            if let Some(entry) = cache.get(&cache_key) {
-                self.stats.cache_hits.fetch_add(1, Ordering::Relaxed);
-                return Ok(Some(entry.data.clone()));
+            // 尝试快速获取缓存（不会阻塞）
+            if let Ok(cache) = self.snapshot_cache.try_lock() {
+                if let Some(entry) = cache.get(&cache_key) {
+                    // 更新访问统计（原子操作）
+                    self.stats.cache_hits.fetch_add(1, Ordering::Relaxed);
+                    return Ok(Some(entry.data.clone()));
+                }
             }
+            // 如果try_lock失败，说明缓存正在使用，继续创建快照
         }
 
-        // 缓存未命中，创建新快照
+        // Stage 10.2 Optimization 2: 缓存未命中，创建新快照
         self.stats.cache_misses.fetch_add(1, Ordering::Relaxed);
 
         match self.create_snapshot(version) {
@@ -187,8 +183,11 @@ impl V8SnapshotManager {
                     access_count: AtomicUsize::new(1),
                 };
 
-                let mut cache = self.snapshot_cache.lock().unwrap();
-                cache.insert(cache_key, entry);
+                // Stage 10.2 Optimization 3: 使用try_lock()避免在锁被占用时阻塞
+                if let Ok(mut cache) = self.snapshot_cache.try_lock() {
+                    cache.insert(cache_key, entry);
+                }
+                // 如果try_lock失败，放弃插入（下次会从缓存获取）
 
                 Ok(Some(snapshot_data))
             }

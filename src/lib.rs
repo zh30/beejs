@@ -426,6 +426,8 @@ impl Runtime {
         verbose: bool,
         optimize_mode: OptimizeMode,
     ) -> Result<Self> {
+        // Stage 10.3 Optimization: 延迟进程池初始化以减少启动时间
+        // 进程池对于简单脚本不是必需的，只有在需要时才会初始化
         // 在测试环境中，先检查 V8 是否可用
         #[cfg(test)]
         {

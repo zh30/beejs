@@ -158,24 +158,28 @@ fn main() -> Result<()> {
     // Fast path: Check for version flag without full parsing
     let args_vec: Vec<String> = std::env::args().collect();
 
-    // Optimization: Check version first without full parsing
+    // Stage 10.1 Optimization: Enhanced fast path checks
+    // Optimization 1: Check version first without full parsing (ZERO overhead)
     if args_vec.len() == 2 && (args_vec[1] == "--version" || args_vec[1] == "-V") {
         println!("beejs {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
 
-    // Optimization: Quick check for help flag
+    // Optimization 2: Quick check for help flag (minimal parsing)
     if args_vec.len() == 2 && (args_vec[1] == "--help" || args_vec[1] == "-h") {
-        let _args = Args::parse();
+        // Use print_help instead of full parse to avoid double parsing
+        let mut app = clap::Command::new("beejs");
+        let _ = app.print_help();
         return Ok(());
     }
 
-    // Check for worker mode (internal flag for process pool workers)
+    // Optimization 3: Worker mode fast path (internal optimization)
     if args_vec.len() >= 2 && args_vec[1] == WORKER_MODE_FLAG {
         return run_worker_mode(&args_vec);
     }
 
-    // Parse all arguments only when we need them
+    // Stage 10.1: Single parse() call - eliminate double parsing overhead
+    // Parse all arguments only when we need them (moved from after help check)
     let args = Args::parse();
 
     // Handle package manager commands (early exit)

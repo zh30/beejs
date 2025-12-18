@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
+#[allow(dead_code)]
 use crate::v8_snapshot::V8SnapshotManager;
 
 /// Lightweight Runtime - minimal V8 runtime for fast startup
