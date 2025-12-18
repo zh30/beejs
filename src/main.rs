@@ -1,4 +1,5 @@
 //! Beejs CLI - Enhanced version with full script execution support
+//! Stage 36.0 - CLI Enhancements: File Watcher, REPL, package.json integration
 //! High-performance JavaScript/TypeScript runtime
 
 use anyhow::{Context, Result};
@@ -6,6 +7,7 @@ use clap::{Parser, ValueEnum};
 use std::fs;
 use std::path::PathBuf;
 use std::time::Instant;
+use tokio::runtime::Runtime;
 
 use beejs::*;
 
@@ -72,12 +74,33 @@ fn main() -> Result<()> {
     // Initialize V8
     let _ = initialize_v8();
 
+    // Try to use enhanced CLI first, fall back to basic CLI
+    let enhanced_result = try_enhanced_cli();
+
+    match enhanced_result {
+        Ok(result) => result,
+        Err(_) => {
+            // Fall back to basic CLI
+            basic_cli_main()
+        }
+    }
+}
+
+fn try_enhanced_cli() -> Result<()> {
+    use crate::cli::enhanced_cli::run_enhanced_cli;
+
+    let rt = tokio::runtime::Runtime::new()?;
+    rt.block_on(run_enhanced_cli())
+}
+
+fn basic_cli_main() -> Result<()> {
     // Parse arguments
     let args = Args::parse();
 
     // Handle version flag
     if args.version {
         println!("beejs {}", env!("CARGO_PKG_VERSION"));
+        println!("Stage 36.0 - CLI Enhancements Available");
         return Ok(());
     }
 

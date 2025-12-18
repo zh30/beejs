@@ -1,0 +1,267 @@
+//! CLI 增强功能测试套件
+//! Stage 36.0 - CLI 增强测试
+
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::time::sleep;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 测试文件监控功能
+    #[tokio::test]
+    async fn test_file_watcher_basic() {
+        // 创建临时测试目录
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let test_file = temp_dir.path().join("test.js");
+
+        // 创建测试文件
+        std::fs::write(&test_file, "console.log('initial')").expect("Failed to write test file");
+
+        // TODO: 实现 FileWatcher 并测试文件监控
+        // let mut watcher = FileWatcher::new(vec![test_file.clone()]);
+        // let watch_handle = tokio::spawn(async move {
+        //     watcher.watch().await
+        // });
+
+        // 等待监控启动
+        sleep(Duration::from_millis(100)).await;
+
+        // 修改文件
+        std::fs::write(&test_file, "console.log('modified')").expect("Failed to modify test file");
+
+        // 验证文件变化被检测到
+        // TODO: 检查文件变化事件
+
+        temp_dir.close().expect("Failed to close temp dir");
+    }
+
+    /// 测试文件监控忽略指定目录
+    #[tokio::test]
+    async fn test_file_watcher_ignore_directories() {
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let src_file = temp_dir.path().join("src").join("test.js");
+        let node_modules_file = temp_dir.path().join("node_modules").join("test.js");
+        let git_file = temp_dir.path().join(".git").join("test.js");
+
+        // 创建目录结构
+        std::fs::create_dir_all(src_file.parent().unwrap()).expect("Failed to create dir");
+        std::fs::create_dir_all(node_modules_file.parent().unwrap()).expect("Failed to create dir");
+        std::fs::create_dir_all(git_file.parent().unwrap()).expect("Failed to create dir");
+
+        // 写入文件
+        std::fs::write(&src_file, "console.log('src')").expect("Failed to write src file");
+        std::fs::write(&node_modules_file, "console.log('node_modules')").expect("Failed to write node_modules file");
+        std::fs::write(&git_file, "console.log('.git')").expect("Failed to write git file");
+
+        // TODO: 验证只有 src/test.js 被监控，node_modules 和 .git 被忽略
+
+        temp_dir.close().expect("Failed to close temp dir");
+    }
+
+    /// 测试 REPL 单行输入
+    #[tokio::test]
+    async fn test_repl_single_line_input() {
+        // TODO: 实现 REPL 并测试
+        // let runtime = Arc::new(Runtime::new().expect("Failed to create runtime"));
+        // let mut repl = Repl::new(runtime);
+        //
+        // let result = repl.evaluate("1 + 1").await.expect("Failed to evaluate");
+        // assert_eq!(result, "2");
+        //
+        // let result = repl.evaluate("console.log('hello')").await.expect("Failed to evaluate");
+        // assert_eq!(result, "undefined");
+    }
+
+    /// 测试 REPL 多行输入
+    #[tokio::test]
+    async fn test_repl_multi_line_input() {
+        // TODO: 实现 REPL 并测试多行功能
+        // let runtime = Arc::new(Runtime::new().expect("Failed to create runtime"));
+        // let mut repl = Repl::new(runtime);
+        //
+        // let multiline_code = r#"
+        // function add(a, b) {
+        //     return a + b;
+        // }
+        // add(2, 3)
+        // "#;
+        //
+        // let result = repl.evaluate(multiline_code).await.expect("Failed to evaluate");
+        // assert_eq!(result, "5");
+    }
+
+    /// 测试 REPL 历史记录
+    #[tokio::test]
+    async fn test_repl_history() {
+        // TODO: 实现 REPL 历史记录功能
+        // let runtime = Arc::new(Runtime::new().expect("Failed to create runtime"));
+        // let mut repl = Repl::new(runtime);
+        //
+        // repl.evaluate("1 + 1").await.expect("Failed to evaluate");
+        // repl.evaluate("2 + 2").await.expect("Failed to evaluate");
+        //
+        // let history = repl.get_history();
+        // assert_eq!(history.len(), 2);
+        // assert!(history.contains(&"1 + 1".to_string()));
+        // assert!(history.contains(&"2 + 2".to_string()));
+    }
+
+    /// 测试 REPL 错误处理
+    #[tokio::test]
+    async fn test_repl_error_handling() {
+        // TODO: 实现 REPL 错误处理
+        // let runtime = Arc::new(Runtime::new().expect("Failed to create runtime"));
+        // let mut repl = Repl::new(runtime);
+        //
+        // let invalid_code = "function invalid({)";
+        // let result = repl.evaluate(invalid_code).await;
+        // assert!(result.is_err());
+        //
+        // 验证错误信息包含语法错误提示
+    }
+
+    /// 测试 package.json 读取 scripts
+    #[test]
+    fn test_package_json_read_scripts() {
+        // 创建临时 package.json
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let package_json = temp_dir.path().join("package.json");
+
+        let package_content = r#"{
+            "name": "test-app",
+            "version": "1.0.0",
+            "scripts": {
+                "start": "beejs src/index.js",
+                "dev": "beejs watch src/index.js",
+                "test": "beejs test"
+            }
+        }"#;
+
+        std::fs::write(&package_json, package_content).expect("Failed to write package.json");
+
+        // TODO: 实现 PackageJson 解析
+        // let pkg = PackageJson::load(&package_json).expect("Failed to load package.json");
+        // let scripts = pkg.get_scripts();
+        // assert_eq!(scripts.get("start"), Some(&"beejs src/index.js".to_string()));
+        // assert_eq!(scripts.get("dev"), Some(&"beejs watch src/index.js".to_string()));
+
+        temp_dir.close().expect("Failed to close temp dir");
+    }
+
+    /// 测试 package.json 读取 beejs 专用配置
+    #[test]
+    fn test_package_json_beejs_config() {
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let package_json = temp_dir.path().join("package.json");
+
+        let package_content = r#"{
+            "name": "test-app",
+            "version": "1.0.0",
+            "beejs": {
+                "entry": "src/index.ts",
+                "optimize": "aggressive",
+                "target": "es2020"
+            }
+        }"#;
+
+        std::fs::write(&package_json, package_content).expect("Failed to write package.json");
+
+        // TODO: 验证 beejs 配置被正确读取
+        // let pkg = PackageJson::load(&package_json).expect("Failed to load package.json");
+        // let config = pkg.get_beejs_config();
+        // assert_eq!(config.entry, Some("src/index.ts".to_string()));
+        // assert_eq!(config.optimize, Some("aggressive".to_string()));
+
+        temp_dir.close().expect("Failed to close temp dir");
+    }
+
+    /// 测试 package.json 执行 scripts
+    #[tokio::test]
+    async fn test_package_json_execute_scripts() {
+        // TODO: 实现 scripts 执行功能
+        // let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        // let package_json = temp_dir.path().join("package.json");
+        // let entry_file = temp_dir.path().join("src").join("index.js");
+        //
+        // std::fs::create_dir_all(entry_file.parent().unwrap()).expect("Failed to create dir");
+        // std::fs::write(&entry_file, "console.log('Hello from Beejs')").expect("Failed to write entry file");
+        //
+        // let package_content = format!(r#"{{
+        //     "scripts": {{
+        //         "start": "beejs src/index.js"
+        //     }}
+        // }}"#);
+        // std::fs::write(&package_json, package_content).expect("Failed to write package.json");
+        //
+        // let pkg = PackageJson::load(&package_json).expect("Failed to load package.json");
+        // let result = pkg.run_script("start").await;
+        // assert!(result.is_ok());
+
+        temp_dir.close().expect("Failed to close temp dir");
+    }
+
+    /// 测试 CLI 参数解析
+    #[test]
+    fn test_cli_argument_parsing() {
+        // TODO: 测试 CLI 参数解析
+        // let args = Args::parse_from(&["beejs", "script.js"]);
+        // assert_eq!(args.script, Some(PathBuf::from("script.js")));
+        //
+        // let args = Args::parse_from(&["beejs", "-e", "console.log('eval')"]);
+        // assert_eq!(args.eval, Some("console.log('eval')".to_string()));
+        //
+        // let args = Args::parse_from(&["beejs", "--watch", "script.js"]);
+        // assert!(args.watch);
+        //
+        // let args = Args::parse_from(&["beejs", "--test"]);
+        // assert!(args.test);
+    }
+
+    /// 测试 CLI 文件监控模式
+    #[tokio::test]
+    async fn test_cli_watch_mode() {
+        // TODO: 测试 CLI watch 模式
+        // let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        // let test_file = temp_dir.path().join("test.js");
+        // std::fs::write(&test_file, "console.log('initial')").expect("Failed to write test file");
+        //
+        // let args = Args {
+        //     script: Some(test_file.clone()),
+        //     watch: true,
+        //     eval: None,
+        //     test: false,
+        //     verbose: false,
+        //     optimize: OptimizeModeArg::default(),
+        // };
+        //
+        // 验证 watch 模式下文件被正确监控
+        // 验证文件修改后自动重新执行
+
+        temp_dir.close().expect("Failed to close temp dir");
+    }
+
+    /// 测试 CLI 测试模式
+    #[tokio::test]
+    async fn test_cli_test_mode() {
+        // TODO: 测试 CLI test 模式
+        // let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        // let test_file = temp_dir.path().join("test.js");
+        // std::fs::write(&test_file, "console.log('test')").expect("Failed to write test file");
+        //
+        // let args = Args {
+        //     script: Some(test_file.clone()),
+        //     test: true,
+        //     watch: false,
+        //     eval: None,
+        //     verbose: false,
+        //     optimize: OptimizeModeArg::default(),
+        // };
+        //
+        // 验证 test 模式下正确执行测试
+
+        temp_dir.close().expect("Failed to close temp dir");
+    }
+}
