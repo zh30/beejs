@@ -139,6 +139,12 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 **状态**: ✅ Completed (2025-12-18) 🎯
 
 ### 最新提交 (2025-12-18)
+**4a10b99** - docs: 清理 nodejs_v8_partial.rs 中过时的TODO注释 📝
+  - ✅ 更新第309-311行的TODO注释，说明这是部分实现
+  - ✅ 澄清主代码使用 src/nodejs.rs 中的完整模块系统
+  - ✅ 解释部分实现仅用于特定测试场景
+  - ✅ 确认模块系统功能正常：120/120测试通过
+
 **3ed3cac** - feat: 为 lock_free 模块创建完整测试套件，提升并发原语测试覆盖率 🎯
   - ✅ 创建 tests/lock_free_tests.rs 完整集成测试套件
   - ✅ 12个测试用例覆盖所有无锁并发原语
