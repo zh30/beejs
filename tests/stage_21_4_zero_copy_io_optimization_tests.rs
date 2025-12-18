@@ -144,14 +144,14 @@ mod tests {
         assert_eq!(buffer.try_read(), Some(3));
         assert_eq!(buffer.try_read(), None);
 
-        // Test buffer full condition
-        for i in 0..10 {
-            assert!(buffer.try_write(i));
+        // Test buffer full condition (ring buffer can hold at most capacity-1 items)
+        for i in 0..9 {
+            assert!(buffer.try_write(i), "Failed to write item {}", i);
         }
         assert!(!buffer.try_write(99)); // Buffer should be full
 
         // Test buffer empty condition
-        for _ in 0..10 {
+        for _ in 0..9 {
             let _ = buffer.try_read();
         }
         assert_eq!(buffer.try_read(), None); // Buffer should be empty

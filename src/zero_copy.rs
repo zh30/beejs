@@ -223,6 +223,27 @@ impl MemoryMappedFile {
         // 简化的实现：内存映射通常自动同步
         Ok(())
     }
+
+    /// 分片读取大文件（零拷贝）
+    pub fn read_chunk(&self, offset: usize, size: usize) -> Result<&[u8], std::io::Error> {
+        if offset + size > self.mapping.len() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Offset + size exceeds file size"
+            ));
+        }
+        Ok(&self.mapping[offset..offset + size])
+    }
+
+    /// 获取文件大小
+    pub fn len(&self) -> usize {
+        self.mapping.len()
+    }
+
+    /// 检查是否为空
+    pub fn is_empty(&self) -> bool {
+        self.mapping.is_empty()
+    }
 }
 
 /// 零拷贝数据传输管理器
@@ -544,5 +565,179 @@ mod tests {
 
         assert_eq!(total_ops, thread_count * iterations);
         assert!(elapsed.as_millis() < 1000); // 应该在1秒内完成
+    }
+}
+
+/// 零拷贝文件缓存管理器
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct ZeroCopyFileCache {
+    /// 缓存的文件映射
+    cache: Arc<Mutex<lru::LruCache<String, Arc<memmap2::Mmap>>>>,
+    /// 最大缓存条目数
+    max_entries: usize,
+    /// 缓存统计
+    stats: Arc<AtomicStats>,
+}
+
+#[allow(dead_code)]
+impl ZeroCopyFileCache {
+    /// 创建新的文件缓存管理器
+    pub fn new(max_entries: usize) -> Self {
+        Self {
+            cache: Arc::new(Mutex::new(lru::LruCache::new(
+                std::num::NonZeroUsize::new(max_entries).unwrap()
+            ))),
+            max_entries,
+            stats: Arc::new(AtomicStats::new()),
+        }
+    }
+
+    /// 获取或加载文件到缓存
+    pub async fn get_or_load(&self, path: &str) -> Result<Arc<memmap2::Mmap>, std::io::Error> {
+        let path_string = path.to_string();
+
+        // 首先检查缓存
+        {
+            let cache = self.cache.lock().unwrap();
+            if let Some(mapping) = cache.get(&path_string) {
+                self.stats.record_operation();
+                return Ok(Arc::clone(mapping));
+            }
+        }
+
+        // 缓存未命中，加载文件
+        let file = tokio::fs::File::open(path).await?;
+        let mapping = unsafe { memmap2::MmapOptions::new().map(&file)? };
+        let mapping = Arc::new(mapping);
+
+        // 添加到缓存
+        {
+            let mut cache = self.cache.lock().unwrap();
+            cache.put(path_string, Arc::clone(&mapping));
+        }
+
+        self.stats.record_operation();
+        Ok(mapping)
+    }
+
+    /// 预加载文件到缓存
+    pub async fn preload(&self, path: &str) -> Result<(), std::io::Error> {
+        let _ = self.get_or_load(path).await?;
+        Ok(())
+    }
+
+    /// 从缓存中移除文件
+    pub fn remove(&self, path: &str) -> Option<Arc<memmap2::Mmap>> {
+        let mut cache = self.cache.lock().unwrap();
+        cache.remove(path)
+    }
+
+    /// 清空缓存
+    pub fn clear(&self) {
+        let mut cache = self.cache.lock().unwrap();
+        cache.clear();
+    }
+
+    /// 获取缓存统计
+    pub fn get_stats(&self) -> String {
+        let cache = self.cache.lock().unwrap();
+        format!(
+            "Zero-copy file cache: {} entries (max: {}), operations: {}",
+            cache.len(),
+            self.max_entries,
+            self.stats.get_report()
+        )
+    }
+}
+
+/// 零拷贝 I/O 性能监控器
+#[derive(Debug)]
+#[allow(dead_code)]
+pub struct ZeroCopyIoMonitor {
+    /// 总零拷贝字节数
+    zero_copy_bytes: Arc<AtomicUsize>,
+    /// 总复制字节数
+    copied_bytes: Arc<AtomicUsize>,
+    /// 文件操作计数
+    file_ops: Arc<AtomicUsize>,
+    /// 缓存命中率
+    cache_hits: Arc<AtomicUsize>,
+    /// 缓存未命中数
+    cache_misses: Arc<AtomicUsize>,
+}
+
+#[allow(dead_code)]
+impl ZeroCopyIoMonitor {
+    /// 创建新的 I/O 监控器
+    pub fn new() -> Self {
+        Self {
+            zero_copy_bytes: Arc::new(AtomicUsize::new(0)),
+            copied_bytes: Arc::new(AtomicUsize::new(0)),
+            file_ops: Arc::new(AtomicUsize::new(0)),
+            cache_hits: Arc::new(AtomicUsize::new(0)),
+            cache_misses: Arc::new(AtomicUsize::new(0)),
+        }
+    }
+
+    /// 记录零拷贝操作
+    pub fn record_zero_copy(&self, bytes: usize) {
+        self.zero_copy_bytes.fetch_add(bytes, Ordering::Relaxed);
+        self.file_ops.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// 记录复制操作
+    pub fn record_copy(&self, bytes: usize) {
+        self.copied_bytes.fetch_add(bytes, Ordering::Relaxed);
+        self.file_ops.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// 记录缓存命中
+    pub fn record_cache_hit(&self) {
+        self.cache_hits.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// 记录缓存未命中
+    pub fn record_cache_miss(&self) {
+        self.cache_misses.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// 获取零拷贝比率
+    pub fn get_zero_copy_ratio(&self) -> f64 {
+        let zero_copy = self.zero_copy_bytes.load(Ordering::Relaxed) as f64;
+        let total = zero_copy + self.copied_bytes.load(Ordering::Relaxed) as f64;
+        if total > 0.0 { zero_copy / total } else { 0.0 }
+    }
+
+    /// 获取缓存命中率
+    pub fn get_cache_hit_rate(&self) -> f64 {
+        let hits = self.cache_hits.load(Ordering::Relaxed) as f64;
+        let total = hits + self.cache_misses.load(Ordering::Relaxed) as f64;
+        if total > 0.0 { hits / total } else { 0.0 }
+    }
+
+    /// 获取性能报告
+    pub fn get_performance_report(&self) -> String {
+        let zero_copy = self.zero_copy_bytes.load(Ordering::Relaxed);
+        let copied = self.copied_bytes.load(Ordering::Relaxed);
+        let file_ops = self.file_ops.load(Ordering::Relaxed);
+        let cache_hit_rate = self.get_cache_hit_rate();
+        let zero_copy_ratio = self.get_zero_copy_ratio();
+
+        format!(
+            "Zero-copy I/O Performance Report:\n\
+             - Total file operations: {}\n\
+             - Zero-copy bytes: {} ({:.2}%)\n\
+             - Copied bytes: {} ({:.2}%)\n\
+             - Cache hit rate: {:.2}%\n\
+             - Zero-copy ratio: {:.2}%",
+            file_ops,
+            zero_copy,
+            zero_copy_ratio * 100.0,
+            copied,
+            (1.0 - zero_copy_ratio) * 100.0,
+            cache_hit_rate * 100.0,
+            zero_copy_ratio * 100.0
+        )
     }
 }

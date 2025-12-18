@@ -93,7 +93,7 @@ pub use isolate_prewarmer::{IsolatePrewarmer, PrewarmConfig, PrewarmStats};
 pub use zero_copy::{
     ZeroCopyBuffer, ZeroCopyChannel, ZeroCopyFileReader, ZeroCopyFileWriter,
     MemoryMappedFile, ZeroCopyManager, ZeroCopyMessage, MessageMetadata,
-    ZeroCopyRingBuffer
+    ZeroCopyRingBuffer, ZeroCopyFileCache, ZeroCopyIoMonitor
 };
 
 // Re-export process pool types
