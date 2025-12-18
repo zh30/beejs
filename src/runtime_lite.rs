@@ -155,9 +155,9 @@ impl RuntimeLite {
             return Some(trimmed.to_string());
         }
 
-        // String constants (single or double quoted)
-        if (trimmed.starts_with('"') && trimmed.ends_with('"')) ||
-           (trimmed.starts_with('\'') && trimmed.ends_with('\'')) {
+        // String constants (single or double quoted) - must be simple, no operators
+        if (trimmed.starts_with('"') && trimmed.ends_with('"') && !trimmed[1..trimmed.len()-1].contains('+') && !trimmed[1..trimmed.len()-1].contains('-') && !trimmed[1..trimmed.len()-1].contains('*') && !trimmed[1..trimmed.len()-1].contains('/')) ||
+           (trimmed.starts_with('\'') && trimmed.ends_with('\'') && !trimmed[1..trimmed.len()-1].contains('+') && !trimmed[1..trimmed.len()-1].contains('-') && !trimmed[1..trimmed.len()-1].contains('*') && !trimmed[1..trimmed.len()-1].contains('/')) {
             return Some(trimmed.to_string());
         }
 
@@ -171,10 +171,36 @@ impl RuntimeLite {
             return Some(trimmed.to_string());
         }
 
+        // Simple string concatenation: "hello" + "world"
+        if self.is_simple_string_concatenation(trimmed) {
+            if let Some(result) = self.evaluate_simple_arithmetic(trimmed) {
+                return Some(result);
+            }
+        }
+
         // Simple arithmetic expressions: numbers with + - * / % operators
         if self.is_simple_arithmetic(trimmed) {
             if let Some(result) = self.evaluate_simple_arithmetic(trimmed) {
                 return Some(result);
+            }
+        }
+
+        // Simple array literals: [1,2,3]
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            return Some(trimmed.to_string());
+        }
+
+        // Simple array operations: [1,2,3].length
+        if trimmed.contains(".length") {
+            let array_part = trimmed.split(".length").next().unwrap();
+            if array_part.starts_with('[') && array_part.ends_with(']') {
+                let elements = &array_part[1..array_part.len()-1];
+                let count = if elements.trim().is_empty() {
+                    0
+                } else {
+                    elements.split(',').count()
+                };
+                return Some(count.to_string());
             }
         }
 
@@ -183,16 +209,22 @@ impl RuntimeLite {
 
     /// Check if code is a simple arithmetic expression
     fn is_simple_arithmetic(&self, code: &str) -> bool {
+        let trimmed = code.trim();
+
+        // Check if it's a string concatenation: "..." + "..." or '...' + '...'
+        if self.is_simple_string_concatenation(trimmed) {
+            return true;
+        }
+
         // Must only contain digits, spaces, and basic operators
         let allowed_chars: std::collections::HashSet<char> =
             "0123456789+-*/%.() ".chars().collect();
 
-        if !code.chars().all(|c| allowed_chars.contains(&c)) {
+        if !trimmed.chars().all(|c| allowed_chars.contains(&c)) {
             return false;
         }
 
         // Must not start or end with operator (except parentheses)
-        let trimmed = code.trim();
         let first_char = trimmed.chars().next();
         let last_char = trimmed.chars().last();
         if first_char.map_or(false, |c| matches!(c, '+' | '-' | '*' | '/' | '%')) ||
@@ -203,6 +235,25 @@ impl RuntimeLite {
         // Simple heuristic: must contain at least one operator
         trimmed.contains('+') || trimmed.contains('-') || trimmed.contains('*') ||
         trimmed.contains('/') || trimmed.contains('%')
+    }
+
+    /// Check if code is a simple string concatenation
+    fn is_simple_string_concatenation(&self, code: &str) -> bool {
+        let trimmed = code.trim();
+
+        // Pattern: "..." + "..." or '...' + '...'
+        if let Some((left, op, right)) = self.parse_simple_binary_op(trimmed) {
+            if op == '+' {
+                // Both sides must be strings
+                let left_is_string = (left.starts_with('"') && left.ends_with('"')) ||
+                                     (left.starts_with('\'') && left.ends_with('\''));
+                let right_is_string = (right.starts_with('"') && right.ends_with('"')) ||
+                                      (right.starts_with('\'') && right.ends_with('\''));
+                return left_is_string && right_is_string;
+            }
+        }
+
+        false
     }
 
     /// Evaluate simple arithmetic expression
@@ -220,6 +271,13 @@ impl RuntimeLite {
                     }
                     if let (Ok(l), Ok(r)) = (left.parse::<f64>(), right.parse::<f64>()) {
                         return Some((l + r).to_string());
+                    }
+                    // String concatenation: "hello" + "world"
+                    if (left.starts_with('"') && left.ends_with('"') && right.starts_with('"') && right.ends_with('"')) ||
+                       (left.starts_with('\'') && left.ends_with('\'') && right.starts_with('\'') && right.ends_with('\'')) {
+                        let left_str = &left[1..left.len()-1];
+                        let right_str = &right[1..right.len()-1];
+                        return Some(format!("{}{}", left_str, right_str));
                     }
                 }
                 '-' => {

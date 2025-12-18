@@ -16,6 +16,10 @@ struct Args {
     #[arg(short, long)]
     eval: Option<String>,
 
+    /// Batch evaluate multiple scripts (faster than multiple --eval calls)
+    #[arg(short = 'b', long = "batch-eval", value_delimiter = ',')]
+    batch_eval: Vec<String>,
+
     /// Run tests
     #[arg(long)]
     test: bool,
@@ -171,13 +175,29 @@ fn main() -> Result<()> {
             println!("Result: {}", result);
         }
         Ok(())
+    } else if !args.batch_eval.is_empty() {
+        // Batch execution mode - faster for multiple scripts
+        if args.verbose {
+            println!("Executing {} scripts in batch mode...", args.batch_eval.len());
+        }
+        for (i, eval_script) in args.batch_eval.iter().enumerate() {
+            let result = runtime
+                .execute_code(eval_script)
+                .context("Failed to execute batch code")?;
+            if args.verbose {
+                println!("[{}] Result: {}", i + 1, result);
+            }
+        }
+        if !args.verbose && !args.batch_eval.is_empty() {
+            println!("Batch execution completed: {} scripts", args.batch_eval.len());
+        }
+        Ok(())
     } else if let Some(ref eval_script) = args.eval {
         let result = runtime
             .execute_code(eval_script)
             .context("Failed to execute code")?;
-        if args.verbose {
-            println!("Result: {}", result);
-        }
+        // Always print result (like Node.js/Bun behavior)
+        println!("{}", result);
         Ok(())
     } else {
         // No script provided - start REPL
