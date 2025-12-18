@@ -140,6 +140,86 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 - [x] 综合验收测试 - ✅ 40/40 测试全部通过 (100%)！
 **状态**: ✅ Completed (2025-12-18 23:30) 🎯
 
+### 阶段 30.5: 生产监控与可观测性 ⭐ [最新阶段]
+**目标**: 集成企业级监控系统，提供完整的可观测性能力
+**成功标准**:
+- [x] 任务 1: Prometheus 指标导出 - ✅ 完整实现！
+- [x] 任务 2: 结构化日志系统 - ✅ 完整实现！
+- [x] 任务 3: 自定义指标系统 - ✅ 完整实现！
+- [x] 任务 4: 告警系统 - ✅ 完整实现！
+- [x] 综合测试套件 - ✅ 20+ 测试用例！
+**状态**: ✅ Completed (2025-12-19) 🎯
+
+**阶段 30.5 详细完成情况**:
+- ✅ 可观测性系统架构设计 (STAGE_30_5_OBSERVABILITY_DESIGN.md)
+  - 完整的模块结构和 API 设计
+  - 详细的组件交互说明
+  - 性能指标和监控面板设计
+
+- ✅ 核心模块实现 (src/observability/)
+  - ObservableSystem: 主可观测性系统
+  - PrometheusExporter: HTTP 指标导出服务器
+  - StructuredLogger: JSON 结构化日志记录器
+  - CustomMetrics: 自定义指标管理系统
+  - AlertingSystem: 多级告警系统
+
+- ✅ Prometheus 指标导出 (src/observability/prometheus_exporter.rs)
+  - /metrics 端点提供 Prometheus 格式指标
+  - /health 健康检查端点
+  - 自定义指标注册和管理
+  - 异步 HTTP 服务器实现
+
+- ✅ 结构化日志 (src/observability/structured_logging.rs)
+  - JSON 格式日志输出
+  - 上下文关联（correlation ID）
+  - 多级别日志支持（TRACE, DEBUG, INFO, WARN, ERROR）
+  - ScriptLogger 和 PerformanceLogger 专门记录器
+
+- ✅ 自定义指标系统 (src/observability/metrics.rs)
+  - 运行时指标：活跃脚本数、内存使用、CPU 使用率
+  - 性能指标：脚本执行时间、JIT 编译时间、GC 暂停时间、网络延迟
+  - 业务指标：脚本加载数、包安装数、热重载次数、并发执行数
+  - Prometheus 集成和自动 P95/P99 计算
+
+- ✅ 告警系统 (src/observability/alerting.rs)
+  - 多级告警（Critical、Warning、Info）
+  - 多种告警条件（大于、小于、等于、范围）
+  - 告警持续时间检查
+  - HTTP Webhook 通知
+  - 内置告警规则
+
+- ✅ 完整测试套件 (tests/stage_30_5_observability_tests.rs)
+  - Prometheus exporter 创建和指标收集测试
+  - 结构化日志记录和上下文测试
+  - 自定义指标记录和查询测试
+  - 告警规则和条件检查测试
+  - ObservableSystem 集成测试
+  - 并发操作测试
+
+- ✅ 依赖管理和模块集成
+  - 添加 9 个 observability 相关依赖
+  - 更新 Cargo.toml 和 lib.rs
+  - 完整的模块导出
+
+**关键指标定义**:
+- beejs_active_scripts: 活跃脚本数量
+- beejs_memory_usage_bytes: 内存使用量
+- beejs_script_execution_duration_seconds: 脚本执行耗时
+- beejs_network_latency_seconds: 网络延迟
+- beejs_scripts_loaded_total: 脚本加载总数
+- beejs_hot_reloads_total: 热重载总数
+
+**内置告警规则**:
+- 高错误率告警：错误率 > 10%
+- 高内存使用告警：内存使用 > 1GB
+- 高延迟告警：P95 延迟 > 1秒
+
+**代码统计**:
+- 新增代码：2800+ 行
+- 新增文件：7 个
+- 测试用例：20+ 个
+- 依赖项：9 个
+
 **阶段 25 详细完成情况**:
 - ✅ 工作窃取优化 (src/concurrent_execution.rs:582-663)
   - 动态窃取阈值：根据负载不均衡程度调整(1-5)
