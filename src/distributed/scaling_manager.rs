@@ -128,7 +128,17 @@ impl ScalingManager {
     }
 
     /// 扩容
-    fn scale_up(&mut self, count: usize) -> Result<(), String> {
+    fn scale_up(&mut self, mut count: usize) -> Result<(), String> {
+        let start_time = Instant::now();
+
+        // 应用最大节点限制
+        let current_count = self.get_current_node_count();
+        let max_additional = self.config.autoscaler_config.max_nodes.saturating_sub(current_count);
+        if count > max_additional {
+            count = max_additional;
+            warn!("扩容数量超过最大节点数限制，调整为 {}", max_additional);
+        }
+
         let mut actual_count = 0;
 
         for i in 0..count {
@@ -149,21 +159,15 @@ impl ScalingManager {
 
             self.nodes.insert(node_id.clone(), node);
 
-            // 分配资源
-            let allocation = self.resource_tracker.allocate(
-                &node_id,
-                self.config.resource_config.max_memory_mb / 10,
-                10,
-            );
-            if let Ok(allocation) = allocation {
-                if let Some(node) = self.nodes.get_mut(&node_id) {
-                    node.resource_allocation = Some(allocation);
-                }
-            }
+            // 不在资源跟踪器中分配节点资源，避免与任务资源混淆
+            // 节点资源由节点自身管理
 
             actual_count += 1;
             info!("节点 {} 创建成功", node_id);
         }
+
+        // 计算扩容时间
+        let scale_up_time = start_time.elapsed();
 
         // 更新统计
         {
@@ -171,6 +175,9 @@ impl ScalingManager {
             stats.total_scale_up_events += 1;
             stats.total_nodes_created += actual_count as u64;
             stats.current_node_count = self.get_current_node_count();
+            stats.total_scale_up_time += scale_up_time;
+            let avg_nanos = stats.total_scale_up_time.as_nanos() / stats.total_scale_up_events.max(1) as u128;
+            stats.average_scale_up_time = Duration::from_nanos(avg_nanos as u64);
             stats.last_scaling_event = Some(ScalingEvent {
                 action: ScalingAction::ScaleUp(actual_count),
                 timestamp: Instant::now(),
@@ -187,12 +194,22 @@ impl ScalingManager {
             metrics: None,
         });
 
-        info!("扩容完成，新增 {} 个节点", actual_count);
+        info!("扩容完成，新增 {} 个节点，耗时 {:?}", actual_count, scale_up_time);
         Ok(())
     }
 
     /// 缩容
-    fn scale_down(&mut self, count: usize) -> Result<(), String> {
+    fn scale_down(&mut self, mut count: usize) -> Result<(), String> {
+        let start_time = Instant::now();
+
+        // 应用最小节点限制
+        let current_count = self.get_current_node_count();
+        let max_remove = current_count.saturating_sub(self.config.autoscaler_config.min_nodes);
+        if count > max_remove {
+            count = max_remove;
+            warn!("缩容数量超过最小节点数限制，调整为 {}", max_remove);
+        }
+
         // 查找可缩容的节点
         let nodes_to_terminate: Vec<String> = self.nodes.values()
             .filter(|n| n.status == ScalingNodeStatus::Running)
@@ -228,12 +245,18 @@ impl ScalingManager {
             info!("节点 {} 缩容完成", node_id);
         }
 
+        // 计算缩容时间
+        let scale_down_time = start_time.elapsed();
+
         // 更新统计
         {
             let mut stats = self.stats.lock().unwrap();
             stats.total_scale_down_events += 1;
             stats.total_nodes_terminated += actual_count as u64;
             stats.current_node_count = self.get_current_node_count();
+            stats.total_scale_down_time += scale_down_time;
+            let avg_nanos = stats.total_scale_down_time.as_nanos() / stats.total_scale_down_events.max(1) as u128;
+            stats.average_scale_down_time = Duration::from_nanos(avg_nanos as u64);
             stats.last_scaling_event = Some(ScalingEvent {
                 action: ScalingAction::ScaleDown(actual_count),
                 timestamp: Instant::now(),
@@ -250,7 +273,7 @@ impl ScalingManager {
             metrics: None,
         });
 
-        info!("缩容完成，移除 {} 个节点", actual_count);
+        info!("缩容完成，移除 {} 个节点，耗时 {:?}", actual_count, scale_down_time);
         Ok(())
     }
 
@@ -361,6 +384,19 @@ impl ScalingManager {
 
         self.is_running = false;
 
+        // 清理所有节点
+        for node in self.nodes.values_mut() {
+            if node.status == ScalingNodeStatus::Running || node.status == ScalingNodeStatus::Draining {
+                node.status = ScalingNodeStatus::Terminated;
+            }
+        }
+
+        // 更新统计
+        {
+            let mut stats = self.stats.lock().unwrap();
+            stats.current_node_count = 0;
+        }
+
         // 记录关闭事件
         self.scaling_history.push(ScalingEvent {
             action: ScalingAction::NoOp,
@@ -369,7 +405,7 @@ impl ScalingManager {
             metrics: None,
         });
 
-        info!("扩缩容管理器已关闭");
+        info!("扩缩容管理器已关闭，所有节点已清理");
     }
 
     /// 获取节点列表

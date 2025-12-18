@@ -168,14 +168,17 @@ impl Autoscaler {
 
     /// 评估是否需要扩缩容
     pub fn evaluate_scaling(&mut self, current_metrics: &ClusterMetrics) -> ScalingAction {
-        // 记录当前指标
-        self.record_metrics(current_metrics.clone());
+        // 先更新冷却时间
+        self.update_cooldown();
 
         // 检查冷却期
         if !self.is_cooldown_complete() {
             debug!("自动扩缩容在冷却期，跳过评估");
             return ScalingAction::NoOp;
         }
+
+        // 记录当前指标
+        self.record_metrics(current_metrics.clone());
 
         // 获取历史平均值（如果有）
         let avg_metrics = self.history.get_average()
@@ -251,22 +254,19 @@ impl Autoscaler {
 
     /// 计算扩容节点数
     fn calculate_scale_up_count(&self, metrics: &ClusterMetrics) -> usize {
-        // 基于负载程度计算扩容节点数
+        // 简化逻辑：基于负载分数调整扩容数量
         let base_count = 1;
-
-        // 根据队列深度调整
-        let queue_factor = (metrics.queue_depth as f64 / 100.0).ceil() as usize;
 
         // 根据负载分数调整
         let load_factor = if metrics.cpu_utilization > 0.9 {
             2
-        } else if metrics.cpu_utilization > 0.8 {
+        } else if metrics.cpu_utilization > 0.85 {
             1
         } else {
             0
         };
 
-        (base_count + queue_factor + load_factor).max(1).min(3)
+        (base_count + load_factor).max(1).min(3)
     }
 
     /// 计算缩容节点数
@@ -280,9 +280,9 @@ impl Autoscaler {
         }
 
         // 根据负载分数调整
-        let load_factor = if metrics.cpu_utilization < 0.2 {
+        let load_factor = if metrics.cpu_utilization < 0.15 {
             2
-        } else if metrics.cpu_utilization < 0.4 {
+        } else if metrics.cpu_utilization < 0.3 {
             1
         } else {
             0
