@@ -94,6 +94,14 @@ pub mod edge {
     pub mod global_router;
     pub mod cache_strategy;
 }
+
+// Stage 27.4: AI 模型集成模块
+pub mod ai {
+    pub mod llm_engine;
+    pub mod model_cache;
+    pub mod acceleration_engine;
+    pub mod model_manager;
+}
 pub use edge::{
     CdnProviderType, CdnEndpoint, EndpointStatus, CdnProvider,
     CloudflareIntegration, VercelIntegration,

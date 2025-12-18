@@ -1,0 +1,826 @@
+//! Stage 27.4 AI 模型集成测试套件
+//! 测试 LLM 推理优化、模型缓存、推理加速和多模型管理功能
+
+use beejs::*;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ========== 阶段 27.4.1: LLM 推理优化测试 ==========
+
+    #[test]
+    fn test_llm_engine_initialization() {
+        let rt = Runtime::new();
+        assert!(rt.is_ok());
+
+        let runtime = rt.unwrap();
+
+        // 初始化 LLM 引擎
+        let llm_engine = AiLlmEngine::new(&runtime, LlmConfig {
+            model_name: "test-model".to_string(),
+            max_tokens: 4096,
+            temperature: 0.7,
+            use_cache: true,
+            parallel_inference: true,
+        });
+
+        assert!(llm_engine.is_ok());
+    }
+
+    #[test]
+    fn test_token_cache_performance() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let config = LlmConfig {
+            model_name: "test-model".to_string(),
+            max_tokens: 4096,
+            temperature: 0.7,
+            use_cache: true,
+            parallel_inference: true,
+        };
+
+        let mut engine = AiLlmEngine::new(&runtime, config).unwrap();
+
+        // 测试 KV Cache 性能
+        let start = Instant::now();
+        for i in 0..100 {
+            let input = format!("Test prompt {}", i);
+            let result = engine.generate(&input, 10);
+            assert!(result.is_ok());
+        }
+        let elapsed = start.elapsed();
+
+        // 缓存应该显著提升性能
+        println!("Token cache test completed in {:?}", elapsed);
+        assert!(elapsed < Duration::from_millis(500));
+    }
+
+    #[test]
+    fn test_batch_inference_performance() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let config = LlmConfig {
+            model_name: "test-model".to_string(),
+            max_tokens: 4096,
+            temperature: 0.7,
+            use_cache: true,
+            parallel_inference: true,
+        };
+
+        let mut engine = AiLlmEngine::new(&runtime, config).unwrap();
+
+        // 创建批量任务
+        let prompts = vec![
+            "Explain quantum computing".to_string(),
+            "Write a Python function".to_string(),
+            "Describe AI trends".to_string(),
+        ];
+
+        let start = Instant::now();
+        let results = engine.batch_generate(&prompts, 20);
+        let elapsed = start.elapsed();
+
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 3);
+
+        println!("Batch inference completed in {:?}", elapsed);
+        assert!(elapsed < Duration::from_millis(1000));
+    }
+
+    #[test]
+    fn test_memory_optimization() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let config = LlmConfig {
+            model_name: "test-model".to_string(),
+            max_tokens: 4096,
+            temperature: 0.7,
+            use_cache: true,
+            parallel_inference: false,
+        };
+
+        let mut engine = AiLlmEngine::new(&runtime, config).unwrap();
+
+        // 测试内存管理
+        for i in 0..50 {
+            let input = format!("Test prompt with varying length {}", i);
+            let result = engine.generate(&input, 50);
+
+            if i % 10 == 0 {
+                // 触发内存优化
+                engine.optimize_memory();
+            }
+
+            assert!(result.is_ok());
+        }
+
+        // 验证内存使用在合理范围内
+        let memory_usage = engine.get_memory_usage();
+        assert!(memory_usage < 2_000_000_000); // < 2GB
+    }
+
+    #[test]
+    fn test_concurrent_inference() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let config = LlmConfig {
+            model_name: "test-model".to_string(),
+            max_tokens: 4096,
+            temperature: 0.7,
+            use_cache: true,
+            parallel_inference: true,
+        };
+
+        let mut engine = AiLlmEngine::new(&runtime, config).unwrap();
+
+        let results = Arc::new(Mutex::new(Vec::new()));
+
+        // 测试 100 个并发推理任务
+        let mut handles = vec![];
+        for i in 0..100 {
+            let mut engine_ref = &mut engine;
+            let results_ref = Arc::clone(&results);
+
+            let handle = std::thread::spawn(move || {
+                let input = format!("Concurrent test prompt {}", i);
+                let result = engine_ref.generate(&input, 10);
+
+                if let Ok(output) = result {
+                    results_ref.lock().unwrap().push(output);
+                }
+
+                i
+            });
+
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            let _ = handle.join();
+        }
+
+        let final_results = results.lock().unwrap();
+        assert_eq!(final_results.len(), 100);
+    }
+
+    // ========== 阶段 27.4.2: 模型缓存系统测试 ==========
+
+    #[test]
+    fn test_model_cache_creation() {
+        let cache = ModelCache::new(ModelCacheConfig {
+            max_memory_mb: 1024,
+            max_disk_gb: 10,
+            enable_compression: true,
+            enable_prefetch: true,
+        });
+
+        assert!(cache.is_ok());
+    }
+
+    #[test]
+    fn test_model_loading_performance() {
+        let mut cache = ModelCache::new(ModelCacheConfig {
+            max_memory_mb: 2048,
+            max_disk_gb: 10,
+            enable_compression: true,
+            enable_prefetch: false,
+        }).unwrap();
+
+        let start = Instant::now();
+        let result = cache.load_model("test-model-7b".to_string());
+        let load_time = start.elapsed();
+
+        assert!(result.is_ok());
+        println!("Model loading time: {:?}", load_time);
+
+        // 模型加载应该在 5 秒内完成
+        assert!(load_time < Duration::from_secs(5));
+    }
+
+    #[test]
+    fn test_cache_hit_rate() {
+        let mut cache = ModelCache::new(ModelCacheConfig {
+            max_memory_mb: 1024,
+            max_disk_gb: 10,
+            enable_compression: true,
+            enable_prefetch: true,
+        }).unwrap();
+
+        // 预热缓存
+        cache.preload_model("test-model-1".to_string()).unwrap();
+        cache.preload_model("test-model-2".to_string()).unwrap();
+        cache.preload_model("test-model-3".to_string()).unwrap();
+
+        // 多次访问已缓存的模型
+        for _ in 0..100 {
+            cache.get_model("test-model-1").unwrap();
+            cache.get_model("test-model-2").unwrap();
+        }
+
+        let hit_rate = cache.get_hit_rate();
+        println!("Cache hit rate: {}%", hit_rate * 100.0);
+
+        // 命中率应该 > 90%
+        assert!(hit_rate > 0.90);
+    }
+
+    #[test]
+    fn test_model_switching_performance() {
+        let mut cache = ModelCache::new(ModelCacheConfig {
+            max_memory_mb: 2048,
+            max_disk_gb: 10,
+            enable_compression: true,
+            enable_prefetch: true,
+        }).unwrap();
+
+        // 加载多个模型
+        cache.load_model("model-1".to_string()).unwrap();
+        cache.load_model("model-2".to_string()).unwrap();
+        cache.load_model("model-3".to_string()).unwrap();
+
+        let start = Instant::now();
+        // 快速切换模型
+        for _ in 0..50 {
+            cache.get_model("model-1").unwrap();
+            cache.get_model("model-2").unwrap();
+            cache.get_model("model-3").unwrap();
+        }
+        let elapsed = start.elapsed();
+
+        println!("Model switching time: {:?}", elapsed / 150);
+        assert!(elapsed / 150 < Duration::from_millis(10));
+    }
+
+    #[test]
+    fn test_cache_memory_management() {
+        let mut cache = ModelCache::new(ModelCacheConfig {
+            max_memory_mb: 512, // 小内存限制
+            max_disk_gb: 10,
+            enable_compression: true,
+            enable_prefetch: true,
+        }).unwrap();
+
+        // 加载多个大模型，触发缓存淘汰
+        cache.load_model("large-model-1".to_string()).unwrap();
+        cache.load_model("large-model-2".to_string()).unwrap();
+        cache.load_model("large-model-3".to_string()).unwrap();
+
+        // 验证内存使用在限制内
+        let memory_usage = cache.get_memory_usage();
+        assert!(memory_usage < 512 * 1024 * 1024);
+    }
+
+    #[test]
+    fn test_smart_prefetch() {
+        let mut cache = ModelCache::new(ModelCacheConfig {
+            max_memory_mb: 2048,
+            max_disk_gb: 10,
+            enable_compression: true,
+            enable_prefetch: true,
+        }).unwrap();
+
+        // 记录访问模式
+        cache.record_access("model-a".to_string());
+        cache.record_access("model-a".to_string());
+        cache.record_access("model-b".to_string());
+
+        // 智能预取应该预加载 model-a
+        let prefetch_list = cache.get_prefetch_recommendations();
+        assert!(prefetch_list.contains(&"model-a".to_string()));
+
+        let accuracy = cache.get_prefetch_accuracy();
+        assert!(accuracy > 0.80);
+    }
+
+    // ========== 阶段 27.4.3: 推理加速引擎测试 ==========
+
+    #[test]
+    fn test_gpu_acceleration_initialization() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
+            use_gpu: true,
+            use_npu: false,
+            batch_size: 32,
+            pipeline_parallel: true,
+        });
+
+        assert!(acceleration.is_ok());
+    }
+
+    #[test]
+    fn test_gpu_acceleration_performance() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let mut acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
+            use_gpu: true,
+            use_npu: false,
+            batch_size: 32,
+            pipeline_parallel: true,
+        }).unwrap();
+
+        let test_input = vec![1.0f32; 1024];
+
+        // CPU 推理
+        let start = Instant::now();
+        let cpu_result = acceleration.cpu_inference(&test_input);
+        let cpu_time = start.elapsed();
+
+        // GPU 推理
+        let start = Instant::now();
+        let gpu_result = acceleration.gpu_inference(&test_input);
+        let gpu_time = start.elapsed();
+
+        assert!(cpu_result.is_ok());
+        assert!(gpu_result.is_ok());
+
+        let speedup = cpu_time.as_secs_f64() / gpu_time.as_secs_f64();
+        println!("GPU speedup: {:.2}x", speedup);
+
+        // GPU 应该比 CPU 快
+        assert!(speedup > 2.0);
+    }
+
+    #[test]
+    fn test_pipeline_parallel_inference() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let mut acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
+            use_gpu: false, // CPU 模式
+            use_npu: false,
+            batch_size: 64,
+            pipeline_parallel: true,
+        }).unwrap();
+
+        let inputs = vec![vec![1.0f32; 512]; 64];
+
+        let start = Instant::now();
+        let results = acceleration.pipeline_inference(&inputs);
+        let elapsed = start.elapsed();
+
+        assert!(results.is_ok());
+        assert_eq!(results.unwrap().len(), 64);
+
+        println!("Pipeline inference time: {:?}", elapsed);
+        assert!(elapsed < Duration::from_millis(100));
+    }
+
+    #[test]
+    fn test_dynamic_batch_processing() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let mut acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
+            use_gpu: false,
+            use_npu: false,
+            batch_size: 32,
+            pipeline_parallel: false,
+        }).unwrap();
+
+        // 动态调整批处理大小
+        acceleration.set_dynamic_batching(true);
+
+        let start = Instant::now();
+        for batch_size in [1, 8, 16, 32, 64] {
+            acceleration.set_batch_size(batch_size);
+
+            let inputs = vec![vec![1.0f32; 256]; batch_size];
+            let result = acceleration.batch_inference(&inputs);
+            assert!(result.is_ok());
+        }
+        let elapsed = start.elapsed();
+
+        println!("Dynamic batching completed in {:?}", elapsed);
+        assert!(elapsed < Duration::from_millis(500));
+    }
+
+    #[test]
+    fn test_acceleration_stability() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let mut acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
+            use_gpu: false,
+            use_npu: false,
+            batch_size: 16,
+            pipeline_parallel: false,
+        }).unwrap();
+
+        // 长时间运行稳定性测试
+        for i in 0..1000 {
+            let input = vec![1.0f32; 128];
+            let result = acceleration.inference(&input);
+
+            if i % 100 == 0 {
+                // 定期检查健康状态
+                assert!(acceleration.is_healthy());
+            }
+
+            assert!(result.is_ok());
+        }
+
+        assert!(acceleration.is_healthy());
+    }
+
+    // ========== 阶段 27.4.4: 多模型管理系统测试 ==========
+
+    #[test]
+    fn test_model_registry_creation() {
+        let registry = ModelRegistry::new(ModelRegistryConfig {
+            auto_discovery: true,
+            health_check_interval: Duration::from_secs(30),
+        });
+
+        assert!(registry.is_ok());
+    }
+
+    #[test]
+    fn test_model_registration_and_discovery() {
+        let mut registry = ModelRegistry::new(ModelRegistryConfig {
+            auto_discovery: true,
+            health_check_interval: Duration::from_secs(30),
+        }).unwrap();
+
+        // 注册模型
+        let model_info = ModelInfo {
+            name: "test-model".to_string(),
+            version: "1.0".to_string(),
+            model_type: ModelType::LanguageModel {
+                model_name: "test-model".to_string(),
+                max_tokens: 4096,
+                temperature: 0.7,
+            },
+            endpoint: "http://localhost:8080".to_string(),
+            capabilities: vec!["text-generation".to_string()],
+        };
+
+        let result = registry.register_model(model_info);
+        assert!(result.is_ok());
+
+        // 发现模型
+        let discovered = registry.discover_models();
+        assert!(discovered.is_ok());
+        assert!(discovered.unwrap().contains(&"test-model".to_string()));
+    }
+
+    #[test]
+    fn test_intelligent_routing() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let mut router = ModelRouter::new(&runtime, RouterConfig {
+            load_balancing: LoadBalancingStrategy::WeightedRoundRobin,
+            fallback_enabled: true,
+            route_cache_ttl: Duration::from_secs(60),
+        }).unwrap();
+
+        // 模拟模型性能数据
+        router.add_model("model-a".to_string(), ModelMetrics {
+            latency: Duration::from_millis(50),
+            throughput: 100.0,
+            error_rate: 0.01,
+            load: 0.3,
+        });
+
+        router.add_model("model-b".to_string(), ModelMetrics {
+            latency: Duration::from_millis(80),
+            throughput: 150.0,
+            error_rate: 0.02,
+            load: 0.5,
+        });
+
+        // 测试路由选择
+        for _ in 0..100 {
+            let selected = router.route_request("text-generation".to_string());
+            assert!(selected.is_ok());
+        }
+
+        let route_accuracy = router.get_route_accuracy();
+        assert!(route_accuracy > 0.95);
+    }
+
+    #[test]
+    fn test_load_balancing() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let mut router = ModelRouter::new(&runtime, RouterConfig {
+            load_balancing: LoadBalancingStrategy::LeastConnections,
+            fallback_enabled: true,
+            route_cache_ttl: Duration::from_secs(60),
+        }).unwrap();
+
+        // 添加多个模型实例
+        for i in 0..5 {
+            router.add_model(format!("model-{}", i), ModelMetrics {
+                latency: Duration::from_millis(50 + i * 10),
+                throughput: 100.0 - i as f64 * 10.0,
+                error_rate: 0.01,
+                load: 0.2 + i as f64 * 0.1,
+            });
+        }
+
+        // 发送多个请求，验证负载均衡
+        let mut load_distribution = std::collections::HashMap::new();
+        for _ in 0..1000 {
+            if let Ok(model_name) = router.route_request("text-generation".to_string()) {
+                *load_distribution.entry(model_name).or_insert(0) += 1;
+            }
+        }
+
+        // 验证负载分布相对均匀
+        assert_eq!(load_distribution.len(), 5);
+        for count in load_distribution.values() {
+            assert!(*count > 150 && *count < 250);
+        }
+    }
+
+    #[test]
+    fn test_failover_mechanism() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let mut router = ModelRouter::new(&runtime, RouterConfig {
+            load_balancing: LoadBalancingStrategy::RoundRobin,
+            fallback_enabled: true,
+            route_cache_ttl: Duration::from_secs(60),
+        }).unwrap();
+
+        router.add_model("primary-model".to_string(), ModelMetrics {
+            latency: Duration::from_millis(50),
+            throughput: 100.0,
+            error_rate: 0.01,
+            load: 0.3,
+        });
+
+        router.add_model("fallback-model".to_string(), ModelMetrics {
+            latency: Duration::from_millis(80),
+            throughput: 80.0,
+            error_rate: 0.01,
+            load: 0.2,
+        });
+
+        // 模拟主模型故障
+        router.mark_model_unhealthy("primary-model".to_string());
+
+        // 应该自动切换到备用模型
+        let start = Instant::now();
+        let selected = router.route_request("text-generation".to_string());
+        let failover_time = start.elapsed();
+
+        assert!(selected.is_ok());
+        assert_eq!(selected.unwrap(), "fallback-model".to_string());
+        assert!(failover_time < Duration::from_secs(1));
+    }
+
+    #[test]
+    fn test_concurrent_model_management() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let mut manager = ModelManager::new(&runtime, ManagerConfig {
+            max_concurrent_models: 10,
+            model_timeout: Duration::from_secs(300),
+            enable_auto_scaling: true,
+        }).unwrap();
+
+        let results = Arc::new(Mutex::new(Vec::new()));
+        let mut handles = vec![];
+
+        // 并发加载和管理模型
+        for i in 0..20 {
+            let mut manager_ref = &mut manager;
+            let results_ref = Arc::clone(&results);
+
+            let handle = std::thread::spawn(move || {
+                let model_name = format!("concurrent-model-{}", i % 10);
+                let result = manager_ref.load_model(model_name.clone());
+
+                if let Ok(handle) = result {
+                    let metrics = manager_ref.get_model_metrics(&model_name);
+                    results_ref.lock().unwrap().push(metrics.is_ok());
+                } else {
+                    results_ref.lock().unwrap().push(false);
+                }
+
+                i
+            });
+
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            let _ = handle.join();
+        }
+
+        let final_results = results.lock().unwrap();
+        assert!(final_results.iter().any(|&x| x)); // 至少有一些成功的
+    }
+
+    // ========== 阶段 27.4.5: 集成测试 ==========
+
+    #[test]
+    fn test_end_to_end_ai_pipeline() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        // 1. 初始化 AI 系统
+        let cache = ModelCache::new(ModelCacheConfig {
+            max_memory_mb: 2048,
+            max_disk_gb: 10,
+            enable_compression: true,
+            enable_prefetch: true,
+        }).unwrap();
+
+        let acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
+            use_gpu: false,
+            use_npu: false,
+            batch_size: 32,
+            pipeline_parallel: true,
+        }).unwrap();
+
+        let manager = ModelManager::new(&runtime, ManagerConfig {
+            max_concurrent_models: 10,
+            model_timeout: Duration::from_secs(300),
+            enable_auto_scaling: true,
+        }).unwrap();
+
+        // 2. 加载模型
+        let model_handle = manager.load_model("test-model".to_string()).unwrap();
+
+        // 3. 执行推理
+        let start = Instant::now();
+        let result = manager.inference(&model_handle, "Hello AI".to_string());
+        let inference_time = start.elapsed();
+
+        assert!(result.is_ok());
+        assert!(inference_time < Duration::from_millis(1000));
+
+        // 4. 验证缓存
+        let cache_hit = cache.get_hit_rate();
+        assert!(cache_hit > 0.0);
+    }
+
+    #[test]
+    fn test_ai_performance_benchmark() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let start = Instant::now();
+
+        // 创建 AI 系统
+        let cache = ModelCache::new(ModelCacheConfig {
+            max_memory_mb: 2048,
+            max_disk_gb: 10,
+            enable_compression: true,
+            enable_prefetch: true,
+        }).unwrap();
+
+        let acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
+            use_gpu: false,
+            use_npu: false,
+            batch_size: 32,
+            pipeline_parallel: true,
+        }).unwrap();
+
+        let manager = ModelManager::new(&runtime, ManagerConfig {
+            max_concurrent_models: 10,
+            model_timeout: Duration::from_secs(300),
+            enable_auto_scaling: true,
+        }).unwrap();
+
+        // 运行综合测试
+        let mut total_inferences = 0;
+        let mut total_time = Duration::from_secs(0);
+
+        for i in 0..100 {
+            let model_handle = manager.load_model(format!("benchmark-model-{}", i % 5)).unwrap();
+
+            let inference_start = Instant::now();
+            let _ = manager.inference(&model_handle, format!("Test prompt {}", i));
+            let inference_time = inference_start.elapsed();
+
+            total_inferences += 1;
+            total_time += inference_time;
+        }
+
+        let total_benchmark_time = start.elapsed();
+        let avg_inference_time = total_time / total_inferences;
+
+        println!("Total benchmark time: {:?}", total_benchmark_time);
+        println!("Average inference time: {:?}", avg_inference_time);
+
+        // 性能要求：平均推理时间 < 100ms
+        assert!(avg_inference_time < Duration::from_millis(100));
+    }
+
+    #[test]
+    fn test_ai_system_stability() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let cache = ModelCache::new(ModelCacheConfig {
+            max_memory_mb: 1024,
+            max_disk_gb: 10,
+            enable_compression: true,
+            enable_prefetch: true,
+        }).unwrap();
+
+        let acceleration = AccelerationEngine::new(&runtime, AccelerationConfig {
+            use_gpu: false,
+            use_npu: false,
+            batch_size: 16,
+            pipeline_parallel: false,
+        }).unwrap();
+
+        let manager = ModelManager::new(&runtime, ManagerConfig {
+            max_concurrent_models: 5,
+            model_timeout: Duration::from_secs(60),
+            enable_auto_scaling: false,
+        }).unwrap();
+
+        // 长时间稳定性测试
+        for cycle in 0..10 {
+            println!("Stability test cycle {}", cycle);
+
+            for i in 0..100 {
+                let model_name = format!("stability-model-{}", i % 3);
+                let model_handle = manager.load_model(model_name).unwrap();
+
+                let result = manager.inference(&model_handle, format!("Stability test {}", i));
+                assert!(result.is_ok());
+
+                if i % 20 == 0 {
+                    // 定期系统检查
+                    assert!(acceleration.is_healthy());
+                    let _ = cache.optimize();
+                }
+            }
+        }
+
+        // 最终健康检查
+        assert!(acceleration.is_healthy());
+    }
+
+    #[test]
+    fn test_ai_memory_leak_detection() {
+        let rt = Runtime::new().unwrap();
+        let runtime = Arc::new(rt);
+
+        let cache = ModelCache::new(ModelCacheConfig {
+            max_memory_mb: 512,
+            max_disk_gb: 10,
+            enable_compression: true,
+            enable_prefetch: false,
+        }).unwrap();
+
+        let manager = ModelManager::new(&runtime, ManagerConfig {
+            max_concurrent_models: 5,
+            model_timeout: Duration::from_secs(30),
+            enable_auto_scaling: true,
+        }).unwrap();
+
+        // 记录初始内存使用
+        let initial_memory = cache.get_memory_usage();
+
+        // 大量模型操作
+        for i in 0..200 {
+            let model_name = format!("memory-test-model-{}", i % 10);
+            let model_handle = manager.load_model(model_name.clone()).unwrap();
+
+            // 执行多次推理
+            for _ in 0..10 {
+                let _ = manager.inference(&model_handle, "Memory test".to_string());
+            }
+
+            // 定期清理
+            if i % 50 == 0 {
+                manager.cleanup_idle_models();
+                cache.optimize();
+            }
+        }
+
+        // 强制垃圾回收
+        cache.force_gc();
+        manager.force_cleanup();
+
+        let final_memory = cache.get_memory_usage();
+
+        println!("Initial memory: {} bytes", initial_memory);
+        println!("Final memory: {} bytes", final_memory);
+        println!("Memory growth: {} bytes", final_memory - initial_memory);
+
+        // 内存增长应该在合理范围内 (< 100MB)
+        assert!(final_memory - initial_memory < 100_000_000);
+    }
+}
