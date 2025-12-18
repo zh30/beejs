@@ -84,6 +84,25 @@ pub mod wasm {
     pub mod module_cache;
 }
 
+// Stage 27.3: 边缘计算优化模块
+pub mod edge {
+    pub mod cdn_provider;
+    pub mod cloudflare_integration;
+    pub mod vercel_integration;
+    pub mod deployment_optimizer;
+    pub mod edge_runtime;
+    pub mod global_router;
+    pub mod cache_strategy;
+}
+pub use edge::{
+    CdnProviderType, CdnEndpoint, EndpointStatus, CdnProvider,
+    CloudflareIntegration, VercelIntegration,
+    EdgeDeploymentOptimizer, OptimizedConfig,
+    EdgeRuntime, RuntimeExecutionContext,
+    GlobalRouter, AnycastDns, GeoDns,
+    EdgeCache, CacheStats,
+};
+
 // Stage 21.2: Lazy loading framework for expensive modules
 pub mod lazy_loader;
 pub use lazy_loader::{print_stats, reset_stats};
