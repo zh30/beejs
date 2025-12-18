@@ -267,6 +267,7 @@ impl StealStats {
 
 /// Stage 25.0: 窃取预测器 - 基于历史数据和任务模式预测窃取目标
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct StealPredictor {
     /// 每个队列的历史窃取成功率
     queue_success_rates: Vec<f64>,
@@ -279,6 +280,7 @@ pub struct StealPredictor {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct StealEvent {
     pub timestamp: Instant,
     pub source_queue: usize,
@@ -466,7 +468,7 @@ impl LoadMonitor {
     }
 
     /// 计算平均执行时间
-    fn calculate_average_duration(&self, worker_id: usize) -> Duration {
+    fn calculate_average_duration(&self, _worker_id: usize) -> Duration {
         // 简化实现：返回默认值
         // 在生产环境中应该从历史记录中计算
         Duration::from_millis(50)
@@ -572,7 +574,7 @@ impl AdaptiveThreadPool {
     /// 评估是否需要调整线程池大小
     pub fn evaluate_scaling_need(&self) -> Option<usize> {
         let current_size = self.current_size.load(std::sync::atomic::Ordering::Relaxed);
-        let (min_load, max_load, avg_load, load_variance) = self.load_monitor.get_system_load_stats();
+        let (_min_load, max_load, avg_load, load_variance) = self.load_monitor.get_system_load_stats();
 
         // 扩容条件：系统负载高且稳定
         let should_scale_up = max_load > current_size * 3 && // 存在严重过载

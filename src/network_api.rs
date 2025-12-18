@@ -48,7 +48,6 @@ pub fn setup_network_apis(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::network::{NetworkBufferPool, ConnectionPool, NetworkIoStatistics};
     use std::sync::Arc;
 
