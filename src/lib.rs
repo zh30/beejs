@@ -20,7 +20,7 @@ mod concurrent_execution;
 mod deep_optimization;
 mod event_loop;
 mod hot_path_tracker;
-mod inline_cache;
+pub mod inline_cache;
 mod isolate_guard;
 mod isolate_pool;
 mod isolate_prewarmer;

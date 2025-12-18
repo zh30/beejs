@@ -16,7 +16,7 @@ fn fast_hash(input: &str) -> u64 {
     hash
 }
 
-/// Represents the type of cache entry (property access or function call)
+/// Represents the type of cache entry (property access, function call, or operator)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CacheType {
     /// Cache for object property access
@@ -28,6 +28,12 @@ pub enum CacheType {
     Function {
         function_name: String,
         receiver_type: String,
+    },
+    /// Cache for operator execution (arithmetic, comparison, logical)
+    Operator {
+        operator: String,
+        left_type: String,
+        right_type: String,
     },
 }
 
@@ -287,6 +293,33 @@ impl InlineCache {
         stats.evictions = 0;
         stats.hit_rate = 0.0;
         stats.total_ops = 0;
+    }
+
+    /// 预热常见操作符：预缓存常用的操作符以提升性能
+    pub fn pre_warm_common_operators(&self, operators: Vec<(CacheType, u64, String, u64)>) {
+        let mut entries = self.entries.lock().unwrap();
+        let mut stats = self.stats.lock().unwrap();
+
+        for (cache_type, receiver_hash, cached_value, type_version) in operators {
+            let key = CacheKey {
+                cache_type: cache_type.clone(),
+                receiver_hash,
+            };
+
+            // 只有当缓存未满且条目不存在时才预热
+            if entries.len() < self.config.max_entries && !entries.contains_key(&key) {
+                entries.insert(
+                    key,
+                    CacheEntry {
+                        cached_value,
+                        type_version,
+                        access_count: 0,
+                        last_accessed: Instant::now(),
+                    },
+                );
+                stats.total_cached += 1;
+            }
+        }
     }
 
     /// 预测性预缓存：预缓存常见属性以提升性能
