@@ -33,6 +33,9 @@ pub mod v8_heap_config;
 pub mod zero_copy;
 pub mod v8_snapshot;
 
+// Stage 31.3: 性能基准测试框架
+pub mod benchmarks;
+
 // Stage 27.1: V8 深度优化 - 嵌入式内置函数
 pub mod v8_optimized {
     pub mod embedded_builtins;
