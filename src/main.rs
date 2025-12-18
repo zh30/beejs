@@ -171,6 +171,7 @@ fn is_simple_string_op(code: &str) -> bool {
 
 /// Stage 18 Optimization: Ultra-fast evaluation without V8
 /// Evaluates simple expressions directly in Rust for maximum speed
+#[allow(dead_code)]
 fn super_fast_eval(code: &str) -> Result<String, &'static str> {
     let code = code.trim();
 
