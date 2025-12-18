@@ -9,6 +9,7 @@ pub mod node_manager;
 pub mod health_monitor;
 pub mod load_balancer;
 pub mod task_scheduler;
+pub mod task_executor;
 
 // Re-export 主要类型
 pub use service_discovery::{
@@ -69,6 +70,37 @@ pub use task_scheduler::{
     TaskResult,
     SchedulerNodeInfo,
     SchedulerStats,
+};
+
+pub use task_executor::{
+    TaskExecutor,
+    ExecutorConfig,
+    ExecutionMode,
+    ExecutorStats,
+    ExecutorWorker,
+    WorkerStatus,
+    WorkerConfig,
+    WorkerStats,
+    TaskExecution,
+    ExecutionResult,
+    ExecutionError,
+    FaultHandler,
+    FaultConfig,
+    RetryPolicy,
+    FaultAction,
+    ExecutionMonitor,
+    MonitorConfig,
+    ExecutionMetrics,
+    AlertType,
+    Alert,
+    ResourceTracker,
+    ResourceConfig,
+    ResourceAllocation,
+    ResourceUsage,
+    Checkpoint,
+    CheckpointManager,
+    RecoveryManager,
+    RecoveryConfig,
 };
 
 /// 分布式系统配置
