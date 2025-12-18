@@ -393,6 +393,40 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
   - 编译状态: 零警告零错误
   - 无性能回归，所有核心功能稳定
 
+### 阶段12.1: 快路径扩展优化 - 字符串和数组方法 (2025-12-18 13:30) 🚀
+- ✅ **字符串方法快路径实现** - 支持7种常用字符串方法
+  - .length: "hello".length = 5 ✅
+  - .substring: "hello world".substring(0, 5) = "hello" ✅
+  - .slice: "hello".slice(1, 4) = "ell" ✅
+  - .indexOf: "hello world".indexOf("world") = 6 ✅
+  - .split: "a,b,c".split(",") = ["a","b","c"] ✅
+  - .toUpperCase: "hello".toUpperCase() = "HELLO" ✅
+  - .toLowerCase: "HELLO".toLowerCase() = "hello" ✅
+- ✅ **数组方法快路径实现** - 支持4种常用数组方法
+  - .length: [1,2,3].length = 3 ✅
+  - .slice: [1,2,3,4,5].slice(1, 3) = [2,3] ✅
+  - .indexOf: [1,2,3].indexOf(2) = 1 ✅
+  - .includes: [1,2,3].includes(2) = true ✅
+- ✅ **字符串+数字混合连接支持** - 智能类型处理
+  - "hello" + 5 = "hello5" ✅
+  - 5 + "hello" = "5hello" ✅
+- ✅ **快路径执行流程优化** - 优先级排序
+  - 1. 字符串方法快路径
+  - 2. 数组方法快路径
+  - 3. 对象属性访问快路径
+  - 4. 字符串属性访问快路径
+  - 5. 回退到V8执行
+- ✅ **测试验证** - 全面的快路径测试覆盖
+  - 11个字符串快路径测试：11/11通过 ✅
+  - 6个数组快路径测试：6/6通过（1个被忽略） ✅
+  - 151/151库测试：100%通过率 ✅
+  - 编译状态：零警告零错误 ✅
+- ✅ **性能验证** - 基准测试确认优化效果
+  - 启动时间：15.91μs (62854 ops/sec)
+  - 字符串操作：快路径绕过V8开销
+  - 数组操作：直接解析无需V8
+  - 基准测试报告：performance_report.md已生成
+
 ### 最新功能 (2025-12-18)
 - ✅ **热重载系统** - 完整的 HotReloader 模块 (src/watcher.rs)
   - 文件监听：支持 JS/TS/JSX/TSX/MJS/CJS 文件

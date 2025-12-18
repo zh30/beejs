@@ -1,93 +1,93 @@
 Beejs Performance Benchmark Report
-Generated: 2025-12-18 07:45:33
+Generated: 2025-12-18 13:30:20
 Iterations per test: 100
 Warmup iterations: 10
 
-Total Benchmark Time: 19.92ms
-Average Time per Operation: 19.92μs
+Total Benchmark Time: 16.21ms
+Average Time per Operation: 16.21μs
 
 Individual Benchmark Results:
 ------------------------------
 
 Benchmark: startup_time
 Iterations: 100
-Total Time: 1.86ms
-Avg Time: 18.60μs
-Min Time: 16.50μs
-Max Time: 44.12μs
-Operations/sec: 53769
+Total Time: 1.59ms
+Avg Time: 15.91μs
+Min Time: 13.96μs
+Max Time: 34.12μs
+Operations/sec: 62854
 
 Benchmark: code_execution
 Iterations: 100
-Total Time: 2.02ms
-Avg Time: 20.23μs
-Min Time: 17.08μs
-Max Time: 36.25μs
-Operations/sec: 49436
+Total Time: 1.63ms
+Avg Time: 16.33μs
+Min Time: 14.21μs
+Max Time: 24.25μs
+Operations/sec: 61248
 
 Benchmark: code_execution
 Iterations: 100
-Total Time: 2.02ms
-Avg Time: 20.16μs
-Min Time: 16.88μs
-Max Time: 27.25μs
-Operations/sec: 49611
+Total Time: 1.64ms
+Avg Time: 16.36μs
+Min Time: 14.21μs
+Max Time: 25.46μs
+Operations/sec: 61117
 
 Benchmark: code_execution
 Iterations: 100
-Total Time: 2.05ms
-Avg Time: 20.55μs
-Min Time: 16.75μs
-Max Time: 29.42μs
-Operations/sec: 48669
+Total Time: 1.62ms
+Avg Time: 16.24μs
+Min Time: 14.21μs
+Max Time: 24.71μs
+Operations/sec: 61569
 
 Benchmark: code_execution
 Iterations: 100
-Total Time: 2.02ms
-Avg Time: 20.20μs
-Min Time: 17.04μs
-Max Time: 27.38μs
-Operations/sec: 49500
+Total Time: 1.58ms
+Avg Time: 15.80μs
+Min Time: 14.29μs
+Max Time: 21.50μs
+Operations/sec: 63303
 
 Benchmark: code_execution
 Iterations: 100
-Total Time: 2.02ms
-Avg Time: 20.23μs
-Min Time: 16.75μs
-Max Time: 29.25μs
-Operations/sec: 49432
+Total Time: 1.62ms
+Avg Time: 16.17μs
+Min Time: 14.25μs
+Max Time: 25.08μs
+Operations/sec: 61843
 
 Benchmark: code_execution
 Iterations: 100
-Total Time: 1.99ms
-Avg Time: 19.88μs
-Min Time: 17.29μs
-Max Time: 28.04μs
-Operations/sec: 50312
+Total Time: 1.64ms
+Avg Time: 16.37μs
+Min Time: 14.33μs
+Max Time: 25.12μs
+Operations/sec: 61080
 
 Benchmark: code_execution
 Iterations: 100
-Total Time: 2.01ms
-Avg Time: 20.05μs
-Min Time: 16.83μs
-Max Time: 26.88μs
-Operations/sec: 49873
+Total Time: 1.65ms
+Avg Time: 16.52μs
+Min Time: 14.54μs
+Max Time: 24.58μs
+Operations/sec: 60551
 
 Benchmark: code_execution
 Iterations: 100
-Total Time: 1.95ms
-Avg Time: 19.48μs
-Min Time: 16.92μs
-Max Time: 26.62μs
-Operations/sec: 51340
+Total Time: 1.65ms
+Avg Time: 16.45μs
+Min Time: 14.17μs
+Max Time: 26.50μs
+Operations/sec: 60783
 
 Benchmark: code_execution
 Iterations: 100
-Total Time: 1.99ms
-Avg Time: 19.85μs
-Min Time: 16.88μs
-Max Time: 28.58μs
-Operations/sec: 50368
+Total Time: 1.59ms
+Avg Time: 15.91μs
+Min Time: 14.25μs
+Max Time: 25.96μs
+Operations/sec: 62846
 
-Overall Performance Score: 5.02/100
+Overall Performance Score: 6.17/100
 Status: 🔴 NEEDS IMPROVEMENT - Beejs requires optimization to meet targets
