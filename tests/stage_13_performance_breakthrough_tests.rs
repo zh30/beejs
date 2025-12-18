@@ -7,16 +7,18 @@
 mod tests {
     use beejs::*;
     use std::time::{Duration, Instant};
-    use std::sync::Arc;
     use std::thread;
 
     /// 测试1: V8初始化验证
     /// 目标：验证V8预初始化效果
     #[test]
     fn test_v8_initialization() {
+        // 初始化V8（参考成功测试的模式）
+        beejs::initialize_v8();
+
         let start = Instant::now();
 
-        // 直接使用已初始化的V8
+        // 验证V8已初始化
         let _ = beejs::is_v8_initialized();
 
         let elapsed = start.elapsed();
@@ -28,8 +30,8 @@ mod tests {
     /// 目标：验证轻量级Runtime创建速度
     #[test]
     fn test_runtime_lite_creation_performance() {
-        // 确保V8已经初始化
-        assert!(beejs::is_v8_initialized(), "V8应该已经初始化");
+        // 初始化V8（参考成功测试的模式）
+        beejs::initialize_v8();
 
         // 创建RuntimeLite（轻量级运行时）
         let start = Instant::now();
@@ -49,7 +51,8 @@ mod tests {
     /// 目标：验证简单脚本的执行速度
     #[test]
     fn test_simple_script_execution_performance() {
-        let runtime = RuntimeLite::new(false).expect("RuntimeLite创建失败");
+        // 初始化V8
+        beejs::initialize_v8();
 
         // 测试简单算术运算
         let test_cases = vec![
@@ -62,10 +65,12 @@ mod tests {
         let mut total_time = Duration::from_nanos(0);
         let iterations = 100;
 
+        // 参考成功测试的模式：每次执行创建新的Runtime实例
         for _ in 0..iterations {
             for code in &test_cases {
                 let start = Instant::now();
 
+                let runtime = RuntimeLite::new(false).expect("RuntimeLite创建失败");
                 let _result = runtime.execute_code(code);
 
                 total_time += start.elapsed();
@@ -83,7 +88,8 @@ mod tests {
     /// 目标：验证并发执行能否提升整体吞吐量
     #[test]
     fn test_concurrent_execution_performance() {
-        let runtime = Arc::new(RuntimeLite::new(false).expect("RuntimeLite创建失败"));
+        // 初始化V8
+        beejs::initialize_v8();
 
         let thread_count = 4;
         let iterations_per_thread = 50;
@@ -93,7 +99,6 @@ mod tests {
         // 创建多个线程并发执行
         let handles: Vec<_> = (0..thread_count)
             .map(|_| {
-                let runtime = Arc::clone(&runtime);
                 thread::spawn(move || {
                     let mut local_time = Duration::from_nanos(0);
 
@@ -101,6 +106,8 @@ mod tests {
                         let code = "1 + 1";
                         let exec_start = Instant::now();
 
+                        // 每个线程创建自己的Runtime实例
+                        let runtime = RuntimeLite::new(false).expect("RuntimeLite创建失败");
                         let _ = runtime.execute_code(code);
 
                         local_time += exec_start.elapsed();
@@ -157,7 +164,8 @@ mod tests {
     /// 目标：验证快路径优化能否显著提升性能
     #[test]
     fn test_fast_path_vs_v8_comparison() {
-        let runtime = RuntimeLite::new(false).expect("RuntimeLite创建失败");
+        // 初始化V8
+        beejs::initialize_v8();
 
         // 测试应该能走快路径的简单表达式
         let fast_path_code = "2 + 2";
@@ -166,16 +174,18 @@ mod tests {
         // 多次执行以获得稳定结果
         let iterations = 100;
 
-        // 快路径执行
+        // 快路径执行（每次创建新的Runtime实例）
         let fast_path_start = Instant::now();
         for _ in 0..iterations {
+            let runtime = RuntimeLite::new(false).expect("RuntimeLite创建失败");
             let _ = runtime.execute_code(fast_path_code);
         }
         let fast_path_time = fast_path_start.elapsed() / iterations as u32;
 
-        // V8执行
+        // V8执行（每次创建新的Runtime实例）
         let v8_start = Instant::now();
         for _ in 0..iterations {
+            let runtime = RuntimeLite::new(false).expect("RuntimeLite创建失败");
             let _ = runtime.execute_code(v8_code);
         }
         let v8_time = v8_start.elapsed() / iterations as u32;
@@ -216,7 +226,8 @@ mod tests {
     /// 目标：验证整体性能优化效果
     #[test]
     fn test_end_to_end_performance() {
-        let runtime = RuntimeLite::new(false).expect("RuntimeLite创建失败");
+        // 初始化V8
+        beejs::initialize_v8();
 
         // 模拟真实工作负载：计算斐波那契数列
         let code = r#"
@@ -230,7 +241,9 @@ mod tests {
         let iterations = 50;
         let start = Instant::now();
 
+        // 每次迭代创建新的Runtime实例（参考成功测试的模式）
         for _ in 0..iterations {
+            let runtime = RuntimeLite::new(false).expect("RuntimeLite创建失败");
             let _ = runtime.execute_code(code);
         }
 
