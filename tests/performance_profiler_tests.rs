@@ -1,0 +1,128 @@
+use beejs::{Profiler, ProfileTarget, ProfilingMode};
+use std::time::Duration;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_profiler_creation() {
+        let profiler = Profiler::new(ProfilingMode::Detailed);
+        assert!(profiler.is_ok());
+        let profiler = profiler.unwrap();
+        assert_eq!(profiler.get_mode(), ProfilingMode::Detailed);
+    }
+
+    #[test]
+    fn test_start_and_stop_profiling() {
+        let mut profiler = Profiler::new(ProfilingMode::Basic).unwrap();
+
+        // Start profiling
+        let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+        assert!(profile_id > 0);
+
+        // Simulate some work
+        std::thread::sleep(Duration::from_millis(10));
+
+        // Stop profiling
+        let result = profiler.stop_profile(profile_id);
+        assert!(result.is_ok());
+
+        let stats = result.unwrap();
+        assert!(stats.execution_time > Duration::from_millis(5));
+        // Note: memory_peak is 0 in this simplified implementation
+        // In a real implementation, this would track actual memory usage
+    }
+
+    #[test]
+    fn test_multiple_profiles() {
+        let mut profiler = Profiler::new(ProfilingMode::Detailed).unwrap();
+
+        // Start multiple profiles
+        let id1 = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+        let id2 = profiler.start_profile(ProfileTarget::Isolate).unwrap();
+
+        std::thread::sleep(Duration::from_millis(5));
+
+        // Stop profiles
+        let result1 = profiler.stop_profile(id1);
+        let result2 = profiler.stop_profile(id2);
+
+        assert!(result1.is_ok());
+        assert!(result2.is_ok());
+    }
+
+    #[test]
+    fn test_profile_statistics() {
+        let mut profiler = Profiler::new(ProfilingMode::Detailed).unwrap();
+
+        let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+        std::thread::sleep(Duration::from_millis(10));
+        profiler.stop_profile(profile_id).unwrap();
+
+        let stats = profiler.get_statistics();
+        assert!(stats.total_profiles > 0);
+        assert!(stats.total_execution_time > Duration::from_millis(5));
+    }
+
+    #[test]
+    fn test_invalid_profile_stop() {
+        let mut profiler = Profiler::new(ProfilingMode::Basic).unwrap();
+
+        // Try to stop non-existent profile
+        let result = profiler.stop_profile(99999);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_profiling_modes() {
+        let basic = Profiler::new(ProfilingMode::Basic).unwrap();
+        assert_eq!(basic.get_mode(), ProfilingMode::Basic);
+
+        let detailed = Profiler::new(ProfilingMode::Detailed).unwrap();
+        assert_eq!(detailed.get_mode(), ProfilingMode::Detailed);
+
+        let minimal = Profiler::new(ProfilingMode::Minimal).unwrap();
+        assert_eq!(minimal.get_mode(), ProfilingMode::Minimal);
+    }
+
+    #[test]
+    fn test_profile_target_validation() {
+        let mut profiler = Profiler::new(ProfilingMode::Detailed).unwrap();
+
+        // Test all profile targets
+        let targets = [
+            ProfileTarget::Runtime,
+            ProfileTarget::Isolate,
+            ProfileTarget::Memory,
+            ProfileTarget::Jit,
+            ProfileTarget::Concurrent,
+        ];
+
+        for target in targets {
+            let profile_id = profiler.start_profile(target).unwrap();
+            assert!(profile_id > 0);
+            profiler.stop_profile(profile_id).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_performance_benchmark() {
+        let mut profiler = Profiler::new(ProfilingMode::Minimal).unwrap();
+
+        // Profile a simple operation
+        let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+
+        // Simple computation
+        let mut sum = 0;
+        for i in 0..1000 {
+            sum += i;
+        }
+
+        profiler.stop_profile(profile_id).unwrap();
+
+        let stats = profiler.get_statistics();
+        assert_eq!(sum, 499500); // Verify computation
+        assert!(stats.total_profiles > 0);
+    }
+}

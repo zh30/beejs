@@ -34,6 +34,8 @@ pub mod v8_snapshot;
 pub mod repl;
 pub mod memory_pool;
 pub mod error_handler;
+pub mod profiler;
+pub mod flame_graph;
 mod module_loader;
 mod nodejs;
 mod precompiled_cache;
@@ -49,6 +51,12 @@ pub mod watcher;
 pub mod shared_memory;
 pub mod shared_object_cache;
 pub mod memory_mapped_file;
+
+// Re-export profiler types
+pub use profiler::{Profiler, ProfileTarget, ProfilingMode, ProfileResult, ProfilingStats};
+
+// Re-export flame graph types
+pub use flame_graph::{FlameGraph, FrameNode, StackFrame};
 
 // 新增WASM集成模块
 pub mod wasm_integration;

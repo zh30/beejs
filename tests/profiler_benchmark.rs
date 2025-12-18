@@ -1,0 +1,208 @@
+//! 性能分析器基准测试
+//! 验证性能分析工具的有效性
+
+use beejs::{Profiler, ProfileTarget, ProfilingMode, FlameGraph, StackFrame};
+use std::time::Duration;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_profiler_performance_overhead() {
+        let mut profiler = Profiler::new(ProfilingMode::Minimal).unwrap();
+
+        // Profile overhead of profiling itself
+        let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+
+        // Simulate some work
+        let mut sum = 0;
+        for i in 0..1000 {
+            sum += i * i;
+        }
+
+        let result = profiler.stop_profile(profile_id).unwrap();
+
+        // Verify profiling didn't add significant overhead
+        assert!(result.execution_time > Duration::from_millis(0));
+        assert!(result.execution_time < Duration::from_millis(10)); // Should be fast
+    }
+
+    #[test]
+    fn test_flame_graph_performance() {
+        let mut flame_graph = FlameGraph::new().unwrap();
+
+        // Add multiple call stacks
+        for i in 0..100 {
+            let stack = vec![
+                StackFrame {
+                    function_name: format!("function_{}", i % 10),
+                    file_path: "benchmark.js".to_string(),
+                    line_number: i,
+                    duration: Duration::from_millis(1),
+                },
+                StackFrame {
+                    function_name: format!("nested_function_{}", i % 5),
+                    file_path: "benchmark.js".to_string(),
+                    line_number: i + 1,
+                    duration: Duration::from_millis(2),
+                },
+            ];
+            flame_graph.add_call_stack(&stack);
+        }
+
+        // Test flame graph operations
+        let frame_count = flame_graph.get_frame_count();
+        assert!(frame_count > 0);
+
+        let max_depth = flame_graph.get_max_depth();
+        assert!(max_depth >= 2);
+
+        // Test SVG generation performance
+        let svg = flame_graph.generate_svg().unwrap();
+        assert!(svg.len() > 100);
+    }
+
+    #[test]
+    fn test_concurrent_profiling() {
+        let mut profiler = Profiler::new(ProfilingMode::Basic).unwrap();
+
+        // Profile multiple operations concurrently
+        let mut profiles = Vec::new();
+
+        for i in 0..10 {
+            let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+            profiles.push(profile_id);
+
+            // Simulate work
+            std::thread::sleep(Duration::from_millis(1));
+        }
+
+        // Stop all profiles
+        for profile_id in profiles {
+            let result = profiler.stop_profile(profile_id).unwrap();
+            assert!(result.execution_time > Duration::from_millis(0));
+        }
+
+        let stats = profiler.get_statistics();
+        assert!(stats.total_profiles == 10);
+    }
+
+    #[test]
+    fn test_profiling_with_different_modes() {
+        let modes = [ProfilingMode::Minimal, ProfilingMode::Basic, ProfilingMode::Detailed];
+
+        for mode in modes {
+            let mut profiler = Profiler::new(mode).unwrap();
+            assert_eq!(profiler.get_mode(), mode);
+
+            let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+            std::thread::sleep(Duration::from_millis(5));
+            profiler.stop_profile(profile_id).unwrap();
+
+            let stats = profiler.get_statistics();
+            assert!(stats.total_profiles > 0);
+        }
+    }
+
+    #[test]
+    fn test_flame_graph_hot_path_detection() {
+        let mut flame_graph = FlameGraph::new().unwrap();
+
+        // Add frames with varying durations
+        let frames = vec![
+            StackFrame {
+                function_name: "fast_function".to_string(),
+                file_path: "test.js".to_string(),
+                line_number: 1,
+                duration: Duration::from_millis(1),
+            },
+            StackFrame {
+                function_name: "slow_function".to_string(),
+                file_path: "test.js".to_string(),
+                line_number: 2,
+                duration: Duration::from_millis(100),
+            },
+            StackFrame {
+                function_name: "medium_function".to_string(),
+                file_path: "test.js".to_string(),
+                line_number: 3,
+                duration: Duration::from_millis(50),
+            },
+        ];
+
+        for frame in frames {
+            flame_graph.add_call_stack(&[frame]);
+        }
+
+        // Find hot paths (threshold: 10ms)
+        let hot_paths = flame_graph.find_hot_paths(10);
+        assert!(hot_paths.len() > 0);
+
+        // The slow function should be detected as hot
+        let slow_function = hot_paths.iter().find(|p| p.function_name == "slow_function");
+        assert!(slow_function.is_some());
+    }
+
+    #[test]
+    fn test_profiling_statistics_accuracy() {
+        let mut profiler = Profiler::new(ProfilingMode::Detailed).unwrap();
+
+        // Profile multiple operations
+        for i in 0..5 {
+            let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+            std::thread::sleep(Duration::from_millis(i + 1));
+            profiler.stop_profile(profile_id).unwrap();
+        }
+
+        let stats = profiler.get_statistics();
+        assert_eq!(stats.total_profiles, 5);
+        assert!(stats.total_execution_time > Duration::from_millis(10));
+        assert!(stats.avg_execution_time > Duration::from_millis(0));
+    }
+
+    #[test]
+    fn test_performance_analysis_workflow() {
+        // Simulate a complete performance analysis workflow
+        let mut profiler = Profiler::new(ProfilingMode::Detailed).unwrap();
+        let mut flame_graph = FlameGraph::new().unwrap();
+
+        // Simulate multiple function calls with different profiles
+        for i in 0..20 {
+            // Profile the call
+            let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
+
+            // Simulate function execution
+            let duration = Duration::from_millis((i % 5) as u64 + 1);
+            std::thread::sleep(duration);
+
+            let profile_result = profiler.stop_profile(profile_id).unwrap();
+
+            // Add to flame graph
+            let stack_frame = StackFrame {
+                function_name: format!("analyzed_function_{}", i % 8),
+                file_path: "analysis.js".to_string(),
+                line_number: i,
+                duration: profile_result.execution_time,
+            };
+            flame_graph.add_call_stack(&[stack_frame]);
+        }
+
+        // Verify the analysis results
+        let profiler_stats = profiler.get_statistics();
+        assert!(profiler_stats.total_profiles > 0);
+
+        let flame_graph_stats = flame_graph.get_frame_count();
+        assert!(flame_graph_stats > 0);
+
+        let hot_paths = flame_graph.find_hot_paths(2);
+        assert!(hot_paths.len() > 0);
+
+        // Generate final reports
+        let svg_report = flame_graph.generate_svg().unwrap();
+        let json_report = flame_graph.export_json().unwrap();
+
+        assert!(svg_report.len() > 1000);
+        assert!(json_report.len() > 100);
+    }
+}

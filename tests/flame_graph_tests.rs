@@ -1,0 +1,217 @@
+use beejs::flame_graph::{FlameGraph, FrameNode, StackFrame};
+use std::time::Duration;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_flame_graph_creation() {
+        let mut flame_graph = FlameGraph::new();
+        assert!(flame_graph.is_ok());
+        let flame_graph = flame_graph.unwrap();
+        assert!(flame_graph.get_frame_count() == 0);
+    }
+
+    #[test]
+    fn test_add_stack_frame() {
+        let mut flame_graph = FlameGraph::new().unwrap();
+
+        let frame = StackFrame {
+            function_name: "test_function".to_string(),
+            file_path: "test.js".to_string(),
+            line_number: 42,
+            duration: Duration::from_millis(10),
+        };
+
+        flame_graph.add_frame(frame).unwrap();
+        assert!(flame_graph.get_frame_count() == 1);
+    }
+
+    #[test]
+    fn test_nested_stack_frames() {
+        let mut flame_graph = FlameGraph::new().unwrap();
+
+        // Add nested frames
+        let frames = vec![
+            StackFrame {
+                function_name: "main".to_string(),
+                file_path: "main.js".to_string(),
+                line_number: 1,
+                duration: Duration::from_millis(100),
+            },
+            StackFrame {
+                function_name: "processData".to_string(),
+                file_path: "main.js".to_string(),
+                line_number: 10,
+                duration: Duration::from_millis(50),
+            },
+            StackFrame {
+                function_name: "transform".to_string(),
+                file_path: "main.js".to_string(),
+                line_number: 20,
+                duration: Duration::from_millis(30),
+            },
+        ];
+
+        for frame in frames {
+            flame_graph.add_frame(frame).unwrap();
+        }
+
+        assert!(flame_graph.get_frame_count() == 3);
+        assert!(flame_graph.get_max_depth() == 3);
+    }
+
+    #[test]
+    fn test_frame_node_creation() {
+        let node = FrameNode::new("test_function".to_string(), 42);
+        assert_eq!(node.function_name, "test_function");
+        assert_eq!(node.line_number, 42);
+        assert_eq!(node.total_duration, Duration::from_millis(0));
+        assert_eq!(node.call_count, 0);
+        assert!(node.children.is_empty());
+    }
+
+    #[test]
+    fn test_svg_generation() {
+        let mut flame_graph = FlameGraph::new().unwrap();
+
+        let frame = StackFrame {
+            function_name: "hot_function".to_string(),
+            file_path: "benchmark.js".to_string(),
+            line_number: 100,
+            duration: Duration::from_millis(25),
+        };
+
+        flame_graph.add_frame(frame).unwrap();
+        let svg = flame_graph.generate_svg();
+
+        assert!(svg.is_ok());
+        let svg_content = svg.unwrap();
+        assert!(svg_content.contains("<svg"));
+        assert!(svg_content.contains("flamegraph"));
+        assert!(svg_content.contains("hot_function"));
+    }
+
+    #[test]
+    fn test_frame_merging() {
+        let mut flame_graph = FlameGraph::new().unwrap();
+
+        // Add same frame twice
+        let frame1 = StackFrame {
+            function_name: "merge_test".to_string(),
+            file_path: "test.js".to_string(),
+            line_number: 5,
+            duration: Duration::from_millis(10),
+        };
+
+        let frame2 = StackFrame {
+            function_name: "merge_test".to_string(),
+            file_path: "test.js".to_string(),
+            line_number: 5,
+            duration: Duration::from_millis(15),
+        };
+
+        flame_graph.add_frame(frame1).unwrap();
+        flame_graph.add_frame(frame2).unwrap();
+
+        flame_graph.merge_duplicate_frames();
+
+        assert!(flame_graph.get_frame_count() == 1);
+    }
+
+    #[test]
+    fn test_hot_path_detection() {
+        let mut flame_graph = FlameGraph::new().unwrap();
+
+        // Add multiple frames with different durations
+        let frames = vec![
+            StackFrame {
+                function_name: "cold_function".to_string(),
+                file_path: "test.js".to_string(),
+                line_number: 1,
+                duration: Duration::from_millis(1),
+            },
+            StackFrame {
+                function_name: "hot_function".to_string(),
+                file_path: "test.js".to_string(),
+                line_number: 10,
+                duration: Duration::from_millis(50),
+            },
+            StackFrame {
+                function_name: "hotter_function".to_string(),
+                file_path: "test.js".to_string(),
+                line_number: 20,
+                duration: Duration::from_millis(100),
+            },
+        ];
+
+        for frame in frames {
+            flame_graph.add_frame(frame).unwrap();
+        }
+
+        let hot_paths = flame_graph.find_hot_paths(2);
+        assert!(hot_paths.len() > 0);
+        // The hottest function should be first
+        assert!(hot_paths[0].function_name.contains("hotter"));
+    }
+
+    #[test]
+    fn test_depth_calculation() {
+        let mut flame_graph = FlameGraph::new().unwrap();
+
+        // Add frames at different depths
+        let frames = vec![
+            StackFrame {
+                function_name: "level0".to_string(),
+                file_path: "test.js".to_string(),
+                line_number: 1,
+                duration: Duration::from_millis(10),
+            },
+            StackFrame {
+                function_name: "level1".to_string(),
+                file_path: "test.js".to_string(),
+                line_number: 2,
+                duration: Duration::from_millis(10),
+            },
+            StackFrame {
+                function_name: "level2".to_string(),
+                file_path: "test.js".to_string(),
+                line_number: 3,
+                duration: Duration::from_millis(10),
+            },
+            StackFrame {
+                function_name: "level3".to_string(),
+                file_path: "test.js".to_string(),
+                line_number: 4,
+                duration: Duration::from_millis(10),
+            },
+        ];
+
+        for frame in frames {
+            flame_graph.add_frame(frame).unwrap();
+        }
+
+        assert_eq!(flame_graph.get_max_depth(), 4);
+    }
+
+    #[test]
+    fn test_export_json() {
+        let mut flame_graph = FlameGraph::new().unwrap();
+
+        let frame = StackFrame {
+            function_name: "json_test".to_string(),
+            file_path: "export.js".to_string(),
+            line_number: 15,
+            duration: Duration::from_millis(20),
+        };
+
+        flame_graph.add_frame(frame).unwrap();
+        let json = flame_graph.export_json();
+
+        assert!(json.is_ok());
+        let json_str = json.unwrap();
+        assert!(json_str.contains("json_test"));
+        assert!(json_str.contains("export.js"));
+    }
+}
