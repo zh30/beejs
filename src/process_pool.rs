@@ -37,19 +37,41 @@ pub struct ProcessPoolConfig {
     pub max_workers: usize,
     /// Initial number of worker processes to spawn
     pub initial_workers: usize,
+    /// Minimum number of worker processes (for scaling down)
+    pub min_workers: usize,
     /// Timeout for worker initialization (ms)
     pub init_timeout_ms: u64,
     /// Enable process pool (disable for single-process mode)
     pub enabled: bool,
+    /// Enable intelligent auto-scaling
+    pub auto_scaling_enabled: bool,
+    /// Queue length threshold to trigger scaling up
+    pub scale_up_threshold: usize,
+    /// Average wait time threshold to trigger scaling up (ms)
+    pub scale_up_latency_ms: u64,
+    /// Idle time threshold to trigger scaling down (seconds)
+    pub scale_down_idle_seconds: u64,
+    /// Scale up step (number of workers to add at once)
+    pub scale_up_step: usize,
+    /// Scale down step (number of workers to remove at once)
+    pub scale_down_step: usize,
 }
 
 impl Default for ProcessPoolConfig {
     fn default() -> Self {
+        let cpu_count = num_cpus::get();
         Self {
-            max_workers: std::cmp::min(MAX_POOL_SIZE, num_cpus::get()),
-            initial_workers: std::cmp::min(DEFAULT_POOL_SIZE, num_cpus::get()),
+            max_workers: std::cmp::min(MAX_POOL_SIZE, cpu_count),
+            initial_workers: std::cmp::min(DEFAULT_POOL_SIZE, cpu_count),
+            min_workers: std::cmp::min(2, cpu_count),
             init_timeout_ms: 5000,
             enabled: true,
+            auto_scaling_enabled: true,
+            scale_up_threshold: 3,
+            scale_up_latency_ms: 100,
+            scale_down_idle_seconds: 30,
+            scale_up_step: std::cmp::min(2, cpu_count / 2),
+            scale_down_step: 1,
         }
     }
 }
@@ -85,6 +107,16 @@ pub struct ProcessPoolStats {
     pub total_executions: usize,
     pub avg_execution_time_ms: f64,
     pub pool_hit_rate: f64,
+    /// Current queue length
+    pub current_queue_length: usize,
+    /// Average wait time for tasks (ms)
+    pub avg_wait_time_ms: f64,
+    /// Total scaling operations performed
+    pub total_scale_operations: usize,
+    /// Peak queue length observed
+    pub peak_queue_length: usize,
+    /// Worker utilization percentage
+    pub worker_utilization_percent: f64,
 }
 
 impl Default for ProcessPoolStats {
@@ -96,6 +128,11 @@ impl Default for ProcessPoolStats {
             total_executions: 0,
             avg_execution_time_ms: 0.0,
             pool_hit_rate: 0.0,
+            current_queue_length: 0,
+            avg_wait_time_ms: 0.0,
+            total_scale_operations: 0,
+            peak_queue_length: 0,
+            worker_utilization_percent: 0.0,
         }
     }
 }
@@ -108,6 +145,12 @@ pub struct ProcessPool {
     stats: Arc<Mutex<ProcessPoolStats>>,
     worker_counter: AtomicUsize,
     shutdown: Arc<AtomicBool>,
+    /// Task queue for auto-scaling monitoring
+    task_queue: Arc<Mutex<Vec<Instant>>>,
+    /// Last scaling operation timestamp
+    last_scale_operation: Arc<Mutex<Instant>>,
+    /// Worker idle time tracking
+    worker_idle_times: Arc<Mutex<HashMap<u32, Instant>>>,
 }
 
 impl ProcessPool {
@@ -120,6 +163,9 @@ impl ProcessPool {
             stats: Arc::new(Mutex::new(ProcessPoolStats::default())),
             worker_counter: AtomicUsize::new(0),
             shutdown: Arc::new(AtomicBool::new(false)),
+            task_queue: Arc::new(Mutex::new(Vec::new())),
+            last_scale_operation: Arc::new(Mutex::new(Instant::now())),
+            worker_idle_times: Arc::new(Mutex::new(HashMap::new())),
         };
 
         // Workers are initialized lazily on first use to avoid async complexity
@@ -275,14 +321,40 @@ impl ProcessPool {
 
         let start = Instant::now();
 
+        // Add to task queue for monitoring
+        {
+            let mut queue = self.task_queue.lock().unwrap();
+            queue.push(start);
+            // Update peak queue length
+            if queue.len() > self.stats.lock().unwrap().peak_queue_length {
+                self.stats.lock().unwrap().peak_queue_length = queue.len();
+            }
+        }
+
+        // Check if we need to scale up
+        if self.config.auto_scaling_enabled {
+            self.check_and_scale().await;
+        }
+
         // Get an available worker
         let worker_pid = self.acquire_worker().await
             .context("No available workers")?;
+
+        let wait_time = start.elapsed();
 
         let result = self.execute_on_worker(worker_pid, script).await;
 
         // Release the worker
         self.release_worker(worker_pid);
+
+        // Remove from task queue and update statistics
+        {
+            let mut queue = self.task_queue.lock().unwrap();
+            if !queue.is_empty() {
+                queue.remove(0);
+            }
+            self.stats.lock().unwrap().current_queue_length = queue.len();
+        }
 
         // Update statistics
         {
@@ -291,6 +363,19 @@ impl ProcessPool {
             let elapsed = start.elapsed();
             let avg_time = stats.avg_execution_time_ms;
             stats.avg_execution_time_ms = avg_time * 0.9 + elapsed.as_millis() as f64 * 0.1;
+            let avg_wait = stats.avg_wait_time_ms;
+            stats.avg_wait_time_ms = avg_wait * 0.9 + wait_time.as_millis() as f64 * 0.1;
+
+            // Update worker utilization
+            let total_workers = stats.total_workers;
+            if total_workers > 0 {
+                stats.worker_utilization_percent = (stats.busy_workers as f64 / total_workers as f64) * 100.0;
+            }
+        }
+
+        // Check if we need to scale down
+        if self.config.auto_scaling_enabled {
+            self.check_and_scale_down().await;
         }
 
         result
@@ -391,7 +476,168 @@ impl ProcessPool {
             total_workers: workers.len(),
             ready_workers: workers.values().filter(|w| w.state == WorkerState::Ready).count(),
             busy_workers: workers.values().filter(|w| w.state == WorkerState::Busy).count(),
-            ..stats
+            current_queue_length: stats.current_queue_length,
+            avg_wait_time_ms: stats.avg_wait_time_ms,
+            total_scale_operations: stats.total_scale_operations,
+            peak_queue_length: stats.peak_queue_length,
+            worker_utilization_percent: stats.worker_utilization_percent,
+            total_executions: stats.total_executions,
+            avg_execution_time_ms: stats.avg_execution_time_ms,
+            pool_hit_rate: stats.pool_hit_rate,
+        }
+    }
+
+    /// Check if we need to scale up the pool
+    async fn check_and_scale(&self) {
+        let queue_length;
+        let avg_wait_time;
+
+        {
+            let stats = self.stats.lock().unwrap();
+            queue_length = stats.current_queue_length;
+            avg_wait_time = stats.avg_wait_time_ms;
+        }
+
+        let should_scale_up = queue_length >= self.config.scale_up_threshold
+            || avg_wait_time >= self.config.scale_up_latency_ms as f64;
+
+        if should_scale_up {
+            let current_workers = {
+                let workers = self.workers.lock().unwrap();
+                workers.len()
+            };
+
+            if current_workers < self.config.max_workers {
+                // Prevent rapid scaling
+                let last_scale = *self.last_scale_operation.lock().unwrap();
+                if last_scale.elapsed().as_secs() >= 2 {
+                    self.scale_up().await;
+                }
+            }
+        }
+    }
+
+    /// Check if we need to scale down the pool
+    async fn check_and_scale_down(&self) {
+        let current_workers;
+        let queue_length;
+        let utilization;
+        let all_idle;
+
+        {
+            let workers = self.workers.lock().unwrap();
+            current_workers = workers.len();
+            queue_length = self.stats.lock().unwrap().current_queue_length;
+            utilization = self.stats.lock().unwrap().worker_utilization_percent;
+
+            // Check if workers have been idle
+            let idle_threshold = std::time::Duration::from_secs(self.config.scale_down_idle_seconds);
+            all_idle = workers.values().all(|w| w.last_used.elapsed() >= idle_threshold);
+        }
+
+        // Only scale down if queue is empty, utilization is low, and workers are idle
+        if queue_length == 0
+            && utilization < 50.0
+            && all_idle
+            && current_workers > self.config.min_workers
+        {
+            let last_scale = *self.last_scale_operation.lock().unwrap();
+            if last_scale.elapsed().as_secs() >= 10 {
+                self.scale_down().await;
+            }
+        }
+    }
+
+    /// Scale up the process pool
+    async fn scale_up(&self) {
+        let current_workers = {
+            let workers = self.workers.lock().unwrap();
+            workers.len()
+        };
+
+        let workers_to_add = std::cmp::min(
+            self.config.scale_up_step,
+            self.config.max_workers - current_workers
+        );
+
+        if workers_to_add > 0 {
+            println!("[ProcessPool] Scaling up: adding {} workers (current: {})",
+                     workers_to_add, current_workers);
+
+            for _i in 0..workers_to_add {
+                let worker_id = self.worker_counter.fetch_add(1, Ordering::SeqCst);
+                if let Ok(pid) = self.spawn_worker_blocking(worker_id) {
+                    println!("[ProcessPool] Scaled up: added worker {} (PID: {})", worker_id, pid);
+                }
+            }
+
+            // Update statistics
+            {
+                let mut stats = self.stats.lock().unwrap();
+                stats.total_scale_operations += 1;
+            }
+
+            *self.last_scale_operation.lock().unwrap() = Instant::now();
+        }
+    }
+
+    /// Scale down the process pool
+    async fn scale_down(&self) {
+        let current_workers = {
+            let workers = self.workers.lock().unwrap();
+            workers.len()
+        };
+
+        let workers_to_remove = std::cmp::min(
+            self.config.scale_down_step,
+            current_workers - self.config.min_workers
+        );
+
+        if workers_to_remove > 0 {
+            println!("[ProcessPool] Scaling down: removing {} workers (current: {})",
+                     workers_to_remove, current_workers);
+
+            // Get idle workers to terminate
+            let idle_workers = {
+                let workers = self.workers.lock().unwrap();
+                let idle_threshold = std::time::Duration::from_secs(self.config.scale_down_idle_seconds);
+                workers.iter()
+                    .filter(|(_, w)| w.state == WorkerState::Ready && w.last_used.elapsed() > idle_threshold)
+                    .map(|(pid, _)| *pid)
+                    .take(workers_to_remove)
+                    .collect::<Vec<u32>>()
+            };
+
+            for pid in idle_workers {
+                // Mark worker as terminating and remove it
+                {
+                    let mut workers = self.workers.lock().unwrap();
+                    if let Some(_worker) = workers.get_mut(&pid) {
+                        // Worker state will be marked as terminating
+                    }
+                }
+
+                // Remove from available workers list
+                {
+                    let mut available = self.available_workers.lock().unwrap();
+                    available.retain(|&p| p != pid);
+                }
+
+                // Terminate the process
+                let _ = std::process::Command::new("kill")
+                    .args(&["-TERM", &pid.to_string()])
+                    .spawn();
+
+                println!("[ProcessPool] Scaled down: terminated worker PID: {}", pid);
+            }
+
+            // Update statistics
+            {
+                let mut stats = self.stats.lock().unwrap();
+                stats.total_scale_operations += 1;
+            }
+
+            *self.last_scale_operation.lock().unwrap() = Instant::now();
         }
     }
 
@@ -510,8 +756,15 @@ mod tests {
         let config = ProcessPoolConfig {
             max_workers: 2,
             initial_workers: 2,
+            min_workers: 1,
             init_timeout_ms: 5000,
             enabled: true,
+            auto_scaling_enabled: true,
+            scale_up_threshold: 3,
+            scale_up_latency_ms: 100,
+            scale_down_idle_seconds: 30,
+            scale_up_step: 1,
+            scale_down_step: 1,
         };
 
         // Initialize process pool
@@ -555,8 +808,15 @@ mod tests {
         let config = ProcessPoolConfig {
             max_workers: 4,
             initial_workers: 4,
+            min_workers: 1,
             init_timeout_ms: 5000,
             enabled: true,
+            auto_scaling_enabled: true,
+            scale_up_threshold: 3,
+            scale_up_latency_ms: 100,
+            scale_down_idle_seconds: 30,
+            scale_up_step: 2,
+            scale_down_step: 1,
         };
 
         let pool = Arc::new(ProcessPool::new(config).expect("Failed to create pool"));
@@ -591,8 +851,15 @@ mod tests {
         let config = ProcessPoolConfig {
             max_workers: 2,
             initial_workers: 1,
+            min_workers: 1,
             init_timeout_ms: 1000,
             enabled: true,
+            auto_scaling_enabled: true,
+            scale_up_threshold: 3,
+            scale_up_latency_ms: 100,
+            scale_down_idle_seconds: 30,
+            scale_up_step: 1,
+            scale_down_step: 1,
         };
 
         let pool = ProcessPool::new(config);
@@ -605,8 +872,15 @@ mod tests {
         let config = ProcessPoolConfig {
             max_workers: 2,
             initial_workers: 1,
+            min_workers: 1,
             init_timeout_ms: 5000,
             enabled: true,
+            auto_scaling_enabled: true,
+            scale_up_threshold: 3,
+            scale_up_latency_ms: 100,
+            scale_down_idle_seconds: 30,
+            scale_up_step: 1,
+            scale_down_step: 1,
         };
 
         let pool = ProcessPool::new(config).unwrap();

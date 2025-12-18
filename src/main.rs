@@ -132,8 +132,15 @@ fn initialize_process_pool(verbose: bool, pool_size: Option<usize>) -> Result<()
     let config = ProcessPoolConfig {
         max_workers: pool_size.unwrap_or(num_cpus::get()),
         initial_workers,
+        min_workers: std::cmp::min(2, num_cpus::get()),
         init_timeout_ms: 5000,
         enabled: true,
+        auto_scaling_enabled: true,
+        scale_up_threshold: 3,
+        scale_up_latency_ms: 100,
+        scale_down_idle_seconds: 30,
+        scale_up_step: std::cmp::min(2, num_cpus::get() / 2),
+        scale_down_step: 1,
     };
 
     init_pool(config)

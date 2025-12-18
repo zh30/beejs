@@ -493,8 +493,15 @@ impl Runtime {
             let pool_config = process_pool::ProcessPoolConfig {
                 max_workers: std::cmp::min(num_cpus::get(), 8),
                 initial_workers: std::cmp::min(4, num_cpus::get()),
+                min_workers: std::cmp::min(2, num_cpus::get()),
                 init_timeout_ms: 2000,
                 enabled: true,
+                auto_scaling_enabled: true,
+                scale_up_threshold: 3,
+                scale_up_latency_ms: 100,
+                scale_down_idle_seconds: 30,
+                scale_up_step: std::cmp::min(2, num_cpus::get() / 2),
+                scale_down_step: 1,
             };
             match process_pool::ProcessPool::new(pool_config) {
                 Ok(pool) => {
