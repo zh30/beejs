@@ -14,6 +14,7 @@ use std::time::{Duration, Instant};
 /// Stage 21.3: Integrates V8 snapshots and context preparation for optimal performance
 pub struct IsolatePrewarmer {
     /// V8 Snapshot Manager for creating and loading snapshots
+    #[allow(dead_code)]
     snapshot_manager: Arc<V8SnapshotManager>,
 
     /// Pre-warmed isolates with prepared contexts
@@ -104,12 +105,16 @@ impl Default for PrewarmConfig {
 #[derive(Debug, Clone)]
 struct CompiledSnippet {
     /// Snippet name for identification
+    #[allow(dead_code)]
     name: String,
     /// JavaScript code
+    #[allow(dead_code)]
     code: String,
     /// Compiled script
+    #[allow(dead_code)]
     script: v8::Global<v8::Script>,
     /// Creation timestamp
+    #[allow(dead_code)]
     created_at: u64,
 }
 

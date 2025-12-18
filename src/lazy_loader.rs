@@ -4,7 +4,6 @@
 
 use once_cell::sync::Lazy;
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 
 /// Lazy loading statistics
 #[derive(Debug, Clone, Default)]
@@ -43,6 +42,7 @@ impl LazyLoader {
     }
 
     /// Record module as lazy (not yet initialized)
+    #[allow(dead_code)]
     fn record_lazy(&self, module_name: &str) {
         let mut stats = self.stats.lock().unwrap();
         stats.lazy_modules += 1;
