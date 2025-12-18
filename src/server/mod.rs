@@ -4,7 +4,6 @@
 //! JavaScript/TypeScript code with runtime reuse optimization.
 
 use serde::{Deserialize, Serialize};
-use std::io::Read;
 use std::sync::{Arc, Mutex};
 use tiny_http::{Server as HttpServer, Response, Request};
 use tracing::{info, warn};
@@ -223,7 +222,7 @@ pub struct EvalRequest {
 }
 
 /// API response for code evaluation
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EvalResponse {
     pub result: String,
     pub execution_time_ms: u64,

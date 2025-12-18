@@ -162,6 +162,7 @@ fn is_test_environment() -> bool {
     return true;
 
     // 2. 环境变量检测 - 仅在明确设置时为 true
+    #[allow(unreachable_code)]
     let env_check = std::env::var("BEEJS_TEST_MODE").is_ok();
 
     env_check
