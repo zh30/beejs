@@ -34,6 +34,7 @@ mod precompiled_cache;
 pub mod package_manager;
 pub mod performance_reporter;
 pub mod performance_analyzer;
+mod server;
 mod test_runner;
 mod typescript;
 pub mod watcher;
@@ -59,6 +60,12 @@ pub use repl::{Repl, ReplConfig};
 pub use lock_free::{
     LockFreeCounter, LockFreeTaskScheduler, LockFreeQueue,
     ShardedLock, LockFreeBufferPool, AtomicStats
+};
+
+// Re-export server types
+pub use server::{
+    Server, ServerConfig, ServerStats,
+    EvalRequest, EvalResponse, start_server
 };
 
 /// Global V8 initialization

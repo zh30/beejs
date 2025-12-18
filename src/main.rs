@@ -86,6 +86,21 @@ enum SubCommand {
     Clean,
     /// Start interactive REPL
     Repl,
+    /// Start HTTP server mode
+    Server {
+        /// Server host (default: 127.0.0.1)
+        #[arg(long, default_value = "127.0.0.1")]
+        host: String,
+        /// Server port (default: 3000)
+        #[arg(long, default_value = "3000")]
+        port: u16,
+        /// Maximum concurrent connections (default: 1000)
+        #[arg(long, default_value = "1000")]
+        max_connections: usize,
+        /// Request timeout in milliseconds (default: 30000)
+        #[arg(long, default_value = "30000")]
+        timeout: u64,
+    },
 }
 
 /// V8 optimization modes
@@ -332,7 +347,74 @@ fn run_package_manager_command(command: &SubCommand, verbose: bool) -> Result<()
             // Run REPL mode via subcommand
             run_repl(verbose)
         }
+        SubCommand::Server {
+            host,
+            port,
+            max_connections,
+            timeout,
+        } => {
+            // Run server mode
+            run_server(
+                host.clone(),
+                *port,
+                *max_connections,
+                *timeout,
+                verbose
+            )
+        }
     }
+}
+
+/// Run server mode
+fn run_server(
+    host: String,
+    port: u16,
+    max_connections: usize,
+    timeout: u64,
+    verbose: bool,
+) -> Result<()> {
+    use beejs::{Server, ServerConfig};
+    use std::sync::Arc;
+    use tokio::runtime::Runtime;
+
+    if verbose {
+        println!("🚀 Starting Beejs Server...");
+        println!("Host: {}", host);
+        println!("Port: {}", port);
+        println!("Max connections: {}", max_connections);
+        println!("Timeout: {}ms", timeout);
+    }
+
+    // Initialize V8
+    beejs::initialize_v8();
+
+    // Create a new runtime
+    let runtime = beejs::Runtime::new_with_optimization(
+        67108864, // stack_size
+        1073741824, // max_heap
+        false, // verbose
+        beejs::OptimizeMode::Speed,
+    )
+    .context("Failed to create runtime")?;
+
+    // Create server
+    let server = Server::new(runtime)
+        .host(&host)
+        .port(port)
+        .max_connections(max_connections)
+        .timeout(timeout);
+
+    // Run the server (blocking call)
+    let rt = Runtime::new().context("Failed to create tokio runtime")?;
+
+    rt.block_on(async {
+        if let Err(e) = server.run().await {
+            eprintln!("Server error: {}", e);
+            std::process::exit(1);
+        }
+    });
+
+    Ok(())
 }
 
 /// Print test results
