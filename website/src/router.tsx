@@ -1,14 +1,17 @@
+import { createRouter as createTanStackRouter } from '@tanstack/react-router'
+import { routeTree } from './routeTree.gen'
 
-import { createBrowserRouter } from "react-router-dom";
-import Home from "./Home";
-// Define your routes
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Home />,
-  },
-]);
+export function createRouter() {
+  const router = createTanStackRouter({
+    routeTree,
+    defaultPreload: 'intent',
+  })
 
-export default router;
+  return router
+}
 
-  
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: ReturnType<typeof createRouter>
+  }
+}

@@ -1,24 +1,24 @@
 {
-  "name": "my-vite-app",
+  "name": "beejs-website",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
+    "dev": "vinxi dev",
+    "build": "vinxi build",
+    "start": "vinxi start",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.90.12",
-    "@tanstack/react-router": "^1.141.6",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
     "react-router-dom": "^7.11.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251217.0",
     "@eslint/js": "^9.39.1",
+    "@tanstack/react-query": "^5.90.12",
+    "@tanstack/react-router": "^1.141.6",
+    "@tanstack/router-generator": "^1.141.7",
+    "@tanstack/router-vite-plugin": "^1.141.7",
     "@tanstack/start": "^1.120.20",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
@@ -33,10 +33,15 @@
     "globals": "^16.5.0",
     "lucide-react": "^0.561.0",
     "postcss": "^8.5.6",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vinxi": "^0.5.9",
+    "vite": "^7.2.4",
+    "vite-tsconfig-paths": "^6.0.2",
+    "wrangler": "^4.55.0"
   }
 }

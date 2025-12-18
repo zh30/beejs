@@ -27,7 +27,8 @@ unsafe impl Sync for RuntimeLite {}
 impl RuntimeLite {
     /// Create a new lightweight runtime with minimal initialization
     pub fn new(verbose: bool) -> Result<Self> {
-        // Initialize V8 (once per process)
+        // Initialize V8 if not already done (safe to call multiple times)
+        // In production, V8 is pre-initialized in main() for optimal startup performance
         super::initialize_v8();
 
         // Check if V8 is properly initialized
