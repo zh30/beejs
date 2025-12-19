@@ -3,7 +3,7 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-19)**: ✅ Stage 53 完成 - 扩展 Web API 支持
+**当前状态 (2025-12-19)**: 🔄 Stage 54.3 进行中 - PyTorch 集成计划制定完成
 
 ## 最新更新 (2025-12-19)
 
@@ -47,6 +47,63 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 - 完整的性能监控和统计
 
 **提交**: ab550fc - feat(ai_inference): Stage 54.2 - ONNX Runtime 集成实现
+
+---
+
+### 📋 Stage 54.3: PyTorch 集成 (2025-12-19)
+**进度**: 📋 计划制定完成
+
+#### 阶段概述:
+Stage 54.3 专注于 **PyTorch TorchScript 模型推理**集成，将为 Beejs 添加原生 PyTorch 支持：
+
+#### 计划内容:
+1. **PyTorch 依赖集成** - tch crate 和 TorchScript 支持
+   - 添加 PyTorch Rust 绑定（tch crate）
+   - 配置 GPU 加速支持（CUDA、ROCm）
+   - 验证跨平台兼容性
+
+2. **TorchScript 引擎实现** - 高性能推理引擎
+   - TorchEngine 结构体和 InferenceEngine trait
+   - TorchEngineFactory 工厂模式
+   - 完整的模型加载和推理接口
+
+3. **GPU 加速优化** - CUDA/ROCm 支持
+   - TorchGPUAccelerator 设备管理
+   - StreamManager 并发流管理
+   - GPU 内存池管理
+
+4. **批处理优化** - 智能批处理算法
+   - 动态批处理大小调整
+   - 零拷贝数据传输
+   - 异步批处理
+
+5. **测试和验证** - 完整测试套件
+   - TorchScript 模型测试
+   - GPU 加速测试
+   - 性能基准测试
+   - 与 ONNX 引擎互操作性测试
+
+#### 技术特点:
+- 原生 PyTorch TorchScript 支持
+- JIT 编译优化
+- 零拷贝数据传输
+- 智能设备选择（CPU/GPU）
+- 与 ONNX 引擎接口一致
+
+#### 新增文件（计划）:
+- `src/ai_inference/pytorch_engine.rs` (PyTorch 引擎实现)
+- `tests/stage54/stage_54_3_pytorch_tests.rs` (完整测试套件)
+
+#### 成功标准:
+- [ ] 支持 TorchScript 模型格式加载
+- [ ] CPU/GPU 推理正常工作
+- [ ] 批处理功能正常
+- [ ] 与 ONNX 引擎互操作
+- [ ] 推理延迟 < 10ms（小型模型）
+
+**文档**: IMPLEMENTATION_PLAN_STAGE_54_3.md
+**下一步**: 阶段 54.3.1 - PyTorch 依赖添加
+**预计完成**: 2025-12-20
 
 ---
 
