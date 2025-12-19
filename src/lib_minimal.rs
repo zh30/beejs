@@ -6,8 +6,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use rusty_v8 as v8;
 
-mod typescript;
-
 /// Beejs Runtime - High-performance JavaScript/TypeScript execution engine using V8
 pub struct Runtime {
     stack_size: usize,

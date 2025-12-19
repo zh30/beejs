@@ -406,6 +406,7 @@ pub enum Token {
     EqEqEq,
     NotEq,
     NotEqEq,
+    Bang,
     Lt,
     Gt,
     Unknown(String),
@@ -530,7 +531,7 @@ impl Parser {
         };
 
         // 可能的类型注解
-        let type_annotation = if self.current_token() == Token::Colon {
+        let type_annotation = if self.current_token_eq(&Token::Colon) {
             self.consume(Token::Colon)?;
             self.parse_type_annotation()
         } else {
@@ -538,9 +539,10 @@ impl Parser {
         };
 
         // 可能的初始化器
-        let initializer = if self.current_token() == Token::Eq {
+        let initializer = if self.current_token_eq(&Token::Eq) {
             self.consume(Token::Eq)?;
-            Some(Box::new(self.parse_expression()?))
+            let expr = self.parse_expression()?;
+            Some(Box::new(ASTNode::Expression(expr)))
         } else {
             None
         };
@@ -573,7 +575,7 @@ impl Parser {
                 _ => bail!("Expected parameter name"),
             };
 
-            let param_type = if self.current_token() == Token::Colon {
+            let param_type = if self.current_token_eq(&Token::Colon) {
                 self.consume(Token::Colon)?;
                 self.parse_type_annotation()
             } else {
@@ -589,7 +591,7 @@ impl Parser {
         self.consume(Token::RParen)?;
 
         // 可能的返回类型
-        let return_type = if self.current_token() == Token::Colon {
+        let return_type = if self.current_token_eq(&Token::Colon) {
             self.consume(Token::Colon)?;
             self.parse_type_annotation()
         } else {
@@ -667,16 +669,19 @@ impl Parser {
 
         match self.current_token() {
             Token::Identifier(ref name) => {
+                let name = name.clone();
                 self.advance();
-                Ok(ASTExpression::Identifier(name.clone()))
+                Ok(ASTExpression::Identifier(name))
             }
             Token::Number(ref num) => {
+                let num = num.clone();
                 self.advance();
-                Ok(ASTExpression::Literal(num.clone()))
+                Ok(ASTExpression::Literal(num))
             }
             Token::String(ref s) => {
+                let s = s.clone();
                 self.advance();
-                Ok(ASTExpression::Literal(s.clone()))
+                Ok(ASTExpression::Literal(s))
             }
             _ => bail!("Unexpected token in expression"),
         }
@@ -686,8 +691,9 @@ impl Parser {
         // 简化的类型注解解析
         match self.current_token() {
             Token::Identifier(ref name) => {
+                let name = name.clone();
                 self.advance();
-                Some(name.clone())
+                Some(name)
             }
             _ => None,
         }
@@ -772,7 +778,9 @@ impl CodeEmitter {
 
                 if let Some(init) = initializer {
                     self.output.push_str(" = ");
-                    self.emit_expression(init);
+                    if let ASTNode::Expression(expr) = init.as_ref() {
+                        self.emit_expression(expr);
+                    }
                 }
 
                 self.output.push_str(";\n");

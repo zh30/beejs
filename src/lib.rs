@@ -24,6 +24,7 @@ pub mod automation;
 pub mod analysis;
 pub mod monitor;
 pub mod runtime_lite;
+// pub mod lib_minimal;
 pub mod memory_pool;
 pub mod process_pool;
 pub mod v8_snapshot;
@@ -77,6 +78,8 @@ pub mod package;
 
 // Stage 48: TypeScript 支持
 pub mod typescript;
+// pub mod stage_48_optimized_process_pool;
+// pub mod stage_48_ai_workload_optimizer;
 
 // 重新导出 REPL 相关类型
 pub use repl::{Repl, ReplConfig};
@@ -196,6 +199,9 @@ pub use precompiled_cache::PrecompiledModuleCache;
 
 // 重新导出运行时精简版
 pub use runtime_lite::RuntimeLite;
+
+// 重新导出 V8 简单运行时
+// pub use lib_minimal::Runtime;
 
 // 重新导出 AI 批处理相关类型
 pub use ai_batch_processor::{
