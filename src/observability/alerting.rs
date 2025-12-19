@@ -357,7 +357,7 @@ impl AlertingSystem {
     }
 
     /// Find a metric by name
-    fn find_metric(&self, metrics: &[MetricFamily], metric_name: &str) -> Option<&MetricFamily> {
+    fn find_metric<'a>(&self, metrics: &'a [MetricFamily], metric_name: &str) -> Option<&'a MetricFamily> {
         metrics.iter().find(|m| {
             m.get_name() == metric_name
         })

@@ -415,7 +415,7 @@ impl ModelConverter {
         // 1. 移除零值参数
         for (name, values) in optimized_model.parameters.iter_mut() {
             // 移除零值参数
-            let non_zero_count = values.iter().filter(|&&x| x.abs() > 1e-6).count();
+            let non_zero_count = values.iter().filter(|x| x.abs() > 1e-6).count();
             let original_count = values.len();
             if non_zero_count < original_count {
                 println!("Removed {}/{} zero parameters from layer {}", original_count - non_zero_count, original_count, name);
@@ -425,7 +425,7 @@ impl ModelConverter {
         // 2. 参数裁剪（保留绝对值较大的参数）
         for (name, values) in optimized_model.parameters.iter_mut() {
             // 保留前 90% 绝对值最大的参数
-            let mut sorted_values = values.clone();
+            let mut sorted_values: Vec<f32> = values.clone();
             sorted_values.sort_by(|a, b| b.abs().partial_cmp(&a.abs()).unwrap());
 
             let keep_count = (sorted_values.len() as f32 * 0.9) as usize;

@@ -179,7 +179,7 @@ pub struct AIModel {
     pub id: String,
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
-    pub parameters: Vec<u8>, // 简化的参数存储
+    pub parameters: std::collections::HashMap<String, Vec<f32>>, // 模型参数
 }
 
 impl AIModel {
@@ -189,7 +189,22 @@ impl AIModel {
             id,
             input_shape,
             output_shape,
-            parameters: Vec::new(),
+            parameters: std::collections::HashMap::new(),
+        }
+    }
+
+    /// 创建新模型（带参数）
+    pub fn new_with_params(
+        id: String,
+        input_shape: Vec<usize>,
+        output_shape: Vec<usize>,
+        parameters: std::collections::HashMap<String, Vec<f32>>,
+    ) -> Self {
+        AIModel {
+            id,
+            input_shape,
+            output_shape,
+            parameters,
         }
     }
 

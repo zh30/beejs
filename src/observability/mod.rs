@@ -188,9 +188,9 @@ impl ObservableSystem {
     pub async fn get_metrics(&self) -> ObservableMetrics {
         let custom_metrics = self.custom_metrics.read().await;
         ObservableMetrics {
-            runtime: custom_metrics.runtime_metrics().await,
-            performance: custom_metrics.performance_metrics().await,
-            business: custom_metrics.business_metrics().await,
+            runtime: custom_metrics.runtime_metrics().await.clone(),
+            performance: custom_metrics.performance_metrics().await.clone(),
+            business: custom_metrics.business_metrics().await.clone(),
         }
     }
 
@@ -214,11 +214,10 @@ impl ObservableSystem {
 }
 
 /// Observable metrics container
-#[derive(Debug, Clone)]
 pub struct ObservableMetrics {
-    pub runtime: RuntimeMetricsSnapshot,
-    pub performance: PerformanceMetricsSnapshot,
-    pub business: BusinessMetricsSnapshot,
+    pub runtime: std::sync::Arc<tokio::sync::RwLock<RuntimeMetrics>>,
+    pub performance: std::sync::Arc<tokio::sync::RwLock<PerformanceMetrics>>,
+    pub business: std::sync::Arc<tokio::sync::RwLock<BusinessMetrics>>,
 }
 
 /// Runtime metrics snapshot

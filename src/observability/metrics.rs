@@ -123,7 +123,7 @@ impl CustomMetrics {
 
     /// Gather all metrics for Prometheus export
     pub fn gather_metrics(&self) -> Result<Vec<prometheus::proto::MetricFamily>> {
-        self.registry.gather()
+        Ok(self.registry.gather())
     }
 }
 

@@ -27,6 +27,11 @@ impl Tensor {
         Ok(Tensor { data, shape })
     }
 
+    /// 创建新的张量（别名方法）
+    pub fn new_with_data(data: Vec<f32>, shape: Vec<usize>) -> Result<Self> {
+        Self::new(data, shape)
+    }
+
     /// 获取张量形状
     pub fn shape(&self) -> &Vec<usize> {
         &self.shape

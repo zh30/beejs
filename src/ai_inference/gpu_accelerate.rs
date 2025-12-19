@@ -350,7 +350,7 @@ impl GPUKernel for Conv2DKernel {
             }
         }
 
-        Ok(Tensor::new_with_data(output_data, output_shape))
+        Ok(Tensor::new_with_data(output_data, output_shape)?)
     }
 }
 
@@ -444,6 +444,6 @@ impl GPUKernel for AttentionKernel {
             }
         }
 
-        Ok(Tensor::new_with_data(output_data, input_shape))
+        Ok(Tensor::new_with_data(output_data, input_shape.clone())?)
     }
 }
