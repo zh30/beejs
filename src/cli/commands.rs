@@ -1,0 +1,195 @@
+//! CLI Commands Module
+//! Stage 56.1 - CLI Core Architecture
+//!
+//! Implements a proper subcommand-based CLI structure similar to Bun
+
+use clap::{Command, Parser, Subcommand};
+use std::path::PathBuf;
+
+/// Main CLI application
+#[derive(Parser, Debug)]
+#[command(
+    name = "beejs",
+    about = "High-performance JavaScript/TypeScript runtime (faster than Bun)",
+    version = "0.1.0",
+    author = "Henry Zhang"
+)]
+pub struct CliApp {
+    /// Enable verbose output
+    #[arg(short, long)]
+    pub verbose: bool,
+
+    /// Configuration file path
+    #[arg(short, long)]
+    pub config: Option<PathBuf>,
+
+    /// Environment variables file (.env)
+    #[arg(short = 'e', long)]
+    pub env: Option<PathBuf>,
+
+    /// Subcommand to execute
+    #[command(subcommand)]
+    pub command: Option<SubCommand>,
+}
+
+/// Subcommand enumeration
+#[derive(Subcommand, Debug)]
+pub enum SubCommand {
+    /// Run a script file
+    Run(RunCommand),
+
+    /// Run tests
+    Test(TestCommand),
+
+    /// Start REPL (interactive shell)
+    Repl(ReplCommand),
+
+    /// Bundle code for production
+    Bundle(BundleCommand),
+
+    /// Version information
+    Version,
+}
+
+/// Run command - execute scripts
+#[derive(Parser, Debug)]
+pub struct RunCommand {
+    /// Script file to execute
+    pub script: PathBuf,
+
+    /// Arguments to pass to the script
+    pub args: Vec<String>,
+
+    /// Watch mode - reload on file changes
+    #[arg(short, long)]
+    pub watch: bool,
+
+    /// Transpile TypeScript (default: auto-detect)
+    #[arg(short, long)]
+    pub transpile: bool,
+
+    /// Hot reload (alias for --watch)
+    #[arg(short = 'H', long)]
+    pub hot: bool,
+}
+
+/// Test command - run test suite
+#[derive(Parser, Debug)]
+pub struct TestCommand {
+    /// Test file or directory (default: current directory)
+    #[arg(default_value = ".")]
+    pub path: PathBuf,
+
+    /// Test pattern (glob pattern)
+    #[arg(short, long, default_value = "**/*.{test,spec}.{js,ts}")]
+    pub pattern: String,
+
+    /// Reporter type (default: spec)
+    #[arg(short = 'r', long, value_enum, default_value = "spec")]
+    pub reporter: TestReporter,
+
+    /// Run tests in watch mode
+    #[arg(short, long)]
+    pub watch: bool,
+
+    /// Run tests once and exit
+    #[arg(short = 'o', long)]
+    pub run_once: bool,
+
+    /// Enable coverage reporting
+    #[arg(short, long)]
+    pub coverage: bool,
+
+    /// Maximum test timeout in seconds
+    #[arg(short, long, default_value = "30")]
+    pub timeout: u64,
+}
+
+/// REPL command - interactive shell
+#[derive(Parser, Debug)]
+pub struct ReplCommand {
+    /// Load a file into the REPL session
+    #[arg(short, long)]
+    pub load: Option<PathBuf>,
+
+    /// Evaluate expression on startup
+    #[arg(short, long)]
+    pub eval: Option<String>,
+
+    /// Save REPL session to file on exit
+    #[arg(short, long)]
+    pub save: Option<PathBuf>,
+
+    /// Enable TypeScript mode
+    #[arg(short, long)]
+    pub typescript: bool,
+}
+
+/// Bundle command - create production bundles
+#[derive(Parser, Debug)]
+pub struct BundleCommand {
+    /// Entry file
+    pub entry: PathBuf,
+
+    /// Output file
+    #[arg(short, long)]
+    pub outfile: Option<PathBuf>,
+
+    /// Minify output
+    #[arg(short, long)]
+    pub minify: bool,
+
+    /// Enable source maps
+    #[arg(short, long)]
+    pub sourcemap: bool,
+
+    /// Target environment (default: browser)
+    #[arg(short = 't', long, value_enum, default_value = "browser")]
+    pub target: BundleTarget,
+
+    /// External dependencies (comma-separated)
+    #[arg(short, long)]
+    pub external: Option<Vec<String>>,
+
+    /// Enable tree shaking
+    #[arg(short = 'T', long)]
+    pub tree_shake: bool,
+}
+
+/// Test reporter type
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TestReporter {
+    /// Spec reporter (default)
+    Spec,
+    /// JSON reporter
+    Json,
+    /// Dot reporter
+    Dot,
+    /// Tap reporter
+    Tap,
+}
+
+/// Bundle target environment
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BundleTarget {
+    /// Browser environment
+    Browser,
+    /// Node.js environment
+    Node,
+    /// Bun environment
+    Bun,
+    /// Neutral (no runtime-specific code)
+    Neutral,
+}
+
+impl Default for TestReporter {
+    fn default() -> Self {
+        TestReporter::Spec
+    }
+}
+
+impl Default for BundleTarget {
+    fn default() -> Self {
+        BundleTarget::Browser
+    }
+}

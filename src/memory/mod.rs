@@ -269,18 +269,22 @@ impl MemoryOptimizationManager {
     /// Compress memory regions
     pub fn compress_memory(&self, data: &[u8]) -> Result<Vec<u8>, String> {
         if let Some(ref compressor) = self.memory_compressor {
-            compressor.compress(data)
+            let address = data.as_ptr() as usize;
+            match compressor.compress(data, address) {
+                Ok(block) => Ok(block.compressed_data),
+                Err(e) => Err(format!("Compression failed: {:?}", e)),
+            }
         } else {
             Ok(data.to_vec())
         }
     }
 
     /// Detect memory leaks
-    pub fn detect_leaks(&self) -> Result<Vec<LeakReport>, String> {
+    pub fn detect_leaks(&self) -> Vec<leak_detector::LeakReport> {
         if let Some(ref detector) = self.leak_detector {
-            detector.detect_leaks()
+            vec![detector.detect_leaks()]
         } else {
-            Ok(vec![])
+            vec![]
         }
     }
 }
@@ -336,6 +340,6 @@ mod tests {
         let _h2 = manager.allocate(200).unwrap();
 
         let stats = manager.get_stats();
-        assert!(stats.total_allocations.load(Ordering::SeqCst) >= 2);
+        assert!(stats.total_allocations >= 2);
     }
 }

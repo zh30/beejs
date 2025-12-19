@@ -143,19 +143,19 @@ impl Default for CompressionConfig {
 #[derive(Debug, Clone)]
 pub struct CompressedBlock {
     /// 原始数据地址
-    original_address: usize,
+    pub original_address: usize,
     /// 压缩数据
-    compressed_data: Vec<u8>,
+    pub compressed_data: Vec<u8>,
     /// 使用的算法
-    algorithm: CompressionAlgorithm,
+    pub algorithm: CompressionAlgorithm,
     /// 原始大小
-    original_size: usize,
+    pub original_size: usize,
     /// 压缩后大小
-    compressed_size: usize,
+    pub compressed_size: usize,
     /// 创建时间
-    created_at: Instant,
+    pub created_at: Instant,
     /// 最后访问时间
-    last_accessed: Instant,
+    pub last_accessed: Instant,
     /// 访问次数 (非原子，用于快照)
     access_count: usize,
     /// 压缩比

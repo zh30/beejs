@@ -86,6 +86,21 @@ pub struct GCStats {
     pub promotion_failures: AtomicU64,
 }
 
+impl Default for GCStats {
+    fn default() -> Self {
+        Self {
+            young_gc_count: AtomicU64::new(0),
+            old_gc_count: AtomicU64::new(0),
+            total_collected_objects: AtomicU64::new(0),
+            total_collected_bytes: AtomicU64::new(0),
+            total_pause_time_ns: AtomicU64::new(0),
+            max_pause_time_ns: AtomicU64::new(0),
+            promoted_objects: AtomicU64::new(0),
+            promotion_failures: AtomicU64::new(0),
+        }
+    }
+}
+
 /// GC 配置
 #[derive(Debug, Clone)]
 pub struct GCConfig {
