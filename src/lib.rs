@@ -567,8 +567,8 @@ mod tests {
     #[test]
     fn test_runtime_creation() {
         let runtime = Runtime::new(4, 512 * 1024 * 1024, true, false);
-        assert_eq!(runtime.get_config().pool_size, 4);
-        assert_eq!(runtime.get_config().max_memory, 512 * 1024 * 1024);
+        std::assert_eq!(runtime.get_config().pool_size, 4);
+        std::assert_eq!(runtime.get_config().max_memory, 512 * 1024 * 1024);
     }
 
     #[test]
@@ -583,9 +583,9 @@ mod tests {
             },
         );
 
-        assert_eq!(result.name, "test");
-        assert_eq!(result.metric_type, MetricType::ExecutionTime);
-        assert!(result.iterations > 0);
+        std::assert_eq!(result.name, "test");
+        std::assert_eq!(result.metric_type, MetricType::ExecutionTime);
+        std::assert!(result.iterations > 0);
     }
 
     #[test]
@@ -626,16 +626,16 @@ mod tests {
         };
 
         let detection = detector.lock().unwrap().detect_regression(&test_result);
-        assert_eq!(detection.test_name, "test_baseline");
+        std::assert_eq!(detection.test_name, "test_baseline");
     }
 
     #[test]
     fn test_threshold_manager() {
         let mut manager = ThresholdManager::new_default();
-        assert!(manager.load_config().is_ok() || manager.save_config().is_ok());
+        std::assert!(manager.load_config().is_ok() || manager.save_config().is_ok());
 
         let stats = manager.get_stats();
-        assert!(stats.total_rules >= 0);
+        std::assert!(stats.total_rules >= 0);
     }
 
     #[test]

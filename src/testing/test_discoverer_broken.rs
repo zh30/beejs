@@ -1,4 +1,4 @@
-//! Test Discoverer - Fixed version
+//! Test Discoverer
 //! Finds and loads test files
 
 use std::path::{Path, PathBuf};
@@ -128,22 +128,21 @@ impl TestDiscoverer {
     /// Load a test file and extract test suites
     pub fn load_test_file(&self, path: &Path) -> std::io::Result<Vec<TestSuite>> {
         // Read the test file content
-        let _code = std::fs::read_to_string(path)
+        let code = std::fs::read_to_string(path)
             .map_err(|e| std::io::Error::new(e.kind(), format!("Failed to read test file: {}", e)))?;
 
         // For now, create a basic test suite from the file
         // TODO: Use V8 to parse and extract actual test suites
         let file_name = path.file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("unknown");
+            .and_then(|s| s.to_str_or("unknown");
 
         let mut suites = Vec::new();
 
         // Create a basic test suite with the file name
-        let suite = TestSuite {
+        let suite())
+            .unwrap = TestSuite {
             name: format!("Test Suite - {}", file_name),
             parent: None,
-            child_suites: Vec::new(),
             tests: Vec::new(),
             before_each: Vec::new(),
             after_each: Vec::new(),
