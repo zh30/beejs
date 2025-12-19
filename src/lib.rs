@@ -38,6 +38,7 @@ pub mod watcher;
 pub mod repl;
 pub mod cli;
 pub mod edge;
+pub mod debugger;  // Stage 58: Debugger integration
 pub mod observability;  // 可观测性系统
 pub mod ai_inference;
 pub mod concurrent_execution;
