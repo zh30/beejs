@@ -1,1 +1,44 @@
-//! dev_server module placeholder
+//! Development server module
+
+use anyhow::Result;
+use std::net::{TcpListener, TcpStream};
+use std::thread;
+use std::io::{Read, Write};
+
+pub struct DevServer {
+    port: u16,
+    host: String,
+}
+
+impl DevServer {
+    pub fn new(port: u16) -> Self {
+        Self {
+            port,
+            host: "127.0.0.1".to_string(),
+        }
+    }
+
+    pub fn start(&self) -> Result<()> {
+        println!("Starting dev server on http://{}:{}", self.host, self.port);
+        
+        // In a real implementation, would start actual HTTP server
+        // For now, just simulate
+        Ok(())
+    }
+
+    pub fn stop(&self) -> Result<()> {
+        println!("Stopping dev server");
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dev_server_creation() {
+        let server = DevServer::new(3000);
+        assert_eq!(server.port, 3000);
+    }
+}
