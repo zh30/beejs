@@ -457,7 +457,7 @@ mod tests {
         let model = ModelHandle {
             id: "test".to_string(),
             path: "test.onnx".to_string(),
-            format: crate::ai_inference::ModelFormat::ONNX,
+            format: crate::ai_inference::engine_interface::ModelFormat::ONNX,
             input_shape: vec![1, 3, 224, 224],
             output_shape: vec![1, 1000],
             metadata: std::collections::HashMap::new(),
@@ -490,7 +490,7 @@ mod tests {
         let model = ModelHandle {
             id: "test".to_string(),
             path: "test.onnx".to_string(),
-            format: crate::ai_inference::ModelFormat::ONNX,
+            format: crate::ai_inference::engine_interface::ModelFormat::ONNX,
             input_shape: vec![1, 3, 224, 224],
             output_shape: vec![1, 1000],
             metadata: std::collections::HashMap::new(),
@@ -516,7 +516,7 @@ mod tests {
         let model = ModelHandle {
             id: "test".to_string(),
             path: "test.onnx".to_string(),
-            format: crate::ai_inference::ModelFormat::ONNX,
+            format: crate::ai_inference::engine_interface::ModelFormat::ONNX,
             input_shape: vec![1, 3, 224, 224],
             output_shape: vec![1, 1000],
             metadata: std::collections::HashMap::new(),

@@ -246,6 +246,45 @@ impl Tensor {
     pub fn to_string(&self) -> String {
         format!("Tensor(shape={:?}, data={:?})", self.shape, self.data)
     }
+
+    /// 转换为 PyTorch 张量
+    #[cfg(feature = "pytorch")]
+    pub fn to_tch_tensor(&self, device: &tch::Device) -> Result<tch::Tensor> {
+        let tensor = tch::Tensor::from(&self.data[..])
+            .reshape(self.shape.as_slice())
+            .to_device(device);
+        Ok(tensor)
+    }
+
+    /// 从 PyTorch 张量创建
+    #[cfg(feature = "pytorch")]
+    pub fn from_tch_tensor(tch_tensor: tch::Tensor, _device: &tch::Device) -> Result<Self> {
+        // 获取张量数据和形状
+        let data_vec: Vec<f32> = tch_tensor
+            .to_kind(tch::Kind::Float)
+            .try_into()
+            .context("Failed to convert PyTorch tensor to Vec<f32>")?;
+
+        let shape: Vec<usize> = tch_tensor
+            .dims()
+            .iter()
+            .map(|&d| d as usize)
+            .collect();
+
+        Ok(Tensor { data: data_vec, shape })
+    }
+
+    /// 转换为 PyTorch 张量（未启用功能时的占位符）
+    #[cfg(not(feature = "pytorch"))]
+    pub fn to_tch_tensor(&self, _device: &tch::Device) -> Result<tch::Tensor> {
+        Err(anyhow::anyhow!("PyTorch support not enabled. Enable with --features pytorch"))
+    }
+
+    /// 从 PyTorch 张量创建（未启用功能时的占位符）
+    #[cfg(not(feature = "pytorch"))]
+    pub fn from_tch_tensor(_tch_tensor: tch::Tensor, _device: &tch::Device) -> Result<Self> {
+        Err(anyhow::anyhow!("PyTorch support not enabled. Enable with --features pytorch"))
+    }
 }
 
 impl fmt::Display for Tensor {
