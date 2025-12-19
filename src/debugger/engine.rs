@@ -119,12 +119,16 @@ impl DebuggerEngine {
         script_name: String,
         line_number: u32,
     ) -> DebugResult<Breakpoint> {
-        let breakpoint = self.breakpoint_manager.add(script_id, script_name, line_number, 0)?;
-        {
-            let mut stats = self.stats.lock().unwrap();
-            stats.breakpoints_set += 1;
+        match self.breakpoint_manager.add(script_id, script_name, line_number, 0) {
+            Ok(breakpoint) => {
+                {
+                    let mut stats = self.stats.lock().unwrap();
+                    stats.breakpoints_set += 1;
+                }
+                DebugResult::ok(breakpoint)
+            }
+            Err(e) => DebugResult::err(e.to_string()),
         }
-        DebugResult::ok(breakpoint)
     }
 
     /// Set a conditional breakpoint
@@ -135,18 +139,22 @@ impl DebuggerEngine {
         line_number: u32,
         condition: crate::debugger::BreakpointCondition,
     ) -> DebugResult<Breakpoint> {
-        let breakpoint = self.breakpoint_manager.add_conditional(
+        match self.breakpoint_manager.add_conditional(
             script_id,
             script_name,
             line_number,
             0,
             condition,
-        )?;
-        {
-            let mut stats = self.stats.lock().unwrap();
-            stats.breakpoints_set += 1;
+        ) {
+            Ok(breakpoint) => {
+                {
+                    let mut stats = self.stats.lock().unwrap();
+                    stats.breakpoints_set += 1;
+                }
+                DebugResult::ok(breakpoint)
+            }
+            Err(e) => DebugResult::err(e.to_string()),
         }
-        DebugResult::ok(breakpoint)
     }
 
     /// Remove a breakpoint
@@ -379,8 +387,10 @@ impl DebuggerEngine {
         expression: &str,
     ) -> DebugResult<String> {
         let inspector = VariableInspector::new(self.config.clone());
-        let var_info = inspector.evaluate_expression(context, expression)?;
-        Ok(var_info.value)
+        match inspector.evaluate_expression(context, expression) {
+            Ok(var_info) => DebugResult::ok(var_info.value),
+            Err(e) => DebugResult::err(e.to_string()),
+        }
     }
 
     /// Get variables in current scope

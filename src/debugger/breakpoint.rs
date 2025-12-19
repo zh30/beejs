@@ -176,9 +176,9 @@ impl BreakpointManager {
                     self.script_breakpoints.remove(&breakpoint.script_id);
                 }
             }
-            Ok(())
+            DebugResult::ok(())
         } else {
-            Err(DebugResult::err(format!("Breakpoint with ID '{}' not found", id)))
+            DebugResult::err(format!("Breakpoint with ID '{}' not found", id))
         }
     }
 

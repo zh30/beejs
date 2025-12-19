@@ -10,7 +10,7 @@ use std::convert::TryFrom;
 use crate::debugger::{DebugResult, config::DebugConfig};
 
 /// Scope types in JavaScript
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ScopeType {
     Global,        // Global scope
     Local,         // Local function scope
@@ -73,11 +73,15 @@ impl VariableInspector {
         let mut all_vars = HashMap::new();
 
         for scope in scopes {
-            let vars = self.get_scope_variables(scope)?;
-            all_vars.insert(scope.scope_type.clone(), vars);
+            match self.get_scope_variables(scope) {
+                Ok(vars) => {
+                    all_vars.insert(scope.scope_type.clone(), vars);
+                }
+                Err(e) => return DebugResult::err(e.to_string()),
+            }
         }
 
-        Ok(all_vars)
+        DebugResult::ok(all_vars)
     }
 
     /// Evaluate an expression in a given context
@@ -87,22 +91,19 @@ impl VariableInspector {
         expression: &str,
     ) -> DebugResult<VariableInfo> {
         // Create a V8 script to evaluate the expression
-        let isolate = context.isolate();
-        let mut scope = v8::HandleScope::new(isolate);
-        let context_local = v8::Local::new(&mut scope, context);
+        // Note: V8 isolate access requires different approach in rusty_v8 0.22
+        // This is a placeholder implementation
+        // TODO: Implement proper expression evaluation with V8
 
-        // Compile and run the expression
-        // This is a simplified implementation
-        // Real implementation would use v8::ScriptCompiler
+        // For now, return a simple variable info
+        let info = VariableInfo {
+            name: expression.to_string(),
+            value: "undefined".to_string(),
+            type_name: "unknown".to_string(),
+            scope_type: ScopeType::Local,
+        };
 
-        Ok(VariableInfo {
-            name: "result".to_string(),
-            value: "expression result".to_string(),
-            type_name: "Unknown".to_string(),
-            preview: "...".to_string(),
-            properties: None,
-            length: None,
-        })
+        DebugResult::ok(info)
     }
 
     /// Get global variables

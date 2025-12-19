@@ -79,7 +79,7 @@ pub struct SourceLocation {
     pub column_number: u32,
 }
 
-/// Debug result
+/// Debug result - compatible with Rust's ? operator
 #[derive(Debug, Clone)]
 pub struct DebugResult<T> {
     pub success: bool,

@@ -9,6 +9,7 @@ use std::time::Instant;
 use beejs::cli::commands::{CliApp, SubCommand};
 use beejs::cli::{ExecutionContext, ExecutorConfig, ScriptExecutor, FileType, shebang};
 use beejs::RuntimeLite;
+use beejs::debugger::DebugSession;
 
 /// CLI entry point
 fn main() -> Result<()> {
