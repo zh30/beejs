@@ -23,8 +23,10 @@ fn setup_process(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
     // process.argv - use Array instead of Object
     let argv = v8::Array::new_with_length(scope, 2);
     // In a real implementation, these would come from actual CLI args
-    argv.set_index(scope, 0, v8::String::new(scope, "beejs").unwrap().into());
-    argv.set_index(scope, 1, v8::String::new(scope, "<eval>").unwrap().into());
+    let val_0 = v8::String::new(scope, "beejs").unwrap().into();
+    argv.set_index(scope, 0, val_0);
+    let val_1 = v8::String::new(scope, "<eval>").unwrap().into();
+    argv.set_index(scope, 1, val_1);
 
     let process_key = v8::String::new(scope, "process").unwrap();
     let global = scope.global();

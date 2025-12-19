@@ -224,8 +224,10 @@ fn search_params_constructor_callback(
         let params_array = v8::Array::new(scope, pairs.len() as u32);
         for (i, (key, value)) in pairs.into_iter().enumerate() {
             let pair_array = v8::Array::new(scope, 2);
-            pair_array.set_index(scope, 0, v8::String::new(scope, &key).unwrap().into());
-            pair_array.set_index(scope, 1, v8::String::new(scope, &value).unwrap().into());
+            let val_0 = v8::String::new(scope, &key).unwrap().into();
+            pair_array.set_index(scope, 0, val_0);
+            let val_1 = v8::String::new(scope, &value).unwrap().into();
+            pair_array.set_index(scope, 1, val_1);
             params_array.set_index(scope, i as u32, pair_array.into());
         }
         params_obj.set(scope, params_key.into(), params_array.into());
@@ -357,8 +359,10 @@ fn search_params_append_callback(
     if params_array.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(params_array) {
             let pair_array = v8::Array::new(scope, 2);
-            pair_array.set_index(scope, 0, v8::String::new(scope, &name).unwrap().into());
-            pair_array.set_index(scope, 1, v8::String::new(scope, &value).unwrap().into());
+            let val_0 = v8::String::new(scope, &name).unwrap().into();
+            pair_array.set_index(scope, 0, val_0);
+            let val_1 = v8::String::new(scope, &value).unwrap().into();
+            pair_array.set_index(scope, 1, val_1);
             let length = arr.length();
             arr.set_index(scope, length, pair_array.into());
         }

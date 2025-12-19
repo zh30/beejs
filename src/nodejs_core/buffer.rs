@@ -407,7 +407,8 @@ fn buffer_to_json_callback(
         // 创建JSON数组
         let json_array = v8::Array::new(scope, buffer_length);
         for i in 0..buffer_length {
-            json_array.set_index(scope, i, v8::Integer::new(scope, data_slice[i] as i32).into());
+            let i_val = v8::Integer::new(scope, data_slice[i] as i32).into();
+            json_array.set_index(scope, i, i_val);
         }
 
         retval.set(json_array.into());
