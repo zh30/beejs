@@ -174,7 +174,7 @@ fn run_script(
     }
 }
 
-/// Run tests
+/// Run tests using Beejs test runner
 fn run_tests(
     cmd: beejs::cli::commands::TestCommand,
     verbose: bool,
@@ -184,25 +184,72 @@ fn run_tests(
         println!("   Pattern: {}", cmd.pattern);
         println!("   Reporter: {:?}", cmd.reporter);
         println!("   Coverage: {}", cmd.coverage);
+        println!("   Path: {:?}", cmd.path);
     }
 
-    // For now, run cargo tests as a placeholder
+    // Use Beejs test runner
+    use beejs::testing::{TestDiscoverer, TestRunner, ConsoleReporter};
+    use std::time::Instant;
+
+    let start = Instant::now();
+
+    // Discover test files
+    let discoverer = TestDiscoverer::default();
     if verbose {
-        println!("⚠️  Running cargo tests (placeholder for Beejs test runner)");
+        println!("🔍 Discovering test files...");
     }
 
-    let output = std::process::Command::new("cargo")
-        .args(&["test", "--lib"])
-        .output()
-        .context("Failed to run tests")?;
+    let discovery = discoverer.discover()
+        .context("Failed to discover test files")?;
 
-    if !output.status.success() {
-        println!("❌ Tests failed:");
-        println!("{}", String::from_utf8_lossy(&output.stderr));
-        return Err(anyhow::anyhow!("Tests failed"));
+    if verbose {
+        println!("📁 Found {} test files", discovery.test_files.len());
     }
 
-    println!("✅ All tests passed");
+    if discovery.test_files.is_empty() {
+        println!("⚠️  No test files found matching pattern: {}", cmd.pattern);
+        return Ok(());
+    }
+
+    // Load all tests
+    if verbose {
+        println!("📦 Loading test files...");
+    }
+
+    let test_suites = discoverer.load_all_tests(&discovery)
+        .context("Failed to load test files")?;
+
+    if verbose {
+        println!("📋 Loaded {} test suites", test_suites.len());
+    }
+
+    // Run tests
+    if verbose {
+        println!("▶️  Running tests...");
+    }
+
+    let config = beejs::testing::TestRunnerConfig {
+        parallel: false, // Start with serial execution
+        timeout: std::time::Duration::from_secs(cmd.timeout),
+        bail: false,
+    };
+
+    let runner = TestRunner::new(config);
+    let (results, stats) = runner.run_suites(test_suites);
+
+    // Report results
+    let reporter = ConsoleReporter::new(verbose);
+    reporter.report_results(&results, &stats);
+
+    if verbose {
+        println!("⏱️  Total execution time: {:?}", start.elapsed());
+    }
+
+    // Return error if any tests failed
+    if stats.failed_tests > 0 {
+        return Err(anyhow::anyhow!("{} test(s) failed", stats.failed_tests));
+    }
+
     Ok(())
 }
 

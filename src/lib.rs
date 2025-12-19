@@ -81,6 +81,9 @@ pub mod typescript;
 // pub mod stage_48_optimized_process_pool;
 // pub mod stage_48_ai_workload_optimizer;
 
+// Stage 56.4: Testing Framework
+pub mod testing;
+
 // 重新导出 REPL 相关类型
 pub use repl::{Repl, ReplConfig};
 
