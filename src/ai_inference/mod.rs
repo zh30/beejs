@@ -8,6 +8,8 @@ mod tensor_ops;
 mod gpu_accelerate;
 mod model_cache;
 mod dynamic_batch_processor;
+mod onnx_runtime;
+mod batch_optimizer;
 
 pub use ai_inference_engine::*;
 pub use engine_interface::*;
@@ -15,6 +17,8 @@ pub use model_loader::*;
 pub use tensor_ops::*;
 pub use model_cache::*;
 pub use dynamic_batch_processor::*;
+pub use onnx_runtime::*;
+pub use batch_optimizer::*;
 
 #[cfg(test)]
 mod tests {
