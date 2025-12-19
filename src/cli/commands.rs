@@ -189,7 +189,6 @@ pub enum BundleTarget {
 #[derive(Parser, Debug)]
 pub enum DebugCommand {
     /// Debug a script file
-    #[command(group = "debug")]
     Script {
         /// Script file to debug
         file: PathBuf,
@@ -208,7 +207,6 @@ pub enum DebugCommand {
     },
 
     /// Attach to a running process for debugging
-    #[command(group = "debug")]
     Attach {
         /// Process ID to attach to
         #[arg(short, long)]
@@ -220,7 +218,6 @@ pub enum DebugCommand {
     },
 
     /// Start inspect mode without specifying a file
-    #[command(group = "debug")]
     Inspect {
         /// Debug server port
         #[arg(short, long, default_value = "9229")]

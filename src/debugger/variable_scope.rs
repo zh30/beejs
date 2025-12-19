@@ -138,8 +138,10 @@ impl VariableInspector {
         let object_local = v8::Local::new(scope, &object);
 
         // Get object keys
+        // Note: GetOwnPropertyNamesOptions is not available in rusty_v8 0.22
+        // Using default behavior for now
         let keys = object_local
-            .get_own_property_names(scope, v8::GetOwnPropertyNamesOptions::default())
+            .get_own_property_names(scope)
             .unwrap_or_else(|_| v8::Array::new(scope, 0));
 
         // Limit number of properties to inspect

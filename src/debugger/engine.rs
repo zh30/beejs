@@ -106,17 +106,15 @@ impl DebuggerEngine {
     /// Initialize the debugger with a V8 isolate
     pub fn initialize(&self, _isolate: &mut v8::Isolate) -> DebugResult<()> {
         // Enable V8 debug mode
-        crate::debugger::v8_stubs::Debug::set_console_error_message_callback(None);
-
-        // Set up debug message queue
-        // This would configure V8's debugging infrastructure
+        // Note: V8 Debug API is not available in rusty_v8 0.22
+        // This will be implemented with proper stubs in future stages
 
         Ok(())
     }
 
     /// Set a breakpoint
     pub fn set_breakpoint(
-        &self,
+        &mut self,
         script_id: String,
         script_name: String,
         line_number: u32,
@@ -131,7 +129,7 @@ impl DebuggerEngine {
 
     /// Set a conditional breakpoint
     pub fn set_conditional_breakpoint(
-        &self,
+        &mut self,
         script_id: String,
         script_name: String,
         line_number: u32,
@@ -323,7 +321,7 @@ impl DebuggerEngine {
     }
 
     /// Extract location from execution state
-    fn extract_location(&self, exec_state: &v8::Global<v8::DebugExecutionState>) -> Option<SourceLocation> {
+    fn extract_location(&self, exec_state: &v8::Global<DebugExecutionState>) -> Option<SourceLocation> {
         // This would use V8's DebugExecutionState API
         // For now, return a placeholder
 

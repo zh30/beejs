@@ -14,12 +14,14 @@ pub mod stack_trace;
 pub mod variable_scope;
 pub mod config;
 pub mod v8_stubs;
+pub mod session;
 
 pub use engine::DebuggerEngine;
 pub use breakpoint::{Breakpoint, BreakpointManager, BreakpointCondition};
 pub use stack_trace::{StackFrame, StackTrace, StackFrameInfo};
 pub use variable_scope::{VariableScope, ScopeType, VariableInspector};
 pub use config::DebugConfig;
+pub use session::DebugSession;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -151,5 +153,6 @@ impl DebugStats {
 /// Initialize the debugger module
 pub fn init() {
     // Set up V8 debug message queue
-    v8::Debug::set_console_error_message_callback(None);
+    // Note: V8 Debug API is not available in rusty_v8 0.22
+    // This will be implemented with proper stubs in future stages
 }

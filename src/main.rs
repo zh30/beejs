@@ -9,6 +9,7 @@ use std::time::Instant;
 use beejs::cli::commands::{CliApp, SubCommand};
 use beejs::cli::{ExecutionContext, ExecutorConfig, ScriptExecutor, FileType, shebang};
 use beejs::RuntimeLite;
+use beejs::debugger::DebugSession;
 
 /// CLI entry point
 fn main() -> Result<()> {
@@ -59,6 +60,12 @@ fn main() -> Result<()> {
                 println!("📦 Bundling: {:?}", cmd.entry);
             }
             run_bundle(cmd, app.verbose)
+        }
+        Some(SubCommand::Debug(cmd)) => {
+            if app.verbose {
+                println!("🐛 Starting debug session");
+            }
+            run_debug(runtime, cmd, app.verbose)
         }
         None => {
             // No subcommand - run script if provided as positional arg (Bun compatibility)
@@ -325,12 +332,53 @@ fn print_no_command_help() {
     println!("  test           Run tests");
     println!("  repl           Start interactive REPL");
     println!("  bundle         Bundle code for production");
+    println!("  debug          Debug a script with interactive debugger");
     println!("  version        Show version information");
     println!();
     println!("Examples:");
     println!("  beejs run script.js");
     println!("  beejs test");
     println!("  beejs repl");
+    println!("  beejs debug script.js");
     println!();
     println!("For more information, try: beejs <command> --help");
+}
+
+/// Run debug session
+fn run_debug(
+    runtime: RuntimeLite,
+    cmd: beejs::cli::commands::DebugCommand,
+    verbose: bool,
+) -> Result<()> {
+    if verbose {
+        println!("🐛 Debug session configuration:");
+        match cmd {
+            beejs::cli::commands::DebugCommand::Script { ref file, break_at, port, web } => {
+                println!("   Script: {:?}", file);
+                println!("   Break at line: {:?}", break_at);
+                println!("   Port: {}", port);
+                println!("   Web UI: {}", web);
+            }
+            beejs::cli::commands::DebugCommand::Attach { pid, port } => {
+                println!("   Attach to PID: {}", pid);
+                println!("   Port: {}", port);
+            }
+            beejs::cli::commands::DebugCommand::Inspect { port, web } => {
+                println!("   Inspect mode");
+                println!("   Port: {}", port);
+                println!("   Web UI: {}", web);
+            }
+        }
+    }
+
+    // Create debug session
+    let session = DebugSession::new(runtime, cmd)
+        .context("Failed to create debug session")?;
+
+    // Start the debug session
+    tokio::runtime::Runtime::new()?
+        .block_on(session.start())
+        .context("Failed to start debug session")?;
+
+    Ok(())
 }

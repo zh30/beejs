@@ -114,8 +114,6 @@ pub fn setup_buffer_api(
         v8::String::new(scope, "length").unwrap(),
         length_getter,
         None, // no setter
-        v8::AccessControl::ALL_CAN_READ,
-        v8::PropertyAttribute::NONE,
     );
 
     // 设置Buffer到全局

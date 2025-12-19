@@ -7,7 +7,7 @@
 use std::collections::HashMap;
 use rusty_v8 as v8;
 
-use crate::debugger::{SourceLocation, DebugResult};
+use crate::debugger::{SourceLocation, DebugResult, v8_stubs::DebugExecutionState};
 
 /// Stack frame information
 #[derive(Debug, Clone)]
@@ -190,7 +190,7 @@ impl StackFrameBuilder {
     /// Build a stack frame from V8 execution state
     pub fn build_from_v8(
         &mut self,
-        exec_state: &v8::Global<v8::DebugExecutionState>,
+        exec_state: &v8::Global<DebugExecutionState>,
     ) -> DebugResult<StackFrame> {
         // This would integrate with V8's DebugExecutionState API
         // For now, return a placeholder implementation
@@ -214,7 +214,7 @@ impl StackFrameBuilder {
     /// Build stack trace from V8 execution state
     pub fn build_stack_trace_from_v8(
         &mut self,
-        exec_state: &v8::Global<v8::DebugExecutionState>,
+        exec_state: &v8::Global<DebugExecutionState>,
         max_frames: usize,
     ) -> DebugResult<StackTrace> {
         let mut frames = Vec::new();
