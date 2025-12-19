@@ -31,7 +31,7 @@ pub struct SendFile {
     file_size: u64,
 
     /// 当前传输位置
-    current_pos: u64,
+    pub current_pos: u64,
 
     /// 传输统计信息
     stats: Arc<std::sync::Mutex<SendFileStats>>,

@@ -13,6 +13,8 @@ pub mod azure;
 pub mod gcp;
 pub mod cloudflare;
 pub mod vercel;
+pub mod load_balancer;
+pub mod distributed_cache;
 
 use std::collections::HashMap;
 
@@ -219,3 +221,80 @@ impl std::fmt::Display for CloudProvider {
         }
     }
 }
+
+/// 云平台适配器 trait
+/// 所有云平台适配器必须实现这个 trait
+pub trait CloudAdapter: Send + Sync {
+    /// 部署函数
+    async fn deploy_function(&self, config: &FunctionConfig) -> Result<DeploymentResult, Box<dyn std::error::Error + Send + Sync>>;
+
+    /// 调用函数
+    async fn invoke_function(&self, name: &str, payload: &[u8]) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>;
+
+    /// 扩缩容服务
+    async fn scale_service(&self, service: &str, replicas: usize) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
+    /// 获取指标
+    async fn get_metrics(&self, service: &str) -> Result<Metrics, Box<dyn std::error::Error + Send + Sync>>;
+}
+
+/// 函数配置
+#[derive(Debug, Clone)]
+pub struct FunctionConfig {
+    pub name: String,
+    pub code: String,
+    pub runtime: String,
+    pub handler: String,
+    pub memory_size: Option<u32>,
+    pub timeout: Option<u32>,
+    pub environment: HashMap<String, String>,
+    pub kv_namespace: Option<String>,
+}
+
+/// 部署结果
+#[derive(Debug, Clone)]
+pub struct DeploymentResult {
+    pub deployment_id: String,
+    pub status: String,
+    pub endpoint: String,
+    pub deployment_time: std::time::Duration,
+    pub message: String,
+}
+
+/// 性能指标
+#[derive(Debug, Clone, Default)]
+pub struct Metrics {
+    pub cpu_usage: f64,
+    pub memory_usage: f64,
+    pub network_io: f64,
+    pub disk_io: f64,
+    pub request_count: u64,
+    pub error_count: u64,
+    pub average_latency: f64,
+}
+
+/// 云平台统一接口
+pub mod cloud_manager {
+    pub use super::CloudAdapter;
+    pub use super::FunctionConfig;
+    pub use super::DeploymentResult;
+    pub use super::Metrics;
+}
+
+/// 负载均衡器
+pub use crate::cloud::load_balancer::{
+    MLLoadBalancer, ServiceEndpoint, LoadBalanceAlgorithm,
+    MLLoadBalancerConfig, LoadBalancerStats,
+};
+
+/// 分布式缓存
+pub use crate::cloud::distributed_cache::{
+    DistributedCache, CacheEntry, CacheNode, CacheStrategy,
+    CacheConfig, CacheStats, ConsistencyLevel,
+};
+
+/// AWS 适配器
+pub use crate::cloud::aws::{AwsAdapter, AwsCredentials};
+
+/// Cloudflare 适配器
+pub use crate::cloud::cloudflare::CloudflareAdapter;

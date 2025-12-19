@@ -55,6 +55,7 @@ pub mod ai_memory_pool;
 pub mod profiler;
 pub mod code_cache;
 pub mod stage_38_smart_process_pool;  // Stage 38.0: 智能进程池系统
+pub mod cloud;  // Stage 39.0: 云平台适配层
 
 // 重新导出 REPL 相关类型
 pub use repl::{Repl, ReplConfig};

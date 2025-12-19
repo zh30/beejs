@@ -8,6 +8,15 @@ pub mod zero_copy_io;
 pub mod batch_processor;
 pub mod buffer_pool;
 pub mod statistics;
+pub mod sendfile;  // Stage 39.0: sendfile 系统调用
+pub mod splice;  // Stage 39.0: splice 系统调用
+pub mod tcp_socket;  // TCP 套接字
+pub mod udp_socket;  // UDP 套接字
+pub mod connection_pool;  // 连接池
+pub mod http2_server;  // HTTP/2 服务器
+pub mod http3_server;  // HTTP/3 服务器
+pub mod zero_copy;  // Stage 39.0: 零拷贝 I/O 优化
+pub mod memory_mapper;  // Stage 39.0: 内存映射管理器
 
 // 重新导出主要类型
 pub use epoll_manager::EpollManager;
@@ -22,11 +31,6 @@ pub use http3_server::Http3Server;
 // 网络缓冲区和统计类型
 pub use buffer_pool::NetworkBufferPool;
 pub use statistics::NetworkIoStatistics;
-
-// 内部模块
-mod connection_pool;
-mod http2_server;
-mod http3_server;
 
 use std::time::Duration;
 
