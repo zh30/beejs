@@ -83,6 +83,8 @@ impl TestRunner {
 
         if test.skip {
             // Return a passed result for skipped tests
+            let duration = start.elapsed();
+            result.duration = duration;
             return result;
         }
 
@@ -90,7 +92,7 @@ impl TestRunner {
         // For now, we'll just simulate execution
 
         let duration = start.elapsed();
-        result.with_duration(duration);
+        result.duration = duration;
 
         result
     }
@@ -117,12 +119,13 @@ impl TestRunner {
                 locked_stats.add_result(&result);
             }
 
-            results.push(result);
-
             // Bail out on first failure if configured
             if self.config.bail && !result.passed {
+                results.push(result);
                 break;
             }
+
+            results.push(result);
         }
 
         // Run afterAll hook if present

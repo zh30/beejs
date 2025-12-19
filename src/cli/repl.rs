@@ -81,6 +81,11 @@ impl Repl {
         }
     }
 
+    /// Get runtime reference (for testing purposes)
+    pub fn runtime(&self) -> &Arc<RuntimeLite> {
+        &self.runtime
+    }
+
     /// Run the REPL
     pub async fn run(&mut self) -> anyhow::Result<()> {
         println!("🐝 Beejs REPL - High-performance JavaScript/TypeScript runtime");
