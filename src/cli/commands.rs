@@ -187,24 +187,20 @@ pub enum BundleTarget {
 
 /// Debug command - interactive debugging
 #[derive(Parser, Debug)]
-#[command(group(
-    clap::ArgGroup::new("debug_mode")
-        .multiple(false)
-        .required(true)
-))]
 pub enum DebugCommand {
     /// Debug a script file
+    #[command(group = "debug")]
     Script {
         /// Script file to debug
         file: PathBuf,
 
         /// Break at line number on startup
-        #[arg(short, long, group = "debug_mode")]
+        #[arg(short, long)]
         break_at: Option<u32>,
 
-        /// Debug server port (default: 9229)
+        /// Debug server port
         #[arg(short, long, default_value = "9229")]
-        port: Option<u16>,
+        port: u16,
 
         /// Enable Web UI debugger
         #[arg(short, long)]
@@ -212,29 +208,30 @@ pub enum DebugCommand {
     },
 
     /// Attach to a running process for debugging
-    #[command(group = "debug_mode")]
+    #[command(group = "debug")]
     Attach {
         /// Process ID to attach to
         #[arg(short, long)]
         pid: u32,
 
-        /// Debug server port (default: 9229)
+        /// Debug server port
         #[arg(short, long, default_value = "9229")]
-        port: Option<u16>,
+        port: u16,
     },
 
     /// Start inspect mode without specifying a file
-    #[command(group = "debug_mode")]
+    #[command(group = "debug")]
     Inspect {
-        /// Debug server port (default: 9229)
+        /// Debug server port
         #[arg(short, long, default_value = "9229")]
-        port: Option<u16>,
+        port: u16,
 
         /// Enable Web UI debugger
         #[arg(short, long)]
         web: bool,
     },
 }
+
 
 impl Default for TestReporter {
     fn default() -> Self {

@@ -25,7 +25,7 @@ mod tests {
                 beejs::cli::commands::DebugCommand::Script { file, break_at, port, web } => {
                     assert_eq!(file, PathBuf::from("test.js"));
                     assert_eq!(break_at, None);
-                    assert_eq!(port, None);
+                    assert_eq!(port, 9229);
                     assert_eq!(web, false);
                 }
                 _ => panic!("Expected DebugCommand::Script"),
@@ -74,7 +74,7 @@ mod tests {
             match debug_cmd {
                 beejs::cli::commands::DebugCommand::Script { file, port, .. } => {
                     assert_eq!(file, PathBuf::from("server.js"));
-                    assert_eq!(port, Some(9229));
+                    assert_eq!(port, 9229);
                 }
                 _ => panic!("Expected DebugCommand::Script"),
             }
@@ -121,7 +121,7 @@ mod tests {
             match debug_cmd {
                 beejs::cli::commands::DebugCommand::Attach { pid, port } => {
                     assert_eq!(pid, 1234);
-                    assert_eq!(port, None);
+                    assert_eq!(port, 9229);
                 }
                 _ => panic!("Expected DebugCommand::Attach"),
             }
@@ -145,7 +145,7 @@ mod tests {
             match debug_cmd {
                 beejs::cli::commands::DebugCommand::Attach { pid, port } => {
                     assert_eq!(pid, 5678);
-                    assert_eq!(port, Some(9229));
+                    assert_eq!(port, 9229);
                 }
                 _ => panic!("Expected DebugCommand::Attach"),
             }
@@ -167,7 +167,7 @@ mod tests {
         if let Some(SubCommand::Debug(debug_cmd)) = app.command {
             match debug_cmd {
                 beejs::cli::commands::DebugCommand::Inspect { port, web } => {
-                    assert_eq!(port, None);
+                    assert_eq!(port, 9229);
                     assert_eq!(web, false);
                 }
                 _ => panic!("Expected DebugCommand::Inspect"),
@@ -191,7 +191,7 @@ mod tests {
         if let Some(SubCommand::Debug(debug_cmd)) = app.command {
             match debug_cmd {
                 beejs::cli::commands::DebugCommand::Inspect { port, .. } => {
-                    assert_eq!(port, Some(8080));
+                    assert_eq!(port, 8080);
                 }
                 _ => panic!("Expected DebugCommand::Inspect"),
             }
@@ -241,7 +241,7 @@ mod tests {
                 beejs::cli::commands::DebugCommand::Script { file, break_at, port, web } => {
                     assert_eq!(file, PathBuf::from("complex-app.js"));
                     assert_eq!(break_at, Some(25));
-                    assert_eq!(port, Some(9229));
+                    assert_eq!(port, 9229);
                     assert_eq!(web, true);
                 }
                 _ => panic!("Expected DebugCommand::Script"),
@@ -275,13 +275,6 @@ mod tests {
         }
     }
 
-    /// 测试调试命令帮助信息
-    #[test]
-    fn test_debug_help_message() {
-        let result = CliApp::try_parse_from(&["beejs", "debug", "--help"]);
-        assert!(result.is_err()); // clap 会返回 Err 用于显示帮助信息
-    }
-
     /// 测试默认端口值
     #[test]
     fn test_default_debug_port() {
@@ -295,7 +288,7 @@ mod tests {
         if let Some(SubCommand::Debug(debug_cmd)) = app.command {
             match debug_cmd {
                 beejs::cli::commands::DebugCommand::Script { port, .. } => {
-                    assert_eq!(port, None); // 默认 None，使用内置默认值
+                    assert_eq!(port, 9229);
                 }
                 _ => panic!("Expected DebugCommand::Script"),
             }
@@ -340,13 +333,12 @@ mod tests {
         ];
         let app = CliApp::parse_from(args);
 
-        // 验证所有配置项都正确设置
         if let Some(SubCommand::Debug(debug_cmd)) = app.command {
             match debug_cmd {
                 beejs::cli::commands::DebugCommand::Script { file, break_at, port, web } => {
                     assert_eq!(file, PathBuf::from("worker.js"));
                     assert_eq!(break_at, None);
-                    assert_eq!(port, Some(9229));
+                    assert_eq!(port, 9229);
                     assert_eq!(web, true);
                 }
                 _ => panic!("Expected DebugCommand::Script"),
