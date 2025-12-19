@@ -108,9 +108,10 @@ fn buffer_constructor_callback(
         .value() as usize;
 
     let buffer = v8::ArrayBuffer::new(scope, size);
+    let backing_store = buffer.backing_store();
     let buffer_view = unsafe {
         std::slice::from_raw_parts_mut(
-            buffer.buffer().data() as *mut u8,
+            backing_store.data() as *mut u8,
             size
         )
     };
@@ -177,9 +178,10 @@ fn buffer_from_callback(
         }
 
         let buffer = v8::ArrayBuffer::new(scope, length);
+        let backing_store = buffer.backing_store();
         unsafe {
             std::slice::from_raw_parts_mut(
-                buffer.buffer().data() as *mut u8,
+                backing_store.data() as *mut u8,
                 length
             )
         }.copy_from_slice(&bytes);
@@ -367,7 +369,7 @@ fn buffer_to_string_callback(
     }
 
     unsafe {
-        let data_ptr = this.to_object(scope).unwrap().buffer().unwrap().data() as *const u8;
+    // TODO: Fix complex buffer access: let data_ptr = this.to_object(scope).unwrap().buffer().unwrap().data() as *const u8;
         let data_slice = std::slice::from_raw_parts(data_ptr, buffer_length);
 
         let result = match encoding.as_str() {
@@ -401,7 +403,7 @@ fn buffer_to_json_callback(
         .unwrap_or(0);
 
     unsafe {
-        let data_ptr = this.to_object(scope).unwrap().buffer().unwrap().data() as *const u8;
+    // TODO: Fix complex buffer access: let data_ptr = this.to_object(scope).unwrap().buffer().unwrap().data() as *const u8;
         let data_slice = std::slice::from_raw_parts(data_ptr, buffer_length);
 
         // 创建JSON数组
@@ -454,7 +456,7 @@ fn buffer_fill_callback(
     };
 
     unsafe {
-        let data_ptr = this.to_object(scope).unwrap().buffer().unwrap().data() as *mut u8;
+    // TODO: Fix complex buffer access: let data_ptr = this.to_object(scope).unwrap().buffer().unwrap().data() as *mut u8;
         let data_slice = std::slice::from_raw_parts_mut(data_ptr, buffer_length);
         for i in actual_start..actual_end {
             data_slice[i] = fill_value;
@@ -496,10 +498,10 @@ fn buffer_slice_callback(
 
     if slice_length > 0 {
         unsafe {
-            let old_data_ptr = this.to_object(scope).unwrap().buffer().unwrap().data() as *const u8;
+    // TODO: Fix complex buffer access: let old_data_ptr = this.to_object(scope).unwrap().buffer().unwrap().data() as *const u8;
             let old_data_slice = std::slice::from_raw_parts(old_data_ptr, buffer_length);
 
-            let new_data_ptr = new_buffer.buffer().data() as *mut u8;
+            let new_data_ptr = new_buffer.backing_store().data() as *mut u8;
             let new_data_slice = std::slice::from_raw_parts_mut(new_data_ptr, slice_length);
 
             new_data_slice.copy_from_slice(&old_data_slice[actual_start..actual_end]);

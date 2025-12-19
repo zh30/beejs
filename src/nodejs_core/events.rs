@@ -25,7 +25,7 @@ pub fn setup_events_api(
     let listener_count_instance = listener_count_func.get_function(scope).unwrap();
     // set_on_instance has been removed, use instance template instead
     let listener_count_key = v8::String::new(scope, "listenerCount").unwrap();
-    event_emitter_constructor.set(scope, listener_count_key.into(), listener_count_instance.into());
+    event_emitter_constructor.set(listener_count_key.into(), listener_count_instance.into());
 
     // 创建构造函数实例
     let event_emitter_func = event_emitter_constructor.get_function(scope).unwrap();
@@ -146,7 +146,9 @@ fn event_emitter_on_callback(
 
         for name in listener_names {
             let name_key = v8::String::new(scope, &name).unwrap();
-            if arr.has_own_property(name_key.into()) {
+            // 检查属性是否存在（简化实现）
+            let prop = arr.get(scope, name_key.into());
+            if prop.is_some() && !prop.unwrap().is_undefined() {
                 listeners_map.insert(name, vec![]); // 简化实现
             }
         }
@@ -160,7 +162,7 @@ fn event_emitter_on_callback(
 
     // 在对象上设置属性标记
     let prop_key = v8::String::new(scope, &event_name).unwrap();
-    this.set_property(scope, prop_key.into(), v8::Boolean::new(scope, true).into(), None).unwrap();
+    this.set(scope, prop_key.into(), v8::Boolean::new(scope, true).into());
 
     retval.set(this.into());
 }
@@ -270,7 +272,7 @@ fn event_emitter_remove_listener_callback(
 
     // 简化实现：移除事件标记
     let prop_key = v8::String::new(scope, &event_name).unwrap();
-    this.delete_property(scope, prop_key.into(), None).unwrap();
+    this.delete(scope, prop_key.into());
 
     retval.set(this.into());
 }

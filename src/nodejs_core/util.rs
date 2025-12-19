@@ -141,7 +141,7 @@ fn util_inspect_callback(
         "null".to_string()
     } else if object.is_undefined() {
         "undefined".to_string()
-    } else if object.is_array(scope) {
+    } else if object.is_array() {
         let arr = v8::Local::<v8::Array>::try_from(object).unwrap();
         let length = arr.length();
         format!("Array({}) [{} items]", length, length)
@@ -309,7 +309,7 @@ fn util_is_array_callback(
     mut retval: v8::ReturnValue,
 ) {
     let value = args.get(0);
-    let is_array = value.is_array(scope);
+    let is_array = value.is_array();
     retval.set(v8::Boolean::new(scope, is_array).into());
 }
 
@@ -379,7 +379,7 @@ fn util_is_object_callback(
     mut retval: v8::ReturnValue,
 ) {
     let value = args.get(0);
-    let is_object = value.is_object() && !value.is_null() && !value.is_array(scope);
+    let is_object = value.is_object() && !value.is_null() && !value.is_array();
     retval.set(v8::Boolean::new(scope, is_object).into());
 }
 

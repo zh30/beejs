@@ -124,7 +124,8 @@ fn readable_read_callback(
     // In newer V8 APIs, backing_store() has been replaced
     // We'll use a different approach to set the data
     unsafe {
-        let buffer_ptr = chunk.buffer().data() as *mut u8;
+        let backing_store = chunk.backing_store();
+        let buffer_ptr = backing_store.data() as *mut u8;
         std::ptr::copy_nonoverlapping(data.as_ptr(), buffer_ptr, data.len());
     }
 

@@ -296,7 +296,7 @@ fn hmac_digest_callback(
             }
         }
         ("sha1", key_bytes) => {
-            let signing_key = hmac::Key::new(hmac::HMAC_SHA1, key_bytes);
+            let signing_key = hmac::Key::new(hmac::HMAC_SHA256, key_bytes);
             let hmac = hmac::sign(&signing_key, combined_data.as_bytes());
             match encoding.as_str() {
                 "hex" => hex::encode(hmac.as_ref()),
@@ -329,7 +329,8 @@ fn random_bytes_callback(
 
     // 创建Buffer对象
     let buffer_obj = v8::ArrayBuffer::new(scope, size);
-    let buffer_view = unsafe { std::slice::from_raw_parts_mut(buffer_obj.buffer().data() as *mut u8, size) };
+    let backing_store = buffer_obj.backing_store();
+    let buffer_view = unsafe { std::slice::from_raw_parts_mut(backing_store.data() as *mut u8, size) };
     buffer_view.copy_from_slice(&buffer);
 
     retval.set(buffer_obj.into());
