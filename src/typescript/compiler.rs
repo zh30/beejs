@@ -187,7 +187,32 @@ impl TypeScriptCompiler {
                     }
                 }
                 let ident: String = chars[start..pos].iter().collect();
-                tokens.push(Token::Identifier(ident));
+                // 关键字识别
+                let token = match ident.as_str() {
+                    "let" => Token::Let,
+                    "const" => Token::Const,
+                    "var" => Token::Var,
+                    "function" => Token::Function,
+                    "if" => Token::If,
+                    "else" => Token::Else,
+                    "for" => Token::For,
+                    "while" => Token::While,
+                    "return" => Token::Return,
+                    "class" => Token::Class,
+                    "interface" => Token::Interface,
+                    "enum" => Token::Enum,
+                    "type" => Token::Type,
+                    "import" => Token::Import,
+                    "export" => Token::Export,
+                    "public" => Token::Public,
+                    "private" => Token::Private,
+                    "protected" => Token::Protected,
+                    "static" => Token::Static,
+                    "async" => Token::Async,
+                    "await" => Token::Await,
+                    _ => Token::Identifier(ident),
+                };
+                tokens.push(token);
                 continue;
             }
 
@@ -454,6 +479,14 @@ pub enum ASTExpression {
         callee: Box<ASTExpression>,
         arguments: Vec<ASTExpression>,
     },
+    MemberExpression {
+        object: Box<ASTExpression>,
+        property: String,
+    },
+    IndexExpression {
+        object: Box<ASTExpression>,
+        index: Box<ASTExpression>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -506,6 +539,9 @@ impl Parser {
             Token::Interface => {
                 self.parse_interface_declaration()
             }
+            Token::Return => {
+                self.parse_return_statement()
+            }
             _ => {
                 // 表达式语句
                 let expr = self.parse_expression()?;
@@ -513,6 +549,21 @@ impl Parser {
                 Ok(ASTNode::Statement(ASTStatement::Expression(expr)))
             }
         }
+    }
+
+    fn parse_return_statement(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Return)?;
+
+        // Check if there's an expression or just a semicolon
+        let expr = if self.current_token_eq(&Token::SemiColon) {
+            None
+        } else {
+            Some(self.parse_expression()?)
+        };
+
+        self.consume(Token::SemiColon)?;
+
+        Ok(ASTNode::Statement(ASTStatement::Return(expr)))
     }
 
     fn parse_variable_declaration(&mut self) -> Result<ASTNode> {
@@ -664,9 +715,134 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Result<ASTExpression> {
-        // 简化的表达式解析
-        // 实际实现需要处理运算符优先级
+        // 解析主表达式 (标识符、字面量、括号表达式)
+        let mut expr = self.parse_primary_expression()?;
 
+        // 处理后缀操作符 (成员访问、函数调用、二元运算符)
+        loop {
+            match self.current_token() {
+                Token::Dot => {
+                    // 成员访问: expr.property
+                    self.advance();
+                    let prop_token = self.consume(Token::Identifier("".to_string()))?;
+                    let prop_name = match prop_token {
+                        Token::Identifier(name) => name,
+                        _ => bail!("Expected property name after '.'"),
+                    };
+                    expr = ASTExpression::MemberExpression {
+                        object: Box::new(expr),
+                        property: prop_name,
+                    };
+                }
+                Token::LParen => {
+                    // 函数调用: expr(args)
+                    self.advance();
+                    let mut arguments = Vec::new();
+
+                    while !self.current_token_eq(&Token::RParen) {
+                        arguments.push(self.parse_expression()?);
+                        if self.current_token_eq(&Token::Comma) {
+                            self.advance();
+                        }
+                    }
+                    self.consume(Token::RParen)?;
+
+                    expr = ASTExpression::CallExpression {
+                        callee: Box::new(expr),
+                        arguments,
+                    };
+                }
+                Token::LBracket => {
+                    // 索引访问: expr[index]
+                    self.advance();
+                    let index = self.parse_expression()?;
+                    self.consume(Token::RBracket)?;
+                    expr = ASTExpression::IndexExpression {
+                        object: Box::new(expr),
+                        index: Box::new(index),
+                    };
+                }
+                // 二元运算符
+                Token::Plus | Token::Minus | Token::Star | Token::Slash |
+                Token::EqEq | Token::EqEqEq | Token::NotEq | Token::NotEqEq |
+                Token::Lt | Token::Gt => {
+                    let op = match self.current_token() {
+                        Token::Plus => "+",
+                        Token::Minus => "-",
+                        Token::Star => "*",
+                        Token::Slash => "/",
+                        Token::EqEq => "==",
+                        Token::EqEqEq => "===",
+                        Token::NotEq => "!=",
+                        Token::NotEqEq => "!==",
+                        Token::Lt => "<",
+                        Token::Gt => ">",
+                        _ => unreachable!(),
+                    };
+                    self.advance();
+                    let right = self.parse_primary_expression()?;
+                    // Handle postfix operators on right side
+                    let right = self.parse_postfix(right)?;
+                    expr = ASTExpression::BinaryExpression {
+                        left: Box::new(expr),
+                        operator: op.to_string(),
+                        right: Box::new(right),
+                    };
+                }
+                _ => break,
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn parse_postfix(&mut self, mut expr: ASTExpression) -> Result<ASTExpression> {
+        // Handle postfix operators after parsing right side of binary expression
+        loop {
+            match self.current_token() {
+                Token::Dot => {
+                    self.advance();
+                    let prop_token = self.consume(Token::Identifier("".to_string()))?;
+                    let prop_name = match prop_token {
+                        Token::Identifier(name) => name,
+                        _ => bail!("Expected property name after '.'"),
+                    };
+                    expr = ASTExpression::MemberExpression {
+                        object: Box::new(expr),
+                        property: prop_name,
+                    };
+                }
+                Token::LParen => {
+                    self.advance();
+                    let mut arguments = Vec::new();
+                    while !self.current_token_eq(&Token::RParen) {
+                        arguments.push(self.parse_expression()?);
+                        if self.current_token_eq(&Token::Comma) {
+                            self.advance();
+                        }
+                    }
+                    self.consume(Token::RParen)?;
+                    expr = ASTExpression::CallExpression {
+                        callee: Box::new(expr),
+                        arguments,
+                    };
+                }
+                Token::LBracket => {
+                    self.advance();
+                    let index = self.parse_expression()?;
+                    self.consume(Token::RBracket)?;
+                    expr = ASTExpression::IndexExpression {
+                        object: Box::new(expr),
+                        index: Box::new(index),
+                    };
+                }
+                _ => break,
+            }
+        }
+        Ok(expr)
+    }
+
+    fn parse_primary_expression(&mut self) -> Result<ASTExpression> {
         match self.current_token() {
             Token::Identifier(ref name) => {
                 let name = name.clone();
@@ -679,11 +855,18 @@ impl Parser {
                 Ok(ASTExpression::Literal(num))
             }
             Token::String(ref s) => {
-                let s = s.clone();
+                let s = format!("\"{}\"", s.clone());
                 self.advance();
                 Ok(ASTExpression::Literal(s))
             }
-            _ => bail!("Unexpected token in expression"),
+            Token::LParen => {
+                // 括号表达式
+                self.advance();
+                let expr = self.parse_expression()?;
+                self.consume(Token::RParen)?;
+                Ok(expr)
+            }
+            _ => bail!("Unexpected token in expression: {:?}", self.current_token()),
         }
     }
 
@@ -841,6 +1024,14 @@ impl CodeEmitter {
                         self.emit_expression(expr);
                         self.output.push_str(";\n");
                     }
+                    ASTStatement::Return(expr) => {
+                        self.output.push_str("return");
+                        if let Some(e) = expr {
+                            self.output.push(' ');
+                            self.emit_expression(e);
+                        }
+                        self.output.push_str(";\n");
+                    }
                     _ => {}
                 }
             }
@@ -883,6 +1074,23 @@ impl CodeEmitter {
                 }
 
                 self.output.push(')');
+            }
+            ASTExpression::MemberExpression {
+                object,
+                property,
+            } => {
+                self.emit_expression(object);
+                self.output.push('.');
+                self.output.push_str(property);
+            }
+            ASTExpression::IndexExpression {
+                object,
+                index,
+            } => {
+                self.emit_expression(object);
+                self.output.push('[');
+                self.emit_expression(index);
+                self.output.push(']');
             }
         }
     }

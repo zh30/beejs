@@ -150,7 +150,29 @@ impl EnhancedArgs {
         let code = std::fs::read_to_string(script_path)
             .context("Failed to read script file")?;
 
-        match runtime.execute_code(&code) {
+        // Check if this is a TypeScript file and transpile if needed
+        let js_code = if script_path.extension().map_or(false, |ext| ext == "ts" || ext == "tsx") {
+            if self.verbose {
+                println!("🔄 Transpiling TypeScript...");
+            }
+            let file_name = script_path.to_string_lossy().to_string();
+            match crate::typescript::compile_typescript(&code, &file_name) {
+                Ok(output) => {
+                    if self.verbose {
+                        println!("✅ TypeScript transpiled successfully");
+                    }
+                    output.js_code
+                }
+                Err(e) => {
+                    println!("❌ TypeScript compilation failed: {}", e);
+                    return Err(anyhow::anyhow!("TypeScript compilation failed: {}", e));
+                }
+            }
+        } else {
+            code
+        };
+
+        match runtime.execute_code(&js_code) {
             Ok(result) => {
                 let duration = start.elapsed();
 
