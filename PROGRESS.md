@@ -3,9 +3,48 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-19)**: 🌟 Stage 43.0 完整生态系统与极致性能优化 - Node.js API兼容性实现完成！
+**当前状态 (2025-12-19)**: 🔧 V8 API 兼容性修复进行中 - 阶段 8 完成
 
 ## 最新更新 (2025-12-19)
+
+### 🔧 Stage 44: V8 API 兼容性修复 (2025-12-19)
+**进度**: 🔄 进行中 (61% 错误已修复)
+
+#### 问题背景
+rusty_v8 0.22.3 版本有大量 API 变更，导致原有代码无法编译。
+
+#### 已修复问题:
+1. **Scope 多重借用** (229 → ~50 个错误)
+   - 将 `obj.set(scope, v8::String::new(scope, ...).into(), ...)` 拆分为多行
+   - 创建中间变量避免同一语句内多次借用 scope
+
+2. **Function API 变更**
+   - `to_function(scope)` → `v8::Local::<v8::Function>::try_from()`
+   - `FunctionCallbackArguments::new()` → 已移除
+   - `ReturnValue::default()` → 已移除
+   - `Function::call(scope, receiver, &args, &mut retval)` → `Function::call(scope, receiver, &args)`
+
+3. **Value 类型检查方法**
+   - `is_function(scope)` → `is_function()`
+   - `is_string(scope)` → `is_string()`
+
+4. **已修复文件**:
+   - crypto.rs, stream.rs, events.rs
+   - child_process.rs, http.rs, util.rs
+   - os.rs, path.rs, url.rs
+
+#### 错误统计:
+- **初始**: 375 个编译错误
+- **当前**: ~145 个编译错误
+- **减少**: 61%
+
+#### 剩余工作:
+- 53 个 scope 多重借用错误
+- 19 个类型不匹配错误
+- 16 个 Option<Local> 类型错误
+- API 变更: backing_store, set_on_instance 等
+
+---
 
 ### ✅ Stage 43.0: 完整生态系统与极致性能优化 (2025-12-19)
 **进度**: ✅ 全部模块实现完成！
