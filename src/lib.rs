@@ -59,6 +59,7 @@ pub mod cloud;  // Stage 39.0: 云平台适配层
 pub mod wasm_optimized;  // Stage 40.0: WebAssembly 极致优化
 pub mod realtime;  // Stage 40.0: 实时协作和同步
 pub mod quantum_computing;  // Stage 41.0: 量子计算模块
+pub mod neural_network;  // Stage 41.0: 神经网络模块
 
 // 重新导出 REPL 相关类型
 pub use repl::{Repl, ReplConfig};
