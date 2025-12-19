@@ -114,7 +114,7 @@ urlencoding = "2.1"
 # candle-nn = "0.7"        # 暂时禁用，版本冲突
 
 # Stage 54.3: PyTorch TorchScript dependencies
-# tch = "0.11"  # 暂时禁用，PyTorch 依赖需要系统级库支持
+tch = { version = "0.11", optional = true }  # 可选依赖，支持条件编译
 
 # Testing
 [dev-dependencies]

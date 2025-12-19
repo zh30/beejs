@@ -77,14 +77,15 @@ impl TorchEngine {
 
         // 初始化统计信息
         let stats = Arc::new(RwLock::new(EngineStats {
+            engine_name: "PyTorch-TorchScript".to_string(),
             total_inferences: 0,
             successful_inferences: 0,
             failed_inferences: 0,
-            total_latency_ms: 0.0,
-            avg_latency_ms: 0.0,
-            min_latency_ms: f64::INFINITY,
-            max_latency_ms: 0.0,
-            peak_memory_usage_mb: 0.0,
+            total_time_ms: 0.0,
+            average_time_ms: 0.0,
+            gpu_utilization: 0.0,
+            memory_usage_bytes: 0,
+            cache_hit_rate: 0.0,
         }));
 
         let engine = Self {
@@ -209,10 +210,8 @@ impl InferenceEngine for TorchEngine {
 
             let latency = start_time.elapsed();
             let latency_ms = latency.as_secs_f64() * 1000.0;
-            stats.total_latency_ms += latency_ms;
-            stats.avg_latency_ms = stats.total_latency_ms / stats.total_inferences as f64;
-            stats.min_latency_ms = stats.min_latency_ms.min(latency_ms);
-            stats.max_latency_ms = stats.max_latency_ms.max(latency_ms);
+            stats.total_time_ms += latency_ms;
+            stats.average_time_ms = stats.total_time_ms / stats.total_inferences as f64;
         }
 
         tracing::debug!("PyTorch inference completed in {:.2}ms", start_time.elapsed().as_secs_f64() * 1000.0);
@@ -254,10 +253,8 @@ impl InferenceEngine for TorchEngine {
 
             let latency = start_time.elapsed();
             let latency_ms = latency.as_secs_f64() * 1000.0;
-            stats.total_latency_ms += latency_ms;
-            stats.avg_latency_ms = stats.total_latency_ms / stats.total_inferences as f64;
-            stats.min_latency_ms = stats.min_latency_ms.min(latency_ms);
-            stats.max_latency_ms = stats.max_latency_ms.max(latency_ms);
+            stats.total_time_ms += latency_ms;
+            stats.average_time_ms = stats.total_time_ms / stats.total_inferences as f64;
         }
 
         tracing::info!(

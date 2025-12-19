@@ -276,13 +276,13 @@ impl Tensor {
 
     /// 转换为 PyTorch 张量（未启用功能时的占位符）
     #[cfg(not(feature = "pytorch"))]
-    pub fn to_tch_tensor(&self, _device: &tch::Device) -> Result<tch::Tensor> {
+    pub fn to_tch_tensor(&self, _device: &()) -> Result<Box<dyn std::fmt::Debug>> {
         Err(anyhow::anyhow!("PyTorch support not enabled. Enable with --features pytorch"))
     }
 
     /// 从 PyTorch 张量创建（未启用功能时的占位符）
     #[cfg(not(feature = "pytorch"))]
-    pub fn from_tch_tensor(_tch_tensor: tch::Tensor, _device: &tch::Device) -> Result<Self> {
+    pub fn from_tch_tensor(_tch_tensor: Box<dyn std::fmt::Debug>, _device: &()) -> Result<Self> {
         Err(anyhow::anyhow!("PyTorch support not enabled. Enable with --features pytorch"))
     }
 }
