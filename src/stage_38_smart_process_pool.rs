@@ -14,9 +14,9 @@
 use anyhow::{Context, Result};
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, RwLock};
 use tokio::time::sleep;
 
 use crate::process_pool::{ProcessPoolConfig, WorkerMetrics, TaskComplexity, ProcessPoolStats};
@@ -92,17 +92,17 @@ impl TaskPattern {
             total_size += record.task_size;
 
             if let Some(prev_time) = record.previous_execution_time {
-                intervals.push(record.timestamp.duration_since(prev_time));
+                intervals.push(record.timestamp.duration_since(prev_time).unwrap_or_default());
             }
 
-            let hour = record.timestamp.duration_since(UNIX_EPOCH).as_secs() as u8 % 24;
+            let hour = record.timestamp.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as u8 % 24;
             hours.push(hour);
         }
 
         // 计算分布
         let total_count = history.len() as f64;
         for (complexity, count) in complexity_counts {
-            self.complexity_distribution.insert(complexity, *count as f64 / total_count);
+            self.complexity_distribution.insert(complexity, count as f64 / total_count);
         }
 
         self.avg_task_size = total_size / history.len();
@@ -131,7 +131,7 @@ impl TaskPattern {
 
         let expected_size = self.avg_task_size;
         let is_peak_time = self.peak_hours.contains(&(SystemTime::now()
-            .duration_since(UNIX_EPOCH).as_secs() as u8 % 24));
+            .duration_since(UNIX_EPOCH).unwrap_or_default().as_secs() as u8 % 24));
 
         TaskPrediction {
             expected_complexity: complexity,
@@ -242,7 +242,7 @@ pub struct MemorySharingManager {
 }
 
 /// 共享内存区域
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SharedMemoryRegion {
     pub id: String,
     pub size: usize,
@@ -563,10 +563,11 @@ impl SmartProcessPool {
                 let features = self.extract_worker_features(available_workers[0]).await;
                 let mut best_worker = available_workers[0];
                 let mut best_prediction = f64::MAX;
+                let predictor = self.predictor.read().await;
 
                 for worker_id in available_workers {
                     let features = self.extract_worker_features(worker_id).await;
-                    let prediction = load_balancer.prediction_model.predict(&features);
+                    let prediction = predictor.prediction_model.predict(&features);
                     if prediction < best_prediction {
                         best_prediction = prediction;
                         best_worker = worker_id;
@@ -659,8 +660,8 @@ impl SmartProcessPool {
             data,
         };
 
-        manager.shared_regions.insert(region_id, region);
-        println!("启用内存共享区域: {}, 大小: {} bytes", region_id, region.size);
+        manager.shared_regions.insert(region_id.clone(), region);
+        println!("启用内存共享区域: {}, 大小: {} bytes", region_id, manager.shared_regions.get(&region_id).unwrap().size);
         Ok(())
     }
 

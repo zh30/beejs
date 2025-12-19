@@ -191,7 +191,7 @@ impl WorkerMetrics {
 }
 
 /// Task complexity classification
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TaskComplexity {
     Simple,   // < 100 chars, no loops/conditions
     Medium,   // 100-500 chars, some loops/conditions

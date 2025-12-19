@@ -474,6 +474,6 @@ async fn test_end_to_end_smart_pool_workflow() {
 }
 
 // 辅助函数：创建系统时间的模拟实现
-fn SystemTime::now() -> SystemTime {
+fn mock_system_time() -> SystemTime {
     SystemTime::UNIX_EPOCH + Duration::from_secs(1640995200) // 2022-01-01 00:00:00 UTC
 }

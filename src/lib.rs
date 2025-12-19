@@ -54,6 +54,7 @@ pub mod ai_batch_processor;
 pub mod ai_memory_pool;
 pub mod profiler;
 pub mod code_cache;
+pub mod stage_38_smart_process_pool;  // Stage 38.0: 智能进程池系统
 
 // 重新导出 REPL 相关类型
 pub use repl::{Repl, ReplConfig};
@@ -158,6 +159,11 @@ pub use network::{
     NetworkBufferPool, ConnectionPool, NetworkIoStatistics,
 };
 
+// 重新导出进程池相关类型
+pub use process_pool::{
+    ProcessPoolConfig, WorkerMetrics, TaskComplexity, ProcessPoolStats, ProcessPool,
+};
+
 // 重新导出预热相关类型
 pub use isolate_prewarmer::{
     IsolatePrewarmer, PrewarmConfig, PrewarmStats,
@@ -178,6 +184,16 @@ pub use ai_batch_processor::{
 // 重新导出 AI 内存池相关类型
 pub use ai_memory_pool::{
     AiMemoryPool, ModelMemoryConfig, create_llm_memory_pool,
+};
+
+// 重新导出智能进程池相关类型
+pub use stage_38_smart_process_pool::{
+    SmartProcessPool, SmartWarmupStrategy, TaskPattern, SmartLoadBalancer,
+    MemorySharingManager, PerformancePredictor,
+    LoadBalancingStrategy, MemoryPoolConfig, PerformanceEvent, ScaleOperation,
+    GlobalPerformanceStats, WorkerPerformanceRecord, TaskExecutionRecord,
+    TaskPrediction, PerformanceBottleneckPrediction, LinearRegressionModel,
+    PerformanceDataPoint,
 };
 
 // 测试套件类型
