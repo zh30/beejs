@@ -52,6 +52,8 @@ pub struct TorchOptimizer {
     pub constant_folding: bool,
     /// 是否启用操作符融合
     pub operator_fusion: bool,
+    /// JIT 优化级别 (0-2)
+    pub jit_optimization_level: u8,
 }
 
 /// PyTorch 引擎工厂
@@ -149,35 +151,20 @@ impl InferenceEngine for TorchEngine {
         tracing::info!("Loading PyTorch TorchScript model from: {}", model_path);
 
         // 模拟模型加载
-        let session = TorchSession {
-            session_id: format!("torch_session_{}", uuid::Uuid::new_v4()),
-            input_infos: vec![TensorInfo {
-                name: "input".to_string(),
-                shape: vec![1, 3, 224, 224],
-                dtype: "float32".to_string(),
-            }],
-            output_infos: vec![TensorInfo {
-                name: "output".to_string(),
-                shape: vec![1, 1000],
-                dtype: "float32".to_string(),
-            }],
-        };
-
-        let model_info = ModelInfo {
-            format: ModelFormat::PyTorch,
-            input_shapes: vec![vec![1, 3, 224, 224]],
-            output_shapes: vec![vec![1, 1000]],
-            parameters: 25000000, // 模拟 25M 参数
-            size_mb: 95.7, // 模拟 95.7MB
-        };
+        let session_id = format!("torch_session_{}", uuid::Uuid::new_v4());
 
         Ok(ModelHandle {
-            session_id: session.session_id.clone(),
-            model_info,
+            id: session_id,
+            path: model_path.to_string(),
+            format: ModelFormat::PyTorch,
+            input_shape: vec![1, 3, 224, 224],
+            output_shape: vec![1, 1000],
             metadata: std::collections::HashMap::from([
                 ("framework".to_string(), "PyTorch".to_string()),
                 ("format".to_string(), "TorchScript".to_string()),
                 ("optimized".to_string(), "true".to_string()),
+                ("parameters".to_string(), "25000000".to_string()),
+                ("size_mb".to_string(), "95.7".to_string()),
             ]),
         })
     }
@@ -191,7 +178,7 @@ impl InferenceEngine for TorchEngine {
 
         tracing::debug!(
             "Executing PyTorch inference (model: {}, input shape: {:?})",
-            model.session_id,
+            model.id,
             input.shape()
         );
 
@@ -217,11 +204,10 @@ impl InferenceEngine for TorchEngine {
         tracing::debug!("PyTorch inference completed in {:.2}ms", start_time.elapsed().as_secs_f64() * 1000.0);
 
         Ok(InferenceResult {
-            output_tensor,
-            metadata: std::collections::HashMap::from([
-                ("engine".to_string(), "PyTorch-TorchScript".to_string()),
-                ("device".to_string(), "CPU".to_string()),
-            ]),
+            output: output_tensor,
+            inference_time_ms: start_time.elapsed().as_secs_f64() * 1000.0,
+            model_id: model.id.clone(),
+            gpu_used: !matches!(self.engine_type, EngineType::CPU),
         })
     }
 
@@ -248,8 +234,8 @@ impl InferenceEngine for TorchEngine {
         // 更新统计信息
         {
             let mut stats = self.stats.write().await;
-            stats.total_inferences += inputs.len();
-            stats.successful_inferences += inputs.len();
+            stats.total_inferences += inputs.len() as u64;
+            stats.successful_inferences += inputs.len() as u64;
 
             let latency = start_time.elapsed();
             let latency_ms = latency.as_secs_f64() * 1000.0;
@@ -269,6 +255,129 @@ impl InferenceEngine for TorchEngine {
     async fn get_stats(&self) -> Result<EngineStats> {
         let stats = self.stats.read().await;
         Ok(stats.clone())
+    }
+
+    /// 流式推理 - 支持实时推理结果
+    async fn infer_stream(
+        &self,
+        model: &ModelHandle,
+        input: Tensor,
+    ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>>> {
+        let (tx, rx) = tokio::sync::mpsc::channel(16);
+
+        // 模拟流式推理
+        let model_id = model.id.clone();
+        let stats = self.stats.clone();
+
+        tokio::spawn(async move {
+            tracing::debug!("Starting streaming inference for model: {}", model_id);
+
+            // 模拟分块推理，每次返回部分结果
+            for chunk_idx in 0..4 {
+                // 模拟推理延迟
+                tokio::time::sleep(Duration::from_millis(2)).await;
+
+                // 创建部分输出张量
+                let chunk_data = vec![0.1 * (chunk_idx + 1) as f32; 250];
+                let chunk_tensor = Tensor::new(chunk_data, vec![1, 250]);
+
+                if let Ok(tensor) = chunk_tensor {
+                    if tx.send(Ok(tensor)).await.is_err() {
+                        tracing::debug!("Stream receiver dropped");
+                        break;
+                    }
+                }
+            }
+
+            // 更新统计
+            if let Ok(mut s) = stats.try_write() {
+                s.total_inferences += 1;
+                s.successful_inferences += 1;
+            }
+        });
+
+        Ok(rx)
+    }
+
+    /// 获取模型信息
+    async fn get_model_info(&self, model: &ModelHandle) -> Result<ModelInfo> {
+        let parameters: usize = model.metadata
+            .get("parameters")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+
+        let size_mb: f64 = model.metadata
+            .get("size_mb")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0.0);
+
+        Ok(ModelInfo {
+            id: model.id.clone(),
+            name: model.path.clone(),
+            format: model.format.clone(),
+            inputs: vec![TensorInfo {
+                name: "input".to_string(),
+                shape: model.input_shape.clone(),
+                data_type: "float32".to_string(),
+                optional: false,
+            }],
+            outputs: vec![TensorInfo {
+                name: "output".to_string(),
+                shape: model.output_shape.clone(),
+                data_type: "float32".to_string(),
+                optional: false,
+            }],
+            parameter_count: parameters,
+            size_bytes: (size_mb * 1024.0 * 1024.0) as u64,
+            engine_type: self.engine_type.clone(),
+        })
+    }
+
+    /// 预热模型 - 初始化 GPU 和优化缓存
+    async fn warmup(&self, model: &ModelHandle) -> Result<()> {
+        tracing::info!("Warming up PyTorch model: {}", model.id);
+
+        // 创建一个小的虚拟输入进行预热
+        let warmup_input = Tensor::new(vec![0.0_f32; 1 * 3 * 224 * 224], vec![1, 3, 224, 224])?;
+
+        // 运行几次推理来预热 JIT 编译器和缓存
+        for i in 0..3 {
+            let _ = self.infer(model, &warmup_input).await;
+            tracing::debug!("Warmup iteration {} completed", i + 1);
+        }
+
+        tracing::info!("Model warmup completed: {}", model.id);
+        Ok(())
+    }
+
+    /// 卸载模型 - 释放资源
+    async fn unload_model(&self, model: &ModelHandle) -> Result<()> {
+        tracing::info!("Unloading PyTorch model: {}", model.id);
+
+        // 在实际实现中，这里会释放 TorchScript 模型资源
+        // 当前为模拟实现
+
+        tracing::debug!("Model {} unloaded successfully", model.id);
+        Ok(())
+    }
+
+    /// 克隆引擎实例
+    fn clone_engine(&self) -> Box<dyn InferenceEngine> {
+        Box::new(TorchEngine {
+            engine_type: self.engine_type.clone(),
+            stats: Arc::new(RwLock::new(EngineStats {
+                engine_name: "PyTorch-TorchScript".to_string(),
+                total_inferences: 0,
+                successful_inferences: 0,
+                failed_inferences: 0,
+                total_time_ms: 0.0,
+                average_time_ms: 0.0,
+                gpu_utilization: 0.0,
+                memory_usage_bytes: 0,
+                cache_hit_rate: 0.0,
+            })),
+            initialized: self.initialized,
+        })
     }
 }
 
@@ -314,6 +423,7 @@ impl TorchOptimizer {
     }
 }
 
+#[async_trait]
 impl EngineFactory for TorchEngineFactory {
     async fn create(&self, engine_type: EngineType) -> Result<Box<dyn InferenceEngine>> {
         let engine = TorchEngine::new(
@@ -427,7 +537,7 @@ mod tests {
         assert!(result.is_ok());
 
         let result = result.unwrap();
-        assert_eq!(*result.output_tensor.shape(), vec![1, 1000]);
+        assert_eq!(*result.output.shape(), vec![1, 1000]);
     }
 
     #[tokio::test]
@@ -465,7 +575,7 @@ mod tests {
         let results = results.unwrap();
         assert_eq!(results.len(), 3);
         for result in results {
-            assert_eq!(*result.output_tensor.shape(), vec![1, 1000]);
+            assert_eq!(*result.output.shape(), vec![1, 1000]);
         }
     }
 
@@ -493,7 +603,7 @@ mod tests {
     #[tokio::test]
     async fn test_engine_factory() {
         let factory = TorchEngineFactory::new(EngineType::CPU);
-        assert_eq!(factory.engine_name(), "PyTorch-TorchScript-Factory");
+        assert_eq!(factory.name(), "PyTorch-TorchScript-Factory");
 
         let formats = factory.supported_formats();
         assert!(formats.contains(&ModelFormat::PyTorch));

@@ -23,7 +23,7 @@ pub enum ModelFormat {
 }
 
 /// AI 推理引擎类型
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum EngineType {
     /// CPU 推理引擎
     CPU,

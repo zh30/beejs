@@ -21,7 +21,7 @@ pub enum BatchStrategy {
 }
 
 /// 动态批处理配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DynamicConfig {
     /// 最小批处理大小
     pub min_batch_size: usize,
@@ -34,7 +34,7 @@ pub struct DynamicConfig {
 }
 
 /// 自适应批处理配置
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AdaptiveConfig {
     /// 初始批处理大小
     pub initial_batch_size: usize,
@@ -124,7 +124,7 @@ impl BatchProcessor {
         self.check_and_process_batch().await?;
 
         // 等待结果
-        receiver.await??.clone()
+        Ok(receiver.await??)
     }
 
     /// 检查并处理批处理
@@ -275,8 +275,8 @@ pub struct SmartBatchProcessor {
     processor: BatchProcessor,
     /// 性能监控
     performance_monitor: PerformanceMonitor,
-    /// 自适应参数
-    adaptive_params: AdaptiveParams,
+    /// 自适应参数 (使用 Mutex 支持内部可变性)
+    adaptive_params: Arc<Mutex<AdaptiveParams>>,
 }
 
 /// 性能监控器
@@ -301,6 +301,8 @@ struct AdaptiveParams {
     max_batch_size: usize,
     /// 延迟目标
     latency_target: f64,
+    /// 吞吐量目标
+    throughput_target: f64,
     /// 调整因子
     adjustment_factor: f64,
 }
@@ -318,13 +320,14 @@ impl SmartBatchProcessor {
         SmartBatchProcessor {
             processor: BatchProcessor::new(strategy),
             performance_monitor: PerformanceMonitor::new(100),
-            adaptive_params: AdaptiveParams {
+            adaptive_params: Arc::new(Mutex::new(AdaptiveParams {
                 current_batch_size: initial_batch_size,
                 min_batch_size: 1,
                 max_batch_size: 64,
                 latency_target: 10.0,
+                throughput_target: 1000.0,
                 adjustment_factor: 0.1,
-            },
+            })),
         }
     }
 
@@ -346,22 +349,23 @@ impl SmartBatchProcessor {
         let avg_latency = self.performance_monitor.get_average_latency();
         let current_throughput = self.performance_monitor.get_average_throughput();
 
+        // 获取自适应参数的锁并更新
+        let mut params = self.adaptive_params.lock().unwrap();
+
         // 根据性能指标调整批处理大小
-        if avg_latency > self.adaptive_params.latency_target {
+        if avg_latency > params.latency_target {
             // 延迟过高，减少批处理大小
-            if self.adaptive_params.current_batch_size > self.adaptive_params.min_batch_size {
-                let new_size = (self.adaptive_params.current_batch_size as f64 *
-                    (1.0 - self.adaptive_params.adjustment_factor)) as usize;
-                self.adaptive_params.current_batch_size =
-                    new_size.max(self.adaptive_params.min_batch_size);
+            if params.current_batch_size > params.min_batch_size {
+                let new_size = (params.current_batch_size as f64 *
+                    (1.0 - params.adjustment_factor)) as usize;
+                params.current_batch_size = new_size.max(params.min_batch_size);
             }
-        } else if current_throughput < self.adaptive_params.throughput_target {
+        } else if current_throughput < params.throughput_target {
             // 吞吐量不足，增加批处理大小
-            if self.adaptive_params.current_batch_size < self.adaptive_params.max_batch_size {
-                let new_size = (self.adaptive_params.current_batch_size as f64 *
-                    (1.0 + self.adaptive_params.adjustment_factor)) as usize;
-                self.adaptive_params.current_batch_size =
-                    new_size.min(self.adaptive_params.max_batch_size);
+            if params.current_batch_size < params.max_batch_size {
+                let new_size = (params.current_batch_size as f64 *
+                    (1.0 + params.adjustment_factor)) as usize;
+                params.current_batch_size = new_size.min(params.max_batch_size);
             }
         }
 
@@ -375,8 +379,9 @@ impl SmartBatchProcessor {
 
     /// 获取性能统计
     pub fn get_performance_stats(&self) -> PerformanceStats {
+        let params = self.adaptive_params.lock().unwrap();
         PerformanceStats {
-            current_batch_size: self.adaptive_params.current_batch_size,
+            current_batch_size: params.current_batch_size,
             average_latency: self.performance_monitor.get_average_latency(),
             average_throughput: self.performance_monitor.get_average_throughput(),
             batch_stats: self.processor.get_stats(),

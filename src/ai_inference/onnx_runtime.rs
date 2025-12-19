@@ -58,6 +58,8 @@ pub struct OnnxGPUAccelerator {
 pub struct GPUMemoryPool {
     /// 内存池大小
     pool_size: usize,
+    /// 可用内存块
+    available_blocks: Arc<Mutex<Vec<MemoryBlock>>>,
 }
 
 /// 内存块
@@ -65,8 +67,8 @@ pub struct GPUMemoryPool {
 pub struct MemoryBlock {
     /// 块大小
     size: usize,
-    /// 指针
-    ptr: *mut u8,
+    /// 指针偏移量（使用 usize 代替原始指针以支持线程安全）
+    offset: usize,
 }
 
 /// 流管理器
@@ -260,7 +262,7 @@ impl GPUMemoryPool {
         // 简化实现：模拟内存分配
         let block = MemoryBlock {
             size,
-            ptr: std::ptr::null_mut(),
+            offset: 0,
         };
         Ok(block)
     }
