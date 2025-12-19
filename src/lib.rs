@@ -65,6 +65,16 @@ pub mod holographic;  // Stage 42.0: 全息计算模块
 pub mod immersive_interaction;  // Stage 42.0: 沉浸式交互模块
 pub mod distributed_metaverse;  // Stage 42.0: 分布式元宇宙网络
 
+// Stage 43.0: 完整生态系统与极致性能优化
+pub mod nodejs_core;
+pub mod web_api;
+pub mod bundler;
+pub mod plugin;
+pub mod jit;
+pub mod memory;
+pub mod simd;
+pub mod package;
+
 // 重新导出 REPL 相关类型
 pub use repl::{Repl, ReplConfig};
 
