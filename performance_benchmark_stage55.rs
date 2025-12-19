@@ -2,6 +2,8 @@
 //! 为 Beejs 建立完整的性能评估体系
 
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType};
+use anyhow::Result;
+use chrono;
 use std::time::{Duration, Instant};
 
 /// 性能基准测试套件
@@ -219,16 +221,22 @@ impl PerformanceBenchmarkSuite {
                 result.name
             ));
             report.push_str(&format!(
-                "- 执行时间: {:.2}ms\n",
-                result.duration.as_millis()
+                "- 平均执行时间: {:.2}μs\n",
+                result.avg_duration.as_secs_f64() * 1_000_000.0
             ));
             report.push_str(&format!(
-                "- 内存使用: {} bytes\n",
-                result.memory_usage
+                "- 总执行时间: {:.2}ms\n",
+                result.total_duration.as_secs_f64() * 1000.0
             ));
+            if let Some(memory) = &result.memory_stats {
+                report.push_str(&format!(
+                    "- 内存使用: {} bytes (RSS)\n",
+                    memory.current_rss
+                ));
+            }
             report.push_str(&format!(
-                "- 吞吐量: {:.2} ops/s\n\n",
-                result.throughput
+                "- 操作/秒: {:.0}\n\n",
+                result.operations_per_second
             ));
         }
 
@@ -237,25 +245,38 @@ impl PerformanceBenchmarkSuite {
 
         // 分析最快的测试
         if let Some(fastest) = self.results.iter().min_by(|a, b| {
-            a.duration
-                .cmp(&b.duration)
+            a.avg_duration
+                .cmp(&b.avg_duration)
         }) {
             report.push_str(&format!(
-                "- 最快操作: {} ({:.2}ms)\n",
+                "- 最快操作: {} ({:.2}μs)\n",
                 fastest.name,
-                fastest.duration.as_millis()
+                fastest.avg_duration.as_secs_f64() * 1_000_000.0
             ));
         }
 
         // 分析最慢的测试
         if let Some(slowest) = self.results.iter().max_by(|a, b| {
-            a.duration
-                .cmp(&b.duration)
+            a.avg_duration
+                .cmp(&b.avg_duration)
         }) {
             report.push_str(&format!(
-                "- 最慢操作: {} ({:.2}ms)\n",
+                "- 最慢操作: {} ({:.2}μs)\n",
                 slowest.name,
-                slowest.duration.as_millis()
+                slowest.avg_duration.as_secs_f64() * 1_000_000.0
+            ));
+        }
+
+        // 分析最高吞吐量的测试
+        if let Some(highest_throughput) = self.results.iter().max_by(|a, b| {
+            a.operations_per_second
+                .partial_cmp(&b.operations_per_second)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        }) {
+            report.push_str(&format!(
+                "- 最高吞吐量: {} ({:.0} ops/s)\n",
+                highest_throughput.name,
+                highest_throughput.operations_per_second
             ));
         }
 

@@ -1,17 +1,24 @@
 //! 性能基准测试模块
 //! Stage 31.3: 性能基准测试完善
+//! Stage 55.1.2: JavaScript 核心基准测试
 //!
 //! 该模块提供完整的性能基准测试框架，包括：
 //! - 启动时间基准测试
 //! - 执行速度基准测试
 //! - 内存使用基准测试
 //! - 并发性能基准测试
+//! - JavaScript 核心基准测试
+//! - AI 推理性能基准测试
+//! - 内存和资源基准测试
 //! - 自动化性能回归检测
 
 pub mod startup;
 pub mod execution;
 pub mod memory;
 pub mod concurrent;
+pub mod javascript_core;
+pub mod ai_inference_core;
+pub mod memory_resource;
 
 use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
