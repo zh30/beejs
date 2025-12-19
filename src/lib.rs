@@ -75,6 +75,9 @@ pub mod memory;
 pub mod simd;
 pub mod package;
 
+// Stage 48: TypeScript 支持
+pub mod typescript;
+
 // 重新导出 REPL 相关类型
 pub use repl::{Repl, ReplConfig};
 
