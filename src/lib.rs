@@ -667,3 +667,6 @@ mod tests {
         let _ = generator.generate_benchmark_report(&results, &config);
     }
 }
+
+// Stage 56.3: Node.js polyfill
+pub mod nodejs_polyfill;

@@ -1,0 +1,91 @@
+//! Stage 56.3 - Package Manager Integration Tests
+//! Tests for module resolution and package.json support
+
+use std::path::{PathBuf, Path};
+
+#[cfg(test)]
+mod module_resolution_tests {
+    use super::*;
+    use crate::cli::module_resolver::{ModuleResolver, ModuleType};
+
+    #[test]
+    fn test_builtin_module_detection() {
+        let resolver = ModuleResolver::new(PathBuf::from("/test"));
+        
+        assert!(resolver.is_builtin_module("fs"));
+        assert!(resolver.is_builtin_module("path"));
+        assert!(resolver.is_builtin_module("os"));
+        assert!(resolver.is_builtin_module("crypto"));
+        assert!(resolver.is_builtin_module("http"));
+        assert!(!resolver.is_builtin_module("lodash"));
+        assert!(!resolver.is_builtin_module("express"));
+    }
+
+    #[test]
+    fn test_resolve_builtin_module() {
+        let resolver = ModuleResolver::new(PathBuf::from("/test"));
+        let result = resolver.resolve("fs", Path::new("/test/script.js"));
+        
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(result.module_type, ModuleType::BuiltIn);
+        assert_eq!(result.path, PathBuf::from("fs"));
+    }
+
+    #[test]
+    fn test_module_type_classification() {
+        let resolver = ModuleResolver::new(PathBuf::from("/test"));
+        
+        assert_eq!(resolver.get_module_type(Path::new("test.js")), ModuleType::JavaScript);
+        assert_eq!(resolver.get_module_type(Path::new("test.mjs")), ModuleType::JavaScript);
+        assert_eq!(resolver.get_module_type(Path::new("test.json")), ModuleType::Json);
+        assert_eq!(resolver.get_module_type(Path::new("test.node")), ModuleType::Native);
+    }
+
+    #[test]
+    fn test_search_paths_generation() {
+        let resolver = ModuleResolver::new(PathBuf::from("/home/user/project/src"));
+        let search_paths = resolver.search_paths();
+
+        // Should include multiple node_modules paths
+        assert!(!search_paths.is_empty());
+        assert!(search_paths.iter().any(|p: &PathBuf| p.to_string_lossy().contains("node_modules")));
+    }
+}
+
+#[cfg(test)]
+mod package_json_tests {
+    use super::*;
+    use crate::cli::PackageJson;
+
+    #[test]
+    fn test_package_json_structure() {
+        let package = PackageJson {
+            name: Some("test-package".to_string()),
+            version: Some("1.0.0".to_string()),
+            description: Some("Test package".to_string()),
+            scripts: Some(std::collections::HashMap::new()),
+            dependencies: Some(std::collections::HashMap::new()),
+            dev_dependencies: Some(std::collections::HashMap::new()),
+            beejs: None,
+        };
+        
+        assert_eq!(package.name, Some("test-package".to_string()));
+        assert_eq!(package.version, Some("1.0.0".to_string()));
+    }
+}
+
+#[cfg(test)]
+mod polyfill_tests {
+    use super::*;
+    use crate::nodejs_polyfill;
+
+    #[test]
+    fn test_is_builtin_module_function() {
+        assert!(nodejs_polyfill::is_builtin_module("fs"));
+        assert!(nodejs_polyfill::is_builtin_module("path"));
+        assert!(nodejs_polyfill::is_builtin_module("os"));
+        assert!(nodejs_polyfill::is_builtin_module("crypto"));
+        assert!(!nodejs_polyfill::is_builtin_module("lodash"));
+    }
+}
