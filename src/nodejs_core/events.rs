@@ -259,7 +259,7 @@ fn event_emitter_remove_listener_callback(
         .unwrap_or_default();
 
     let listener = args.get(1);
-    if !listener.is_function(scope) {
+    if !listener.is_function() {
         retval.set(v8::null(scope).into());
         return;
     }

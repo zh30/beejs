@@ -130,7 +130,7 @@ fn buffer_from_callback(
 ) {
     let arg = args.get(0);
 
-    if arg.is_string(scope) {
+    if arg.is_string() {
         // Buffer.from(string)
         let string = arg.to_string(scope).unwrap().to_rust_string_lossy(scope);
         let encoding = args
@@ -437,7 +437,7 @@ fn buffer_fill_callback(
 
     let fill_value = if value.is_number() {
         value.to_integer(scope).unwrap().value() as u8
-    } else if value.is_string(scope) {
+    } else if value.is_string() {
         let string = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
         string.chars().next().unwrap_or('\0') as u8
     } else {

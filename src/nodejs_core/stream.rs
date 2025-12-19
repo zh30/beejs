@@ -175,7 +175,7 @@ fn readable_on_callback(
 
     let listener = args.get(1);
 
-    if !listener.is_function(scope) {
+    if !listener.is_function() {
         retval.set(v8::null(scope).into());
         return;
     }
@@ -184,12 +184,12 @@ fn readable_on_callback(
     if event == "data" {
         // 创建测试数据
         let data = v8::String::new(scope, "test data chunk").unwrap();
-        let data_value = data.into();
+        let _data_value: v8::Local<v8::Value> = data.into();
 
         if listener.is_function() {
             if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
-                let mut cb_retval = v8::ReturnValue::new();
-                listener_func.call(scope, this, &args, &mut cb_retval);
+                let call_args: &[v8::Local<v8::Value>] = &[data.into()];
+                listener_func.call(scope, this.into(), call_args);
             }
         }
     }
@@ -198,8 +198,7 @@ fn readable_on_callback(
     if event == "end" {
         if listener.is_function() {
             if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
-                let mut cb_retval = v8::ReturnValue::new();
-                listener_func.call(scope, this, &args, &mut cb_retval);
+                listener_func.call(scope, this.into(), &[]);
             }
         }
     }
@@ -292,7 +291,7 @@ fn writable_write_callback(
         .unwrap_or_default();
 
     // 默认_write实现 - 输出到控制台
-    if chunk.is_string(scope) {
+    if chunk.is_string() {
         let content = chunk.to_string(scope).unwrap().to_rust_string_lossy(scope);
         eprintln!("[Writable Stream] {}: {}", encoding, content);
     }

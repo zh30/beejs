@@ -149,7 +149,7 @@ fn fetch_callback(
     let init = args.get(1);
 
     // Convert to string for URL
-    let url_str = if input.is_string(scope) {
+    let url_str = if input.is_string() {
         input.to_string(scope).unwrap().to_rust_string_lossy(scope)
     } else {
         // TODO: Handle Request object
@@ -211,7 +211,7 @@ fn response_constructor_callback(
     let ok_key = v8::String::new(scope, "ok").unwrap();
     response_obj.set(scope, ok_key.into(), v8::Boolean::new(scope, status >= 200 && status < 300).into());
 
-    if body.is_string(scope) {
+    if body.is_string() {
         let body_text = body.to_string(scope).unwrap().to_rust_string_lossy(scope);
         let body_key = v8::String::new(scope, "body").unwrap();
         response_obj.set(scope, body_key.into(), v8::String::new(scope, &body_text).unwrap().into());

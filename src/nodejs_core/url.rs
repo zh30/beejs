@@ -218,7 +218,7 @@ fn search_params_constructor_callback(
     params_obj.set(scope, params_key.into(), params_array.into());
 
     // 初始化参数
-    if init.is_string(scope) {
+    if init.is_string() {
         let query_string = init.to_string(scope).unwrap().to_rust_string_lossy(scope);
         let pairs = parse_query_string(&query_string);
         let params_array = v8::Array::new(scope, pairs.len() as u32);

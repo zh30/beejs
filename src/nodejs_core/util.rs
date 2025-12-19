@@ -131,7 +131,7 @@ fn util_inspect_callback(
     };
 
     // 简化的inspect实现
-    let result = if object.is_string(scope) {
+    let result = if object.is_string() {
         format!("'{}'", object.to_string(scope).unwrap().to_rust_string_lossy(scope))
     } else if object.is_number() {
         object.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope)
@@ -178,7 +178,7 @@ fn util_format_callback(
                 's' => {
                     if arg_index < args.length() {
                         let arg = args.get(arg_index);
-                        let arg_str = if arg.is_string(scope) {
+                        let arg_str = if arg.is_string() {
                             arg.to_string(scope).unwrap().to_rust_string_lossy(scope)
                         } else if arg.is_number() {
                             arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope)
@@ -254,7 +254,7 @@ fn util_format_callback(
             result.push(' ');
         }
         let arg = args.get(arg_index);
-        if arg.is_string(scope) {
+        if arg.is_string() {
             result.push_str(&arg.to_string(scope).unwrap().to_rust_string_lossy(scope));
         } else if arg.is_number() {
             result.push_str(&arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope));
@@ -359,7 +359,7 @@ fn util_is_string_callback(
     mut retval: v8::ReturnValue,
 ) {
     let value = args.get(0);
-    let is_string = value.is_string(scope);
+    let is_string = value.is_string();
     retval.set(v8::Boolean::new(scope, is_string).into());
 }
 
@@ -400,7 +400,7 @@ fn util_promisify_callback(
 ) {
     let original = args.get(0);
 
-    if !original.is_function(scope) {
+    if !original.is_function() {
         retval.set(v8::null(scope).into());
         return;
     }
@@ -491,7 +491,7 @@ fn util_debuglog_func_callback(
             message.push(' ');
         }
         let arg = args.get(i);
-        if arg.is_string(scope) {
+        if arg.is_string() {
             message.push_str(&arg.to_string(scope).unwrap().to_rust_string_lossy(scope));
         } else if arg.is_number() {
             message.push_str(&arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope));

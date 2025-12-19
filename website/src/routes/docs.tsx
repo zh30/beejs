@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { Book, ChevronRight, Code, Terminal, Layers, Cpu, Zap, ArrowLeft } from 'lucide-react'
+import { Book, ChevronRight, Code, Terminal, Layers, Cpu, Zap, ArrowLeft, Server } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { BeeLogo } from '../components/Logo'
 
@@ -21,6 +21,7 @@ export default function DocsComponent() {
         { id: 'v8-isolate-pool', name: 'V8 Isolate Pool', icon: <Cpu className="w-4 h-4" /> },
         { id: 'jit-optimization', name: 'JIT Optimization', icon: <Zap className="w-4 h-4" /> },
         { id: 'memory-management', name: 'Memory Management', icon: <Layers className="w-4 h-4" /> },
+        { id: 'server-mode', name: 'Server Mode', icon: <Server className="w-4 h-4" /> },
       ]
     },
     {
@@ -47,6 +48,8 @@ export default function DocsComponent() {
         return <JITOptimizationContent />
       case 'memory-management':
         return <MemoryManagementContent />
+      case 'server-mode':
+        return <ServerModeContent />
       case 'cli-usage':
         return <CLIUsageContent />
       case 'api-reference':
@@ -170,6 +173,11 @@ function IntroductionContent() {
           It is engineered from the ground up for the **AI era**, focusing on extreme startup speed,
           sophisticated memory management, and native AI co-processing.
         </p>
+        <p className="mt-6">
+          Whether you are deploying massive agent swarms or low-latency edge functions, Beejs provides
+          the raw power and architectural flexibility to scale without compromise. With the introduction
+          of **Server Mode**, Beejs now supports persistent low-latency execution via standard web protocols.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
@@ -240,6 +248,12 @@ function QuickStartContent() {
         <p className="text-gray-400 mb-6">Create `hello.ts` and experience the speed instantly.</p>
         <CodeBlock lang="typescript" code={`const name: string = "Beejs Operator";\nconsole.log(\`Hello \${name} from the fastest runtime!\`);\n\n// Trigger Native AI Optimization\nBeejs.optimize('speed');`} />
         <CodeBlock code="$ beejs hello.ts" />
+      </section>
+
+      <section className="mt-20">
+        <h2 className="text-2xl font-black text-white uppercase italic mb-6 tracking-tighter">Running a Server</h2>
+        <p className="text-gray-400 mb-6">Start a persistent execution environment for ultra-low latency.</p>
+        <CodeBlock code="$ beejs server --port 3000" />
       </section>
 
       <div className="mt-20 flex justify-between">
@@ -344,6 +358,52 @@ function MemoryManagementContent() {
         <Link to="/docs/jit-optimization" className="text-gray-600 font-black uppercase tracking-widest hover:text-white transition-colors">
           ← JIT Optimization
         </Link>
+        <Link to="/docs/server-mode" className="px-8 py-4 bg-brand-yellow text-brand-black font-black uppercase -skew-x-12 hover:bg-white transition-all">
+          <span className="skew-x-12 flex items-center">
+            Next: Server Mode <ChevronRight className="w-5 h-5 ml-2" />
+          </span>
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function ServerModeContent() {
+  return (
+    <div className="space-y-12 pb-24">
+      <SectionHeader title="Server Mode" subtitle="Persistent Persistent Persistent Execution" />
+
+      <div className="prose prose-invert prose-brand max-w-none text-gray-400 leading-relaxed text-lg">
+        <p>
+          Beejs Server Mode transforms the runtime from a one-shot execution tool into a high-performance,
+          long-running server. By keeping the V8 isolates warm and ready, it eliminates the 11ms startup
+          penalty entirely for repeat executions.
+        </p>
+      </div>
+
+      <section>
+        <h2 className="text-2xl font-black text-white uppercase italic mb-6 tracking-tighter">Core Features</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-6 glass border border-white/5">
+            <h4 className="text-brand-yellow font-black mb-2 uppercase text-xs tracking-widest">HTTP/WS API</h4>
+            <p className="text-xs text-gray-500">Expose code execution via standard web endpoints or real-time streaming sockets.</p>
+          </div>
+          <div className="p-6 glass border border-white/5">
+            <h4 className="text-brand-yellow font-black mb-2 uppercase text-xs tracking-widest">Shared State</h4>
+            <p className="text-xs text-gray-500">Optionally share global constants and pre-compiled modules across client sessions.</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-20">
+        <h2 className="text-2xl font-black text-white uppercase italic mb-6 tracking-tighter">Activation</h2>
+        <CodeBlock code="$ beejs server --host 0.0.0.0 --port 3000" />
+      </section>
+
+      <div className="mt-20 flex justify-between">
+        <Link to="/docs/memory-management" className="text-gray-600 font-black uppercase tracking-widest hover:text-white transition-colors">
+          ← Memory
+        </Link>
         <Link to="/docs/cli-usage" className="px-8 py-4 bg-brand-yellow text-brand-black font-black uppercase -skew-x-12 hover:bg-white transition-all">
           <span className="skew-x-12 flex items-center">
             Next: CLI Usage <ChevronRight className="w-5 h-5 ml-2" />
@@ -361,6 +421,7 @@ function CLIUsageContent() {
       <div className="grid grid-cols-1 gap-4">
         {[
           { cmd: 'run <file>', desc: 'Optimize and execute target script.' },
+          { cmd: 'server', desc: 'Initialize persistent execution server.' },
           { cmd: '--watch', desc: 'Hot-load changes with zero downtime.' },
           { cmd: 'test', desc: 'Execute native performance test suite.' },
           { cmd: 'init', desc: 'Bootstrap a new high-performance hive.' },
@@ -373,8 +434,8 @@ function CLIUsageContent() {
       </div>
 
       <div className="mt-20 flex justify-between">
-        <Link to="/docs/memory-management" className="text-gray-600 font-black uppercase tracking-widest hover:text-white transition-colors">
-          ← Memory
+        <Link to="/docs/server-mode" className="text-gray-600 font-black uppercase tracking-widest hover:text-white transition-colors">
+          ← Server Mode
         </Link>
         <Link to="/docs/api-reference" className="px-8 py-4 bg-brand-yellow text-brand-black font-black uppercase -skew-x-12 hover:bg-white transition-all">
           <span className="skew-x-12 flex items-center">

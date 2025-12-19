@@ -125,7 +125,7 @@ pub fn setup_websocket_api(
         let send_key = v8::String::new(scope, "send").unwrap();
         let send_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
             let data = args.get(0);
-            if data.is_string(scope) {
+            if data.is_string() {
                 let message = data.to_string(scope).unwrap().to_rust_string_lossy(scope);
                 println!("WebSocket send: {}", message);
             }
@@ -177,7 +177,7 @@ fn websocket_constructor_callback(
     // Parse protocols (optional second argument)
     let protocols = if args.length() > 1 {
         let proto_arg = args.get(1);
-        if proto_arg.is_string(scope) {
+        if proto_arg.is_string() {
             vec![proto_arg.to_string(scope).unwrap().to_rust_string_lossy(scope)]
         } else {
             Vec::new()
