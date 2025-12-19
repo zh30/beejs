@@ -146,7 +146,7 @@ impl Bundler {
 
         // Phase 1: Dependency resolution
         let phase1_start = std::time::Instant::now();
-        let resolved_modules = self.resolve_dependencies(entry_points)?;
+        let resolved_modules = self.resolve_dependencies(entry_points.clone())?;
         let phase1_time = phase1_start.elapsed().as_millis() as u64;
 
         // Phase 2: Module transformation

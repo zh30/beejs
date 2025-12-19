@@ -147,7 +147,7 @@ impl PluginManager {
 
         {
             let mut plugins = self.plugins.lock().unwrap();
-            plugins.insert(name, arc_plugin);
+            plugins.insert(name.clone(), arc_plugin);
         }
 
         println!("Registered JS plugin: {}", name);
@@ -275,19 +275,29 @@ impl PluginManager {
 mod tests {
     use super::*;
 
-    struct TestRustPlugin;
+    struct TestRustPlugin {
+        metadata: PluginMetadata,
+    }
+
+    impl TestRustPlugin {
+        fn new() -> Self {
+            Self {
+                metadata: PluginMetadata {
+                    name: "test-rust-plugin".to_string(),
+                    version: "1.0.0".to_string(),
+                    description: "Test Rust plugin".to_string(),
+                    author: "Test Author".to_string(),
+                    homepage: None,
+                    permissions: vec!["read".to_string()],
+                    dependencies: Vec::new(),
+                }
+            }
+        }
+    }
 
     impl Plugin for TestRustPlugin {
         fn metadata(&self) -> &PluginMetadata {
-            &PluginMetadata {
-                name: "test-rust-plugin".to_string(),
-                version: "1.0.0".to_string(),
-                description: "Test Rust plugin".to_string(),
-                author: "Test Author".to_string(),
-                homepage: None,
-                permissions: vec!["read".to_string()],
-                dependencies: Vec::new(),
-            }
+            &self.metadata
         }
 
         fn state(&self) -> &PluginState {
@@ -309,7 +319,7 @@ mod tests {
     #[test]
     fn test_register_rust_plugin() {
         let manager = PluginManager::new(false);
-        let plugin = Box::new(TestRustPlugin);
+        let plugin = Box::new(TestRustPlugin::new());
         assert!(manager.register_rust_plugin(plugin).is_ok());
     }
 
@@ -332,7 +342,7 @@ mod tests {
     #[test]
     fn test_list_plugins() {
         let manager = PluginManager::new(false);
-        let plugin = Box::new(TestRustPlugin);
+        let plugin = Box::new(TestRustPlugin::new());
         manager.register_rust_plugin(plugin).unwrap();
 
         let plugins = manager.list_plugins();
