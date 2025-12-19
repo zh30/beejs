@@ -2,6 +2,7 @@
 //! 专为 AI 工作负载优化的推理引擎
 
 mod ai_inference_engine;
+mod engine_interface;
 mod model_loader;
 mod tensor_ops;
 mod gpu_accelerate;
@@ -9,6 +10,7 @@ mod model_cache;
 mod dynamic_batch_processor;
 
 pub use ai_inference_engine::*;
+pub use engine_interface::*;
 pub use model_loader::*;
 pub use tensor_ops::*;
 pub use model_cache::*;

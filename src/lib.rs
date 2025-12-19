@@ -563,7 +563,7 @@ mod tests {
 
     #[test]
     fn test_runtime_creation() {
-        let runtime = Runtime::new(4, 512 * 1024 * 1024, true);
+        let runtime = Runtime::new(4, 512 * 1024 * 1024, true, false);
         assert_eq!(runtime.get_config().pool_size, 4);
         assert_eq!(runtime.get_config().max_memory, 512 * 1024 * 1024);
     }

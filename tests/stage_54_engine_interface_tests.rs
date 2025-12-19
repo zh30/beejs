@@ -1,0 +1,619 @@
+//! Stage 54.1: AI 推理引擎接口测试套件
+//! 测试统一的 AI 推理引擎接口的功能和兼容性
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::time::Duration;
+    use beejs::ai_inference::{
+        ModelFormat, EngineType, InferenceOptions, MemoryOptimization,
+        InferenceEngine, EngineFactory, EngineManager,
+        ModelHandle, ModelInfo, TensorInfo, EngineStats,
+    };
+    use anyhow::Result;
+    use tokio;
+
+    /// 模拟 ONNX 引擎实现
+    #[derive(Clone)]
+    struct MockOnnxEngine {
+        available: bool,
+        name: String,
+        stats: EngineStats,
+    }
+
+    impl MockOnnxEngine {
+        fn new() -> Self {
+            Self {
+                available: true,
+                name: "MockONNXEngine".to_string(),
+                stats: EngineStats {
+                    engine_name: "MockONNXEngine".to_string(),
+                    total_inferences: 0,
+                    successful_inferences: 0,
+                    failed_inferences: 0,
+                    total_time_ms: 0.0,
+                    average_time_ms: 0.0,
+                    gpu_utilization: 0.0,
+                    memory_usage_bytes: 0,
+                    cache_hit_rate: 0.0,
+                },
+            }
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl InferenceEngine for MockOnnxEngine {
+        fn clone_engine(&self) -> Box<dyn InferenceEngine> {
+            Box::new(self.clone())
+        }
+
+        fn name(&self) -> &str {
+            &self.name
+        }
+
+        fn supported_formats(&self) -> Vec<ModelFormat> {
+            vec![ModelFormat::ONNX]
+        }
+
+        fn is_available(&self) -> bool {
+            self.available
+        }
+
+        async fn load_model(
+            &self,
+            model_path: &str,
+            options: InferenceOptions,
+        ) -> Result<ModelHandle> {
+            // 模拟模型加载
+            tokio::time::sleep(Duration::from_millis(10)).await;
+
+            Ok(ModelHandle {
+                id: format!("model_{}", model_path),
+                path: model_path.to_string(),
+                format: ModelFormat::ONNX,
+                input_shape: vec![1, 3, 224, 224],
+                output_shape: vec![1, 1000],
+                metadata: HashMap::from([
+                    ("framework".to_string(), "ONNX".to_string()),
+                    ("version".to_string(), "1.0".to_string()),
+                ]),
+            })
+        }
+
+        async fn infer(
+            &self,
+            model: &ModelHandle,
+            input: &beejs::ai_inference::Tensor,
+        ) -> Result<beejs::ai_inference::InferenceResult> {
+            // 模拟推理时间
+            tokio::time::sleep(Duration::from_millis(5)).await;
+
+            Ok(beejs::ai_inference::InferenceResult {
+                output: beejs::ai_inference::Tensor::new(
+                    vec![0.1; 1000],
+                    vec![1, 1000],
+                )?,
+                inference_time_ms: 5.0,
+                model_id: model.id.clone(),
+                gpu_used: false,
+            })
+        }
+
+        async fn batch_infer(
+            &self,
+            model: &ModelHandle,
+            inputs: &[beejs::ai_inference::Tensor],
+        ) -> Result<Vec<beejs::ai_inference::InferenceResult>> {
+            let mut results = Vec::new();
+
+            for input in inputs {
+                let result = self.infer(model, input).await?;
+                results.push(result);
+            }
+
+            Ok(results)
+        }
+
+        async fn infer_stream(
+            &self,
+            model: &ModelHandle,
+            input: beejs::ai_inference::Tensor,
+        ) -> Result<tokio::sync::mpsc::Receiver<Result<beejs::ai_inference::Tensor>>> {
+            let (tx, rx) = tokio::sync::mpsc::channel(10);
+
+            tokio::spawn(async move {
+                // 模拟流式推理
+                for i in 0..3 {
+                    let output = beejs::ai_inference::Tensor::new(
+                        vec![0.1; 1000],
+                        vec![1, 1000],
+                    )?;
+                    if tx.send(Ok(output)).await.is_err() {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
+            });
+
+            Ok(rx)
+        }
+
+        async fn get_model_info(&self, model: &ModelHandle) -> Result<ModelInfo> {
+            Ok(ModelInfo {
+                id: model.id.clone(),
+                name: "TestModel".to_string(),
+                format: ModelFormat::ONNX,
+                inputs: vec![TensorInfo {
+                    name: "input".to_string(),
+                    shape: vec![1, 3, 224, 224],
+                    data_type: "float32".to_string(),
+                    optional: false,
+                }],
+                outputs: vec![TensorInfo {
+                    name: "output".to_string(),
+                    shape: vec![1, 1000],
+                    data_type: "float32".to_string(),
+                    optional: false,
+                }],
+                parameter_count: 1000000,
+                size_bytes: 1000000,
+                engine_type: EngineType::CPU,
+            })
+        }
+
+        async fn warmup(&self, model: &ModelHandle) -> Result<()> {
+            // 模拟预热
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            Ok(())
+        }
+
+        async fn unload_model(&self, model: &ModelHandle) -> Result<()> {
+            // 模拟卸载
+            Ok(())
+        }
+
+        async fn get_stats(&self) -> Result<EngineStats> {
+            Ok(self.stats.clone())
+        }
+    }
+
+    /// ONNX 引擎工厂
+    struct OnnxEngineFactory;
+
+    #[async_trait::async_trait]
+    impl EngineFactory for OnnxEngineFactory {
+        async fn create(&self, engine_type: EngineType) -> Result<Box<dyn InferenceEngine>> {
+            Ok(Box::new(MockOnnxEngine::new()))
+        }
+
+        fn name(&self) -> &str {
+            "onnx"
+        }
+
+        fn supported_formats(&self) -> Vec<ModelFormat> {
+            vec![ModelFormat::ONNX]
+        }
+    }
+
+    /// 测试引擎管理器注册和获取
+    #[tokio::test]
+    async fn test_engine_manager_registration() {
+        let mut manager = EngineManager::new(EngineType::CPU);
+
+        // 注册 ONNX 工厂
+        manager.register_factory("onnx".to_string(), Box::new(OnnxEngineFactory));
+
+        // 检查可用的引擎
+        let engines = manager.available_engines();
+        assert_eq!(engines, vec!["onnx"]);
+
+        // 检查引擎可用性
+        let is_available = manager.is_engine_available("onnx", None).await;
+        assert!(is_available);
+    }
+
+    /// 测试模型加载功能
+    #[tokio::test]
+    async fn test_model_loading() {
+        let mut manager = EngineManager::new(EngineType::CPU);
+        manager.register_factory("onnx".to_string(), Box::new(OnnxEngineFactory));
+
+        let engine = manager.get_or_create_engine("onnx", None).await.unwrap();
+
+        let options = InferenceOptions {
+            engine_type: EngineType::CPU,
+            batch_size: Some(1),
+            optimization: true,
+            parallel_inferences: Some(1),
+            memory_optimization: Some(MemoryOptimization::Medium),
+            custom_options: HashMap::new(),
+        };
+
+        let model = engine.load_model("test_model.onnx", options).await.unwrap();
+
+        assert_eq!(model.path, "test_model.onnx");
+        assert_eq!(model.format, ModelFormat::ONNX);
+        assert_eq!(model.input_shape, vec![1, 3, 224, 224]);
+        assert_eq!(model.output_shape, vec![1, 1000]);
+    }
+
+    /// 测试单次推理功能
+    #[tokio::test]
+    async fn test_single_inference() {
+        let mut manager = EngineManager::new(EngineType::CPU);
+        manager.register_factory("onnx".to_string(), Box::new(OnnxEngineFactory));
+
+        let engine = manager.get_or_create_engine("onnx", None).await.unwrap();
+
+        let options = InferenceOptions {
+            engine_type: EngineType::CPU,
+            batch_size: Some(1),
+            optimization: true,
+            parallel_inferences: Some(1),
+            memory_optimization: Some(MemoryOptimization::Medium),
+            custom_options: HashMap::new(),
+        };
+
+        let model = engine.load_model("test_model.onnx", options).await.unwrap();
+
+        let input = beejs::ai_inference::Tensor::new(
+            vec![1.0; 3 * 224 * 224],
+            vec![1, 3, 224, 224],
+        ).unwrap();
+
+        let result = engine.infer(&model, &input).await.unwrap();
+
+        assert_eq!(result.output.shape(), &vec![1, 1000]);
+        assert!(result.inference_time_ms > 0.0);
+        assert_eq!(result.model_id, model.id);
+    }
+
+    /// 测试批量推理功能
+    #[tokio::test]
+    async fn test_batch_inference() {
+        let mut manager = EngineManager::new(EngineType::CPU);
+        manager.register_factory("onnx".to_string(), Box::new(OnnxEngineFactory));
+
+        let engine = manager.get_or_create_engine("onnx", None).await.unwrap();
+
+        let options = InferenceOptions {
+            engine_type: EngineType::CPU,
+            batch_size: Some(3),
+            optimization: true,
+            parallel_inferences: Some(3),
+            memory_optimization: Some(MemoryOptimization::Medium),
+            custom_options: HashMap::new(),
+        };
+
+        let model = engine.load_model("test_model.onnx", options).await.unwrap();
+
+        let inputs = vec![
+            beejs::ai_inference::Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224]).unwrap(),
+            beejs::ai_inference::Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224]).unwrap(),
+            beejs::ai_inference::Tensor::new(vec![1.0; 3 * 224 * 224], vec![1, 3, 224, 224]).unwrap(),
+        ];
+
+        let results = engine.batch_infer(&model, &inputs).await.unwrap();
+
+        assert_eq!(results.len(), 3);
+        for result in results {
+            assert_eq!(result.output.shape(), &vec![1, 1000]);
+            assert!(result.inference_time_ms > 0.0);
+        }
+    }
+
+    /// 测试流式推理功能
+    #[tokio::test]
+    async fn test_stream_inference() {
+        let mut manager = EngineManager::new(EngineType::CPU);
+        manager.register_factory("onnx".to_string(), Box::new(OnnxEngineFactory));
+
+        let engine = manager.get_or_create_engine("onnx", None).await.unwrap();
+
+        let options = InferenceOptions {
+            engine_type: EngineType::CPU,
+            batch_size: Some(1),
+            optimization: true,
+            parallel_inferences: Some(1),
+            memory_optimization: Some(MemoryOptimization::Medium),
+            custom_options: HashMap::new(),
+        };
+
+        let model = engine.load_model("test_model.onnx", options).await.unwrap();
+
+        let input = beejs::ai_inference::Tensor::new(
+            vec![1.0; 3 * 224 * 224],
+            vec![1, 3, 224, 224],
+        ).unwrap();
+
+        let mut stream = engine.infer_stream(&model, input).await.unwrap();
+
+        let mut count = 0;
+        while let Some(result) = stream.recv().await {
+            let tensor = result.unwrap();
+            assert_eq!(tensor.shape(), &vec![1, 1000]);
+            count += 1;
+
+            // 最多接收 3 个结果
+            if count >= 3 {
+                break;
+            }
+        }
+
+        assert_eq!(count, 3);
+    }
+
+    /// 测试模型预热功能
+    #[tokio::test]
+    async fn test_model_warmup() {
+        let mut manager = EngineManager::new(EngineType::CPU);
+        manager.register_factory("onnx".to_string(), Box::new(OnnxEngineFactory));
+
+        let engine = manager.get_or_create_engine("onnx", None).await.unwrap();
+
+        let options = InferenceOptions {
+            engine_type: EngineType::CPU,
+            batch_size: Some(1),
+            optimization: true,
+            parallel_inferences: Some(1),
+            memory_optimization: Some(MemoryOptimization::Medium),
+            custom_options: HashMap::new(),
+        };
+
+        let model = engine.load_model("test_model.onnx", options).await.unwrap();
+
+        let start = std::time::Instant::now();
+        engine.warmup(&model).await.unwrap();
+        let elapsed = start.elapsed();
+
+        // 预热应该需要一些时间（模拟 50ms）
+        assert!(elapsed >= Duration::from_millis(40));
+    }
+
+    /// 测试模型信息获取
+    #[tokio::test]
+    async fn test_model_info() {
+        let mut manager = EngineManager::new(EngineType::CPU);
+        manager.register_factory("onnx".to_string(), Box::new(OnnxEngineFactory));
+
+        let engine = manager.get_or_create_engine("onnx", None).await.unwrap();
+
+        let options = InferenceOptions {
+            engine_type: EngineType::CPU,
+            batch_size: Some(1),
+            optimization: true,
+            parallel_inferences: Some(1),
+            memory_optimization: Some(MemoryOptimization::Medium),
+            custom_options: HashMap::new(),
+        };
+
+        let model = engine.load_model("test_model.onnx", options).await.unwrap();
+
+        let info = engine.get_model_info(&model).await.unwrap();
+
+        assert_eq!(info.id, model.id);
+        assert_eq!(info.name, "TestModel");
+        assert_eq!(info.format, ModelFormat::ONNX);
+        assert_eq!(info.inputs.len(), 1);
+        assert_eq!(info.outputs.len(), 1);
+        assert_eq!(info.parameter_count, 1000000);
+    }
+
+    /// 测试引擎统计信息
+    #[tokio::test]
+    async fn test_engine_stats() {
+        let mut manager = EngineManager::new(EngineType::CPU);
+        manager.register_factory("onnx".to_string(), Box::new(OnnxEngineFactory));
+
+        let engine = manager.get_or_create_engine("onnx", None).await.unwrap();
+
+        let stats = engine.get_stats().await.unwrap();
+
+        assert_eq!(stats.engine_name, "MockONNXEngine");
+        assert_eq!(stats.total_inferences, 0);
+        assert_eq!(stats.successful_inferences, 0);
+    }
+
+    /// 测试多种引擎类型支持
+    #[tokio::test]
+    async fn test_multiple_engine_types() {
+        let engine_types = vec![
+            EngineType::CPU,
+            EngineType::CUDA,
+            EngineType::ROCm,
+            EngineType::Metal,
+        ];
+
+        for engine_type in engine_types {
+            let mut manager = EngineManager::new(engine_type.clone());
+            manager.register_factory("onnx".to_string(), Box::new(OnnxEngineFactory));
+
+            let engine = manager.get_or_create_engine("onnx", None).await.unwrap();
+
+            assert_eq!(engine.name(), "MockONNXEngine");
+            let formats = engine.supported_formats();
+            assert_eq!(formats, vec![ModelFormat::ONNX]);
+        }
+    }
+
+    /// 测试内存优化选项
+    #[tokio::test]
+    async fn test_memory_optimization_options() {
+        let optimizations = vec![
+            MemoryOptimization::None,
+            MemoryOptimization::Low,
+            MemoryOptimization::Medium,
+            MemoryOptimization::High,
+            MemoryOptimization::Aggressive,
+        ];
+
+        let mut manager = EngineManager::new(EngineType::CPU);
+        manager.register_factory("onnx".to_string(), Box::new(OnnxEngineFactory));
+
+        for optimization in optimizations {
+            let options = InferenceOptions {
+                engine_type: EngineType::CPU,
+                batch_size: Some(1),
+                optimization: true,
+                parallel_inferences: Some(1),
+                memory_optimization: Some(optimization.clone()),
+                custom_options: HashMap::new(),
+            };
+
+            let engine = manager.get_or_create_engine("onnx", None).await.unwrap();
+            let model = engine.load_model("test_model.onnx", options).await.unwrap();
+
+            assert_eq!(model.id, "model_test_model.onnx");
+        }
+    }
+
+    /// 测试自定义选项
+    #[tokio::test]
+    async fn test_custom_options() {
+        let mut custom_options = HashMap::new();
+        custom_options.insert("precision".to_string(), "fp16".to_string());
+        custom_options.insert("threads".to_string(), "4".to_string());
+
+        let options = InferenceOptions {
+            engine_type: EngineType::CPU,
+            batch_size: Some(1),
+            optimization: true,
+            parallel_inferences: Some(1),
+            memory_optimization: Some(MemoryOptimization::Medium),
+            custom_options: custom_options.clone(),
+        };
+
+        let mut manager = EngineManager::new(EngineType::CPU);
+        manager.register_factory("onnx".to_string(), Box::new(OnnxEngineFactory));
+
+        let engine = manager.get_or_create_engine("onnx", None).await.unwrap();
+        let model = engine.load_model("test_model.onnx", options).await.unwrap();
+
+        assert_eq!(model.metadata.get("framework"), Some(&"ONNX".to_string()));
+    }
+
+    /// 测试模型格式支持
+    #[tokio::test]
+    async fn test_model_format_support() {
+        let formats = vec![
+            ModelFormat::ONNX,
+            ModelFormat::PyTorch,
+            ModelFormat::TensorFlowLite,
+            ModelFormat::TensorFlow,
+            ModelFormat::Custom("custom".to_string()),
+        ];
+
+        for format in formats {
+            // 创建模拟引擎工厂
+            struct MockFactory(ModelFormat);
+            #[async_trait::async_trait]
+            impl EngineFactory for MockFactory {
+                async fn create(&self, _engine_type: EngineType) -> Result<Box<dyn InferenceEngine>> {
+                    Ok(Box::new(MockEngine(self.0.clone())))
+                }
+
+                fn name(&self) -> &str {
+                    "mock"
+                }
+
+                fn supported_formats(&self) -> Vec<ModelFormat> {
+                    vec![self.0.clone()]
+                }
+            }
+
+            #[derive(Clone)]
+            struct MockEngine(ModelFormat);
+            #[async_trait::async_trait]
+            impl InferenceEngine for MockEngine {
+                fn clone_engine(&self) -> Box<dyn InferenceEngine> {
+                    Box::new(self.clone())
+                }
+
+                fn name(&self) -> &str {
+                    "MockEngine"
+                }
+
+                fn supported_formats(&self) -> Vec<ModelFormat> {
+                    vec![self.0.clone()]
+                }
+
+                fn is_available(&self) -> bool {
+                    true
+                }
+
+                async fn load_model(
+                    &self,
+                    _model_path: &str,
+                    _options: InferenceOptions,
+                ) -> Result<ModelHandle> {
+                    Ok(ModelHandle {
+                        id: "test".to_string(),
+                        path: _model_path.to_string(),
+                        format: self.0.clone(),
+                        input_shape: vec![1, 3, 224, 224],
+                        output_shape: vec![1, 1000],
+                        metadata: HashMap::new(),
+                    })
+                }
+
+                async fn infer(
+                    &self,
+                    _model: &ModelHandle,
+                    _input: &beejs::ai_inference::Tensor,
+                ) -> Result<beejs::ai_inference::InferenceResult> {
+                    todo!()
+                }
+
+                async fn batch_infer(
+                    &self,
+                    _model: &ModelHandle,
+                    _inputs: &[beejs::ai_inference::Tensor],
+                ) -> Result<Vec<beejs::ai_inference::InferenceResult>> {
+                    todo!()
+                }
+
+                async fn infer_stream(
+                    &self,
+                    _model: &ModelHandle,
+                    _input: beejs::ai_inference::Tensor,
+                ) -> Result<tokio::sync::mpsc::Receiver<Result<beejs::ai_inference::Tensor>>> {
+                    todo!()
+                }
+
+                async fn get_model_info(&self, _model: &ModelHandle) -> Result<ModelInfo> {
+                    todo!()
+                }
+
+                async fn warmup(&self, _model: &ModelHandle) -> Result<()> {
+                    Ok(())
+                }
+
+                async fn unload_model(&self, _model: &ModelHandle) -> Result<()> {
+                    Ok(())
+                }
+
+                async fn get_stats(&self) -> Result<EngineStats> {
+                    Ok(EngineStats {
+                        engine_name: "MockEngine".to_string(),
+                        total_inferences: 0,
+                        successful_inferences: 0,
+                        failed_inferences: 0,
+                        total_time_ms: 0.0,
+                        average_time_ms: 0.0,
+                        gpu_utilization: 0.0,
+                        memory_usage_bytes: 0,
+                        cache_hit_rate: 0.0,
+                    })
+                }
+            }
+
+            let mut manager = EngineManager::new(EngineType::CPU);
+            manager.register_factory("mock".to_string(), Box::new(MockFactory(format.clone())));
+
+            let engine = manager.get_or_create_engine("mock", None).await.unwrap();
+            let supported = engine.supported_formats();
+
+            assert_eq!(supported, vec![format]);
+        }
+    }
+}
