@@ -371,8 +371,8 @@ fn run_debug(
         }
     }
 
-    // Create debug session
-    let session = DebugSession::new(runtime, cmd)
+    // Create debug session (must be mutable for start())
+    let mut session = DebugSession::new(runtime, cmd)
         .context("Failed to create debug session")?;
 
     // Start the debug session

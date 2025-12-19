@@ -10,6 +10,7 @@ use rusty_v8 as v8;
 
 use crate::{RuntimeLite, debugger::{DebuggerEngine, DebugConfig}};
 use crate::debugger::engine::SimpleEventListener;
+use crate::debugger::cli::{DebugConsole, DebugCliCommand};
 use crate::cli::commands::DebugCommand;
 
 /// Debug session that manages the runtime and debugger
@@ -66,7 +67,7 @@ impl DebugSession {
     }
 
     /// Start the debug session
-    pub async fn start(&self) -> Result<()> {
+    pub async fn start(&mut self) -> Result<()> {
         self.initialize()?;
 
         println!("🚀 Starting debug session on port {}", self.debug_port);
@@ -74,21 +75,50 @@ impl DebugSession {
         if self.web_ui {
             println!("🌐 Web UI mode enabled");
             println!("   Open http://localhost:{} in your browser", self.debug_port);
+            // TODO: Start web UI server
+            println!("   ⚠️  Web UI not yet implemented");
         } else {
             println!("💻 CLI debug mode");
-            println!("   Use 'help' command for available debug operations");
         }
 
-        // TODO: Implement actual debugging logic
-        // This will include:
-        // 1. Setting up V8 debug callbacks
-        // 2. Starting WebSocket server for Chrome DevTools
-        // 3. Creating interactive CLI for debugging
-        // 4. Handling debug commands (break, continue, step, etc.)
+        // Load script if provided
+        if let Some(ref script_path) = self.script_path {
+            println!("\n📄 Loading script: {}", script_path.display());
 
-        println!("\n📋 Debug session ready!");
-        println!("   Breakpoints: 0 set");
-        println!("   Status: Running");
+            // Read script content
+            let code = std::fs::read_to_string(script_path)
+                .context("Failed to read script file")?;
+
+            // Set initial breakpoint if specified
+            // TODO: Implement breakpoint setting
+
+            // Start interactive CLI
+            self.start_interactive_cli().await?;
+        } else {
+            println!("\n📋 Debug session ready!");
+            println!("   Status: Waiting for connection");
+            println!("   Debug port: {}", self.debug_port);
+
+            // TODO: Start Chrome DevTools protocol server
+            println!("   ⚠️  Chrome DevTools protocol not yet implemented");
+        }
+
+        Ok(())
+    }
+
+    /// Start interactive CLI debugging
+    async fn start_interactive_cli(&mut self) -> Result<()> {
+        println!("\n🐛 Starting interactive debug console...");
+        println!("   Type 'help' for available commands\n");
+
+        // Create debug console
+        let console = DebugConsole::new(
+            Arc::clone(&self.debugger),
+            Arc::new(Mutex::new(self.runtime.clone())),
+        );
+
+        // Run the console
+        console.run().await?;
 
         Ok(())
     }

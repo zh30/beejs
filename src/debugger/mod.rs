@@ -15,6 +15,7 @@ pub mod variable_scope;
 pub mod config;
 pub mod v8_stubs;
 pub mod session;
+pub mod cli;
 
 pub use engine::DebuggerEngine;
 pub use breakpoint::{Breakpoint, BreakpointManager, BreakpointCondition};
