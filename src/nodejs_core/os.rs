@@ -206,9 +206,11 @@ pub fn setup_os_api(
     let val_sigunused = v8::Integer::new(scope, 31);
     signals_obj.set(scope, key_sigunused.into(), val_sigunused.into());
 
-    constants_obj.set(scope, v8::String::new(scope, "signals").unwrap().into(), signals_obj.into());
+    let signals_key = v8::String::new(scope, "signals").unwrap();
+    constants_obj.set(scope, signals_key.into(), signals_obj.into());
 
-    os_obj.set(scope, v8::String::new(scope, "constants").unwrap().into(), constants_obj.into());
+    let constants_key = v8::String::new(scope, "constants").unwrap();
+    os_obj.set(scope, constants_key.into(), constants_obj.into());
 
     // EOL常量
     let eol = if cfg!(windows) { "\r\n" } else { "\n" };
@@ -255,7 +257,8 @@ pub fn setup_os_api(
     let val_x86 = v8::String::new(scope, "x86").unwrap();
     arch_constants_obj.set(scope, key_x86.into(), val_x86.into());
 
-    os_obj.set(scope, v8::String::new(scope, "arch").unwrap().into(), arch_constants_obj.into());
+    let arch_key = v8::String::new(scope, "arch").unwrap();
+    os_obj.set(scope, arch_key.into(), arch_constants_obj.into());
 
     // platform()的常量版本
     let platform_constants_obj = v8::Object::new(scope);

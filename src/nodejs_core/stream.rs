@@ -215,7 +215,10 @@ fn readable_pause_callback(
     let state_key = v8::String::new(scope, "_readableState").unwrap();
     let state = this.get(scope, state_key.into()).unwrap();
     let flow_key = v8::String::new(scope, "flowing").unwrap();
-    state.to_object(scope).unwrap().set(scope, flow_key.into(), v8::Boolean::new(scope, false).into());
+    let flow_val = v8::Boolean::new(scope, false);
+    if let Some(state_obj) = state.to_object(scope) {
+        state_obj.set(scope, flow_key.into(), flow_val.into());
+    }
     retval.set(this.into());
 }
 
@@ -228,7 +231,10 @@ fn readable_resume_callback(
     let state_key = v8::String::new(scope, "_readableState").unwrap();
     let state = this.get(scope, state_key.into()).unwrap();
     let flow_key = v8::String::new(scope, "flowing").unwrap();
-    state.to_object(scope).unwrap().set(scope, flow_key.into(), v8::Boolean::new(scope, true).into());
+    let flow_val = v8::Boolean::new(scope, true);
+    if let Some(state_obj) = state.to_object(scope) {
+        state_obj.set(scope, flow_key.into(), flow_val.into());
+    }
     retval.set(this.into());
 }
 

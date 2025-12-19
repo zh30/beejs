@@ -101,7 +101,8 @@ fn event_emitter_constructor_callback(
 
     // 添加_maxListeners属性
     let max_listeners_key = v8::String::new(scope, "_maxListeners").unwrap();
-    emitter_obj.set(scope, max_listeners_key.into(), v8::Integer::new(scope, 10).into());
+    let max_val = v8::Integer::new(scope, 10);
+    emitter_obj.set(scope, max_listeners_key.into(), max_val.into());
 
     retval.set(emitter_obj.into());
 }
