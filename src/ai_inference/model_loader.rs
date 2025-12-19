@@ -299,9 +299,9 @@ impl ModelLoader {
     }
 
     /// 获取模型信息
-    pub fn get_model_info(&self, model_id: &str) -> Result<ModelInfo> {
+    pub fn get_model_info(&self, model_id: &str) -> Result<LoaderModelInfo> {
         if let Some(model) = self.loaded_models.get(model_id) {
-            Ok(ModelInfo {
+            Ok(LoaderModelInfo {
                 id: model.id.clone(),
                 input_shape: model.input_shape.clone(),
                 output_shape: model.output_shape.clone(),
@@ -314,9 +314,9 @@ impl ModelLoader {
     }
 }
 
-/// 模型信息
+/// 模型信息（模型加载器专用）
 #[derive(Debug, Clone)]
-pub struct ModelInfo {
+pub struct LoaderModelInfo {
     pub id: String,
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,

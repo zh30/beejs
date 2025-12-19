@@ -6,9 +6,9 @@ mod tests {
     use std::collections::HashMap;
     use std::time::Duration;
     use beejs::ai_inference::{
-        ModelFormat, EngineType, InferenceOptions, MemoryOptimization,
+        EngineType, InferenceOptions, MemoryOptimization,
         InferenceEngine, EngineFactory, EngineManager,
-        ModelHandle, ModelInfo, TensorInfo, EngineStats,
+        ModelHandle, TensorInfo, EngineStats, ModelFormat, ModelInfo,
     };
     use anyhow::Result;
     use tokio;
@@ -124,12 +124,17 @@ mod tests {
             tokio::spawn(async move {
                 // 模拟流式推理
                 for i in 0..3 {
-                    let output = beejs::ai_inference::Tensor::new(
+                    // Create tensor without ? operator in async context
+                    match beejs::ai_inference::Tensor::new(
                         vec![0.1; 1000],
                         vec![1, 1000],
-                    )?;
-                    if tx.send(Ok(output)).await.is_err() {
-                        break;
+                    ) {
+                        Ok(output) => {
+                            if tx.send(Ok(output)).await.is_err() {
+                                break;
+                            }
+                        }
+                        Err(_) => break,
                     }
                     tokio::time::sleep(Duration::from_millis(10)).await;
                 }
