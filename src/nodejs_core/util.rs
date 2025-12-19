@@ -442,10 +442,11 @@ fn util_promise_then_callback(
     mut retval: v8::ReturnValue,
 ) {
     let on_fulfilled = args.get(0);
-    if on_fulfilled.is_function(scope) {
-        let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-        let mut cb_retval = v8::ReturnValue::default();
-        on_fulfilled.to_function(scope).unwrap().call(scope, v8::undefined(scope).into(), &cb_args, &mut cb_retval);
+    if on_fulfilled.is_function() {
+        if let Ok(func) = v8::Local::<v8::Function>::try_from(on_fulfilled) {
+            let undefined = v8::undefined(scope);
+            func.call(scope, undefined.into(), &[]);
+        }
     }
     retval.set(v8::undefined(scope).into());
 }

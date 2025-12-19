@@ -141,18 +141,20 @@ fn child_on_callback(
 
     let listener = args.get(1);
 
-    if !listener.is_function(scope) {
+    if !listener.is_function() {
         retval.set(v8::null(scope).into());
         return;
     }
 
     // 模拟emit 'exit'事件
     if event == "exit" {
-        let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-        cb_args.set_index(scope, 0, v8::Integer::new(scope, 0).into());
-
-        let mut cb_retval = v8::ReturnValue::default();
-        listener.to_function(scope).unwrap().call(scope, this, &cb_args, &mut cb_retval);
+        if listener.is_function() {
+            if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
+                let exit_code = v8::Integer::new(scope, 0);
+                let call_args: &[v8::Local<v8::Value>] = &[exit_code.into()];
+                listener_func.call(scope, this.into(), call_args);
+            }
+        }
     }
 
     retval.set(this.into());

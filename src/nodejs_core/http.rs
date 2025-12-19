@@ -128,7 +128,7 @@ fn http_server_on_callback(
 
     let listener = args.get(1);
 
-    if !listener.is_function(scope) {
+    if !listener.is_function() {
         retval.set(v8::null(scope).into());
         return;
     }
@@ -139,12 +139,12 @@ fn http_server_on_callback(
         let res_obj = v8::Object::new(scope);
 
         // 调用监听器
-        let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-        cb_args.set_index(scope, 0, req_obj.into());
-        cb_args.set_index(scope, 1, res_obj.into());
-
-        let mut cb_retval = v8::ReturnValue::default();
-        listener.to_function(scope).unwrap().call(scope, this, &cb_args, &mut cb_retval);
+        if listener.is_function() {
+            if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
+                let call_args: &[v8::Local<v8::Value>] = &[req_obj.into(), res_obj.into()];
+                listener_func.call(scope, this.into(), call_args);
+            }
+        }
     }
 
     retval.set(this.into());
@@ -158,12 +158,13 @@ fn http_req_end_callback(
     let this = args.this();
     let callback = args.get(0);
 
-    if callback.is_function(scope) {
+    if callback.is_function() {
         let res_obj = v8::Object::new(scope);
 
         // statusCode
         let status_code_key = v8::String::new(scope, "statusCode").unwrap();
-        res_obj.set(scope, status_code_key.into(), v8::Integer::new(scope, 200).into());
+        let status_val = v8::Integer::new(scope, 200);
+        res_obj.set(scope, status_code_key.into(), status_val.into());
 
         // end
         let end_func = v8::FunctionTemplate::new(scope, http_res_end_callback);
@@ -171,11 +172,10 @@ fn http_req_end_callback(
         let end_key = v8::String::new(scope, "end").unwrap();
         res_obj.set(scope, end_key.into(), end_instance.into());
 
-        let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-        cb_args.set_index(scope, 0, res_obj.into());
-
-        let mut cb_retval = v8::ReturnValue::default();
-        callback.to_function(scope).unwrap().call(scope, this, &cb_args, &mut cb_retval);
+        if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
+            let call_args: &[v8::Local<v8::Value>] = &[res_obj.into()];
+            cb_func.call(scope, this.into(), call_args);
+        }
     }
 
     retval.set(this.into());

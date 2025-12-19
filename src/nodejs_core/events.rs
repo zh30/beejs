@@ -119,13 +119,14 @@ fn event_emitter_on_callback(
         .unwrap_or_default();
 
     let listener = args.get(1);
-    if !listener.is_function(scope) {
+    if !listener.is_function() {
         retval.set(v8::null(scope).into());
         return;
     }
 
     // 创建持久化函数引用
-    let function_global = v8::Global::new(scope, listener.to_function(scope).unwrap());
+    let listener_func = v8::Local::<v8::Function>::try_from(listener).unwrap();
+    let function_global = v8::Global::new(scope, listener_func);
 
     // 获取当前的监听器数组
     let listeners_key = v8::String::new(scope, "_listeners").unwrap();
@@ -173,12 +174,13 @@ fn event_emitter_once_callback(
         .unwrap_or_default();
 
     let listener = args.get(1);
-    if !listener.is_function(scope) {
+    if !listener.is_function() {
         retval.set(v8::null(scope).into());
         return;
     }
 
-    let function_global = v8::Global::new(scope, listener.to_function(scope).unwrap());
+    let listener_func = v8::Local::<v8::Function>::try_from(listener).unwrap();
+    let function_global = v8::Global::new(scope, listener_func);
 
     // 添加一次性监听器
     ONCE_LISTENERS.with(|map| {
@@ -187,7 +189,8 @@ fn event_emitter_once_callback(
     });
 
     let prop_key = v8::String::new(scope, &event_name).unwrap();
-    this.set_property(scope, prop_key.into(), v8::Boolean::new(scope, true).into(), v8::PropertyAttribute::None).unwrap();
+    let prop_val = v8::Boolean::new(scope, true);
+    this.set(scope, prop_key.into(), prop_val.into());
 
     retval.set(this.into());
 }
@@ -204,7 +207,7 @@ fn event_emitter_emit_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
-    let mut event_args = Vec::new();
+    let mut event_args: Vec<v8::Local<v8::Value>> = Vec::new();
     for i in 1..args.length() {
         event_args.push(args.get(i));
     }
@@ -217,15 +220,7 @@ fn event_emitter_emit_callback(
         if let Some(listeners) = map_ref.get(&event_name) {
             for listener in listeners {
                 let listener_func = v8::Local::new(scope, listener);
-                let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-
-                // 设置参数
-                for (i, arg) in event_args.iter().enumerate() {
-                    cb_args.set_index(scope, i as u8, *arg);
-                }
-
-                let mut cb_retval = v8::ReturnValue::default();
-                listener_func.call(scope, this, &cb_args, &mut cb_retval);
+                listener_func.call(scope, this.into(), &event_args);
                 emitted = true;
             }
         }
@@ -238,14 +233,7 @@ fn event_emitter_emit_callback(
         if let Some(listeners) = map_ref.get_mut(&event_name) {
             for listener in listeners.iter() {
                 let listener_func = v8::Local::new(scope, listener);
-                let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-
-                for (i, arg) in event_args.iter().enumerate() {
-                    cb_args.set_index(scope, i as u8, *arg);
-                }
-
-                let mut cb_retval = v8::ReturnValue::default();
-                listener_func.call(scope, this, &cb_args, &mut cb_retval);
+                listener_func.call(scope, this.into(), &event_args);
                 executed_once.push(listener.clone());
                 emitted = true;
             }

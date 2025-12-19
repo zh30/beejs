@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Rocket, Zap, Shield, Brain, Cpu, Code, Activity, Server } from 'lucide-react'
+import { Rocket, Zap, Brain, Cpu, Code, Activity, Server } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { BeeLogo } from '../components/Logo'
 
@@ -34,12 +34,12 @@ export default function HomeComponent() {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             <h1 className="text-5xl md:text-9xl font-black mb-6 tracking-tighter leading-[0.9] text-white uppercase italic">
-              Ultra <span className="text-brand-yellow glow-text">Fast</span> <br />
-              <span className="text-gray-500">AI Runtime</span>
+              AI native <br />
+              <span className="text-brand-yellow glow-text">Server Runtime</span>
             </h1>
             <p className="text-base md:text-xl text-gray-400 mb-10 max-w-2xl mx-auto leading-relaxed font-mono uppercase tracking-widest px-4">
-              Building the backbone of the next billion AI agents. <br className="hidden md:block" />
-              11ms startup. Zero compromise.
+              The fastest execution layer for the AI era. <br className="hidden md:block" />
+              11ms startup. Persistent Server Mode. Zero compromise.
             </p>
             <div className="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 px-4">
               <Link to="/docs" className="w-full md:w-auto px-10 py-5 bg-brand-yellow text-brand-black font-black rounded-none -skew-x-12 text-lg hover:bg-white transition-all text-center uppercase">
@@ -54,7 +54,7 @@ export default function HomeComponent() {
 
         {/* Floating Decors */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 hidden lg:block text-[10px] font-mono text-gray-600 uppercase tracking-[0.5em] vertical-rl">
-          System Status: Operational // Core: V8-Rust // Latency: 11ms
+          System Status: Operational // Core: V8-Rust // Server Mode: Alpha
         </div>
       </section>
 
@@ -114,9 +114,9 @@ export default function HomeComponent() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
             <FeatureCard
-              icon={<Shield />}
-              title="V8 Isolate Pool"
-              desc="Instant-on isolates eliminate cold-start penalties globally."
+              icon={<Server />}
+              title="Server Mode"
+              desc="Persistent execution layer for zero-latency code execution via HTTP/WS."
             />
             <FeatureCard
               icon={<Brain />}

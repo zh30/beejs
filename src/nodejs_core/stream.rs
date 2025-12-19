@@ -317,18 +317,20 @@ fn writable_public_write_callback(
 
     // 调用_write方法
     let write_key = v8::String::new(scope, "_write").unwrap();
-    if let Some(write_func) = this.get(scope, write_key.into()).and_then(|f| f.to_function(scope)) {
-        let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-        cb_args.set_index(scope, 0, chunk);
-        cb_args.set_index(scope, 1, v8::String::new(scope, &encoding).unwrap().into());
+    if let Some(write_func_val) = this.get(scope, write_key.into()) {
+        if write_func_val.is_function() {
+            if let Ok(write_func) = v8::Local::<v8::Function>::try_from(write_func_val) {
+                let encoding_val = v8::String::new(scope, &encoding).unwrap();
+                let call_args: &[v8::Local<v8::Value>] = &[chunk, encoding_val.into()];
+                write_func.call(scope, this.into(), call_args);
 
-        let mut cb_retval = v8::ReturnValue::default();
-        write_func.call(scope, this, &cb_args, &mut cb_retval);
-
-        // 如果有回调，调用它
-        if callback.is_function(scope) {
-            let mut cb_retval2 = v8::ReturnValue::default();
-            callback.to_function(scope).unwrap().call(scope, this, &cb_args, &mut cb_retval2);
+                // 如果有回调，调用它
+                if callback.is_function() {
+                    if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
+                        cb_func.call(scope, this.into(), &[]);
+                    }
+                }
+            }
         }
     }
 
@@ -351,21 +353,22 @@ fn writable_end_callback(
     // 结束写入
     if !chunk.is_undefined() {
         let write_key = v8::String::new(scope, "write").unwrap();
-        if let Some(write_func) = this.get(scope, write_key.into()).and_then(|f| f.to_function(scope)) {
-            let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-            cb_args.set_index(scope, 0, chunk);
-            cb_args.set_index(scope, 1, v8::String::new(scope, &encoding).unwrap().into());
-
-            let mut cb_retval = v8::ReturnValue::default();
-            write_func.call(scope, this, &cb_args, &mut cb_retval);
+        if let Some(write_func_val) = this.get(scope, write_key.into()) {
+            if write_func_val.is_function() {
+                if let Ok(write_func) = v8::Local::<v8::Function>::try_from(write_func_val) {
+                    let encoding_val = v8::String::new(scope, &encoding).unwrap();
+                    let call_args: &[v8::Local<v8::Value>] = &[chunk, encoding_val.into()];
+                    write_func.call(scope, this.into(), call_args);
+                }
+            }
         }
     }
 
     let callback = args.get(2);
-    if callback.is_function(scope) {
-        let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-        let mut cb_retval = v8::ReturnValue::default();
-        callback.to_function(scope).unwrap().call(scope, this, &cb_args, &mut cb_retval);
+    if callback.is_function() {
+        if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
+            cb_func.call(scope, this.into(), &[]);
+        }
     }
 
     retval.set(this.into());
@@ -402,11 +405,11 @@ fn transform_transform_callback(
     let callback = args.get(2);
 
     // 默认_transform实现
-    if callback.is_function(scope) {
+    if callback.is_function() {
         let this = args.this();
-        let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-        let mut cb_retval = v8::ReturnValue::default();
-        callback.to_function(scope).unwrap().call(scope, this, &cb_args, &mut cb_retval);
+        if let Ok(cb_func) = v8::Local::<v8::Function>::try_from(callback) {
+            cb_func.call(scope, this.into(), &[]);
+        }
     }
 
     retval.set(v8::undefined(scope).into());
