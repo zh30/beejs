@@ -148,22 +148,44 @@ impl RuntimeLite {
         Ok(())
     }
 
+    /// Set up Web APIs for modern web compatibility (Stage 53.0)
+    fn setup_web_apis(
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        context: &v8::Local<v8::Context>,
+    ) -> Result<()> {
+        use crate::web_api;
+
+        eprintln!("🔧 Initializing Web APIs...");
+
+        // Set up Fetch, WebSocket, URL, and other Web APIs
+        web_api::init_web_api(scope, context)?;
+
+        eprintln!("✅ Web APIs initialized successfully");
+
+        Ok(())
+    }
+
     /// Execute JavaScript code with minimal overhead - V8 Binding Layer Optimization
     pub fn execute_code(&self, code: &str) -> Result<String> {
         // Increment execution count
         self.execution_count.fetch_add(1, Ordering::SeqCst);
 
+        eprintln!("🔍 execute_code called with code length: {}", code.len());
+
         // 🚀 ULTRA-FAST PATH: Bypass V8 entirely for simple constants
         if let Some(value) = self.try_fast_constant_path(code) {
+            eprintln!("🚀 Using fast constant path");
             return Ok(value);
         }
 
         // Optimized path: Skip setup for pure eval scripts with no console output
         if code.trim_start().starts_with("console.log") || code.trim_start().starts_with("console.error") {
+            eprintln!("🚀 Using simple print path");
             // For scripts that only print, use minimal setup
             return self.execute_simple_print(code);
         }
 
+        eprintln!("🚀 Using standard path");
         // Standard execution path for other scripts
         self.execute_standard(code)
     }
@@ -794,6 +816,9 @@ impl RuntimeLite {
 
         // Set up Node.js APIs for compatibility
         Self::setup_nodejs_apis(scope, &context)?;
+
+        // Set up Web APIs for modern web compatibility (Stage 53.0)
+        Self::setup_web_apis(scope, &context)?;
 
         self.execute_direct(scope, context, code)
     }
