@@ -73,11 +73,15 @@ pub fn setup_path_api(
 
     // sep
     let sep = if cfg!(windows) { "\\" } else { "/" };
-    path_obj.set(scope, v8::String::new(scope, "sep").unwrap().into(), v8::String::new(scope, sep).unwrap().into());
+    let key_sep = v8::String::new(scope, "sep").unwrap();
+    let val_sep = v8::String::new(scope, sep).unwrap();
+    path_obj.set(scope, key_sep.into(), val_sep.into());
 
     // delimiter
     let delimiter = if cfg!(windows) { ";" } else { ":" };
-    path_obj.set(scope, v8::String::new(scope, "delimiter").unwrap().into(), v8::String::new(scope, delimiter).unwrap().into());
+    let key_delimiter = v8::String::new(scope, "delimiter").unwrap();
+    let val_delimiter = v8::String::new(scope, delimiter).unwrap();
+    path_obj.set(scope, key_delimiter.into(), val_delimiter.into());
 
     // win32
     let win32_obj = v8::Object::new(scope);
@@ -85,20 +89,33 @@ pub fn setup_path_api(
 
     // 复制所有方法到win32和posix
     for &key_str in &["join", "resolve", "relative", "dirname", "basename", "extname", "parse", "format", "isAbsolute", "normalize"] {
-        if let Some(method) = path_obj.get(scope, v8::String::new(scope, key_str).unwrap().into()) {
-            win32_obj.set(scope, v8::String::new(scope, key_str).unwrap().into(), method);
-            posix_obj.set(scope, v8::String::new(scope, key_str).unwrap().into(), method);
+        let key_val = v8::String::new(scope, key_str).unwrap();
+        if let Some(method) = path_obj.get(scope, key_val.into()) {
+            let win32_key = v8::String::new(scope, key_str).unwrap();
+            win32_obj.set(scope, win32_key.into(), method);
+            let posix_key = v8::String::new(scope, key_str).unwrap();
+            posix_obj.set(scope, posix_key.into(), method);
         }
     }
 
-    win32_obj.set(scope, v8::String::new(scope, "sep").unwrap().into(), v8::String::new(scope, "\\").unwrap().into());
-    win32_obj.set(scope, v8::String::new(scope, "delimiter").unwrap().into(), v8::String::new(scope, ";").unwrap().into());
+    let key_sep = v8::String::new(scope, "sep").unwrap();
+    let val_sep = v8::String::new(scope, "\\").unwrap();
+    win32_obj.set(scope, key_sep.into(), val_sep.into());
+    let key_delimiter = v8::String::new(scope, "delimiter").unwrap();
+    let val_delimiter = v8::String::new(scope, ";").unwrap();
+    win32_obj.set(scope, key_delimiter.into(), val_delimiter.into());
 
-    posix_obj.set(scope, v8::String::new(scope, "sep").unwrap().into(), v8::String::new(scope, "/").unwrap().into());
-    posix_obj.set(scope, v8::String::new(scope, "delimiter").unwrap().into(), v8::String::new(scope, ":").unwrap().into());
+    let key_sep = v8::String::new(scope, "sep").unwrap();
+    let val_sep = v8::String::new(scope, "/").unwrap();
+    posix_obj.set(scope, key_sep.into(), val_sep.into());
+    let key_delimiter = v8::String::new(scope, "delimiter").unwrap();
+    let val_delimiter = v8::String::new(scope, ":").unwrap();
+    posix_obj.set(scope, key_delimiter.into(), val_delimiter.into());
 
-    path_obj.set(scope, v8::String::new(scope, "win32").unwrap().into(), win32_obj.into());
-    path_obj.set(scope, v8::String::new(scope, "posix").unwrap().into(), posix_obj.into());
+    let win32_key = v8::String::new(scope, "win32").unwrap();
+    path_obj.set(scope, win32_key.into(), win32_obj.into());
+    let posix_key = v8::String::new(scope, "posix").unwrap();
+    path_obj.set(scope, posix_key.into(), posix_obj.into());
 
     // 设置到全局
     let global = context.global(scope);
@@ -437,11 +454,21 @@ fn path_parse_callback(
         &base
     };
 
-    result.set(scope, v8::String::new(scope, "root").unwrap().into(), v8::String::new(scope, root).unwrap().into());
-    result.set(scope, v8::String::new(scope, "dir").unwrap().into(), v8::String::new(scope, dir).unwrap().into());
-    result.set(scope, v8::String::new(scope, "base").unwrap().into(), v8::String::new(scope, base).unwrap().into());
-    result.set(scope, v8::String::new(scope, "ext").unwrap().into(), v8::String::new(scope, ext).unwrap().into());
-    result.set(scope, v8::String::new(scope, "name").unwrap().into(), v8::String::new(scope, name).unwrap().into());
+    let key_root = v8::String::new(scope, "root").unwrap();
+    let val_root = v8::String::new(scope, root).unwrap();
+    result.set(scope, key_root.into(), val_root.into());
+    let key_dir = v8::String::new(scope, "dir").unwrap();
+    let val_dir = v8::String::new(scope, dir).unwrap();
+    result.set(scope, key_dir.into(), val_dir.into());
+    let key_base = v8::String::new(scope, "base").unwrap();
+    let val_base = v8::String::new(scope, base).unwrap();
+    result.set(scope, key_base.into(), val_base.into());
+    let key_ext = v8::String::new(scope, "ext").unwrap();
+    let val_ext = v8::String::new(scope, ext).unwrap();
+    result.set(scope, key_ext.into(), val_ext.into());
+    let key_name = v8::String::new(scope, "name").unwrap();
+    let val_name = v8::String::new(scope, name).unwrap();
+    result.set(scope, key_name.into(), val_name.into());
 
     retval.set(result.into());
 }
@@ -454,23 +481,28 @@ fn path_format_callback(
     let path_obj = args.get(0);
 
     if let Some(obj) = path_obj.to_object(scope) {
-        let root = obj.get(scope, v8::String::new(scope, "root").unwrap().into())
+        let root_key = v8::String::new(scope, "root").unwrap();
+        let root = obj.get(scope, root_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
 
-        let dir = obj.get(scope, v8::String::new(scope, "dir").unwrap().into())
+        let dir_key = v8::String::new(scope, "dir").unwrap();
+        let dir = obj.get(scope, dir_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
 
-        let base = obj.get(scope, v8::String::new(scope, "base").unwrap().into())
+        let base_key = v8::String::new(scope, "base").unwrap();
+        let base = obj.get(scope, base_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
 
-        let name = obj.get(scope, v8::String::new(scope, "name").unwrap().into())
+        let name_key = v8::String::new(scope, "name").unwrap();
+        let name = obj.get(scope, name_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
 
-        let ext = obj.get(scope, v8::String::new(scope, "ext").unwrap().into())
+        let ext_key = v8::String::new(scope, "ext").unwrap();
+        let ext = obj.get(scope, ext_key.into())
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
 

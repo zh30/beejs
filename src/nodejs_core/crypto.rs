@@ -96,7 +96,8 @@ fn hash_update_callback(
     if data_array.is_array() {
         let arr = v8::Local::<v8::Array>::try_from(data_array).unwrap();
         let length = arr.length();
-        arr.set_index(scope, length, v8::String::new(scope, &data).unwrap().into());
+        let str_val = v8::String::new(scope, &data).unwrap();
+        arr.set_index(scope, length, str_val.into());
     }
 
     retval.set(this.into());
@@ -238,7 +239,8 @@ fn hmac_update_callback(
     if data_array.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(data_array) {
             let length = arr.length();
-            arr.set_index(scope, length, v8::String::new(scope, &data).unwrap().into());
+            let str_val = v8::String::new(scope, &data).unwrap();
+            arr.set_index(scope, length, str_val.into());
         }
     }
 

@@ -75,14 +75,30 @@ fn url_constructor_callback(
 
     // 设置URL属性
     if let Some(parts) = parsed_url {
-        url_obj.set(scope, v8::String::new(scope, "href").unwrap().into(), v8::String::new(scope, &parts.href).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "protocol").unwrap().into(), v8::String::new(scope, &parts.protocol).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "hostname").unwrap().into(), v8::String::new(scope, &parts.hostname).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "port").unwrap().into(), v8::String::new(scope, &parts.port).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "pathname").unwrap().into(), v8::String::new(scope, &parts.pathname).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "search").unwrap().into(), v8::String::new(scope, &parts.search).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "hash").unwrap().into(), v8::String::new(scope, &parts.hash).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "host").unwrap().into(), v8::String::new(scope, &parts.host).unwrap().into());
+        let key_href = v8::String::new(scope, "href").unwrap();
+        let val_href = v8::String::new(scope, &parts.href);
+        url_obj.set(scope, key_href.into(), val_href.into());
+        let key_protocol = v8::String::new(scope, "protocol").unwrap();
+        let val_protocol = v8::String::new(scope, &parts.protocol);
+        url_obj.set(scope, key_protocol.into(), val_protocol.into());
+        let key_hostname = v8::String::new(scope, "hostname").unwrap();
+        let val_hostname = v8::String::new(scope, &parts.hostname);
+        url_obj.set(scope, key_hostname.into(), val_hostname.into());
+        let key_port = v8::String::new(scope, "port").unwrap();
+        let val_port = v8::String::new(scope, &parts.port);
+        url_obj.set(scope, key_port.into(), val_port.into());
+        let key_pathname = v8::String::new(scope, "pathname").unwrap();
+        let val_pathname = v8::String::new(scope, &parts.pathname);
+        url_obj.set(scope, key_pathname.into(), val_pathname.into());
+        let key_search = v8::String::new(scope, "search").unwrap();
+        let val_search = v8::String::new(scope, &parts.search);
+        url_obj.set(scope, key_search.into(), val_search.into());
+        let key_hash = v8::String::new(scope, "hash").unwrap();
+        let val_hash = v8::String::new(scope, &parts.hash);
+        url_obj.set(scope, key_hash.into(), val_hash.into());
+        let key_host = v8::String::new(scope, "host").unwrap();
+        let val_host = v8::String::new(scope, &parts.host);
+        url_obj.set(scope, key_host.into(), val_host.into());
     }
 
     // toString方法
@@ -566,14 +582,30 @@ fn url_parse_callback(
 
     let url_obj = v8::Object::new(scope);
     if let Some(parts) = parsed_url {
-        url_obj.set(scope, v8::String::new(scope, "href").unwrap().into(), v8::String::new(scope, &parts.href).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "protocol").unwrap().into(), v8::String::new(scope, &parts.protocol).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "hostname").unwrap().into(), v8::String::new(scope, &parts.hostname).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "port").unwrap().into(), v8::String::new(scope, &parts.port).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "pathname").unwrap().into(), v8::String::new(scope, &parts.pathname).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "search").unwrap().into(), v8::String::new(scope, &parts.search).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "hash").unwrap().into(), v8::String::new(scope, &parts.hash).unwrap().into());
-        url_obj.set(scope, v8::String::new(scope, "host").unwrap().into(), v8::String::new(scope, &parts.host).unwrap().into());
+        let key_href = v8::String::new(scope, "href").unwrap();
+        let val_href = v8::String::new(scope, &parts.href);
+        url_obj.set(scope, key_href.into(), val_href.into());
+        let key_protocol = v8::String::new(scope, "protocol").unwrap();
+        let val_protocol = v8::String::new(scope, &parts.protocol);
+        url_obj.set(scope, key_protocol.into(), val_protocol.into());
+        let key_hostname = v8::String::new(scope, "hostname").unwrap();
+        let val_hostname = v8::String::new(scope, &parts.hostname);
+        url_obj.set(scope, key_hostname.into(), val_hostname.into());
+        let key_port = v8::String::new(scope, "port").unwrap();
+        let val_port = v8::String::new(scope, &parts.port);
+        url_obj.set(scope, key_port.into(), val_port.into());
+        let key_pathname = v8::String::new(scope, "pathname").unwrap();
+        let val_pathname = v8::String::new(scope, &parts.pathname);
+        url_obj.set(scope, key_pathname.into(), val_pathname.into());
+        let key_search = v8::String::new(scope, "search").unwrap();
+        let val_search = v8::String::new(scope, &parts.search);
+        url_obj.set(scope, key_search.into(), val_search.into());
+        let key_hash = v8::String::new(scope, "hash").unwrap();
+        let val_hash = v8::String::new(scope, &parts.hash);
+        url_obj.set(scope, key_hash.into(), val_hash.into());
+        let key_host = v8::String::new(scope, "host").unwrap();
+        let val_host = v8::String::new(scope, &parts.host);
+        url_obj.set(scope, key_host.into(), val_host.into());
     }
 
     retval.set(url_obj.into());

@@ -50,10 +50,15 @@ While other runtimes focus on broad compatibility, Beejs is obsessively optimize
 - **Smart Memory Allocation**: Pre-allocated memory pools designed specifically for large AI models and datasets.
 - **Async Prediction Queues**: Native handling of long-running AI tasks without blocking the main event loop.
 
+### 🌐 Server Mode (New!)
+- **Zero-Latency Execution**: Keep Beejs running as a persistent server to eliminate startup overhead entirely.
+- **HTTP & WebSocket API**: Execute code remotely via standard web protocols.
+- **Runtime Pooling**: Intelligently manage a pool of warm runtimes for massive parallel execution.
+
 ### 🛠️ Developer Experience
-- **Integrated Package Manager**: Full compatibility with `npm`/`yarn` ecosystems but with Beejs speed.
+- **Integrated Package Manager**: Full compatibility with `npm`/`yarn` ecosystems (`beejs add`, `beejs install`).
 - **Live Hot Reloading**: Instant feedback during development with built-in `--watch` mode.
-- **Jest-Style Testing**: Built-in test runner for unit and integration testing.
+- **Jest-Style Testing**: Built-in test runner for unit and integration testing (`beejs --test`).
 - **Telemetry Dashboard**: Real-time performance monitoring and self-healing runtime state.
 
 ---
@@ -61,8 +66,6 @@ While other runtimes focus on broad compatibility, Beejs is obsessively optimize
 ## 🚀 Quick Start
 
 ### Installation
-
-Choose the method that fits your workflow:
 
 ```bash
 # Automated install (macOS, Linux, WSL)
@@ -76,21 +79,16 @@ cargo build --release
 
 ### Usage
 
-Create a file named `main.ts`:
-
-```typescript
-// All TS features supported out of the box
-const start = Date.now();
-console.log(`Hello from the edge! Sync time: ${start}ms`);
-
-// Native Beejs optimization
-Beejs.optimize('speed');
-```
-
-Run it instantly:
+Run a script instantly:
 
 ```bash
 beejs main.ts
+```
+
+Start the performance-optimized server:
+
+```bash
+beejs server --port 3000
 ```
 
 ---
@@ -117,8 +115,6 @@ Node  █████████ 5.8k
 
 ## 🏗️ Architecture
 
-Beejs is composed of several high-performance layers designed to work in perfect harmony:
-
 ```mermaid
 graph TD
     A[CLI / User Space] --> B[Rust Controller]
@@ -128,24 +124,18 @@ graph TD
     C --> F[JIT Optimizer]
     D --> G[AI Memory Pool]
     E --> H[Native Modules]
+    B --> I[Server Mode API]
 ```
 
 ---
 
-## 🛠️ Configuration
+## 🗺️ Roadmap & Current Status
 
-Tune the runtime to your specific needs:
-
-```bash
-# Optimize for execution speed
-beejs --optimize speed app.js
-
-# Limit max heap for memory-constrained environments
-beejs --max-heap 128M app.js
-
-# Watch for changes (Hot Reload)
-beejs --watch server.ts
-```
+Beejs is under active development. We are currently focusing on:
+- [x] **V8 API Modernization**: Upgrading to the latest `rusty_v8` for better performance and stability.
+- [x] **Server Mode Alpha**: High-performance persistent runtime for low-latency workloads.
+- [ ] **Expanded Web API Support**: Bringing more standard Web APIs (Fetch, Streams, etc.) to the runtime.
+- [ ] **Deep Learning Integration**: Direct bindings for popular AI inference engines.
 
 ---
 

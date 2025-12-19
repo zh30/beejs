@@ -95,8 +95,12 @@ fn readable_constructor_callback(
     // _readableState
     let state_key = v8::String::new(scope, "_readableState").unwrap();
     let state_obj = v8::Object::new(scope);
-    state_obj.set(scope, v8::String::new(scope, "flowing").unwrap().into(), v8::Boolean::new(scope, false).into());
-    state_obj.set(scope, v8::String::new(scope, "paused").unwrap().into(), v8::Boolean::new(scope, false).into());
+    let flowing_key = v8::String::new(scope, "flowing").unwrap();
+    let flowing_val = v8::Boolean::new(scope, false);
+    state_obj.set(scope, flowing_key.into(), flowing_val.into());
+    let paused_key = v8::String::new(scope, "paused").unwrap();
+    let paused_val = v8::Boolean::new(scope, false);
+    state_obj.set(scope, paused_key.into(), paused_val.into());
     stream_obj.set(scope, state_key.into(), state_obj.into());
 
     retval.set(stream_obj.into());
@@ -143,9 +147,12 @@ fn readable_public_read_callback(
     if let Some(read_func_value) = this.get(scope, read_key.into()) {
         if read_func_value.is_function() {
             if let Ok(read_func) = v8::Local::<v8::Function>::try_from(read_func_value) {
-                let cb_args = args;
-                // 使用函数签名中的 retval 参数
-                read_func.call(scope, this, &cb_args, &mut retval);
+                let size_val = v8::Integer::new(scope, size as i32);
+                let call_args: &[v8::Local<v8::Value>] = &[size_val.into()];
+                if let Some(result) = read_func.call(scope, this.into(), call_args) {
+                    retval.set(result);
+                    return;
+                }
             }
         }
     }
