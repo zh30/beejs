@@ -129,11 +129,11 @@ impl PluginManager {
     /// Register Rust plugin
     pub fn register_rust_plugin(&self, plugin: Box<dyn Plugin>) -> Result<()> {
         let name = plugin.metadata().name.clone();
-        let arc_plugin = Arc::new(plugin);
+        let arc_plugin: Arc<dyn Plugin> = plugin.into();
 
         {
             let mut plugins = self.plugins.lock().unwrap();
-            plugins.insert(name, arc_plugin);
+            plugins.insert(name.clone(), arc_plugin);
         }
 
         println!("Registered Rust plugin: {}", name);

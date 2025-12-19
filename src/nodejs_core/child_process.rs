@@ -55,17 +55,19 @@ fn cp_exec_callback(
 
     // stdout
     let stdout_key = v8::String::new(scope, "stdout").unwrap();
-    child_obj.set(scope, stdout_key.into(), v8::String::new(scope, "mock output").unwrap().into());
+    let stdout_val = v8::String::new(scope, "mock output").unwrap();
+    child_obj.set(scope, stdout_key.into(), stdout_val.into());
 
     // stderr
     let stderr_key = v8::String::new(scope, "stderr").unwrap();
-    child_obj.set(scope, stderr_key.into(), v8::String::new(scope, "").unwrap().into());
+    let stderr_val = v8::String::new(scope, "").unwrap();
+    child_obj.set(scope, stderr_key.into(), stderr_val.into());
 
     // pid
     let pid_key = v8::String::new(scope, "pid").unwrap();
     let pid_key_val = v8::Integer::new(scope, 12345).into();
 
-    child_obj.set(scope, pid_key.into(), pid_key_val);;
+    child_obj.set(scope, pid_key.into(), pid_key_val);
 
     // on
     let on_func = v8::FunctionTemplate::new(scope, child_on_callback);
@@ -123,12 +125,13 @@ fn cp_exec_file_callback(
     let child_obj = v8::Object::new(scope);
 
     let stdout_key = v8::String::new(scope, "stdout").unwrap();
-    child_obj.set(scope, stdout_key.into(), v8::String::new(scope, "mock output").unwrap().into());
+    let stdout_val = v8::String::new(scope, "mock output").unwrap();
+    child_obj.set(scope, stdout_key.into(), stdout_val.into());
 
     let pid_key = v8::String::new(scope, "pid").unwrap();
     let pid_key_val = v8::Integer::new(scope, 12345).into();
 
-    child_obj.set(scope, pid_key.into(), pid_key_val);;
+    child_obj.set(scope, pid_key.into(), pid_key_val);
 
     retval.set(child_obj.into());
 }

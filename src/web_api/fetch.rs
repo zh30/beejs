@@ -180,10 +180,11 @@ fn fetch_callback(
     let status_key = v8::String::new(scope, "status").unwrap();
     let status_key_val = v8::Integer::new(scope, 200).into();
 
-    response_obj.set(scope, status_key.into(), status_key_val);;
+    response_obj.set(scope, status_key.into(), status_key_val);
 
     let status_text_key = v8::String::new(scope, "statusText").unwrap();
-    response_obj.set(scope, status_text_key.into(), v8::String::new(scope, "OK").unwrap().into());
+    let status_text_val = v8::String::new(scope, "OK").unwrap();
+    response_obj.set(scope, status_text_key.into(), status_text_val.into());
 
     retval.set(response_obj.into());
 }
@@ -204,23 +205,28 @@ fn response_constructor_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let status = args.get(0).to_uint32(scope).unwrap_or(200);
+    let status: u32 = args.get(0)
+        .to_integer(scope)
+        .map(|i| i.value() as u32)
+        .unwrap_or(200);
     let body = args.get(1);
 
     let response_obj = v8::Object::new(scope);
 
     let status_key = v8::String::new(scope, "status").unwrap();
-    response_obj.set(scope, status_key.into(), v8::Integer::new_from_unsigned(scope, status).into());
+    let status_val = v8::Integer::new_from_unsigned(scope, status).into();
+    response_obj.set(scope, status_key.into(), status_val);
 
     let ok_key = v8::String::new(scope, "ok").unwrap();
     let ok_key_val = v8::Boolean::new(scope, status >= 200 && status < 300).into();
 
-    response_obj.set(scope, ok_key.into(), ok_key_val);;
+    response_obj.set(scope, ok_key.into(), ok_key_val);
 
     if body.is_string() {
         let body_text = body.to_string(scope).unwrap().to_rust_string_lossy(scope);
         let body_key = v8::String::new(scope, "body").unwrap();
-        response_obj.set(scope, body_key.into(), v8::String::new(scope, &body_text).unwrap().into());
+        let body_val = v8::String::new(scope, &body_text).unwrap().into();
+        response_obj.set(scope, body_key.into(), body_val);
     }
 
     retval.set(response_obj.into());
@@ -236,7 +242,7 @@ fn headers_constructor_callback(
 
     // Add common headers methods
     let get_key = v8::String::new(scope, "get").unwrap();
-    let get_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+    let get_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
         let name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
         // TODO: Implement actual header storage and retrieval
         _rv.set(v8::String::new(scope, "").unwrap().into());

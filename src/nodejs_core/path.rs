@@ -186,7 +186,7 @@ fn path_resolve_callback(
     } else {
         // 从右向左处理路径
         for path in paths.into_iter().rev() {
-            if is_windows && (path.starts_with('\\') || (path.len() > 1 && path.chars().nth(1) == ':')) {
+            if is_windows && (path.starts_with('\\') || (path.len() > 1 && path.chars().nth(1) == Some(':'))) {
                 // 绝对路径
                 result = path.to_string();
                 break;
@@ -284,15 +284,15 @@ fn path_dirname_callback(
 
     if is_windows {
         // Windows路径处理
-        if path.len() == 2 && path.chars().nth(1) == ':' {
+        if path.len() == 2 && path.chars().nth(1) == Some(':') {
             result = path; // C: -> C:
-        } else if path.len() > 2 && path.chars().nth(1) == ':' {
-            result = &path[..2]; // C:\path -> C:\
+        } else if path.len() > 2 && path.chars().nth(1) == Some(':') {
+            result = path[..2].to_string(); // C:\path -> C:\
         } else if let Some(last_slash) = path.rfind('\\') {
             if last_slash == 0 {
                 result = "\\".to_string();
             } else {
-                result = &path[..last_slash];
+                result = path[..last_slash].to_string();
             }
         } else {
             result = ".".to_string();
@@ -305,7 +305,7 @@ fn path_dirname_callback(
             if last_slash == 0 {
                 result = "/".to_string();
             } else {
-                result = &path[..last_slash];
+                result = path[..last_slash].to_string();
             }
         } else {
             result = ".".to_string();
@@ -410,55 +410,55 @@ fn path_parse_callback(
     let result = v8::Object::new(scope);
 
     // root
-    let root = if is_windows {
-        if path.len() > 1 && path.chars().nth(1) == ':' {
-            &path[..3] // C:\
+    let root: String = if is_windows {
+        if path.len() > 1 && path.chars().nth(1) == Some(':') {
+            path[..3].to_string() // C:\
         } else if path.starts_with("\\\\") {
             "\\\\".to_string()
         } else {
             "".to_string()
         }
     } else {
-        if path.starts_with('/') { "/" } else { "" }
+        if path.starts_with('/') { "/".to_string() } else { "".to_string() }
     };
 
     // dir
-    let dir = if let Some(last_sep) = path.rfind(separator) {
+    let dir: String = if let Some(last_sep) = path.rfind(separator) {
         if last_sep == 0 {
-            if is_windows { "\\" } else { "/" }
+            if is_windows { "\\".to_string() } else { "/".to_string() }
         } else {
-            &path[..last_sep]
+            path[..last_sep].to_string()
         }
     } else {
-        ""
+        "".to_string()
     };
 
     // base
-    let base = if let Some(last_sep) = path.rfind(separator) {
+    let base: &str = if let Some(last_sep) = path.rfind(separator) {
         &path[last_sep + 1..]
     } else {
         &path
     };
 
     // ext
-    let ext = if let Some(dot_pos) = base.rfind('.') {
+    let ext: &str = if let Some(dot_pos) = base.rfind('.') {
         &base[dot_pos..]
     } else {
         ""
     };
 
     // name
-    let name = if !base.is_empty() && ext.len() < base.len() {
+    let name: &str = if !base.is_empty() && ext.len() < base.len() {
         &base[..base.len() - ext.len()]
     } else {
-        &base
+        base
     };
 
     let key_root = v8::String::new(scope, "root").unwrap();
-    let val_root = v8::String::new(scope, root).unwrap();
+    let val_root = v8::String::new(scope, &root).unwrap();
     result.set(scope, key_root.into(), val_root.into());
     let key_dir = v8::String::new(scope, "dir").unwrap();
-    let val_dir = v8::String::new(scope, dir).unwrap();
+    let val_dir = v8::String::new(scope, &dir).unwrap();
     result.set(scope, key_dir.into(), val_dir.into());
     let key_base = v8::String::new(scope, "base").unwrap();
     let val_base = v8::String::new(scope, base).unwrap();
@@ -506,12 +506,13 @@ fn path_format_callback(
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope)))
             .unwrap_or_default();
 
+        let file_part = if !base.is_empty() { base.clone() } else { format!("{}{}", name, ext) };
         let result = if !dir.is_empty() {
-            format!("{}/{}", dir, if !base.is_empty() { &base } else { &format!("{}{}", name, ext) })
+            format!("{}/{}", dir, file_part)
         } else if !root.is_empty() {
-            format!("{}{}", root, if !base.is_empty() { &base } else { &format!("{}{}", name, ext) })
+            format!("{}{}", root, file_part)
         } else {
-            if !base.is_empty() { base } else { format!("{}{}", name, ext) }
+            file_part
         };
 
         retval.set(v8::String::new(scope, &result).unwrap().into());
@@ -535,7 +536,7 @@ fn path_is_absolute_callback(
 
     let is_absolute = if is_windows {
         // Windows: C:\path or \\server\share
-        (path.len() > 1 && path.chars().nth(1) == ':') || path.starts_with("\\\\")
+        (path.len() > 1 && path.chars().nth(1) == Some(':')) || path.starts_with("\\\\")
     } else {
         // POSIX: /path
         path.starts_with('/')
@@ -567,8 +568,9 @@ fn normalize_path(path: &str, is_windows: bool) -> String {
     let separator = if is_windows { '\\' } else { '/' };
     let other_separator = if is_windows { '/' } else { '\\' };
 
-    let mut parts: Vec<&str> = path
-        .replace(other_separator, &separator.to_string())
+    let separator_str = separator.to_string();
+    let replaced_path = path.replace(other_separator, &separator_str);
+    let mut parts: Vec<&str> = replaced_path
         .split(separator)
         .filter(|s| !s.is_empty() && *s != ".")
         .collect();

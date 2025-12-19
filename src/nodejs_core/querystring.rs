@@ -68,7 +68,9 @@ fn qs_parse_callback(
 
     // 简化实现
     let result_obj = v8::Object::new(scope);
-    result_obj.set(scope, v8::String::new(scope, "parsed").unwrap().into(), v8::String::new(scope, "true").unwrap().into());
+    let _key_0 = v8::String::new(scope, "parsed").unwrap();
+    let _val_0 = v8::String::new(scope, "true").unwrap();
+    result_obj.set(scope, _key_0.into(), _val_0.into());
 
     retval.set(result_obj.into());
 }

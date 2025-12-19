@@ -398,11 +398,13 @@ fn os_cpus_callback(
 ) {
     // 获取CPU数量
     let cpu_count = num_cpus::get();
-    let cpus_array = v8::Array::new(scope, cpu_count as u32);
+    let cpus_array = v8::Array::new(scope, cpu_count as i32);
 
     for i in 0..cpu_count {
         let cpu_obj = v8::Object::new(scope);
-        cpu_obj.set(scope, v8::String::new(scope, "model").unwrap().into(), v8::String::new(scope, "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz").unwrap().into());
+        let _key_0 = v8::String::new(scope, "model").unwrap();
+        let val = v8::String::new(scope, "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz").unwrap().into();
+        cpu_obj.set(scope, _key_0.into(), val);
         let key_speed = v8::String::new(scope, "speed").unwrap();
         let val_speed = v8::Number::new(scope, 3600.0);
         cpu_obj.set(scope, key_speed.into(), val_speed.into());
@@ -424,7 +426,8 @@ fn os_cpus_callback(
         let val_irq = v8::Number::new(scope, 0.0);
         times_obj.set(scope, key_irq.into(), val_irq.into());
 
-        cpu_obj.set(scope, v8::String::new(scope, "times").unwrap().into(), times_obj.into());
+        let _key_1 = v8::String::new(scope, "times").unwrap();
+        cpu_obj.set(scope, _key_1.into(), times_obj.into());
         cpus_array.set_index(scope, i as u32, cpu_obj.into());
     }
 
@@ -437,7 +440,7 @@ fn os_freemem_callback(
     mut retval: v8::ReturnValue,
 ) {
     // 简化的可用内存
-    let freemem = 8 * 1024 * 1024 * 1024; // 8GB
+    let freemem = 8u64 * 1024 * 1024 * 1024; // 8GB
     retval.set(v8::Number::new(scope, freemem as f64).into());
 }
 
@@ -447,7 +450,7 @@ fn os_totalmem_callback(
     mut retval: v8::ReturnValue,
 ) {
     // 简化的总内存
-    let totalmem = 16 * 1024 * 1024 * 1024; // 16GB
+    let totalmem = 16u64 * 1024 * 1024 * 1024; // 16GB
     retval.set(v8::Number::new(scope, totalmem as f64).into());
 }
 
@@ -456,7 +459,7 @@ fn os_homedir_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    if let Ok(home_dir) = dirs::home_dir() {
+    if let Some(home_dir) = dirs::home_dir() {
         retval.set(v8::String::new(scope, &home_dir.to_string_lossy()).unwrap().into());
     } else {
         retval.set(v8::String::new(scope, "/home/user").unwrap().into());
@@ -501,8 +504,10 @@ fn os_network_interfaces_callback(
     loopback_obj.set(scope, key_internal.into(), val_internal.into());
     loopback_array.set_index(scope, 0, loopback_obj.into());
 
-    interfaces_obj.set(scope, v8::String::new(scope, "lo").unwrap().into(), loopback_array.into());
-    interfaces_obj.set(scope, v8::String::new(scope, "lo0").unwrap().into(), loopback_array.into());
+    let _key_2 = v8::String::new(scope, "lo").unwrap();
+    interfaces_obj.set(scope, _key_2.into(), loopback_array.into());
+    let _key_3 = v8::String::new(scope, "lo0").unwrap();
+    interfaces_obj.set(scope, _key_3.into(), loopback_array.into());
 
     retval.set(interfaces_obj.into());
 }

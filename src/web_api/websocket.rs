@@ -33,7 +33,7 @@ pub struct WebSocketConfig {
 }
 
 /// WebSocket structure
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct WebSocket {
     pub url: String,
     pub ready_state: ReadyState,
@@ -119,7 +119,9 @@ pub fn setup_websocket_api(
     let websocket_constructor = websocket_template.get_function(scope).unwrap();
 
     // Add WebSocket prototype methods
-    let proto = websocket_constructor.prototype_or_null(scope);
+    let global = context.global(scope);
+    let proto_key = v8::String::new(scope, "WebSocket").unwrap();
+    let proto = global.get(scope, proto_key.into()).and_then(|p| p.to_object(scope));
     if let Some(proto) = proto {
         // send method
         let send_key = v8::String::new(scope, "send").unwrap();

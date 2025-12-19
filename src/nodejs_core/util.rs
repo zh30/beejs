@@ -116,7 +116,7 @@ fn util_inspect_callback(
         let show_hidden_key = v8::String::new(scope, "showHidden").unwrap();
         options.to_object(scope).and_then(|obj| {
             obj.get(scope, show_hidden_key.into())
-        }).unwrap_or(v8::Boolean::new(scope, false).into()).to_boolean().unwrap()
+        }).map(|v| v.to_boolean(scope).is_true()).unwrap_or(false)
     } else {
         false
     };
@@ -136,7 +136,7 @@ fn util_inspect_callback(
     } else if object.is_number() {
         object.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope)
     } else if object.is_boolean() {
-        object.to_boolean(scope).unwrap().to_string()
+        if object.to_boolean(scope).is_true() { "true".to_string() } else { "false".to_string() }
     } else if object.is_null() {
         "null".to_string()
     } else if object.is_undefined() {
@@ -183,7 +183,7 @@ fn util_format_callback(
                         } else if arg.is_number() {
                             arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope)
                         } else if arg.is_boolean() {
-                            arg.to_boolean(scope).unwrap().to_string()
+                            if arg.to_boolean(scope).is_true() { "true".to_string() } else { "false".to_string() }
                         } else if arg.is_null() {
                             "null".to_string()
                         } else if arg.is_undefined() {
@@ -259,7 +259,7 @@ fn util_format_callback(
         } else if arg.is_number() {
             result.push_str(&arg.to_number(scope).unwrap().to_string(scope).unwrap().to_rust_string_lossy(scope));
         } else if arg.is_boolean() {
-            result.push_str(&arg.to_boolean(scope).unwrap().to_string());
+            result.push_str(if arg.to_boolean(scope).is_true() { "true" } else { "false" });
         } else {
             result.push_str("[Object]");
         }
@@ -468,7 +468,8 @@ fn util_debuglog_callback(
 
     // 保存section
     let section_key = v8::String::new(scope, "_section").unwrap();
-    debuglog_instance.set(scope, section_key.into(), v8::String::new(scope, &section).unwrap().into());
+    let section_val = v8::String::new(scope, &section).unwrap();
+    debuglog_instance.set(scope, section_key.into(), section_val.into());
 
     retval.set(debuglog_instance.into());
 }

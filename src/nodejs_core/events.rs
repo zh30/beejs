@@ -34,7 +34,8 @@ pub fn setup_events_api(
     let global = context.global(scope);
     let events_key = v8::String::new(scope, "events").unwrap();
     let events_obj = v8::Object::new(scope);
-    events_obj.set(scope, v8::String::new(scope, "EventEmitter").unwrap().into(), event_emitter_func.into());
+    let _key_0 = v8::String::new(scope, "EventEmitter").unwrap();
+    events_obj.set(scope, _key_0.into(), event_emitter_func.into());
     global.set(scope, events_key.into(), events_obj.into());
 
     Ok(())
@@ -135,7 +136,7 @@ fn event_emitter_on_callback(
     let listeners_key = v8::String::new(scope, "_listeners").unwrap();
     let existing_listeners = this.get(scope, listeners_key.into());
 
-    let mut listeners_map = HashMap::new();
+    let mut listeners_map: HashMap<String, Vec<v8::Global<v8::Function>>> = HashMap::new();
 
     if let Some(arr) = existing_listeners.and_then(|v| v.to_object(scope)) {
         // 转换现有的监听器
@@ -162,7 +163,8 @@ fn event_emitter_on_callback(
 
     // 在对象上设置属性标记
     let prop_key = v8::String::new(scope, &event_name).unwrap();
-    this.set(scope, prop_key.into(), v8::Boolean::new(scope, true).into());
+    let val = v8::Boolean::new(scope, true).into();
+    this.set(scope, prop_key.into(), val);
 
     retval.set(this.into());
 }
@@ -405,12 +407,12 @@ fn event_emitter_set_max_callback(
         .get(0)
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, 10))
-        .value();
+        .value() as i32;
 
     let max_key = v8::String::new(scope, "_maxListeners").unwrap();
     let max_key_val = v8::Integer::new(scope, n).into();
 
-    this.set(scope, max_key.into(), max_key_val);;
+    this.set(scope, max_key.into(), max_key_val);
 
     retval.set(this.into());
 }

@@ -54,7 +54,7 @@ impl Url {
                     let (h, p) = host_part.split_at(port_pos);
                     (h.to_string(), p.to_string())
                 } else {
-                    (host_part, "".to_string())
+                    (host_part.clone(), "".to_string())
                 };
 
                 let origin = format!("{}://{}", protocol, host_part);
@@ -241,31 +241,40 @@ fn url_constructor_callback(
 
         // Store URL data
         let href_key = v8::String::new(scope, "href").unwrap();
-        url_obj.set(scope, href_key.into(), v8::String::new(scope, &url.href).unwrap().into());
+        let href_val = v8::String::new(scope, &url.href).unwrap();
+        url_obj.set(scope, href_key.into(), href_val.into());
 
         let protocol_key = v8::String::new(scope, "protocol").unwrap();
-        url_obj.set(scope, protocol_key.into(), v8::String::new(scope, &url.protocol).unwrap().into());
+        let protocol_val = v8::String::new(scope, &url.protocol).unwrap();
+        url_obj.set(scope, protocol_key.into(), protocol_val.into());
 
         let host_key = v8::String::new(scope, "host").unwrap();
-        url_obj.set(scope, host_key.into(), v8::String::new(scope, &url.host).unwrap().into());
+        let host_val = v8::String::new(scope, &url.host).unwrap();
+        url_obj.set(scope, host_key.into(), host_val.into());
 
         let hostname_key = v8::String::new(scope, "hostname").unwrap();
-        url_obj.set(scope, hostname_key.into(), v8::String::new(scope, &url.hostname).unwrap().into());
+        let hostname_val = v8::String::new(scope, &url.hostname).unwrap();
+        url_obj.set(scope, hostname_key.into(), hostname_val.into());
 
         let port_key = v8::String::new(scope, "port").unwrap();
-        url_obj.set(scope, port_key.into(), v8::String::new(scope, &url.port).unwrap().into());
+        let port_val = v8::String::new(scope, &url.port).unwrap();
+        url_obj.set(scope, port_key.into(), port_val.into());
 
         let pathname_key = v8::String::new(scope, "pathname").unwrap();
-        url_obj.set(scope, pathname_key.into(), v8::String::new(scope, &url.pathname).unwrap().into());
+        let pathname_val = v8::String::new(scope, &url.pathname).unwrap();
+        url_obj.set(scope, pathname_key.into(), pathname_val.into());
 
         let search_key = v8::String::new(scope, "search").unwrap();
-        url_obj.set(scope, search_key.into(), v8::String::new(scope, &url.search).unwrap().into());
+        let search_val = v8::String::new(scope, &url.search).unwrap();
+        url_obj.set(scope, search_key.into(), search_val.into());
 
         let hash_key = v8::String::new(scope, "hash").unwrap();
-        url_obj.set(scope, hash_key.into(), v8::String::new(scope, &url.hash).unwrap().into());
+        let hash_val = v8::String::new(scope, &url.hash).unwrap();
+        url_obj.set(scope, hash_key.into(), hash_val.into());
 
         let origin_key = v8::String::new(scope, "origin").unwrap();
-        url_obj.set(scope, origin_key.into(), v8::String::new(scope, &url.origin).unwrap().into());
+        let origin_val = v8::String::new(scope, &url.origin).unwrap();
+        url_obj.set(scope, origin_key.into(), origin_val.into());
 
         retval.set(url_obj.into());
     } else {
@@ -288,7 +297,7 @@ fn url_search_params_constructor_callback(
     let proto = v8::Object::new(scope);
 
     let get_key = v8::String::new(scope, "get").unwrap();
-    let get_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+    let get_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
         let name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
         _rv.set(v8::String::new(scope, "").unwrap().into());
     });

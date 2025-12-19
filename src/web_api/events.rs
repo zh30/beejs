@@ -44,7 +44,7 @@ impl Event {
 }
 
 /// EventTarget structure
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct EventTarget {
     listeners: Arc<Mutex<HashMap<String, Vec<Box<dyn Fn(&Event) + Send + Sync>>>>>,
 }

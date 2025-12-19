@@ -84,7 +84,7 @@ pub fn setup_buffer_api(
     // );
 
     // length 属性
-    let length_getter = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+    let length_getter = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
         let this = args.this();
         let length_key = v8::String::new(scope, "_length").unwrap();
         let length = this.get(scope, length_key.into()).unwrap_or(v8::Integer::new(scope, 0).into());
@@ -115,7 +115,7 @@ fn buffer_constructor_callback(
         .get(0)
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, 0))
-        .value() as isize;
+        .value() as usize;
 
     let buffer = v8::ArrayBuffer::new(scope, size);// TODO: Fix V8 API - backing_store() not available
 
@@ -167,7 +167,8 @@ fn buffer_from_callback(
         // }.copy_from_slice(&bytes);
 
         let length_key = v8::String::new(scope, "_length").unwrap();
-        buffer.set(scope, length_key.into(), v8::Integer::new(scope, bytes.len() as i32).into());
+        let len_val = v8::Integer::new(scope, bytes.len() as i32).into();
+    buffer.set(scope, length_key.into(), len_val);
 
         retval.set(buffer.into());
     } else if arg.is_array() {
@@ -177,7 +178,7 @@ fn buffer_from_callback(
         let mut bytes = vec![0u8; length];
 
         for i in 0..length {
-            if let Some(val) = arr.get_index(scope, i) {
+            if let Some(val) = arr.get_index(scope, i as u32) {
                 if let Some(int) = val.to_integer(scope) {
                     bytes[i] = int.value() as u8;
                 }
@@ -214,7 +215,7 @@ fn buffer_alloc_callback(
         .get(0)
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, 0))
-        .value() as isize;
+        .value() as usize;
 
     let fill_value = args
         .get(1)
@@ -248,18 +249,18 @@ fn buffer_concat_callback(
         .get(1)
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, 0))
-        .value() as isize;
+        .value() as usize;
 
     if list.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(list) {
-            let mut combined_data = Vec::new();
-            let mut calculated_length = 0;
+            let mut combined_data: Vec<u8> = Vec::new();
+            let mut calculated_length: usize = 0;
 
             for i in 0..arr.length() {
                 if let Ok(buf) = v8::Local::<v8::Array>::try_from(arr.get_index(scope, i).unwrap()) {
                     let length_key = v8::String::new(scope, "_length").unwrap();
                     if let Some(len_val) = buf.get(scope, length_key.into()).and_then(|v| v.to_integer(scope)) {
-                        let len = len_val.value() as isize;
+                        let len = len_val.value() as usize;
                         calculated_length += len;
 
                         // TODO: Fix V8 API - ArrayBuffer access needs redesign
@@ -356,16 +357,16 @@ fn buffer_to_string_callback(
         .get(2)
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, -1))
-        .value() as isize;
+        .value();
 
     let length_key = v8::String::new(scope, "_length").unwrap();
     let buffer_length = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value() as isize))
+        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
 
-    let actual_end = if end == -1 { buffer_length } else { end.min(buffer_length as isize) as usize };
-    let actual_start = start.min(buffer_length);
+    let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
+    let actual_start = (start as i64).min(buffer_length) as usize;
 
     if actual_start >= actual_end {
         retval.set(v8::String::new(scope, "").unwrap().into());
@@ -387,7 +388,7 @@ fn buffer_to_json_callback(
     let length_key = v8::String::new(scope, "_length").unwrap();
     let buffer_length = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value() as isize))
+        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
 
     // TODO: Fix V8 API - ArrayBuffer access needs redesign
@@ -418,22 +419,22 @@ fn buffer_fill_callback(
         .get(1)
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, 0))
-        .value() as isize;
+        .value();
 
     let end = args
         .get(2)
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, -1))
-        .value() as isize;
+        .value();
 
     let length_key = v8::String::new(scope, "_length").unwrap();
     let buffer_length = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value() as isize))
+        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
 
-    let actual_end = if end == -1 { buffer_length } else { end.min(buffer_length as isize) as usize };
-    let actual_start = start.min(buffer_length);
+    let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
+    let actual_start = start.min(buffer_length) as usize;
 
     let fill_value = if value.is_number() {
         value.to_integer(scope).unwrap().value() as u8
@@ -466,16 +467,16 @@ fn buffer_slice_callback(
         .get(1)
         .to_integer(scope)
         .unwrap_or(v8::Integer::new(scope, -1))
-        .value() as isize;
+        .value();
 
     let length_key = v8::String::new(scope, "_length").unwrap();
     let buffer_length = this
         .get(scope, length_key.into())
-        .and_then(|v| v.to_integer(scope).map(|i| i.value() as isize))
+        .and_then(|v| v.to_integer(scope).map(|i| i.value()))
         .unwrap_or(0);
 
-    let actual_end = if end == -1 { buffer_length } else { end.min(buffer_length as isize) as usize };
-    let actual_start = start.min(buffer_length);
+    let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
+    let actual_start = (start as i64).min(buffer_length) as usize;
     let slice_length = if actual_end > actual_start { actual_end - actual_start } else { 0 };
 
     let new_buffer = v8::ArrayBuffer::new(scope, slice_length);
