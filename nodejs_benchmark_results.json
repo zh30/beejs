@@ -1,0 +1,108 @@
+{
+  "runtime": "Node.js",
+  "version": "v24.12.0",
+  "timestamp": "2025-12-19T09:19:58.930Z",
+  "platform": {
+    "os": "darwin",
+    "arch": "arm64",
+    "cpuCount": 12
+  },
+  "results": [
+    {
+      "name": "Startup Time",
+      "iterations": 1000,
+      "mean": 0.004,
+      "median": 0.002,
+      "min": 0.001,
+      "max": 0.267,
+      "stdDev": 0.013,
+      "throughput": 259963.49,
+      "avgMemoryBytes": 4830968,
+      "avgMemoryMB": 4.61
+    },
+    {
+      "name": "Simple Arithmetic",
+      "iterations": 1000,
+      "mean": 0.011,
+      "median": 0.01,
+      "min": 0.008,
+      "max": 0.062,
+      "stdDev": 0.005,
+      "throughput": 90010.34,
+      "avgMemoryBytes": 4801988,
+      "avgMemoryMB": 4.58
+    },
+    {
+      "name": "Fibonacci (n=30)",
+      "iterations": 1000,
+      "mean": 11.346,
+      "median": 11.235,
+      "min": 10.362,
+      "max": 26.13,
+      "stdDev": 0.95,
+      "throughput": 88.14,
+      "avgMemoryBytes": 4777052,
+      "avgMemoryMB": 4.56
+    },
+    {
+      "name": "Array Operations",
+      "iterations": 1000,
+      "mean": 0.141,
+      "median": 0.135,
+      "min": 0.118,
+      "max": 0.461,
+      "stdDev": 0.021,
+      "throughput": 7071.28,
+      "avgMemoryBytes": 6572376,
+      "avgMemoryMB": 6.27
+    },
+    {
+      "name": "Object Operations",
+      "iterations": 1000,
+      "mean": 1.538,
+      "median": 1.474,
+      "min": 1.312,
+      "max": 5.761,
+      "stdDev": 0.285,
+      "throughput": 650.37,
+      "avgMemoryBytes": 18991784,
+      "avgMemoryMB": 18.11
+    },
+    {
+      "name": "String Operations",
+      "iterations": 1000,
+      "mean": 0.066,
+      "median": 0.064,
+      "min": 0.056,
+      "max": 0.298,
+      "stdDev": 0.013,
+      "throughput": 15056.55,
+      "avgMemoryBytes": 18041458,
+      "avgMemoryMB": 17.21
+    },
+    {
+      "name": "JSON Processing",
+      "iterations": 1000,
+      "mean": 0.075,
+      "median": 0.072,
+      "min": 0.063,
+      "max": 0.214,
+      "stdDev": 0.013,
+      "throughput": 13418.76,
+      "avgMemoryBytes": 18336214,
+      "avgMemoryMB": 17.49
+    },
+    {
+      "name": "Async Operations",
+      "iterations": 1000,
+      "mean": 0,
+      "median": 0,
+      "min": 0,
+      "max": 0.013,
+      "stdDev": 0.001,
+      "throughput": 2016747.07,
+      "avgMemoryBytes": 15601732,
+      "avgMemoryMB": 14.88
+    }
+  ]
+}
