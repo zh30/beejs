@@ -41,6 +41,20 @@ pub struct RuntimeLite {
 unsafe impl Send for RuntimeLite {}
 unsafe impl Sync for RuntimeLite {}
 
+// Implement Clone for RuntimeLite - all fields are Arc or atomic types
+impl Clone for RuntimeLite {
+    fn clone(&self) -> Self {
+        Self {
+            execution_count: Arc::clone(&self.execution_count),
+            script_cache: Arc::clone(&self.script_cache),
+            cache_hits: Arc::clone(&self.cache_hits),
+            cache_misses: Arc::clone(&self.cache_misses),
+            v8_snapshot: self.v8_snapshot.clone(),
+            memory_pool: Arc::clone(&self.memory_pool),
+        }
+    }
+}
+
 impl RuntimeLite {
     /// Create a new lightweight runtime with minimal initialization
     pub fn new(verbose: bool) -> Result<Self> {

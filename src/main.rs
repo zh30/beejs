@@ -9,7 +9,6 @@ use std::time::Instant;
 use beejs::cli::commands::{CliApp, SubCommand};
 use beejs::cli::{ExecutionContext, ExecutorConfig, ScriptExecutor, FileType, shebang};
 use beejs::RuntimeLite;
-use beejs::debugger::DebugSession;
 
 /// CLI entry point
 fn main() -> Result<()> {
@@ -347,27 +346,21 @@ fn print_no_command_help() {
 /// Run debug session
 fn run_debug(
     runtime: RuntimeLite,
-    cmd: beejs::cli::commands::DebugCommand,
+    cmd: beejs::cli::commands::SubCommand,
     verbose: bool,
 ) -> Result<()> {
+    let cmd = match cmd {
+        SubCommand::Debug(cmd) => cmd,
+        _ => return Err(anyhow::anyhow!("Invalid debug command")),
+    };
     if verbose {
         println!("🐛 Debug session configuration:");
-        match cmd {
-            beejs::cli::commands::DebugCommand::Script { ref file, break_at, port, web } => {
-                println!("   Script: {:?}", file);
-                println!("   Break at line: {:?}", break_at);
-                println!("   Port: {}", port);
-                println!("   Web UI: {}", web);
-            }
-            beejs::cli::commands::DebugCommand::Attach { pid, port } => {
-                println!("   Attach to PID: {}", pid);
-                println!("   Port: {}", port);
-            }
-            beejs::cli::commands::DebugCommand::Inspect { port, web } => {
-                println!("   Inspect mode");
-                println!("   Port: {}", port);
-                println!("   Web UI: {}", web);
-            }
+        println!("   Script: {:?}", cmd.file);
+        println!("   Break at line: {:?}", cmd.break_at);
+        println!("   Port: {}", cmd.port);
+        println!("   Web UI: {}", cmd.web);
+        if let Some(pid) = cmd.pid {
+            println!("   Attach to PID: {}", pid);
         }
     }
 

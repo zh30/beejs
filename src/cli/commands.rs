@@ -48,7 +48,26 @@ pub enum SubCommand {
     Bundle(BundleCommand),
 
     /// Debug a script with interactive debugger
-    Debug(DebugCommand),
+    Debug {
+        /// Script file to debug
+        file: Option<PathBuf>,
+
+        /// Break at line number on startup
+        #[arg(short, long)]
+        break_at: Option<u32>,
+
+        /// Debug server port
+        #[arg(short, long, default_value = "9229")]
+        port: u16,
+
+        /// Enable Web UI debugger
+        #[arg(short, long)]
+        web: bool,
+
+        /// Attach to a running process
+        #[arg(short, long)]
+        pid: Option<u32>,
+    },
 
     /// Version information
     Version,
@@ -183,50 +202,6 @@ pub enum BundleTarget {
     Bun,
     /// Neutral (no runtime-specific code)
     Neutral,
-}
-
-/// Debug command - interactive debugging
-#[derive(Parser, Debug)]
-pub enum DebugCommand {
-    /// Debug a script file
-    Script {
-        /// Script file to debug
-        file: PathBuf,
-
-        /// Break at line number on startup
-        #[arg(short, long)]
-        break_at: Option<u32>,
-
-        /// Debug server port
-        #[arg(short, long, default_value = "9229")]
-        port: u16,
-
-        /// Enable Web UI debugger
-        #[arg(short, long)]
-        web: bool,
-    },
-
-    /// Attach to a running process for debugging
-    Attach {
-        /// Process ID to attach to
-        #[arg(short, long)]
-        pid: u32,
-
-        /// Debug server port
-        #[arg(short, long, default_value = "9229")]
-        port: u16,
-    },
-
-    /// Start inspect mode without specifying a file
-    Inspect {
-        /// Debug server port
-        #[arg(short, long, default_value = "9229")]
-        port: u16,
-
-        /// Enable Web UI debugger
-        #[arg(short, long)]
-        web: bool,
-    },
 }
 
 

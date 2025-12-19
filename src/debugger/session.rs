@@ -11,12 +11,11 @@ use rusty_v8 as v8;
 use crate::{RuntimeLite, debugger::{DebuggerEngine, DebugConfig}};
 use crate::debugger::engine::SimpleEventListener;
 use crate::debugger::cli::{DebugConsole, DebugCliCommand};
-use crate::cli::commands::DebugCommand;
 
 /// Debug session that manages the runtime and debugger
 pub struct DebugSession {
     runtime: RuntimeLite,
-    debugger: Arc<DebuggerEngine>,
+    debugger: Arc<Mutex<DebuggerEngine>>,
     event_listener: Arc<SimpleEventListener>,
     script_path: Option<PathBuf>,
     debug_port: u16,
@@ -27,17 +26,20 @@ impl DebugSession {
     /// Create a new debug session
     pub fn new(
         runtime: RuntimeLite,
-        cmd: DebugCommand,
+        cmd: crate::cli::commands::SubCommand,
     ) -> Result<Self> {
-        let (script_path, debug_port, web_ui) = match cmd {
-            DebugCommand::Script { file, port, .. } => (Some(file), port, false),
-            DebugCommand::Attach { port, .. } => (None, port, false),
-            DebugCommand::Inspect { port, web } => (None, port, web),
+        let cmd = match cmd {
+            crate::cli::commands::SubCommand::Debug(cmd) => cmd,
+            _ => return Err(anyhow::anyhow!("Invalid debug command")),
         };
+
+        let script_path = cmd.file;
+        let debug_port = cmd.port;
+        let web_ui = cmd.web;
 
         // Create debugger engine with configuration
         let config = DebugConfig::default();
-        let debugger = Arc::new(DebuggerEngine::new(config));
+        let debugger = Arc::new(Mutex::new(DebuggerEngine::new(config)));
         let event_listener = Arc::new(SimpleEventListener::new());
 
         Ok(Self {
@@ -112,7 +114,7 @@ impl DebugSession {
         println!("   Type 'help' for available commands\n");
 
         // Create debug console
-        let console = DebugConsole::new(
+        let mut console = DebugConsole::new(
             Arc::clone(&self.debugger),
             Arc::new(Mutex::new(self.runtime.clone())),
         );

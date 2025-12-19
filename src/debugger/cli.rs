@@ -78,7 +78,7 @@ impl DebugConsole {
 
             // Parse and execute
             match self.execute_command(command).await {
-                Ok(DebugCliCommand::Quit) | Ok(DebugCliCommand::Exit) => {
+                Ok(DebugCliCommand::Quit) => {
                     println!("👋 Exiting debugger...");
                     break;
                 }

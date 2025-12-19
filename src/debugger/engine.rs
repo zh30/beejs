@@ -109,7 +109,7 @@ impl DebuggerEngine {
         // Note: V8 Debug API is not available in rusty_v8 0.22
         // This will be implemented with proper stubs in future stages
 
-        Ok(())
+        DebugResult::ok(())
     }
 
     /// Set a breakpoint
@@ -124,7 +124,7 @@ impl DebuggerEngine {
             let mut stats = self.stats.lock().unwrap();
             stats.breakpoints_set += 1;
         }
-        Ok(breakpoint)
+        DebugResult::ok(breakpoint)
     }
 
     /// Set a conditional breakpoint
@@ -146,21 +146,21 @@ impl DebuggerEngine {
             let mut stats = self.stats.lock().unwrap();
             stats.breakpoints_set += 1;
         }
-        Ok(breakpoint)
+        DebugResult::ok(breakpoint)
     }
 
     /// Remove a breakpoint
-    pub fn remove_breakpoint(&self, id: &str) -> DebugResult<()> {
+    pub fn remove_breakpoint(&mut self, id: &str) -> DebugResult<()> {
         self.breakpoint_manager.remove_breakpoint(id)
     }
 
     /// Enable a breakpoint
-    pub fn enable_breakpoint(&self, id: &str) -> DebugResult<()> {
+    pub fn enable_breakpoint(&mut self, id: &str) -> DebugResult<()> {
         self.breakpoint_manager.enable_breakpoint(id)
     }
 
     /// Disable a breakpoint
-    pub fn disable_breakpoint(&self, id: &str) -> DebugResult<()> {
+    pub fn disable_breakpoint(&mut self, id: &str) -> DebugResult<()> {
         self.breakpoint_manager.disable_breakpoint(id)
     }
 
@@ -168,7 +168,7 @@ impl DebuggerEngine {
     pub fn continue_execution(&self) -> DebugResult<()> {
         let mut state = self.state.lock().unwrap();
         *state = DebugState::Running;
-        Ok(())
+        DebugResult::ok(())
     }
 
     /// Step over
@@ -176,7 +176,7 @@ impl DebuggerEngine {
         let mut state = self.state.lock().unwrap();
         *state = DebugState::Stepping;
         self.step_type = Some(StepType::Over);
-        Ok(())
+        DebugResult::ok(())
     }
 
     /// Step into
@@ -184,7 +184,7 @@ impl DebuggerEngine {
         let mut state = self.state.lock().unwrap();
         *state = DebugState::Stepping;
         self.step_type = Some(StepType::Into);
-        Ok(())
+        DebugResult::ok(())
     }
 
     /// Step out
@@ -192,7 +192,7 @@ impl DebuggerEngine {
         let mut state = self.state.lock().unwrap();
         *state = DebugState::Stepping;
         self.step_type = Some(StepType::Out);
-        Ok(())
+        DebugResult::ok(())
     }
 
     /// Next (step to next statement)
@@ -200,21 +200,21 @@ impl DebuggerEngine {
         let mut state = self.state.lock().unwrap();
         *state = DebugState::Stepping;
         self.step_type = Some(StepType::Next);
-        Ok(())
+        DebugResult::ok(())
     }
 
     /// Pause execution
     pub fn pause(&self) -> DebugResult<()> {
         let mut state = self.state.lock().unwrap();
         *state = DebugState::Paused;
-        Ok(())
+        DebugResult::ok(())
     }
 
     /// Terminate debugging
     pub fn terminate(&self) -> DebugResult<()> {
         let mut state = self.state.lock().unwrap();
         *state = DebugState::Terminated;
-        Ok(())
+        DebugResult::ok(())
     }
 
     /// Get current execution state

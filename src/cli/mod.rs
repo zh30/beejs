@@ -12,7 +12,7 @@ pub use file_watcher::FileWatcher;
 pub use repl::Repl;
 pub use package_json::PackageJson;
 pub use enhanced_cli::EnhancedArgs;
-pub use commands::{CliApp, SubCommand, RunCommand, TestCommand, ReplCommand, BundleCommand, DebugCommand};
+pub use commands::{CliApp, SubCommand, RunCommand, TestCommand, ReplCommand, BundleCommand};
 pub use script_executor::{
     FileType, ModuleSystem, ExecutionContext, ExecutorConfig, ScriptExecutor,
     detect_file_type, shebang, args,
