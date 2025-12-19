@@ -3,9 +3,70 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-19)**: 🔄 Stage 55.3 进行中 - 性能优化实现 (55.3.1 JIT优化已完成)
+**当前状态 (2025-12-19)**: 🔄 Stage 56.2 完成 - 脚本执行引擎
 
 ## 最新更新 (2025-12-19)
+
+### ✅ Stage 56.2: 脚本执行引擎 (2025-12-19)
+**进度**: ✅ 完成
+
+#### 完成功能:
+1. **文件类型检测系统** - 完整的文件类型识别
+   - JavaScript (.js), ES Module (.mjs), CommonJS (.cjs)
+   - TypeScript (.ts, .tsx, .mts, .cts)
+   - JSON (.json)
+   - 自动模块系统检测 (ESModule/CommonJS/Auto)
+
+2. **执行上下文注入** - Node.js 兼容的全局变量
+   - `__dirname` - 脚本所在目录
+   - `__filename` - 脚本完整路径
+   - `process.argv` - 命令行参数数组
+   - `process.cwd()` - 当前工作目录
+
+3. **Shebang 支持** - 跨运行时兼容
+   - 检测 `#!/usr/bin/env beejs`
+   - 兼容 Node.js 和 Bun 的 shebang
+   - 自动剥离 shebang 行后执行
+
+4. **参数传递系统** - 灵活的参数处理
+   - 支持 `--` 分隔符区分运行时参数和脚本参数
+   - 识别带值选项 (`--config value`)
+   - 完整的 process.argv 填充
+
+5. **完整测试套件** - 42 个测试用例
+   - 文件类型检测测试 (10 个)
+   - 执行上下文测试 (6 个)
+   - 模块解析测试 (6 个)
+   - 参数解析测试 (5 个)
+   - 脚本执行器测试 (9 个)
+   - Shebang 检测测试 (6 个)
+
+#### 新增文件:
+- `src/cli/script_executor.rs` (400+ 行) - 脚本执行引擎核心
+- `tests/stage_56_2_script_executor_tests.rs` (700+ 行) - 完整测试套件
+- `test_stage56_2.js` - 功能验证脚本
+
+#### 技术特点:
+- TDD 开发流程 (先写测试再实现)
+- ExecutionContext 统一上下文管理
+- ScriptExecutor 可配置执行器
+- 与 Bun CLI 高度兼容
+
+**提交**: dec322e - feat(stage56.2): 完成脚本执行引擎 - 核心执行上下文支持
+
+---
+
+### ✅ Stage 56.1: CLI 核心架构 (2025-12-19)
+**进度**: ✅ 完成
+
+#### 完成功能:
+- 基于 clap 的子命令结构 (run, test, repl, bundle)
+- 全局选项支持 (-v, --config, --env)
+- Bun 兼容的命令行接口
+
+**提交**: beffcf7 - feat(stage56.1): 完成 CLI 核心架构
+
+---
 
 ### ✅ Stage 54.2: ONNX Runtime 集成 (2025-12-19)
 **进度**: ✅ 完成
