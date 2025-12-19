@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_url_parse_absolute() {
-        let url = Url::parse("https://example.com:8080/path/to/page?query=value#hash").unwrap();
+        let url = Url::parse("https://example.com:8080/path/to/page?query=value#hash", None).unwrap();
 
         assert_eq!(url.protocol, "https");
         assert_eq!(url.host, "example.com:8080");

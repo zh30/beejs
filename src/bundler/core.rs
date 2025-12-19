@@ -373,7 +373,16 @@ mod tests {
 
     #[test]
     fn test_add_module() {
-        let options = BuildOptions::default();
+        let options = BuildOptions {
+            minify: false,
+            sourcemap: true,
+            target: "es2020".to_string(),
+            format: "esm".to_string(),
+            splitting: true,
+            tree_shaking: false,
+            optimization_level: 1,
+            parallel_jobs: 4,
+        };
         let bundler = Bundler::new(options);
 
         let module = Module {
@@ -391,7 +400,16 @@ mod tests {
 
     #[test]
     fn test_analyze_dependencies() {
-        let options = BuildOptions::default();
+        let options = BuildOptions {
+            minify: false,
+            sourcemap: true,
+            target: "es2020".to_string(),
+            format: "esm".to_string(),
+            splitting: false,
+            tree_shaking: true,
+            optimization_level: 1,
+            parallel_jobs: 4,
+        };
         let bundler = Bundler::new(options);
 
         let code = r#"
@@ -409,7 +427,16 @@ mod tests {
 
     #[test]
     fn test_typescript_to_javascript() {
-        let options = BuildOptions::default();
+        let options = BuildOptions {
+            minify: true,
+            sourcemap: false,
+            target: "es2020".to_string(),
+            format: "cjs".to_string(),
+            splitting: false,
+            tree_shaking: true,
+            optimization_level: 3,
+            parallel_jobs: 1,
+        };
         let bundler = Bundler::new(options);
 
         let ts_code = r#"
@@ -425,7 +452,16 @@ mod tests {
 
     #[test]
     fn test_build_stats() {
-        let options = BuildOptions::default();
+        let options = BuildOptions {
+            minify: true,
+            sourcemap: true,
+            target: "es2020".to_string(),
+            format: "esm".to_string(),
+            splitting: true,
+            tree_shaking: true,
+            optimization_level: 3,
+            parallel_jobs: 8,
+        };
         let bundler = Bundler::new(options);
 
         let module = Module {

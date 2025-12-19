@@ -353,7 +353,7 @@ mod tests {
     #[test]
     fn test_emit_event() {
         let manager = PluginManager::new(false);
-        let plugin = Box::new(TestRustPlugin);
+        let plugin = Box::new(TestRustPlugin::new());
         manager.register_rust_plugin(plugin).unwrap();
 
         assert!(manager.emit_event(PluginEvent::Init).is_ok());
