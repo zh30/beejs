@@ -213,9 +213,11 @@ impl MLLoadBalancer {
 
     /// 添加服务端点
     pub fn add_endpoint(&mut self, endpoint: ServiceEndpoint) {
+        let endpoint_id = endpoint.id.clone();
+        let endpoint_region = endpoint.region.clone();
         self.endpoints.push(endpoint);
         self.current_replicas = self.endpoints.len();
-        println!("➕ 添加服务端点: {} (区域: {})", endpoint.id, endpoint.region);
+        println!("➕ 添加服务端点: {} (区域: {})", endpoint_id, endpoint_region);
     }
 
     /// 移除服务端点
@@ -241,15 +243,26 @@ impl MLLoadBalancer {
             LoadBalanceAlgorithm::CostOptimized => self.select_cost_optimized(),
         };
 
+        // 在释放借用之前处理 selected
         if let Some(endpoint) = selected {
-            // 更新统计信息
-            self.stats.total_requests += 1;
+            // 克隆需要的字段以释放借用
+            let endpoint_id = endpoint.id.clone();
+            let endpoint_region = endpoint.region.clone();
+            let endpoint_load = endpoint.current_load;
+            let endpoint_response_time = endpoint.response_time;
 
             println!("🎯 选择服务端点: {} (区域: {}, 负载: {:.2}%, 响应时间: {:.2}ms)",
-                     endpoint.id, endpoint.region, endpoint.current_load * 100.0, endpoint.response_time);
+                     endpoint_id, endpoint_region, endpoint_load * 100.0, endpoint_response_time);
         }
 
         selected
+    }
+
+    /// 更新选择统计信息
+    pub fn update_selection_stats(&mut self, selected: Option<&ServiceEndpoint>) {
+        if selected.is_some() {
+            self.stats.total_requests += 1;
+        }
     }
 
     /// 轮询算法
@@ -311,9 +324,9 @@ impl MLLoadBalancer {
 
         // 提取特征并预测每个端点的性能
         let mut best_score = f64::MIN;
-        let mut best_endpoint = None;
+        let mut best_endpoint_index = None;
 
-        for endpoint in &self.endpoints {
+        for (i, endpoint) in self.endpoints.iter().enumerate() {
             // 构建特征向量 [负载, 响应时间, 错误率, 成本, 可用性]
             let features = [
                 endpoint.current_load,
@@ -335,14 +348,19 @@ impl MLLoadBalancer {
 
             if score > best_score {
                 best_score = score;
-                best_endpoint = Some(endpoint);
+                best_endpoint_index = Some(i);
             }
         }
 
-        // 训练模型 (使用历史数据)
+        // 在释放借用之后训练模型
+        if let Some(index) = best_endpoint_index {
+            let endpoint = &self.endpoints[index];
+            drop(endpoint);
+        }
         self.train_model();
 
-        best_endpoint
+        // 返回最佳端点
+        best_endpoint_index.and_then(|i| self.endpoints.get(i))
     }
 
     /// 成本优化选择

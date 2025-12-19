@@ -64,7 +64,7 @@ enum TaskStatus {
 
 /// 异步零拷贝 I/O 性能统计
 #[derive(Debug, Clone, Default)]
-struct AsyncZeroCopyStats {
+pub struct AsyncZeroCopyStats {
     /// 总任务数
     pub total_tasks: u64,
     /// 成功任务数
@@ -372,8 +372,11 @@ impl AsyncZeroCopy {
         // }
 
         // 临时模拟实现
-        let chunk_size = std::cmp::min(max_bytes, self.config.buffer_size);
-        Ok(chunk_size as u64)
+        #[cfg(unix)]
+        {
+            let chunk_size = std::cmp::min(max_bytes, self.config.buffer_size);
+            Ok(chunk_size as u64)
+        }
 
         #[cfg(not(unix))]
         {

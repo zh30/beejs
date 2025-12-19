@@ -177,8 +177,10 @@ impl<T: Clone> DistributedCache<T> {
 
     /// 添加缓存节点
     pub fn add_node(&mut self, node: CacheNode) {
+        let node_id = node.id.clone();
+        let node_weight = node.weight;
         self.nodes.push(node);
-        println!("➕ 添加缓存节点: {} (权重: {})", node.id, node.weight);
+        println!("➕ 添加缓存节点: {} (权重: {})", node_id, node_weight);
     }
 
     /// 获取缓存值
@@ -255,6 +257,7 @@ impl<T: Clone> DistributedCache<T> {
         };
 
         // 添加到缓存
+        let key_for_log = key.clone();
         storage.insert(key.clone(), entry);
         access_order.push_back(key.clone());
         access_frequency.insert(key, 0);
@@ -265,7 +268,7 @@ impl<T: Clone> DistributedCache<T> {
             stats.cache_size = storage.len();
         }
 
-        println!("✅ 设置缓存: {} (TTL: {:?})", key, ttl);
+        println!("✅ 设置缓存: {} (TTL: {:?})", key_for_log, ttl);
         true
     }
 
@@ -331,6 +334,7 @@ impl<T: Clone> DistributedCache<T> {
             "config:app".to_string(),
             "data:popular".to_string(),
         ];
+        let warmup_count = warmup_keys.len();
 
         for key in warmup_keys {
             if let Some(value) = load_fn(&key) {
@@ -352,11 +356,11 @@ impl<T: Clone> DistributedCache<T> {
         // 更新统计信息
         {
             let mut stats = self.stats.lock().unwrap();
-            stats.warmup_count = warmup_keys.len() as u64;
+            stats.warmup_count = warmup_count as u64;
             stats.cache_size = storage.len();
         }
 
-        println!("✅ 缓存预热完成: {} 条记录", warmup_keys.len());
+        println!("✅ 缓存预热完成: {} 条记录", warmup_count);
         Ok(())
     }
 
@@ -421,12 +425,18 @@ impl<T: Clone> DistributedCache<T> {
             }
             CacheStrategy::LFU => {
                 // 驱逐访问频率最低的
-                let mut sorted_keys: Vec<_> = access_frequency.iter()
-                    .min_by_key(|(_, &count)| count)
-                    .map(|(key, _)| key.clone())
+                let mut keys_by_frequency: Vec<_> = access_frequency.iter()
+                    .collect();
+                keys_by_frequency.sort_by_key(|(_, &count)| count);
+
+                // 首先收集要删除的键，释放 access_frequency 的借用
+                let keys_to_remove: Vec<String> = keys_by_frequency.iter()
+                    .take(evict_count)
+                    .map(|(key, _)| (*key).clone())
                     .collect();
 
-                for key in sorted_keys.drain(..evict_count.min(sorted_keys.len())) {
+                // 然后删除这些键
+                for key in keys_to_remove {
                     storage.remove(&key);
                     access_order.retain(|k| k != &key);
                     access_frequency.remove(&key);
@@ -443,10 +453,11 @@ impl<T: Clone> DistributedCache<T> {
             }
             CacheStrategy::TTL => {
                 // 驱逐即将过期的
-                let mut keys_to_evict: Vec<String> = storage.iter()
+                // 首先收集要驱逐的键，释放 storage 的借用
+                let keys_to_evict: Vec<String> = storage.iter()
                     .filter_map(|(key, entry)| {
                         entry.ttl.map(|ttl| {
-                            if entry.created_at.elapsed() > ttl * 0.9 {
+                            if entry.created_at.elapsed() > Duration::from_secs_f64(ttl.as_secs_f64() * 0.9) {
                                 Some(key.clone())
                             } else {
                                 None
@@ -456,6 +467,7 @@ impl<T: Clone> DistributedCache<T> {
                     .take(evict_count)
                     .collect();
 
+                // 然后驱逐这些键
                 for key in keys_to_evict {
                     storage.remove(&key);
                     access_order.retain(|k| k != &key);

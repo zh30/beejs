@@ -114,13 +114,14 @@ impl<T> BatchProcessor<T> {
     /// 返回创建结果
     pub fn new(config: Option<BatchProcessorConfig>) -> Self {
         let config = config.unwrap_or_default();
+        let max_batch_size = config.max_batch_size;
 
         Self {
             config,
             queue: Arc::new(Mutex::new(VecDeque::new())),
             stats: Arc::new(Mutex::new(BatchProcessorStats::default())),
             performance_history: Arc::new(Mutex::new(VecDeque::new())),
-            current_batch_size: config.max_batch_size / 2, // 从中等大小开始
+            current_batch_size: max_batch_size / 2, // 从中等大小开始
         }
     }
 
@@ -145,21 +146,25 @@ impl<T> BatchProcessor<T> {
     /// - `item`: 要添加的项
     pub fn add_item_with_priority(&self, item: BatchItem<T>) {
         let mut queue = self.queue.lock().unwrap();
+        let item_priority = item.priority;
 
         // 如果是优先级批处理，按优先级插入
         if self.config.strategy == BatchStrategy::PriorityBased
             || self.config.strategy == BatchStrategy::Hybrid
         {
             // 找到合适的位置插入，保持队列按优先级降序
-            let mut inserted = false;
+            let mut insert_position = None;
             for (i, existing_item) in queue.iter().enumerate() {
-                if item.priority > existing_item.priority {
-                    queue.insert(i, item);
-                    inserted = true;
+                if item_priority > existing_item.priority {
+                    insert_position = Some(i);
                     break;
                 }
             }
-            if !inserted {
+
+            // 在找到的位置插入，或添加到末尾
+            if let Some(pos) = insert_position {
+                queue.insert(pos, item);
+            } else {
                 queue.push_back(item);
             }
         } else {
@@ -179,6 +184,7 @@ impl<T> BatchProcessor<T> {
     /// 返回处理结果
     pub fn process_batch<F>(&mut self, mut processor: F) -> Result<(), Box<dyn std::error::Error>>
     where
+        T: Clone,
         F: FnMut(&[T]) -> Result<(), Box<dyn std::error::Error>>,
     {
         let start_time = Instant::now();
@@ -222,6 +228,7 @@ impl<T> BatchProcessor<T> {
         }
 
         // 执行批处理
+        let batch_len = batch_data.len();
         match processor(&batch_data) {
             Ok(()) => {
                 let elapsed = start_time.elapsed();
@@ -234,13 +241,13 @@ impl<T> BatchProcessor<T> {
 
                     // 计算系统调用减少量
                     // 假设每个项单独处理需要 1 次系统调用，批处理只需要 1 次
-                    let syscall_reduction = (batch_data.len() as u64 - 1)
+                    let syscall_reduction = (batch_len as u64 - 1)
                         * self.config.target_syscall_reduction as u64;
                     stats.syscalls_reduced += syscall_reduction;
 
                     // 计算性能提升
                     if elapsed.as_micros() > 0 {
-                        let throughput = batch_data.len() as f64 / elapsed.as_micros() as f64 * 1_000_000.0;
+                        let throughput = batch_len as f64 / elapsed.as_micros() as f64 * 1_000_000.0;
                         stats.performance_improvement = throughput / 1000.0; // 假设基线是 1000 ops/sec
                     }
                 }
@@ -248,23 +255,18 @@ impl<T> BatchProcessor<T> {
                 // 记录性能历史
                 {
                     let mut history = self.performance_history.lock().unwrap();
-                    let batch_size_f64 = batch_data.len() as f64;
+                    let batch_size_f64 = batch_len as f64;
                     history.push_back(batch_size_f64);
                     if history.len() > 100 {
                         history.pop_front();
                     }
                 }
 
-                // 动态调整批处理大小
-                if self.config.enable_dynamic_adjustment {
-                    self.adjust_batch_size(elapsed, batch_data.len());
-                }
-
                 println!(
                     "✅ 批处理成功: {} 项, 耗时: {:?}, 系统调用减少: {}",
-                    batch_data.len(),
+                    batch_len,
                     elapsed,
-                    batch_data.len() - 1
+                    batch_len - 1
                 );
 
                 Ok(())

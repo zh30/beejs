@@ -6,7 +6,7 @@
 //! 网络套接字到文件的零拷贝接收，最小化数据拷贝开销。
 
 use std::fs::File;
-use std::io::{self, Seek, SeekFrom};
+use std::io::{self, Read, Seek, SeekFrom};
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -173,7 +173,8 @@ impl ZeroCopyReceiver {
             Ok(bytes_received) => {
                 // 从临时文件读取到缓冲区
                 temp_file.seek(SeekFrom::Start(0))?;
-                temp_file.read_exact(&mut buffer[0..bytes_received])?;
+                let bytes_to_read = bytes_received as usize;
+                temp_file.read_exact(&mut buffer[0..bytes_to_read])?;
 
                 self.current_pos += bytes_received;
 

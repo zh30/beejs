@@ -82,7 +82,7 @@ pub struct MemoryMapperStats {
 }
 
 /// 内存映射区域
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MemoryMappedRegion {
     /// 映射 ID
     pub id: u64,
