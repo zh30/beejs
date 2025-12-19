@@ -35,7 +35,11 @@ fn setup_process(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
     argv.set_index(scope, 1, v8::String::new(scope, "<eval>").unwrap().into());
 
     let global = get_global(scope);
-    global.set(scope, v8::String::new(scope, "process").unwrap().into(), process.clone().into())
+    let global_key = v8::String::new(scope, "process").unwrap();
+
+    let global_val = process.clone(;
+
+    global.set(scope, global_key.into(), global_val);.into())
         .map_err(|e| anyhow!("Failed to set process global: {}", e))?;
     process.set(scope, v8::String::new(scope, "argv").unwrap().into(), argv.into())
         .map_err(|e| anyhow!("Failed to set process.argv: {}", e))?;
@@ -188,7 +192,11 @@ fn setup_path(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
     path.set(scope, "extname", extname_func_instance.into())?;
 
     let global = scope.global();
-    global.set(scope, v8::String::new(scope, "path").unwrap().into(), path.into())?;
+    let global_key = v8::String::new(scope, "path").unwrap();
+
+    let global_val = path.into(;
+
+    global.set(scope, global_key.into(), global_val);)?;
 
     Ok(())
 }
@@ -307,7 +315,11 @@ fn setup_fs(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<()> {
     fs_obj.set(scope, "statSync", stat_sync_instance.into())?;
 
     let global = scope.global();
-    global.set(scope, v8::String::new(scope, "fs").unwrap().into(), fs_obj.into())?;
+    let global_key = v8::String::new(scope, "fs").unwrap();
+
+    let global_val = fs_obj.into(;
+
+    global.set(scope, global_key.into(), global_val);)?;
 
     Ok(())
 }
@@ -379,13 +391,21 @@ fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>, module_loa
     let require_func_instance = require_func.get_function(scope).unwrap();
 
     let global = scope.global();
-    global.set(scope, v8::String::new(scope, "require").unwrap().into(), require_func_instance.into())?;
+    let global_key = v8::String::new(scope, "require").unwrap();
+
+    let global_val = require_func_instance.into(;
+
+    global.set(scope, global_key.into(), global_val);)?;
 
     // Module object
     let module = v8::Object::new(scope);
     let exports = v8::Object::new(scope);
     module.set(scope, "exports", exports.into())?;
-    global.set(scope, v8::String::new(scope, "module").unwrap().into(), module.into())?;
+    let global_key = v8::String::new(scope, "module").unwrap();
+
+    let global_val = module.into(;
+
+    global.set(scope, global_key.into(), global_val);)?;
 
     Ok(())
 }

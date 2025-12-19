@@ -118,7 +118,9 @@ fn buffer_constructor_callback(
 
     // 设置length属性
     let length_key = v8::String::new(scope, "_length").unwrap();
-    buffer.set(scope, length_key.into(), v8::Integer::new(scope, size as i32).into());
+    let length_key_val = v8::Integer::new(scope, size as i32).into();
+
+    buffer.set(scope, length_key.into(), length_key_val);;
 
     retval.set(buffer.into());
 }
@@ -183,7 +185,9 @@ fn buffer_from_callback(
         }.copy_from_slice(&bytes);
 
         let length_key = v8::String::new(scope, "_length").unwrap();
-        buffer.set(scope, length_key.into(), v8::Integer::new(scope, length as i32).into());
+        let length_key_val = v8::Integer::new(scope, length as i32).into();
+
+        buffer.set(scope, length_key.into(), length_key_val);;
 
         retval.set(buffer.into());
     } else {
@@ -220,7 +224,9 @@ fn buffer_alloc_callback(
     }.fill(fill_value);
 
     let length_key = v8::String::new(scope, "_length").unwrap();
-    buffer.set(scope, length_key.into(), v8::Integer::new(scope, size as i32).into());
+    let length_key_val = v8::Integer::new(scope, size as i32).into();
+
+    buffer.set(scope, length_key.into(), length_key_val);;
 
     retval.set(buffer.into());
 }
@@ -272,7 +278,9 @@ fn buffer_concat_callback(
             }.copy_from_slice(&combined_data[..target_length]);
 
             let length_key = v8::String::new(scope, "_length").unwrap();
-            buffer.set(scope, length_key.into(), v8::Integer::new(scope, target_length as i32).into());
+            let length_key_val = v8::Integer::new(scope, target_length as i32).into();
+
+            buffer.set(scope, length_key.into(), length_key_val);;
 
             retval.set(buffer.into());
         }
@@ -498,7 +506,9 @@ fn buffer_slice_callback(
     }
 
     let length_key = v8::String::new(scope, "_length").unwrap();
-    new_buffer.set(scope, length_key.into(), v8::Integer::new(scope, slice_length as i32).into());
+    let length_key_val = v8::Integer::new(scope, slice_length as i32).into();
+
+    new_buffer.set(scope, length_key.into(), length_key_val);;
 
     retval.set(new_buffer.into());
 }

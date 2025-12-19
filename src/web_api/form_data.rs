@@ -16,7 +16,8 @@ pub fn setup_form_data_api(
             let name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
             println!("FormData.append: {}", name);
         });
-        proto.set(scope, append_key.into(), append_func.get_function(scope).unwrap().into());
+        let append_func_instance = append_func.get_function(scope).unwrap();
+        proto.set(scope, append_key.into(), append_func_instance.into());
         
         form_data_obj.set_prototype(scope, proto.into());
         retval.set(form_data_obj.into());
@@ -26,7 +27,8 @@ pub fn setup_form_data_api(
     
     let global = context.global(scope);
     let form_data_key = v8::String::new(scope, "FormData").unwrap();
-    global.set(scope, form_data_key.into(), form_data_constructor.into());
+    let form_data_val = form_data_constructor.into();
+    global.set(scope, form_data_key.into(), form_data_val);
     
     Ok(())
 }

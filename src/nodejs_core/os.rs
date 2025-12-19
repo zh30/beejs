@@ -293,7 +293,8 @@ pub fn setup_os_api(
     let val_netbsd = v8::String::new(scope, "netbsd").unwrap();
     platform_constants_obj.set(scope, key_netbsd.into(), val_netbsd.into());
 
-    os_obj.set(scope, v8::String::new(scope, "platform").unwrap().into(), platform_constants_obj.into());
+    let platform_key = v8::String::new(scope, "platform").unwrap();
+    os_obj.set(scope, platform_key.into(), platform_constants_obj.into());
 
     // 设置到全局
     let global = context.global(scope);
@@ -367,9 +368,12 @@ fn os_loadavg_callback(
 ) {
     // 简化的负载平均值
     let loadavg = v8::Array::new(scope, 3);
-    loadavg.set_index(scope, 0, v8::Number::new(scope, 0.1).into());
-    loadavg.set_index(scope, 1, v8::Number::new(scope, 0.2).into());
-    loadavg.set_index(scope, 2, v8::Number::new(scope, 0.3).into());
+    let val1 = v8::Number::new(scope, 0.1).into();
+    loadavg.set_index(scope, 0, val1);
+    let val2 = v8::Number::new(scope, 0.2).into();
+    loadavg.set_index(scope, 1, val2);
+    let val3 = v8::Number::new(scope, 0.3).into();
+    loadavg.set_index(scope, 2, val3);
     retval.set(loadavg.into());
 }
 

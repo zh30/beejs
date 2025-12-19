@@ -309,7 +309,8 @@ fn search_params_set_callback(
                     if pair.length() >= 2 {
                         let key = pair.get_index(scope, 0).unwrap();
                         if key.to_string(scope).unwrap().to_rust_string_lossy(scope) == name {
-                            pair.set_index(scope, 1, v8::String::new(scope, &value).unwrap().into());
+                            let new_value = v8::String::new(scope, &value).unwrap().into();
+                            pair.set_index(scope, 1, new_value);
                             found = true;
                             break;
                         }
@@ -319,8 +320,10 @@ fn search_params_set_callback(
 
             if !found {
                 let pair_array = v8::Array::new(scope, 2);
-                pair_array.set_index(scope, 0, v8::String::new(scope, &name).unwrap().into());
-                pair_array.set_index(scope, 1, v8::String::new(scope, &value).unwrap().into());
+                let name_val = v8::String::new(scope, &name).unwrap().into();
+                pair_array.set_index(scope, 0, name_val);
+                let value_val = v8::String::new(scope, &value).unwrap().into();
+                pair_array.set_index(scope, 1, value_val);
                 let length = arr.length();
                 arr.set_index(scope, length, pair_array.into());
             }

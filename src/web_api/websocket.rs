@@ -130,14 +130,16 @@ pub fn setup_websocket_api(
                 println!("WebSocket send: {}", message);
             }
         });
-        proto.set(scope, send_key.into(), send_func.get_function(scope).unwrap().into());
+        let send_func_instance = send_func.get_function(scope).unwrap();
+        proto.set(scope, send_key.into(), send_func_instance.into());
 
         // close method
         let close_key = v8::String::new(scope, "close").unwrap();
         let close_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
             println!("WebSocket close");
         });
-        proto.set(scope, close_key.into(), close_func.get_function(scope).unwrap().into());
+        let close_func_instance = close_func.get_function(scope).unwrap();
+        proto.set(scope, close_key.into(), close_func_instance.into());
 
         // addEventListener method
         let add_event_key = v8::String::new(scope, "addEventListener").unwrap();
@@ -147,7 +149,9 @@ pub fn setup_websocket_api(
             println!("WebSocket addEventListener: {}", event_type);
             // TODO: Store listener for event triggering
         });
-        proto.set(scope, add_event_key.into(), add_event_func.get_function(scope).unwrap().into());
+        let add_event_func_instance = add_event_func.get_function(scope).unwrap();
+
+        proto.set(scope, add_event_key.into(), add_event_func_instance.into());;
 
         // removeEventListener method
         let remove_event_key = v8::String::new(scope, "removeEventListener").unwrap();
@@ -155,7 +159,9 @@ pub fn setup_websocket_api(
             let event_type = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
             println!("WebSocket removeEventListener: {}", event_type);
         });
-        proto.set(scope, remove_event_key.into(), remove_event_func.get_function(scope).unwrap().into());
+        let remove_event_func_instance = remove_event_func.get_function(scope).unwrap();
+
+        proto.set(scope, remove_event_key.into(), remove_event_func_instance.into());;
     }
 
     // Set WebSocket to global
@@ -201,40 +207,50 @@ fn websocket_constructor_callback(
 
     // Set readyState property
     let ready_state_key = v8::String::new(scope, "readyState").unwrap();
-    ws_obj.set(scope, ready_state_key.into(), v8::Integer::new(scope, 0).into()); // CONNECTING = 0
+    let ready_state_val = v8::Integer::new(scope, 0).into();
+    ws_obj.set(scope, ready_state_key.into(), ready_state_val); // CONNECTING = 0
 
     // Set URL property
     let url_key = v8::String::new(scope, "url").unwrap();
-    ws_obj.set(scope, url_key.into(), v8::String::new(scope, &websocket.url).unwrap().into());
+    let url_val = v8::String::new(scope, &websocket.url).unwrap().into();
+    ws_obj.set(scope, url_key.into(), url_val);
 
     // Set bufferedAmount property
     let buffered_key = v8::String::new(scope, "bufferedAmount").unwrap();
-    ws_obj.set(scope, buffered_key.into(), v8::Integer::new(scope, 0).into());
+    let buffered_val = v8::Integer::new(scope, 0).into();
+    ws_obj.set(scope, buffered_key.into(), buffered_val);
 
     // Set extensions property
     let ext_key = v8::String::new(scope, "extensions").unwrap();
-    ws_obj.set(scope, ext_key.into(), v8::String::new(scope, "").unwrap().into());
+    let ext_val = v8::String::new(scope, "").unwrap().into();
+    ws_obj.set(scope, ext_key.into(), ext_val);
 
     // Set protocol property
     let protocol_key = v8::String::new(scope, "protocol").unwrap();
-    ws_obj.set(scope, protocol_key.into(), v8::String::new(scope, "").unwrap().into());
+    let protocol_val = v8::String::new(scope, "").unwrap().into();
+    ws_obj.set(scope, protocol_key.into(), protocol_val);
 
     // Set binaryType property
     let binary_type_key = v8::String::new(scope, "binaryType").unwrap();
-    ws_obj.set(scope, binary_type_key.into(), v8::String::new(scope, "arraybuffer").unwrap().into());
+    let binary_type_val = v8::String::new(scope, "arraybuffer").unwrap().into();
+    ws_obj.set(scope, binary_type_key.into(), binary_type_val);
 
     // Add event handler properties
     let onopen_key = v8::String::new(scope, "onopen").unwrap();
-    ws_obj.set(scope, onopen_key.into(), v8::undefined(scope).into());
+    let onopen_val = v8::undefined(scope).into();
+    ws_obj.set(scope, onopen_key.into(), onopen_val);
 
     let onmessage_key = v8::String::new(scope, "onmessage").unwrap();
-    ws_obj.set(scope, onmessage_key.into(), v8::undefined(scope).into());
+    let onmessage_val = v8::undefined(scope).into();
+    ws_obj.set(scope, onmessage_key.into(), onmessage_val);
 
     let onclose_key = v8::String::new(scope, "onclose").unwrap();
-    ws_obj.set(scope, onclose_key.into(), v8::undefined(scope).into());
+    let onclose_val = v8::undefined(scope).into();
+    ws_obj.set(scope, onclose_key.into(), onclose_val);
 
     let onerror_key = v8::String::new(scope, "onerror").unwrap();
-    ws_obj.set(scope, onerror_key.into(), v8::undefined(scope).into());
+    let onerror_val = v8::undefined(scope).into();
+    ws_obj.set(scope, onerror_key.into(), onerror_val);
 
     retval.set(ws_obj.into());
 }

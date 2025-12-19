@@ -403,7 +403,9 @@ fn event_emitter_set_max_callback(
         .value();
 
     let max_key = v8::String::new(scope, "_maxListeners").unwrap();
-    this.set(scope, max_key.into(), v8::Integer::new(scope, n).into());
+    let max_key_val = v8::Integer::new(scope, n).into();
+
+    this.set(scope, max_key.into(), max_key_val);;
 
     retval.set(this.into());
 }

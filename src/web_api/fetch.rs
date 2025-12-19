@@ -173,10 +173,14 @@ fn fetch_callback(
     // For now, create a simple response
     let response_obj = v8::Object::new(scope);
     let ok_key = v8::String::new(scope, "ok").unwrap();
-    response_obj.set(scope, ok_key.into(), v8::Boolean::new(scope, true).into());
+    let ok_key_val = v8::Boolean::new(scope, true).into();
+
+    response_obj.set(scope, ok_key.into(), ok_key_val);;
 
     let status_key = v8::String::new(scope, "status").unwrap();
-    response_obj.set(scope, status_key.into(), v8::Integer::new(scope, 200).into());
+    let status_key_val = v8::Integer::new(scope, 200).into();
+
+    response_obj.set(scope, status_key.into(), status_key_val);;
 
     let status_text_key = v8::String::new(scope, "statusText").unwrap();
     response_obj.set(scope, status_text_key.into(), v8::String::new(scope, "OK").unwrap().into());
@@ -209,7 +213,9 @@ fn response_constructor_callback(
     response_obj.set(scope, status_key.into(), v8::Integer::new_from_unsigned(scope, status).into());
 
     let ok_key = v8::String::new(scope, "ok").unwrap();
-    response_obj.set(scope, ok_key.into(), v8::Boolean::new(scope, status >= 200 && status < 300).into());
+    let ok_key_val = v8::Boolean::new(scope, status >= 200 && status < 300).into();
+
+    response_obj.set(scope, ok_key.into(), ok_key_val);;
 
     if body.is_string() {
         let body_text = body.to_string(scope).unwrap().to_rust_string_lossy(scope);

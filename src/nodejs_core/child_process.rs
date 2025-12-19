@@ -63,7 +63,9 @@ fn cp_exec_callback(
 
     // pid
     let pid_key = v8::String::new(scope, "pid").unwrap();
-    child_obj.set(scope, pid_key.into(), v8::Integer::new(scope, 12345).into());
+    let pid_key_val = v8::Integer::new(scope, 12345).into();
+
+    child_obj.set(scope, pid_key.into(), pid_key_val);;
 
     // on
     let on_func = v8::FunctionTemplate::new(scope, child_on_callback);
@@ -91,7 +93,9 @@ fn cp_spawn_callback(
     let child_obj = v8::Object::new(scope);
 
     let pid_key = v8::String::new(scope, "pid").unwrap();
-    child_obj.set(scope, pid_key.into(), v8::Integer::new(scope, 12345).into());
+    let pid_key_val = v8::Integer::new(scope, 12345).into();
+
+    child_obj.set(scope, pid_key.into(), pid_key_val);;
 
     let on_func = v8::FunctionTemplate::new(scope, child_on_callback);
     let on_instance = on_func.get_function(scope).unwrap();
@@ -122,7 +126,9 @@ fn cp_exec_file_callback(
     child_obj.set(scope, stdout_key.into(), v8::String::new(scope, "mock output").unwrap().into());
 
     let pid_key = v8::String::new(scope, "pid").unwrap();
-    child_obj.set(scope, pid_key.into(), v8::Integer::new(scope, 12345).into());
+    let pid_key_val = v8::Integer::new(scope, 12345).into();
+
+    child_obj.set(scope, pid_key.into(), pid_key_val);;
 
     retval.set(child_obj.into());
 }

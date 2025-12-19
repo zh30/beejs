@@ -249,7 +249,11 @@ impl Runtime {
         // Get the global object and set console
         let context = scope.context();
         let global = context.global(scope);
-        global.set(scope, v8::String::new(scope, "console").unwrap().into(), console.into())
+        let global_key = v8::String::new(scope, "console").unwrap();
+
+        let global_val = console.into(;
+
+        global.set(scope, global_key.into(), global_val);)
             .map_err(|e| anyhow!("Failed to set global console: {}", e))?;
 
         Ok(())
