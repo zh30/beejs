@@ -93,7 +93,8 @@ fn hash_update_callback(
     // 将数据添加到缓冲区
     let data_key = v8::String::new(scope, "_data").unwrap();
     let data_array = this.get(scope, data_key.into()).unwrap();
-    if let Some(arr) = data_array.to_array(scope) {
+    if data_array.is_array() {
+        let arr = v8::Local::<v8::Array>::try_from(data_array).unwrap();
         let length = arr.length();
         arr.set_index(scope, length, v8::String::new(scope, &data).unwrap().into());
     }
@@ -124,7 +125,8 @@ fn hash_digest_callback(
     let data_key = v8::String::new(scope, "_data").unwrap();
     let data_array = this.get(scope, data_key.into()).unwrap();
     let mut combined_data = String::new();
-    if let Some(arr) = data_array.to_array(scope) {
+    if data_array.is_array() {
+        let arr = v8::Local::<v8::Array>::try_from(data_array).unwrap();
         for i in 0..arr.length() {
             if let Some(data_str) = arr.get_index(scope, i).and_then(|v| v.to_string(scope)) {
                 combined_data.push_str(&data_str.to_rust_string_lossy(scope));
