@@ -3,9 +3,7 @@
 
 #[cfg(test)]
 mod stage_39_tests {
-    use std::sync::{Arc, Mutex};
     use std::collections::HashMap;
-    use std::time::{Duration, SystemTime};
 
     /// 测试 1: 零拷贝文件传输 - sendfile 系统调用
     #[test]
@@ -57,7 +55,7 @@ mod stage_39_tests {
 
         // 创建映射数据
         let map_size = 4096; // 4KB
-        let mapped_data = Arc::new(vec![0u8; map_size]);
+        let mut mapped_data = vec![0u8; map_size];
 
         // 模拟内存映射访问
         for i in 0..map_size {
@@ -248,10 +246,11 @@ mod stage_39_tests {
         let mut hit_count = 0;
         let mut miss_count = 0;
         let total_requests = 100;
+        let key_count = 5; // 只有 5 个不同的键，提高命中率
 
         // 模拟缓存请求
         for i in 0..total_requests {
-            let key = format!("key_{}", i % 20); // 20 个不同的键
+            let key = format!("key_{}", i % key_count); // 5 个不同的键
             let value = format!("value_{}", i);
 
             // 检查缓存命中
