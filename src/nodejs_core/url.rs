@@ -236,20 +236,20 @@ fn search_params_get_callback(
 
     if params_array.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(params_array) {
-        for i in 0..arr.length() {
-            .and_then(|v| {
-                if v.is_array() {
+            for i in 0..arr.length() {
+                let v = arr.get_index(scope, i).unwrap();
+                if let Some(pair) = if v.is_array() {
                     v8::Local::<v8::Array>::try_from(v).ok()
                 } else {
                     None
-                }
-            })
-                if pair.length() >= 2 {
-                    let key = pair.get_index(scope, 0).unwrap();
-                    let value = pair.get_index(scope, 1).unwrap();
-                    if key.to_string(scope).unwrap().to_rust_string_lossy(scope) == name {
-                        result = value;
-                        break;
+                } {
+                    if pair.length() >= 2 {
+                        let key = pair.get_index(scope, 0).unwrap();
+                        let value = pair.get_index(scope, 1).unwrap();
+                        if key.to_string(scope).unwrap().to_rust_string_lossy(scope) == name {
+                            result = value;
+                            break;
+                        }
                     }
                 }
             }
@@ -282,32 +282,32 @@ fn search_params_set_callback(
 
     if params_array.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(params_array) {
-        let mut found = false;
-        for i in 0..arr.length() {
-            .and_then(|v| {
-                if v.is_array() {
+            let mut found = false;
+            for i in 0..arr.length() {
+                let v = arr.get_index(scope, i).unwrap();
+                if let Some(pair) = if v.is_array() {
                     v8::Local::<v8::Array>::try_from(v).ok()
                 } else {
                     None
-                }
-            })
-                if pair.length() >= 2 {
-                    let key = pair.get_index(scope, 0).unwrap();
-                    if key.to_string(scope).unwrap().to_rust_string_lossy(scope) == name {
-                        pair.set_index(scope, 1, v8::String::new(scope, &value).unwrap().into());
-                        found = true;
-                        break;
+                } {
+                    if pair.length() >= 2 {
+                        let key = pair.get_index(scope, 0).unwrap();
+                        if key.to_string(scope).unwrap().to_rust_string_lossy(scope) == name {
+                            pair.set_index(scope, 1, v8::String::new(scope, &value).unwrap().into());
+                            found = true;
+                            break;
+                        }
                     }
                 }
             }
-        }
 
-        if !found {
-            let pair_array = v8::Array::new(scope, 2);
-            pair_array.set_index(scope, 0, v8::String::new(scope, &name).unwrap().into());
-            pair_array.set_index(scope, 1, v8::String::new(scope, &value).unwrap().into());
-            let length = arr.length();
-            arr.set_index(scope, length, pair_array.into());
+            if !found {
+                let pair_array = v8::Array::new(scope, 2);
+                pair_array.set_index(scope, 0, v8::String::new(scope, &name).unwrap().into());
+                pair_array.set_index(scope, 1, v8::String::new(scope, &value).unwrap().into());
+                let length = arr.length();
+                arr.set_index(scope, length, pair_array.into());
+            }
         }
     }
 
@@ -365,26 +365,26 @@ fn search_params_delete_callback(
 
     if params_array.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(params_array) {
-        let mut new_arr = v8::Array::new(scope, 0);
-        let mut new_index = 0;
-        for i in 0..arr.length() {
-            .and_then(|v| {
-                if v.is_array() {
+            let mut new_arr = v8::Array::new(scope, 0);
+            let mut new_index = 0;
+            for i in 0..arr.length() {
+                let v = arr.get_index(scope, i).unwrap();
+                if let Some(pair) = if v.is_array() {
                     v8::Local::<v8::Array>::try_from(v).ok()
                 } else {
                     None
-                }
-            })
-                if pair.length() >= 2 {
-                    let key = pair.get_index(scope, 0).unwrap();
-                    if key.to_string(scope).unwrap().to_rust_string_lossy(scope) != name {
-                        new_arr.set_index(scope, new_index, pair.into());
-                        new_index += 1;
+                } {
+                    if pair.length() >= 2 {
+                        let key = pair.get_index(scope, 0).unwrap();
+                        if key.to_string(scope).unwrap().to_rust_string_lossy(scope) != name {
+                            new_arr.set_index(scope, new_index, pair.into());
+                            new_index += 1;
+                        }
                     }
                 }
             }
+            this.set(scope, params_key.into(), new_arr.into());
         }
-        this.set(scope, params_key.into(), new_arr.into());
     }
 
     retval.set(this.into());
@@ -408,19 +408,19 @@ fn search_params_has_callback(
 
     if params_array.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(params_array) {
-        for i in 0..arr.length() {
-            .and_then(|v| {
-                if v.is_array() {
+            for i in 0..arr.length() {
+                let v = arr.get_index(scope, i).unwrap();
+                if let Some(pair) = if v.is_array() {
                     v8::Local::<v8::Array>::try_from(v).ok()
                 } else {
                     None
-                }
-            })
-                if pair.length() >= 2 {
-                    let key = pair.get_index(scope, 0).unwrap();
-                    if key.to_string(scope).unwrap().to_rust_string_lossy(scope) == name {
-                        has = true;
-                        break;
+                } {
+                    if pair.length() >= 2 {
+                        let key = pair.get_index(scope, 0).unwrap();
+                        if key.to_string(scope).unwrap().to_rust_string_lossy(scope) == name {
+                            has = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -442,22 +442,22 @@ fn search_params_keys_callback(
 
     if params_array.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(params_array) {
-        let mut key_index = 0;
-        let mut seen_keys = std::collections::HashSet::new();
-        for i in 0..arr.length() {
-            .and_then(|v| {
-                if v.is_array() {
+            let mut key_index = 0;
+            let mut seen_keys = std::collections::HashSet::new();
+            for i in 0..arr.length() {
+                let v = arr.get_index(scope, i).unwrap();
+                if let Some(pair) = if v.is_array() {
                     v8::Local::<v8::Array>::try_from(v).ok()
                 } else {
                     None
-                }
-            })
-                if pair.length() >= 2 {
-                    let key = pair.get_index(scope, 0).unwrap();
-                    let key_str = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
-                    if seen_keys.insert(key_str.clone()) {
-                        keys_array.set_index(scope, key_index, v8::String::new(scope, &key_str).unwrap().into());
-                        key_index += 1;
+                } {
+                    if pair.length() >= 2 {
+                        let key = pair.get_index(scope, 0).unwrap();
+                        let key_str = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                        if seen_keys.insert(key_str.clone()) {
+                            keys_array.set_index(scope, key_index, v8::String::new(scope, &key_str).unwrap().into());
+                            key_index += 1;
+                        }
                     }
                 }
             }
@@ -479,19 +479,19 @@ fn search_params_values_callback(
 
     if params_array.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(params_array) {
-        let mut value_index = 0;
-        for i in 0..arr.length() {
-            .and_then(|v| {
-                if v.is_array() {
+            let mut value_index = 0;
+            for i in 0..arr.length() {
+                let v = arr.get_index(scope, i).unwrap();
+                if let Some(pair) = if v.is_array() {
                     v8::Local::<v8::Array>::try_from(v).ok()
                 } else {
                     None
-                }
-            })
-                if pair.length() >= 2 {
-                    let value = pair.get_index(scope, 1).unwrap();
-                    values_array.set_index(scope, value_index, value);
-                    value_index += 1;
+                } {
+                    if pair.length() >= 2 {
+                        let value = pair.get_index(scope, 1).unwrap();
+                        values_array.set_index(scope, value_index, value);
+                        value_index += 1;
+                    }
                 }
             }
         }
@@ -524,24 +524,24 @@ fn search_params_to_string_callback(
     let mut query_string = String::new();
     if params_array.is_array() {
         if let Ok(arr) = v8::Local::<v8::Array>::try_from(params_array) {
-        for i in 0..arr.length() {
-            .and_then(|v| {
-                if v.is_array() {
+            for i in 0..arr.length() {
+                let v = arr.get_index(scope, i).unwrap();
+                if let Some(pair) = if v.is_array() {
                     v8::Local::<v8::Array>::try_from(v).ok()
                 } else {
                     None
-                }
-            })
-                if pair.length() >= 2 {
-                    let key = pair.get_index(scope, 0).unwrap();
-                    let value = pair.get_index(scope, 1).unwrap();
-                    let key_str = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
-                    let value_str = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                } {
+                    if pair.length() >= 2 {
+                        let key = pair.get_index(scope, 0).unwrap();
+                        let value = pair.get_index(scope, 1).unwrap();
+                        let key_str = key.to_string(scope).unwrap().to_rust_string_lossy(scope);
+                        let value_str = value.to_string(scope).unwrap().to_rust_string_lossy(scope);
 
-                    if !query_string.is_empty() {
-                        query_string.push('&');
+                        if !query_string.is_empty() {
+                            query_string.push('&');
+                        }
+                        query_string.push_str(&format!("{}={}", key_str, value_str));
                     }
-                    query_string.push_str(&format!("{}={}", key_str, value_str));
                 }
             }
         }

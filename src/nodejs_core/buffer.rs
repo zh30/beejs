@@ -212,8 +212,9 @@ fn buffer_alloc_callback(
 
     let buffer = v8::ArrayBuffer::new(scope, size);
     unsafe {
+        let backing_store = buffer.backing_store();
         std::slice::from_raw_parts_mut(
-            buffer.buffer().data() as *mut u8,
+            backing_store.data() as *mut u8,
             size
         )
     }.fill(fill_value);
@@ -258,22 +259,23 @@ fn buffer_concat_callback(
                     }
                 }
             }
+
+            let target_length = if total_length > 0 { total_length } else { calculated_length };
+            let buffer = v8::ArrayBuffer::new(scope, target_length);
+
+            unsafe {
+                let backing_store = buffer.backing_store();
+                std::slice::from_raw_parts_mut(
+                    backing_store.data() as *mut u8,
+                    target_length
+                )
+            }.copy_from_slice(&combined_data[..target_length]);
+
+            let length_key = v8::String::new(scope, "_length").unwrap();
+            buffer.set(scope, length_key.into(), v8::Integer::new(scope, target_length as i32).into());
+
+            retval.set(buffer.into());
         }
-
-        let target_length = if total_length > 0 { total_length } else { calculated_length };
-        let buffer = v8::ArrayBuffer::new(scope, target_length);
-
-        unsafe {
-            std::slice::from_raw_parts_mut(
-                buffer.buffer().data() as *mut u8,
-                target_length
-            )
-        }.copy_from_slice(&combined_data[..target_length]);
-
-        let length_key = v8::String::new(scope, "_length").unwrap();
-        buffer.set(scope, length_key.into(), v8::Integer::new(scope, target_length as i32).into());
-
-        retval.set(buffer.into());
     } else {
         retval.set(v8::null(scope).into());
     }

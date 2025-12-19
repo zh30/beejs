@@ -181,10 +181,8 @@ fn readable_on_callback(
 
         if listener.is_function() {
             if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
-                // 创建新的 FunctionCallbackArguments
-                // 直接使用参数中的 args，不需要创建新的
-                // 使用函数签名中的 retval 参数，不需要创建新的
-                listener_func.call(scope, this, &cb_args, &mut cb_retval);
+                let mut cb_retval = v8::ReturnValue::new();
+                listener_func.call(scope, this, &args, &mut cb_retval);
             }
         }
     }
@@ -193,9 +191,8 @@ fn readable_on_callback(
     if event == "end" {
         if listener.is_function() {
             if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
-                // 直接使用参数中的 args，不需要创建新的
-                // 使用函数签名中的 retval 参数，不需要创建新的
-                listener_func.call(scope, this, &cb_args, &mut cb_retval);
+                let mut cb_retval = v8::ReturnValue::new();
+                listener_func.call(scope, this, &args, &mut cb_retval);
             }
         }
     }
