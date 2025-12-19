@@ -1,5 +1,14 @@
 //! Node.js Core Modules Polyfill
 //! Stage 56.3 - Built-in Module Implementation
+
+use rusty_v8 as v8;
+
+pub mod fs;
+pub mod path;
+pub mod os;
+pub mod crypto;
+pub mod http;
+pub mod url;
 pub mod querystring;
 pub mod util;
 

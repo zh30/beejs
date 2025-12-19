@@ -5,54 +5,58 @@ use rusty_v8 as v8;
 pub fn register(scope: &mut v8::HandleScope, global: &v8::Local<v8::Object>) {
     let path_key = v8::String::new(scope, "path").unwrap();
     let path_obj = v8::Object::new(scope);
-    
+
     // Join paths
-    let join_fn = v8::Function::new(scope, join).unwrap();
-    path_obj.set(scope, "join".into(), join_fn.into());
-    
+    let join_fn = v8::FunctionTemplate::new(scope, join).get_function(scope).unwrap();
+    let join_key = v8::String::new(scope, "join").unwrap().into();
+    path_obj.set(scope, join_key, join_fn.into());
+
     // Resolve
-    let resolve_fn = v8::Function::new(scope, resolve).unwrap();
-    path_obj.set(scope, "resolve".into(), resolve_fn.into());
-    
+    let resolve_fn = v8::FunctionTemplate::new(scope, resolve).get_function(scope).unwrap();
+    let resolve_key = v8::String::new(scope, "resolve").unwrap().into();
+    path_obj.set(scope, resolve_key, resolve_fn.into());
+
     // Basename
-    let basename_fn = v8::Function::new(scope, basename).unwrap();
-    path_obj.set(scope, "basename".into(), basename_fn.into());
-    
+    let basename_fn = v8::FunctionTemplate::new(scope, basename).get_function(scope).unwrap();
+    let basename_key = v8::String::new(scope, "basename").unwrap().into();
+    path_obj.set(scope, basename_key, basename_fn.into());
+
     global.set(scope, path_key.into(), path_obj.into());
 }
 
 fn join(scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue) {
     let mut result = String::new();
-    
+
     for i in 0..args.length() {
-        let arg = args.get(i).to_string(scope).unwrap().to_rust_string();
+        let arg = args.get(i).to_string(scope).unwrap().to_rust_string_lossy(scope);
         if i > 0 && !result.ends_with('/') && !arg.starts_with('/') {
             result.push('/');
         }
         result.push_str(&arg);
     }
-    
+
     retval.set(v8::String::new(scope, &result).unwrap().into());
 }
 
 fn resolve(scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue) {
     let mut paths = Vec::new();
-    
+
     for i in 0..args.length() {
-        paths.push(args.get(i).to_string(scope).unwrap().to_rust_string());
+        paths.push(args.get(i).to_string(scope).unwrap().to_rust_string_lossy(scope));
     }
-    
+
     let result = std::path::Path::new(&paths.join("/"))
         .canonicalize()
         .unwrap_or_else(|_| std::path::Path::new(&paths.join("/")).to_path_buf());
-    
+
     retval.set(v8::String::new(scope, &result.to_string_lossy()).unwrap().into());
 }
 
 fn basename(scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue) {
-    let path_str = args.get(0).to_string(scope).unwrap().to_rust_string();
+    let path_arg = args.get(0);
+    let path_str = path_arg.to_string(scope).unwrap().to_rust_string_lossy(scope);
     let path = std::path::Path::new(&path_str);
-    
+
     if let Some(file_name) = path.file_name() {
         retval.set(v8::String::new(scope, &file_name.to_string_lossy()).unwrap().into());
     } else {
