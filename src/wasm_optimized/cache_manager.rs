@@ -6,6 +6,7 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::num::NonZero;
 use wasmtime::Module;
 use anyhow::{Result, Context};
 use tracing::{info, debug, warn};
@@ -77,7 +78,7 @@ impl WasmCacheManager {
         info!("🚀 初始化 WASM 缓存管理器 (策略: {:?}, 最大大小: {}, 最大内存: {}MB)",
               config.strategy, config.max_size, config.max_memory_mb);
 
-        let cache = Arc::new(RwLock::new(LruCache::new(config.max_size)));
+        let cache = Arc::new(RwLock::new(LruCache::new(NonZero::new(config.max_size).unwrap_or(NonZero::new(100).unwrap()))));
 
         let manager = Self {
             cache,
@@ -150,6 +151,8 @@ impl WasmCacheManager {
             ttl: self.config.default_ttl,
         };
 
+        let entry_size = entry.size_bytes;
+
         let mut cache = self.cache.write().await;
 
         // 检查内存限制
@@ -158,14 +161,14 @@ impl WasmCacheManager {
             self.evict_if_needed(&mut cache).await?;
         }
 
-        cache.put(name, entry);
+        cache.put(name.clone(), entry);
 
         // 更新统计
         self.update_statistics().await;
 
         debug!("📦 缓存模块: {} (耗时: {:.2}ms, 大小: {} bytes)",
                name, start_time.elapsed().as_secs_f64() * 1000.0,
-               entry.size_bytes);
+               entry_size);
 
         Ok(())
     }

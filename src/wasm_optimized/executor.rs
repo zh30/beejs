@@ -118,16 +118,16 @@ impl WasmOptimizedExecutor {
 
         // 查找主函数
         let _main_func = instance.get_func(&mut store, "main")
-            .or_else(|_| instance.get_func(&mut store, "_start"));
+            .or_else(|| instance.get_func(&mut store, "_start"));
 
         // 执行函数 (简化版本)
-        let result = if _main_func.is_ok() {
+        let result = if _main_func.is_some() {
             // 获取执行时间
             let execution_time = start_time.elapsed().as_secs_f64() * 1000.0;
 
             WasmExecutionResult {
                 execution_time_ms: execution_time,
-                memory_usage_kb: memory.size() * 64,
+                memory_usage_kb: memory.size(&store) * 64,
                 output: vec![],
                 success: true,
             }

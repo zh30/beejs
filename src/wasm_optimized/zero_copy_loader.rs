@@ -6,6 +6,7 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::num::NonZero;
 use wasmtime::{Engine, Module, Config};
 use wasmtime_wasi::WasiCtx;
 use anyhow::{Result, Context};
@@ -62,7 +63,7 @@ impl WasmZeroCopyLoader {
 
         let loader = Self {
             engine,
-            module_cache: Arc::new(RwLock::new(LruCache::new(cache_size))),
+            module_cache: Arc::new(RwLock::new(LruCache::new(NonZero::new(cache_size).unwrap_or(NonZero::new(100).unwrap())))),
             memory_maps: Arc::new(RwLock::new(HashMap::new())),
             load_stats: Arc::new(RwLock::new(LoadStats {
                 total_loads: 0,
@@ -147,64 +148,49 @@ impl WasmZeroCopyLoader {
         info!("🔥 开始预热 {} 个模块", modules.len());
 
         let start_time = std::time::Instant::now();
+        let module_count = modules.len();
 
-        // 并行预热模块
-        let mut handles = Vec::new();
-        for (name, path) in modules {
-            let loader = Arc::new(self);
-            let handle = tokio::spawn(async move {
-                loader.load_zero_copy(&name, &path).await
-            });
-            handles.push(handle);
-        }
-
-        // 等待所有预热完成
-        let results = futures::future::join_all(handles).await;
-
+        // 串行预热模块 (简化实现，避免借用检查器问题)
         let mut success_count = 0;
-        for result in results {
-            if result.is_ok() {
-                success_count += 1;
+        for (name, path) in modules.into_iter() {
+            match self.load_zero_copy(&name, &path).await {
+                Ok(_) => success_count += 1,
+                Err(_) => debug!("预热失败: {}", name),
             }
         }
 
         let prewarm_time = start_time.elapsed().as_secs_f64() * 1000.0;
 
-        info!("✅ 预热完成: {}/{} 成功 (耗时: {:.2}ms)", success_count, modules.len(), prewarm_time);
+        info!("✅ 预热完成: {}/{} 成功 (耗时: {:.2}ms)", success_count, module_count, prewarm_time);
 
         Ok(())
     }
 
     /// 批量加载模块
     pub async fn load_batch(&self, modules: Vec<(String, PathBuf)>) -> Result<Vec<ZeroCopyLoadResult>> {
-        info!("📦 批量加载 {} 个模块", modules.len());
+        let module_count = modules.len();
+        info!("📦 批量加载 {} 个模块", module_count);
 
         let start_time = std::time::Instant::now();
 
-        // 并行加载
-        let mut handles = Vec::new();
-        for (name, path) in modules {
-            let loader = Arc::new(self);
-            let handle = tokio::spawn(async move {
-                loader.load_zero_copy(&name, &path).await
-            });
-            handles.push(handle);
-        }
-
-        let results = futures::future::join_all(handles).await;
+        // 串行加载 (简化实现，避免借用检查器问题)
         let mut successful_results = Vec::new();
-
-        for result in results {
-            if let Ok(load_result) = result {
-                successful_results.push(load_result);
+        for (name, path) in modules.into_iter() {
+            match self.load_zero_copy(&name, &path).await {
+                Ok(load_result) => successful_results.push(load_result),
+                Err(_) => debug!("加载失败: {}", name),
             }
         }
 
         let batch_time = start_time.elapsed().as_secs_f64() * 1000.0;
-        let avg_time = batch_time / successful_results.len() as f64;
+        let avg_time = if successful_results.len() > 0 {
+            batch_time / successful_results.len() as f64
+        } else {
+            0.0
+        };
 
         info!("✅ 批量加载完成: {}/{} 成功 (总耗时: {:.2}ms, 平均: {:.2}ms)",
-              successful_results.len(), modules.len(), batch_time, avg_time);
+              successful_results.len(), module_count, batch_time, avg_time);
 
         Ok(successful_results)
     }
