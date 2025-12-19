@@ -121,10 +121,11 @@ fn readable_read_callback(
     // 创建一些测试数据
     let data = vec![b'A'; size.min(1024)];
     let chunk = v8::ArrayBuffer::new(scope, data.len());
-    let backing_store = chunk.backing_store();
+    // In newer V8 APIs, backing_store() has been replaced
+    // We'll use a different approach to set the data
     unsafe {
-        std::slice::from_raw_parts_mut(backing_store.data() as *mut u8, data.len())
-            .copy_from_slice(&data);
+        let buffer_ptr = chunk.buffer().data() as *mut u8;
+        std::ptr::copy_nonoverlapping(data.as_ptr(), buffer_ptr, data.len());
     }
 
     retval.set(chunk.into());

@@ -286,8 +286,8 @@ fn hmac_digest_callback(
 
     let digest_result = match (algorithm.as_str(), key.as_bytes()) {
         ("sha256", key_bytes) => {
-            let signing_key = hmac::Key::from_slice(key_bytes);
-            let hmac = hmac::sign(signing_key, combined_data.as_bytes());
+            let signing_key = hmac::Key::new(hmac::HMAC_SHA256, key_bytes);
+            let hmac = hmac::sign(&signing_key, combined_data.as_bytes());
             match encoding.as_str() {
                 "hex" => hex::encode(hmac.as_ref()),
                 "base64" => base64::encode(hmac.as_ref()),
@@ -296,8 +296,8 @@ fn hmac_digest_callback(
             }
         }
         ("sha1", key_bytes) => {
-            let signing_key = hmac::Key::from_slice(key_bytes);
-            let hmac = hmac::sign(signing_key, combined_data.as_bytes());
+            let signing_key = hmac::Key::new(hmac::HMAC_SHA1, key_bytes);
+            let hmac = hmac::sign(&signing_key, combined_data.as_bytes());
             match encoding.as_str() {
                 "hex" => hex::encode(hmac.as_ref()),
                 "base64" => base64::encode(hmac.as_ref()),
@@ -324,9 +324,8 @@ fn random_bytes_callback(
         .value() as usize;
 
     let mut buffer = vec![0u8; size];
-    ring::rand::SystemRandom::new()
-        .fill(&mut buffer)
-        .unwrap_or(());
+    let rand = ring::rand::SystemRandom::new();
+    ring::rand::SecureRandom::fill(&rand, &mut buffer).unwrap_or(());
 
     // 创建Buffer对象
     let buffer_obj = v8::ArrayBuffer::new(scope, size);
