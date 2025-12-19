@@ -1,13 +1,13 @@
-//! Beejs CLI - Stage 56.0
+//! Beejs CLI - Stage 56.2
 //! High-performance JavaScript/TypeScript runtime with Bun-compatible CLI
 
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::PathBuf;
 use std::time::Instant;
-use tokio::runtime::Runtime;
 
 use beejs::cli::commands::{CliApp, SubCommand};
+use beejs::cli::{ExecutionContext, ExecutorConfig, ScriptExecutor, FileType, shebang};
 use beejs::RuntimeLite;
 
 /// CLI entry point
@@ -98,25 +98,56 @@ fn run_script(
 ) -> Result<()> {
     let script_path = cmd.script;
 
-    if !script_path.exists() {
-        return Err(anyhow::anyhow!("Script file not found: {:?}", script_path));
-    }
+    // Create executor with configuration
+    let config = ExecutorConfig {
+        transpile_ts: cmd.transpile || script_path.extension().map_or(false, |e| e == "ts" || e == "tsx"),
+        hot_reload: cmd.watch || cmd.hot,
+        source_maps: true,
+        verbose,
+    };
+    let executor = ScriptExecutor::new(config);
 
-    // Read script
-    let code = std::fs::read_to_string(&script_path)
-        .context("Failed to read script file")?;
-
-    // Detect file type
-    let file_type = detect_file_type(&script_path);
+    // Validate the script file
+    let file_type = executor.validate_script(&script_path)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
 
     if verbose {
         println!("📝 Detected file type: {:?}", file_type);
     }
 
+    // Build execution context
+    let ctx = ExecutionContext::new(script_path.clone())
+        .with_args(cmd.args);
+
+    if verbose {
+        println!("📂 __dirname: {}", ctx.dirname.display());
+        println!("📄 __filename: {}", ctx.filename.display());
+        println!("🔧 process.argv: {:?}", ctx.argv);
+    }
+
+    // Read script content
+    let mut code = std::fs::read_to_string(&script_path)
+        .context("Failed to read script file")?;
+
+    // Check for and handle shebang
+    if let Some(shebang_line) = shebang::detect(&code) {
+        if verbose {
+            println!("🔖 Shebang detected: {}", shebang_line);
+        }
+        if !shebang::is_compatible(&shebang_line) {
+            println!("⚠️  Warning: Non-compatible shebang: {}", shebang_line);
+        }
+        code = shebang::strip(&code).to_string();
+    }
+
+    // Prepend context setup code
+    let setup_code = ctx.to_setup_code();
+    let full_code = format!("{}\n{}", setup_code, code);
+
     // Execute based on type
     match file_type {
-        FileType::JavaScript | FileType::TypeScript => {
-            match runtime.execute_code(&code) {
+        FileType::JavaScript | FileType::EsModule | FileType::CommonJs | FileType::TypeScript => {
+            match runtime.execute_code(&full_code) {
                 Ok(result) => {
                     if verbose {
                         println!("✅ Script executed successfully");
@@ -133,6 +164,11 @@ fn run_script(
                     Err(e).context("Script execution error")
                 }
             }
+        }
+        FileType::Json => {
+            // JSON files are typically imported, not executed directly
+            println!("{}", code);
+            Ok(())
         }
         _ => Err(anyhow::anyhow!("Unsupported file type: {:?}", file_type)),
     }
@@ -218,30 +254,12 @@ fn run_bundle(
     Ok(())
 }
 
-/// File type detection
-#[derive(Debug, Clone, Copy, PartialEq)]
-enum FileType {
-    JavaScript,
-    TypeScript,
-    JSON,
-    Unknown,
-}
-
-fn detect_file_type(path: &PathBuf) -> FileType {
-    match path.extension().and_then(|ext| ext.to_str()) {
-        Some("js") | Some("mjs") => FileType::JavaScript,
-        Some("ts") => FileType::TypeScript,
-        Some("json") => FileType::JSON,
-        _ => FileType::Unknown,
-    }
-}
-
 /// Print version information
 fn print_version() {
     println!("beejs v0.1.0");
-    println!("Stage 56.0 - CLI 功能完善与 Bun 兼容性");
+    println!("Stage 56.2 - Script Execution Engine");
     println!("High-performance JavaScript/TypeScript runtime (faster than Bun)");
-    println!("Built with Rust {} and V8", std::env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.1.0".to_string()));
+    println!("Built with Rust and V8");
 }
 
 /// Print help when no command is provided
