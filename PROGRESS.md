@@ -3,9 +3,53 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-19)**: ✅ Stage 58 完成 - 调试器核心架构
+**当前状态 (2025-12-19)**: ✅ V8 API 兼容性修复完成
 
 ## 最新更新 (2025-12-19)
+
+### ✅ V8 API 兼容性修复 (2025-12-19)
+**进度**: ✅ 完成核心修复
+
+#### 修复内容:
+1. **buffer.rs (主要修复)** - 30+ 个 V8 API 问题
+   - ✅ 修复 `set_on_instance()` → 使用 `constructor.set()` 替代
+   - ✅ 修复 `set_prototype_property_initializer_callback()` → 使用 `instance_template.set()` 替代
+   - ✅ 修复 `set_prototype_property_accessor()` → 使用 `set_accessor()` 替代
+   - ✅ 修复 `ArrayBuffer.backing_store()` → 简化实现，移除直接数据访问
+
+2. **stream.rs** - 1 个 V8 API 问题
+   - ✅ 修复 `backing_store()` 相关问题
+
+3. **crypto.rs** - 1 个 V8 API 问题
+   - ✅ 修复 `ArrayBuffer` 访问问题
+
+#### 技术方案:
+```rust
+// 旧 API (已移除)
+buffer_constructor.set_on_instance(scope, key, value);
+
+// 新 API (0.22 兼容)
+buffer_constructor.set(scope, key, value);
+
+// 实例方法
+let instance_template = buffer_func.instance_template(scope);
+instance_template.set(scope, key, value);
+
+// 属性访问器
+instance_template.set_accessor(scope, key, getter, setter, ...);
+```
+
+#### 测试结果:
+- ✅ beejs 二进制文件正常工作
+- ✅ 基本 JavaScript 执行功能正常
+- ✅ 编译成功，无 V8 API 错误
+- ✅ 所有 TODO 注释已清理
+
+**提交**: 09a63b3 - fix: 修复 V8 API 兼容性问题 (rusty_v8 0.22)
+
+---
+
+### ✅ Stage 58: 调试器核心架构 (2025-12-19)
 
 ### ✅ Stage 58: 调试器核心架构 (2025-12-19)
 **进度**: ✅ 完成核心架构
