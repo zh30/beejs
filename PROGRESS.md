@@ -3,9 +3,71 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-19)**: 🔄 Stage 56.5 进行中 - 测试运行器修复与 Stage 57 规划
+**当前状态 (2025-12-19)**: ✅ Stage 57 完成 - REPL 交互式环境
 
 ## 最新更新 (2025-12-19)
+
+### ✅ Stage 57: REPL 交互式环境 (2025-12-19)
+**进度**: ✅ 完成实现
+
+#### 完成功能:
+1. **REPL 核心实现** - 完整的交互式环境
+   - `src/cli/repl.rs` (380+ 行) - REPL 引擎
+     * Repl 结构体和配置管理
+     * 多行输入自动检测和缩进
+     * 命令历史记录 (VecDeque)
+     * 生命周期钩子支持
+     * 统计信息收集
+
+2. **main.rs 集成** - CLI 无缝连接
+   - 完整的 run_repl() 函数实现
+   - 支持 --eval, --load, --typescript 参数
+   - 异步 REPL 运行
+   - 错误处理和用户友好的提示
+
+3. **核心功能**:
+   - ✅ 交互式代码执行 (JavaScript)
+   - ✅ 单行和多行输入支持
+   - ✅ 特殊命令 (.help, .exit, .clear, .history)
+   - ✅ 命令历史记录和浏览
+   - ✅ 自动缩进和语法提示
+   - ✅ 友好的错误信息和堆栈跟踪
+   - ✅ CLI 参数支持 (--eval, --load, --typescript)
+
+4. **技术实现**:
+   - 使用 V8 实时编译和执行
+   - Arc<RuntimeLite> 运行时共享
+   - VecDeque 历史记录管理
+   - 自动多行检测 ({, (, [, function, if, for, while, try, class)
+   - 异步/等待模式集成
+
+5. **测试验证**:
+   - ✅ 数学计算: `1 + 1` → `2`
+   - ✅ 帮助命令: `.help` 显示命令列表
+   - ✅ 特殊命令: `.exit` 正常退出
+   - ✅ Eval 参数: `beejs repl --eval "2 * 3"` → `6`
+   - ✅ 脚本执行保持正常
+   - ✅ 多行函数定义和调用
+
+#### 架构设计:
+```rust
+pub struct Repl {
+    runtime: Arc<RuntimeLite>,
+    config: ReplConfig,
+    history: VecDeque<String>,
+    multiline_buffer: Vec<String>,
+    in_multiline: bool,
+    indent_level: usize,
+}
+```
+
+#### CLI 集成:
+- `beejs repl` - 启动交互式 REPL
+- `beejs repl --eval "expr"` - 计算表达式并退出
+- `beejs repl --load <file>` - 加载文件后启动 REPL
+- `beejs repl --typescript` - TypeScript 模式（实验性）
+
+**提交**: bfdba62 - feat(stage57): 完成 REPL 交互式环境实现
 
 ### ✅ Stage 56.5: 测试运行器修复与优化 (2025-12-19)
 **进度**: 🔄 部分修复
