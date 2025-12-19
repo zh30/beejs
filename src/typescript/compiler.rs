@@ -487,6 +487,9 @@ pub enum ASTExpression {
         object: Box<ASTExpression>,
         index: Box<ASTExpression>,
     },
+    ObjectLiteral {
+        properties: Vec<(String, ASTExpression)>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -866,8 +869,41 @@ impl Parser {
                 self.consume(Token::RParen)?;
                 Ok(expr)
             }
+            Token::LBrace => {
+                // 对象字面量
+                self.parse_object_literal()
+            }
             _ => bail!("Unexpected token in expression: {:?}", self.current_token()),
         }
+    }
+
+    fn parse_object_literal(&mut self) -> Result<ASTExpression> {
+        self.consume(Token::LBrace)?;
+        let mut properties = Vec::new();
+
+        while !self.current_token_eq(&Token::RBrace) {
+            // 解析属性名
+            let prop_name_token = self.consume(Token::Identifier("".to_string()))?;
+            let prop_name = match prop_name_token {
+                Token::Identifier(name) => name,
+                _ => bail!("Expected property name"),
+            };
+
+            self.consume(Token::Colon)?;
+
+            // 解析属性值
+            let prop_value = self.parse_expression()?;
+            properties.push((prop_name, prop_value));
+
+            // 处理逗号分隔符
+            if self.current_token_eq(&Token::Comma) {
+                self.consume(Token::Comma)?;
+            }
+        }
+
+        self.consume(Token::RBrace)?;
+
+        Ok(ASTExpression::ObjectLiteral { properties })
     }
 
     fn parse_type_annotation(&mut self) -> Option<String> {
@@ -1091,6 +1127,18 @@ impl CodeEmitter {
                 self.output.push('[');
                 self.emit_expression(index);
                 self.output.push(']');
+            }
+            ASTExpression::ObjectLiteral { properties } => {
+                self.output.push('{');
+                for (i, (name, value)) in properties.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(", ");
+                    }
+                    self.output.push_str(name);
+                    self.output.push_str(": ");
+                    self.emit_expression(value);
+                }
+                self.output.push('}');
             }
         }
     }
