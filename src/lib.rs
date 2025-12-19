@@ -337,11 +337,12 @@ impl Default for PerformanceConfig {
 /// 主要的 Beejs 运行时
 pub struct Runtime {
     config: PerformanceConfig,
+    verbose: bool,
 }
 
 impl Runtime {
     /// 创建新的运行时实例
-    pub fn new(pool_size: usize, max_memory: usize, enable_optimization: bool) -> Self {
+    pub fn new(pool_size: usize, max_memory: usize, enable_optimization: bool, verbose: bool) -> Self {
         Self {
             config: PerformanceConfig {
                 pool_size,
@@ -349,6 +350,7 @@ impl Runtime {
                 enable_optimization,
                 performance_monitoring: true,
             },
+            verbose,
         }
     }
 
@@ -358,6 +360,7 @@ impl Runtime {
             num_cpus::get(),
             1024 * 1024 * 1024,
             true,
+            false,
         )
     }
 
@@ -366,6 +369,7 @@ impl Runtime {
         pool_size: usize,
         max_memory: usize,
         optimize_mode: OptimizeMode,
+        verbose: bool,
     ) -> Self {
         let enable_optimization = match optimize_mode {
             OptimizeMode::Speed => true,
@@ -373,7 +377,7 @@ impl Runtime {
             OptimizeMode::Auto => true,
         };
 
-        Self::new(pool_size, max_memory, enable_optimization)
+        Self::new(pool_size, max_memory, enable_optimization, verbose)
     }
 
     /// 运行基准测试
@@ -408,7 +412,7 @@ impl Runtime {
     /// 执行 JavaScript 代码
     pub fn execute_code(&self, code: &str) -> Result<String> {
         // 使用 RuntimeLite 来执行代码
-        let lite_runtime = crate::runtime_lite::RuntimeLite::new(false)?;
+        let lite_runtime = crate::runtime_lite::RuntimeLite::new(self.verbose)?;
         lite_runtime.execute_code(code)
     }
 
@@ -445,6 +449,7 @@ pub fn get_smart_runtime(
         num_cpus::get(),
         max_heap,
         enable_optimization,
+        verbose,
     ))
 }
 
@@ -504,11 +509,20 @@ pub fn generate_performance_report(
 /// Console callback functions for V8 integration
 pub fn console_log_callback(
     scope: &mut v8::HandleScope,
-    _args: v8::FunctionCallbackArguments,
+    args: v8::FunctionCallbackArguments,
     _rv: v8::ReturnValue,
 ) {
-    // Simple console log implementation
-    println!("console.log called");
+    // Convert all arguments to strings and print them
+    let mut output = String::new();
+    for i in 0..args.length() {
+        if i > 0 {
+            output.push(' ');
+        }
+        let arg = args.get(i);
+        let arg_str = arg.to_string(scope).unwrap_or_else(|| v8::String::new(scope, "<unknown>").unwrap());
+        output.push_str(&arg_str.to_rust_string_lossy(scope));
+    }
+    println!("{}", output);
 }
 
 pub fn console_error_callback(

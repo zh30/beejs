@@ -36,7 +36,7 @@ impl StartupBenchmark {
             MetricType::StartupTime,
             || {
                 // 模拟冷启动 - 创建新的 Runtime
-                let _runtime = crate::Runtime::new(1024, 1024, false);
+                let _runtime = crate::Runtime::new(1024, 1024, false, false);
             },
         )
     }
@@ -57,7 +57,7 @@ impl StartupBenchmark {
             MetricType::StartupTime,
             || {
                 // 模拟热启动 - 使用现有 Runtime
-                let runtime = crate::Runtime::new(1024, 1024, false);
+                let runtime = crate::Runtime::new(1024, 1024, false, false);
                 let _ = runtime;
             },
         )
@@ -156,7 +156,7 @@ impl StartupBenchmark {
                 let _isolate = Isolate::new(Default::default());
 
                 // 2. 创建 Runtime
-                let _runtime = crate::Runtime::new(1024, 1024, false);
+                let _runtime = crate::Runtime::new(1024, 1024, false, false);
 
                 let _elapsed = start.elapsed();
                 _elapsed

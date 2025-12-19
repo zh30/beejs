@@ -1503,7 +1503,7 @@ impl ConcurrentRuntimePool {
 
             // 否则创建新实例
             if pool.len() < self.config.pool_size_per_thread {
-                let runtime = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false);
+                let runtime = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
                 let current_size = pool.len() + 1;
                 THREAD_POOL_SIZE.with(|size| {
                     *size.borrow_mut() = current_size;
@@ -1586,7 +1586,7 @@ impl ConcurrentRuntimePool {
             THREAD_RUNTIME_POOL.with(|pool| {
                 let mut pool = pool.borrow_mut();
                 if pool.len() < pool_size_per_thread {
-                    let runtime = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false);
+                    let runtime = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
                     pool.push(runtime);
                     THREAD_POOL_SIZE.with(|size| {
                         *size.borrow_mut() = pool.len();

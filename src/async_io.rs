@@ -164,7 +164,7 @@ impl AsyncIoManager {
                 let task_start = Instant::now();
 
                 // 创建新的运行时实例执行脚本
-                let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false)
+                let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)
                     .expect("Failed to create runtime");
 
                 let result = rt.execute_code(&code_clone);

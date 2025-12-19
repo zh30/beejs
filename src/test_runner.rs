@@ -77,8 +77,7 @@ impl TestRunner {
         let runtime = crate::Runtime::new(
             67108864,   // 64MB stack
             1073741824, // 1GB heap
-            config.verbose,
-        )?;
+            config.verbose,  , false)?;
 
         Ok(Self { config, runtime })
     }

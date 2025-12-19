@@ -335,7 +335,7 @@ mod tests {
     #[test]
     fn test_llm_engine_creation() {
         // 为测试提供默认参数
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
         let config = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,
@@ -351,7 +351,7 @@ mod tests {
     #[test]
     fn test_text_generation() {
         // 为测试提供默认参数
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
         let config = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,
@@ -372,7 +372,7 @@ mod tests {
     #[test]
     fn test_batch_generation() {
         // 为测试提供默认参数
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
         let config = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,
@@ -395,7 +395,7 @@ mod tests {
 
     #[test]
     fn test_memory_optimization() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
         let config = LlmConfig {
             model_name: "test-model".to_string(),
             max_tokens: 4096,

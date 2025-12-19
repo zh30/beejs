@@ -894,7 +894,7 @@ pub async fn execute_with_pool(script: &str) -> Result<String> {
 async fn execute_script_in_worker(script: &str) -> Result<String> {
     // Create a Runtime instance for this worker
     // Use default settings optimized for speed
-    let runtime = Runtime::new(67108864, 134217728, false) // 64MB stack, 128MB heap, no verbose
+    let runtime = Runtime::new(67108864, 134217728, false, false) // 64MB stack, 128MB heap, no verbose
         .context("Failed to create Runtime in worker")?;
 
     // Execute the script and capture output

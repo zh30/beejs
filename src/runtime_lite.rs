@@ -158,7 +158,10 @@ impl RuntimeLite {
         eprintln!("🔧 Initializing Web APIs...");
 
         // Set up Fetch, WebSocket, URL, and other Web APIs
-        web_api::init_web_api(scope, context)?;
+        if let Err(e) = web_api::init_web_api(scope, context) {
+            eprintln!("❌ Web API initialization failed: {:?}", e);
+            return Err(e);
+        }
 
         eprintln!("✅ Web APIs initialized successfully");
 
@@ -170,7 +173,8 @@ impl RuntimeLite {
         // Increment execution count
         self.execution_count.fetch_add(1, Ordering::SeqCst);
 
-        eprintln!("🔍 execute_code called with code length: {}", code.len());
+        println!("[DEBUG] execute_code called with code length: {}", code.len());
+        println!("[DEBUG] Code preview (first 100 chars): {:?}", &code[..std::cmp::min(code.len(), 100)]);
 
         // 🚀 ULTRA-FAST PATH: Bypass V8 entirely for simple constants
         if let Some(value) = self.try_fast_constant_path(code) {
@@ -178,8 +182,24 @@ impl RuntimeLite {
             return Ok(value);
         }
 
+        // Check if code contains Web API usage - if so, force standard path
+        let code_trimmed = code.trim();
+        eprintln!("🔍 Checking for Web API usage in trimmed code: {:?}", code_trimmed);
+
+        let has_web_api = code_trimmed.contains("new URL") ||
+                          code_trimmed.contains("new URLSearchParams") ||
+                          code_trimmed.contains("fetch(") ||
+                          code_trimmed.contains("new WebSocket");
+
+        eprintln!("🔍 Web API detected: {}", has_web_api);
+
+        if has_web_api {
+            eprintln!("🚀 Web API detected, using standard path");
+            return self.execute_standard(code);
+        }
+
         // Optimized path: Skip setup for pure eval scripts with no console output
-        if code.trim_start().starts_with("console.log") || code.trim_start().starts_with("console.error") {
+        if code_trimmed.starts_with("console.log") || code_trimmed.starts_with("console.error") {
             eprintln!("🚀 Using simple print path");
             // For scripts that only print, use minimal setup
             return self.execute_simple_print(code);
