@@ -148,9 +148,10 @@ fn buffer_from_callback(
         };
 
         let buffer = v8::ArrayBuffer::new(scope, bytes.len());
+        let backing_store = buffer.backing_store();
         unsafe {
             std::slice::from_raw_parts_mut(
-                buffer.buffer().data() as *mut u8,
+                backing_store.data() as *mut u8,
                 bytes.len()
             )
         }.copy_from_slice(&bytes);
@@ -159,7 +160,8 @@ fn buffer_from_callback(
         buffer.set(scope, length_key.into(), v8::Integer::new(scope, bytes.len() as i32).into());
 
         retval.set(buffer.into());
-    } else if let Some(arr) = arg.to_array(scope) {
+    } else if arg.is_array() {
+        let arr = v8::Local::<v8::Array>::try_from(arg).unwrap();
         // Buffer.from(array)
         let length = arr.length() as usize;
         let mut bytes = vec![0u8; length];
