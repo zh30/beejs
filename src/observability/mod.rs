@@ -148,9 +148,8 @@ impl ObservableSystem {
         success: bool,
     ) {
         // Update metrics
-        if let Ok(mut metrics) = self.custom_metrics.write().await {
-            metrics.record_script_execution(duration, success).await;
-        }
+        let mut metrics = self.custom_metrics.write().await;
+        metrics.record_script_execution(duration, success).await;
 
         // Log event
         if let Some(logger) = &self.structured_logger {
@@ -170,9 +169,8 @@ impl ObservableSystem {
 
     /// Record memory usage
     pub async fn record_memory_usage(&self, bytes: usize) {
-        if let Ok(mut metrics) = self.custom_metrics.write().await {
-            metrics.record_memory_usage(bytes).await;
-        }
+        let mut metrics = self.custom_metrics.write().await;
+        metrics.record_memory_usage(bytes).await;
     }
 
     /// Record network I/O event
@@ -182,18 +180,17 @@ impl ObservableSystem {
         bytes: usize,
         duration: std::time::Duration,
     ) {
-        if let Ok(mut metrics) = self.custom_metrics.write().await {
-            metrics.record_network_io(operation, bytes, duration).await;
-        }
+        let mut metrics = self.custom_metrics.write().await;
+        metrics.record_network_io(operation, bytes, duration).await;
     }
 
     /// Get current observable metrics
     pub async fn get_metrics(&self) -> ObservableMetrics {
         let custom_metrics = self.custom_metrics.read().await;
         ObservableMetrics {
-            runtime: custom_metrics.runtime_metrics().await.clone(),
-            performance: custom_metrics.performance_metrics().await.clone(),
-            business: custom_metrics.business_metrics().await.clone(),
+            runtime: custom_metrics.runtime_metrics().await,
+            performance: custom_metrics.performance_metrics().await,
+            business: custom_metrics.business_metrics().await,
         }
     }
 

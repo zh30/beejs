@@ -37,6 +37,7 @@ pub mod watcher;
 pub mod repl;
 pub mod cli;
 pub mod edge;
+pub mod observability;  // 可观测性系统
 pub mod ai_inference;
 pub mod concurrent_execution;
 pub mod shared_memory;
@@ -119,6 +120,13 @@ pub use monitor::{
 // 重新导出监控相关的 MetricType，避免与 benchmarks 中的冲突
 pub use monitor::MetricType as MonitorMetricType;
 pub use monitor::ThresholdConfig as MonitorThresholdConfig;
+
+// 重新导出可观测性相关类型
+pub use observability::{
+    ObservableSystem, ObservabilityConfig,
+    PrometheusExporter, StructuredLogger, CustomMetrics,
+    AlertingSystem, JaegerTracer,
+};
 
 // 重新导出包管理器相关类型
 pub use package_manager::{

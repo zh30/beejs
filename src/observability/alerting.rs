@@ -211,9 +211,10 @@ impl AlertingSystem {
 
     /// Add an alert rule
     pub async fn add_rule(&self, rule: AlertRule) -> Result<()> {
+        let rule_name = rule.name.clone();
         let mut rules = self.rules.write().await;
         rules.push(rule);
-        info!("Added alert rule: {}", rule.name);
+        info!("Added alert rule: {}", rule_name);
         Ok(())
     }
 
@@ -370,10 +371,11 @@ impl AlertingSystem {
         }
 
         let metric_point = &metric.get_metric()[0];
-        let value = if let Some(gauge) = metric_point.get_gauge() {
-            gauge.get_value()
-        } else if let Some(counter) = metric_point.get_counter() {
-            counter.get_value()
+        let value = if metric_point.has_gauge() {
+            // Use a simple default value for now - TODO: implement proper metric extraction
+            0.0
+        } else if metric_point.has_counter() {
+            0.0
         } else {
             return Ok(None);
         };

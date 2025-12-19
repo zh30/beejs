@@ -111,6 +111,9 @@ impl StructuredLogger {
             }
         }
 
+        // Clone context for tracing before moving it
+        let context_clone = context.clone();
+
         // Create log entry
         let log_entry = self.create_log_entry(level, message, context);
 
@@ -124,7 +127,6 @@ impl StructuredLogger {
         }
 
         // Output to stdout using tracing
-        let context_clone = context.clone();
         match level {
             Level::TRACE => tracing::trace!(message, context = ?context_clone),
             Level::DEBUG => tracing::debug!(message, context = ?context_clone),
