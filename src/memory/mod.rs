@@ -22,12 +22,12 @@ pub use zero_copy_allocator::*;
 
 use crate::memory_pool::SmartMemoryPool;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, atomic::AtomicU64};
 use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
 /// Memory optimization configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct MemoryOptimizationConfig {
     /// Enable zero-copy allocation
     pub enable_zero_copy: bool,
@@ -42,11 +42,13 @@ pub struct MemoryOptimizationConfig {
     /// Pool configuration
     pub pool_config: PoolConfig,
     /// GC configuration
-    pub gc_config: GCConfig,
+    pub gc_config: generational_gc::GCConfig,
     /// Compression configuration
-    pub compression_config: CompressionConfig,
+    pub compression_config: memory_compression::CompressionConfig,
     /// Leak detection configuration
-    pub leak_detection_config: LeakDetectionConfig,
+    pub leak_detection_config: leak_detector::LeakDetectorConfig,
+    /// Zero-copy allocator configuration
+    pub allocator_config: zero_copy_allocator::AllocatorConfig,
 }
 
 impl Default for MemoryOptimizationConfig {
@@ -57,10 +59,11 @@ impl Default for MemoryOptimizationConfig {
             enable_generational_gc: true,
             enable_compression: true,
             enable_leak_detection: true,
-            pool_config: PoolConfig::default(),
-            gc_config: GCConfig::default(),
-            compression_config: CompressionConfig::default(),
-            leak_detection_config: LeakDetectionConfig::default(),
+            pool_config: crate::memory_pool::PoolConfig::default(),
+            gc_config: generational_gc::GCConfig::default(),
+            compression_config: memory_compression::CompressionConfig::default(),
+            leak_detection_config: leak_detector::LeakDetectorConfig::default(),
+            allocator_config: zero_copy_allocator::AllocatorConfig::default(),
         }
     }
 }
@@ -104,45 +107,11 @@ pub struct MemoryOptimizationStats {
     pub active_allocations: usize,
 }
 
-/// Pool configuration (re-exported for convenience)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PoolConfig {
-    pub string_pool_size: usize,
-    pub object_pool_size: usize,
-    pub buffer_timeout: Duration,
-    pub min_usage_threshold: usize,
-}
+/// Pool configuration (re-exported for convenience) - 使用 memory_pool 中的定义
+pub use crate::memory_pool::PoolConfig;
 
-impl Default for PoolConfig {
-    fn default() -> Self {
-        Self {
-            string_pool_size: 100,
-            object_pool_size: 50,
-            buffer_timeout: Duration::from_secs(300),
-            min_usage_threshold: 3,
-        }
-    }
-}
-
-/// GC configuration (re-exported for convenience)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GCConfig {
-    pub young_generation_size: usize,
-    pub old_generation_size: usize,
-    pub gc_threshold: usize,
-    pub max_pause_time: Duration,
-}
-
-impl Default for GCConfig {
-    fn default() -> Self {
-        Self {
-            young_generation_size: 16 * 1024 * 1024, // 16MB
-            old_generation_size: 256 * 1024 * 1024,  // 256MB
-            gc_threshold: 1000,
-            max_pause_time: Duration::from_millis(10),
-        }
-    }
-}
+/// GC configuration (re-exported for convenience) - 使用 generational_gc 中的定义
+pub use generational_gc::GCConfig;
 
 /// Compression configuration (re-exported for convenience)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -197,19 +166,19 @@ impl MemoryOptimizationManager {
 
         // Initialize components based on configuration
         if config.enable_zero_copy {
-            manager.zero_copy_allocator = Some(ZeroCopyAllocator::new(Default::default()));
+            manager.zero_copy_allocator = Some(ZeroCopyAllocator::new(config.allocator_config.clone()));
         }
         if config.enable_pooling {
             manager.memory_pool = Some(SmartMemoryPool::new(config.pool_config));
         }
         if config.enable_generational_gc {
-            manager.generational_gc = Some(GenerationalGC::new(config.gc_config));
+            manager.generational_gc = Some(GenerationalGC::new(config.gc_config.clone()));
         }
         if config.enable_compression {
-            manager.memory_compressor = Some(MemoryCompression::new(config.compression_config));
+            manager.memory_compressor = Some(MemoryCompression::new(config.compression_config.clone()));
         }
         if config.enable_leak_detection {
-            manager.leak_detector = Some(MemoryLeakDetector::new(config.leak_detection_config));
+            manager.leak_detector = Some(MemoryLeakDetector::new(config.leak_detection_config.clone()));
         }
 
         manager
@@ -222,12 +191,10 @@ impl MemoryOptimizationManager {
 
         // Try zero-copy allocation first
         if let Some(ref allocator) = self.zero_copy_allocator {
-            match allocator.allocate(size) {
-                Ok(handle) => {
-                    stats.zero_copy_allocations += 1;
-                    return Ok(handle);
-                }
-                Err(_) => {}
+            let ptr = allocator.allocate(size);
+            if !ptr.is_null() {
+                stats.zero_copy_allocations += 1;
+                return Ok(AllocationHandle { ptr, size });
             }
         }
 
@@ -337,6 +304,7 @@ impl Drop for AllocationHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::Ordering;
 
     #[test]
     fn test_memory_optimization_manager_creation() {
