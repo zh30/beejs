@@ -330,6 +330,7 @@ impl TypeScriptCompiler {
                 },
                 '<' => Token::Lt,
                 '>' => Token::Gt,
+                '|' => Token::Pipe,
                 _ => Token::Unknown(ch.to_string()),
             });
 
@@ -434,8 +435,22 @@ pub enum Token {
     Bang,
     Lt,
     Gt,
+    Pipe,
     Unknown(String),
     Eof,
+}
+
+/// 枚举成员
+#[derive(Debug, Clone)]
+pub struct EnumMember {
+    pub name: String,
+    pub value: Option<EnumValue>,
+}
+
+#[derive(Debug, Clone)]
+pub enum EnumValue {
+    Number(u32),
+    String(String),
 }
 
 /// 抽象语法树节点
@@ -461,6 +476,10 @@ pub enum ASTNode {
     InterfaceDeclaration {
         name: String,
         properties: HashMap<String, String>,
+    },
+    EnumDeclaration {
+        name: String,
+        members: Vec<EnumMember>,
     },
     Expression(ASTExpression),
     Statement(ASTStatement),
@@ -541,6 +560,9 @@ impl Parser {
             }
             Token::Interface => {
                 self.parse_interface_declaration()
+            }
+            Token::Enum => {
+                self.parse_enum_declaration()
             }
             Token::Return => {
                 self.parse_return_statement()
@@ -715,6 +737,69 @@ impl Parser {
         self.consume(Token::RBrace)?;
 
         Ok(ASTNode::InterfaceDeclaration { name, properties })
+    }
+
+    fn parse_enum_declaration(&mut self) -> Result<ASTNode> {
+        self.consume(Token::Enum)?;
+
+        let name_token = self.consume(Token::Identifier("".to_string()))?;
+        let name = match name_token {
+            Token::Identifier(name) => name,
+            _ => bail!("Expected enum name"),
+        };
+
+        self.consume(Token::LBrace)?;
+        let mut members = Vec::new();
+        let mut current_value: Option<u32> = None;
+
+        while !self.current_token_eq(&Token::RBrace) {
+            let member_name_token = self.consume(Token::Identifier("".to_string()))?;
+            let member_name = match member_name_token {
+                Token::Identifier(name) => name,
+                _ => bail!("Expected enum member name"),
+            };
+
+            let mut member_value = None;
+
+            // 检查是否有显式值 (如: North = 0)
+            if self.current_token_eq(&Token::Eq) {
+                self.consume(Token::Eq)?;
+                match self.current_token() {
+                    Token::Number(ref num) => {
+                        if let Ok(n) = num.parse::<u32>() {
+                            member_value = Some(EnumValue::Number(n));
+                            current_value = Some(n + 1);
+                        } else {
+                            member_value = Some(EnumValue::String(num.clone()));
+                        }
+                        self.advance();
+                    }
+                    Token::String(ref s) => {
+                        member_value = Some(EnumValue::String(s.clone()));
+                        self.advance();
+                    }
+                    _ => bail!("Expected number or string value for enum member"),
+                }
+            } else {
+                // 自动递增数字枚举
+                if let Some(val) = current_value {
+                    member_value = Some(EnumValue::Number(val));
+                    current_value = Some(val + 1);
+                } else {
+                    member_value = Some(EnumValue::Number(0));
+                    current_value = Some(1);
+                }
+            }
+
+            members.push(EnumMember { name: member_name, value: member_value });
+
+            if self.current_token_eq(&Token::Comma) {
+                self.consume(Token::Comma)?;
+            }
+        }
+        self.consume(Token::RBrace)?;
+
+        Ok(ASTNode::EnumDeclaration { name, members })
     }
 
     fn parse_expression(&mut self) -> Result<ASTExpression> {
@@ -907,12 +992,50 @@ impl Parser {
     }
 
     fn parse_type_annotation(&mut self) -> Option<String> {
-        // 简化的类型注解解析
+        self.parse_union_type()
+    }
+
+    fn parse_union_type(&mut self) -> Option<String> {
+        // 解析第一个类型
+        let first_type = self.parse_basic_type()?;
+
+        let mut types = vec![first_type];
+
+        // 检查是否有更多类型（通过 | 连接）
+        while self.current_token_eq(&Token::Pipe) {
+            self.advance(); // 消耗 |
+
+            if let Some(t) = self.parse_basic_type() {
+                types.push(t);
+            } else {
+                break;
+            }
+        }
+
+        // 如果只有一个类型，返回它；否则返回联合类型
+        if types.len() == 1 {
+            Some(types[0].clone())
+        } else {
+            Some(types.join(" | "))
+        }
+    }
+
+    fn parse_basic_type(&mut self) -> Option<String> {
         match self.current_token() {
             Token::Identifier(ref name) => {
                 let name = name.clone();
                 self.advance();
                 Some(name)
+            }
+            Token::String(ref s) => {
+                let s = s.clone();
+                self.advance();
+                Some(format!("\"{}\"", s))
+            }
+            Token::Number(ref n) => {
+                let n = n.clone();
+                self.advance();
+                Some(n)
             }
             _ => None,
         }
@@ -1043,6 +1166,35 @@ impl CodeEmitter {
             }
             ASTNode::InterfaceDeclaration { .. } => {
                 // 接口在 JavaScript 中不存在，跳过
+            }
+            ASTNode::EnumDeclaration { name, members } => {
+                // 转译枚举为 JavaScript 对象
+                self.output.push_str("var ");
+                self.output.push_str(name);
+                self.output.push_str(" = {\n");
+
+                for (i, member) in members.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(",\n");
+                    }
+                    self.output.push_str("    ");
+                    self.output.push_str(&member.name);
+                    self.output.push_str(": ");
+
+                    match &member.value {
+                        Some(EnumValue::Number(n)) => {
+                            self.output.push_str(&n.to_string());
+                        }
+                        Some(EnumValue::String(s)) => {
+                            self.output.push_str(&format!("\"{}\"", s));
+                        }
+                        None => {
+                            self.output.push_str("0");
+                        }
+                    }
+                }
+
+                self.output.push_str("\n};\n");
             }
             ASTNode::Expression(expr) => {
                 self.emit_expression(expr);
