@@ -1,0 +1,358 @@
+//! Stage 59: CLI 调试命令测试
+//! 测试 CLI 调试功能的完整性和正确性
+
+use std::path::PathBuf;
+use clap::Parser;
+use beejs::cli::commands::{CliApp, SubCommand};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 测试 DebugCommand::Script 命令解析
+    #[test]
+    fn test_debug_script_command_parsing() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "test.js"
+        ];
+        let app = CliApp::parse_from(args);
+        assert!(app.command.is_some());
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Script { file, break_at, port, web } => {
+                    assert_eq!(file, PathBuf::from("test.js"));
+                    assert_eq!(break_at, None);
+                    assert_eq!(port, None);
+                    assert_eq!(web, false);
+                }
+                _ => panic!("Expected DebugCommand::Script"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试带初始断点的调试命令
+    #[test]
+    fn test_debug_script_with_breakpoint() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "app.js",
+            "--break-at", "10"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Script { file, break_at, .. } => {
+                    assert_eq!(file, PathBuf::from("app.js"));
+                    assert_eq!(break_at, Some(10));
+                }
+                _ => panic!("Expected DebugCommand::Script"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试带端口的调试命令
+    #[test]
+    fn test_debug_script_with_port() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "server.js",
+            "--port", "9229"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Script { file, port, .. } => {
+                    assert_eq!(file, PathBuf::from("server.js"));
+                    assert_eq!(port, Some(9229));
+                }
+                _ => panic!("Expected DebugCommand::Script"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试 Web UI 模式
+    #[test]
+    fn test_debug_with_web_ui() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "web-app.js",
+            "--web"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Script { file, web, .. } => {
+                    assert_eq!(file, PathBuf::from("web-app.js"));
+                    assert_eq!(web, true);
+                }
+                _ => panic!("Expected DebugCommand::Script"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试 Attach 命令解析
+    #[test]
+    fn test_debug_attach_command() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "--attach", "1234"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Attach { pid, port } => {
+                    assert_eq!(pid, 1234);
+                    assert_eq!(port, None);
+                }
+                _ => panic!("Expected DebugCommand::Attach"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试带端口的 Attach 命令
+    #[test]
+    fn test_debug_attach_with_port() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "--attach", "5678",
+            "--port", "9229"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Attach { pid, port } => {
+                    assert_eq!(pid, 5678);
+                    assert_eq!(port, Some(9229));
+                }
+                _ => panic!("Expected DebugCommand::Attach"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试 Inspect 命令解析
+    #[test]
+    fn test_debug_inspect_command() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "--inspect"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Inspect { port, web } => {
+                    assert_eq!(port, None);
+                    assert_eq!(web, false);
+                }
+                _ => panic!("Expected DebugCommand::Inspect"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试带端口的 Inspect 命令
+    #[test]
+    fn test_debug_inspect_with_port() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "--inspect",
+            "--port", "8080"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Inspect { port, .. } => {
+                    assert_eq!(port, Some(8080));
+                }
+                _ => panic!("Expected DebugCommand::Inspect"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试 Web UI 模式的 Inspect 命令
+    #[test]
+    fn test_debug_inspect_with_web() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "--inspect",
+            "--web"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Inspect { web, .. } => {
+                    assert_eq!(web, true);
+                }
+                _ => panic!("Expected DebugCommand::Inspect"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试完整参数组合
+    #[test]
+    fn test_debug_script_full_parameters() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "complex-app.js",
+            "--break-at", "25",
+            "--port", "9229",
+            "--web"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Script { file, break_at, port, web } => {
+                    assert_eq!(file, PathBuf::from("complex-app.js"));
+                    assert_eq!(break_at, Some(25));
+                    assert_eq!(port, Some(9229));
+                    assert_eq!(web, true);
+                }
+                _ => panic!("Expected DebugCommand::Script"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试 TypeScript 文件调试
+    #[test]
+    fn test_debug_typescript_file() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "app.ts",
+            "--break-at", "15"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Script { file, break_at, .. } => {
+                    assert_eq!(file, PathBuf::from("app.ts"));
+                    assert_eq!(break_at, Some(15));
+                }
+                _ => panic!("Expected DebugCommand::Script"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试调试命令帮助信息
+    #[test]
+    fn test_debug_help_message() {
+        let result = CliApp::try_parse_from(&["beejs", "debug", "--help"]);
+        assert!(result.is_err()); // clap 会返回 Err 用于显示帮助信息
+    }
+
+    /// 测试默认端口值
+    #[test]
+    fn test_default_debug_port() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "script.js"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Script { port, .. } => {
+                    assert_eq!(port, None); // 默认 None，使用内置默认值
+                }
+                _ => panic!("Expected DebugCommand::Script"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试复杂场景：多行代码调试
+    #[test]
+    fn test_debug_multiline_script() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "src/components/Button.tsx",
+            "--break-at", "42"
+        ];
+        let app = CliApp::parse_from(args);
+
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Script { file, break_at, .. } => {
+                    assert_eq!(file, PathBuf::from("src/components/Button.tsx"));
+                    assert_eq!(break_at, Some(42));
+                }
+                _ => panic!("Expected DebugCommand::Script"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+
+    /// 测试调试会话配置
+    #[test]
+    fn test_debug_session_configuration() {
+        let args = vec![
+            "beejs",
+            "debug",
+            "worker.js",
+            "--port", "9229",
+            "--web"
+        ];
+        let app = CliApp::parse_from(args);
+
+        // 验证所有配置项都正确设置
+        if let Some(SubCommand::Debug(debug_cmd)) = app.command {
+            match debug_cmd {
+                beejs::cli::commands::DebugCommand::Script { file, break_at, port, web } => {
+                    assert_eq!(file, PathBuf::from("worker.js"));
+                    assert_eq!(break_at, None);
+                    assert_eq!(port, Some(9229));
+                    assert_eq!(web, true);
+                }
+                _ => panic!("Expected DebugCommand::Script"),
+            }
+        } else {
+            panic!("Expected Debug subcommand");
+        }
+    }
+}
