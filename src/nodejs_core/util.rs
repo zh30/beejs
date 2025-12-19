@@ -142,7 +142,7 @@ fn util_inspect_callback(
     } else if object.is_undefined() {
         "undefined".to_string()
     } else if object.is_array(scope) {
-        let arr = object.to_array(scope).unwrap();
+        let arr = v8::Local::<v8::Array>::try_from(object).unwrap();
         let length = arr.length();
         format!("Array({}) [{} items]", length, length)
     } else if object.is_object() {

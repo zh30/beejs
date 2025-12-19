@@ -236,22 +236,25 @@ fn buffer_concat_callback(
         .unwrap_or(v8::Integer::new(scope, 0))
         .value() as usize;
 
-    if let Some(arr) = list.to_array(scope) {
-        let mut combined_data = Vec::new();
-        let mut calculated_length = 0;
+    if list.is_array() {
+        if let Ok(arr) = v8::Local::<v8::Array>::try_from(list) {
+            let mut combined_data = Vec::new();
+            let mut calculated_length = 0;
 
-        for i in 0..arr.length() {
-            if let Some(buf) = arr.get_index(scope, i).and_then(|v| v.to_array(scope)) {
-                let length_key = v8::String::new(scope, "_length").unwrap();
-                if let Some(len_val) = buf.get(scope, length_key.into()).and_then(|v| v.to_integer(scope)) {
-                    let len = len_val.value() as usize;
-                    calculated_length += len;
+            for i in 0..arr.length() {
+                if let Ok(buf) = v8::Local::<v8::Array>::try_from(arr.get_index(scope, i).unwrap()) {
+                    let length_key = v8::String::new(scope, "_length").unwrap();
+                    if let Some(len_val) = buf.get(scope, length_key.into()).and_then(|v| v.to_integer(scope)) {
+                        let len = len_val.value() as usize;
+                        calculated_length += len;
 
-                    // 复制数据
-                    unsafe {
-                        let data_ptr = buf.buffer().data() as *const u8;
-                        let data_slice = std::slice::from_raw_parts(data_ptr, len);
-                        combined_data.extend_from_slice(data_slice);
+                        // 复制数据
+                        unsafe {
+                            let backing_store = buf.backing_store();
+                            let data_ptr = backing_store.data() as *const u8;
+                            let data_slice = std::slice::from_raw_parts(data_ptr, len);
+                            combined_data.extend_from_slice(data_slice);
+                        }
                     }
                 }
             }
