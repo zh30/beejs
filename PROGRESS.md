@@ -3,9 +3,77 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-19)**: ✅ Stage 57 完成 - REPL 交互式环境
+**当前状态 (2025-12-19)**: ✅ Stage 58 完成 - 调试器核心架构
 
 ## 最新更新 (2025-12-19)
+
+### ✅ Stage 58: 调试器核心架构 (2025-12-19)
+**进度**: ✅ 完成核心架构
+
+#### 完成功能:
+1. **调试器模块架构** - `src/debugger/` 目录
+   - `engine.rs` (420+ 行) - 调试引擎核心
+     * DebugState 状态管理 (Running/Paused/Stepping/Terminated)
+     * DebuggerEngine 主体实现
+     * 事件监听器模式
+     * 调试统计信息收集
+
+   - `breakpoint.rs` (280+ 行) - 断点管理系统
+     * BreakpointManager 断点生命周期管理
+     * 条件断点支持
+     * 断点命中计数
+     * 脚本映射管理
+
+   - `stack_trace.rs` (320+ 行) - 调用栈管理
+     * StackFrame 栈帧结构
+     * StackTrace 调用链
+     * StackFrameBuilder V8 栈帧构建
+     * StackTraverser 栈遍历工具
+
+   - `variable_scope.rs` (340+ 行) - 变量作用域检查
+     * VariableInspector 变量检查器
+     * ScopeType 作用域类型 (Global/Local/Closure/Catch 等)
+     * VariableInfo 变量信息结构
+     * 作用域链遍历
+
+   - `config.rs` - 调试器配置管理
+     * DebugConfig 配置结构
+     * 默认配置值
+
+   - `v8_stubs.rs` - V8 API 存根实现
+     * DebugEvent 调试事件类型
+     * DebugExecutionState 执行状态
+     * DebugBreakLocation 断点位置
+     * GetOwnPropertyNamesOptions 属性选项
+
+2. **核心调试功能**:
+   - ✅ 断点管理 (设置/删除/启用/禁用/条件)
+   - ✅ 执行控制 (Continue/StepOver/StepInto/StepOut/Next)
+   - ✅ 变量检查和修改
+   - ✅ 调用栈遍历和导航
+   - ✅ 调试事件系统
+   - ✅ 统计信息收集
+
+3. **技术实现**:
+   - 使用 `rusty_v8` V8 引擎集成
+   - `Arc<Mutex<>>` 线程安全状态管理
+   - 事件监听器模式 (DebugEventListener trait)
+   - 模块化设计，支持扩展和测试
+   - 存根实现便于 V8 API 集成
+
+4. **架构设计**:
+```rust
+pub struct DebuggerEngine {
+    config: DebugConfig,
+    state: Arc<Mutex<DebugState>>,
+    breakpoint_manager: BreakpointManager,
+    current_stack: Arc<Mutex<Option<StackTrace>>>,
+    stats: Arc<Mutex<DebugStats>>,
+    event_listeners: Vec<Box<dyn DebugEventListener + Send + Sync>>,
+}
+```
+
+**提交**: 071711f - feat(stage58): 完成调试器核心架构实现
 
 ### ✅ Stage 57: REPL 交互式环境 (2025-12-19)
 **进度**: ✅ 完成实现
