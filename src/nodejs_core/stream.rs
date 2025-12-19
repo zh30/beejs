@@ -117,8 +117,9 @@ fn readable_read_callback(
     // 创建一些测试数据
     let data = vec![b'A'; size.min(1024)];
     let chunk = v8::ArrayBuffer::new(scope, data.len());
+    let backing_store = chunk.backing_store();
     unsafe {
-        std::slice::from_raw_parts_mut(chunk.buffer().data() as *mut u8, data.len())
+        std::slice::from_raw_parts_mut(backing_store.data() as *mut u8, data.len())
             .copy_from_slice(&data);
     }
 
@@ -139,12 +140,14 @@ fn readable_public_read_callback(
 
     // 调用_read方法
     let read_key = v8::String::new(scope, "_read").unwrap();
-    if let Some(read_func) = this.get(scope, read_key.into()).and_then(|f| f.to_function(scope)) {
-        let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-        cb_args.set_index(scope, 0, v8::Integer::new(scope, size).into());
-
-        let mut cb_retval = v8::ReturnValue::default();
-        read_func.call(scope, this, &cb_args, &mut cb_retval);
+    if let Some(read_func_value) = this.get(scope, read_key.into()) {
+        if read_func_value.is_function() {
+            if let Ok(read_func) = v8::Local::<v8::Function>::try_from(read_func_value) {
+                let cb_args = args;
+                let mut cb_retval = v8::ReturnValue::new();
+                read_func.call(scope, this, &cb_args, &mut cb_retval);
+            }
+        }
     }
 
     // 简化实现：返回null表示没有更多数据
@@ -174,18 +177,27 @@ fn readable_on_callback(
     if event == "data" {
         // 创建测试数据
         let data = v8::String::new(scope, "test data chunk").unwrap();
-        let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-        cb_args.set_index(scope, 0, data.into());
+        let data_value = data.into();
 
-        let mut cb_retval = v8::ReturnValue::default();
-        listener.to_function(scope).unwrap().call(scope, this, &cb_args, &mut cb_retval);
+        if listener.is_function() {
+            if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
+                // 创建新的 FunctionCallbackArguments
+                let cb_args = v8::FunctionCallbackArguments::from_function_args(scope, &[data_value]);
+                let mut cb_retval = v8::ReturnValue::new();
+                listener_func.call(scope, this, &cb_args, &mut cb_retval);
+            }
+        }
     }
 
     // 模拟emit 'end'事件
     if event == "end" {
-        let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
-        let mut cb_retval = v8::ReturnValue::default();
-        listener.to_function(scope).unwrap().call(scope, this, &cb_args, &mut cb_retval);
+        if listener.is_function() {
+            if let Ok(listener_func) = v8::Local::<v8::Function>::try_from(listener) {
+                let cb_args = v8::FunctionCallbackArguments::from_function_args(scope, &[]);
+                let mut cb_retval = v8::ReturnValue::new();
+                listener_func.call(scope, this, &cb_args, &mut cb_retval);
+            }
+        }
     }
 
     retval.set(this.into());
