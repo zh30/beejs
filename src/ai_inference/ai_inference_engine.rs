@@ -1,7 +1,7 @@
 //! AI 推理引擎核心实现
 //! 提供高性能的 AI 模型推理能力
 
-use crate::ai_inference::{ModelLoader, Tensor, ModelCache};
+use crate::ai_inference::{ModelLoader, Tensor, ModelCache, InferenceResult};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::{Result, Context};
@@ -15,15 +15,6 @@ pub struct AIInferenceEngine {
     model_cache: ModelCache,
     inference_count: Arc<RwLock<u64>>,
     total_inference_time: Arc<RwLock<Duration>>,
-}
-
-/// AI 推理结果
-#[derive(Debug, Clone)]
-pub struct InferenceResult {
-    pub output: Tensor,
-    pub inference_time_ms: f64,
-    pub model_id: String,
-    pub gpu_used: bool,
 }
 
 impl AIInferenceEngine {

@@ -1,7 +1,7 @@
 //! 统一的 AI 推理引擎接口
 //! 支持多种 AI 框架和模型格式的通用接口
 
-use crate::ai_inference::{Tensor, InferenceResult};
+use crate::ai_inference::Tensor;
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -121,6 +121,15 @@ pub trait InferenceEngine: Send + Sync {
 
     /// 克隆引擎实例
     fn clone_engine(&self) -> Box<dyn InferenceEngine>;
+}
+
+/// AI 推理结果
+#[derive(Debug, Clone)]
+pub struct InferenceResult {
+    pub output: Tensor,
+    pub inference_time_ms: f64,
+    pub model_id: String,
+    pub gpu_used: bool,
 }
 
 /// 模型句柄 - 代表已加载的模型

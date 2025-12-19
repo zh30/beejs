@@ -1,7 +1,7 @@
 //! 动态批处理优化器 - 简化版
 //! Stage 35.0 候选特性 - 动态调整批次大小以优化推理性能
 
-use super::ai_inference_engine::{AIInferenceEngine, InferenceResult};
+use super::{AIInferenceEngine, InferenceResult};
 use super::tensor_ops::Tensor;
 use anyhow::{Result};
 use std::collections::VecDeque;
