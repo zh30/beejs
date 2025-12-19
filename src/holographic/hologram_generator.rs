@@ -1,0 +1,157 @@
+//! 全息图像生成器
+
+/// 全息图类型
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HologramType {
+    /// 振幅全息
+    Amplitude,
+    /// 相位全息
+    Phase,
+    /// 复振幅全息
+    Complex,
+    /// 彩色全息
+    Color,
+}
+
+impl Default for HologramType {
+    fn default() -> Self {
+        Self::Phase
+    }
+}
+
+/// 全息编码方式
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HologramEncoding {
+    /// 二值编码
+    Binary,
+    /// 多级编码
+    MultiLevel,
+    /// 连续编码
+    Continuous,
+    /// 误差扩散
+    ErrorDiffusion,
+}
+
+impl Default for HologramEncoding {
+    fn default() -> Self {
+        Self::MultiLevel
+    }
+}
+
+/// 生成器配置
+#[derive(Debug, Clone)]
+pub struct GeneratorConfig {
+    /// 全息图类型
+    pub hologram_type: HologramType,
+    /// 编码方式
+    pub encoding: HologramEncoding,
+    /// 优化迭代次数
+    pub optimization_iterations: u32,
+}
+
+impl Default for GeneratorConfig {
+    fn default() -> Self {
+        Self {
+            hologram_type: HologramType::Phase,
+            encoding: HologramEncoding::MultiLevel,
+            optimization_iterations: 50,
+        }
+    }
+}
+
+/// 全息图生成器
+pub struct HologramGenerator {
+    /// 配置
+    config: GeneratorConfig,
+}
+
+impl HologramGenerator {
+    /// 创建全息图生成器
+    pub fn new(config: GeneratorConfig) -> Result<Self, GeneratorError> {
+        Ok(Self { config })
+    }
+
+    /// 从点云生成全息图
+    pub fn from_point_cloud(&self, points: &[[f32; 3]], resolution: (u32, u32)) -> Result<Hologram, GeneratorError> {
+        let (width, height) = resolution;
+        let data = vec![0u8; (width * height) as usize];
+
+        Ok(Hologram {
+            width,
+            height,
+            hologram_type: self.config.hologram_type,
+            data,
+            point_count: points.len(),
+        })
+    }
+
+    /// 从深度图生成全息图
+    pub fn from_depth_map(&self, depth: &[f32], width: u32, height: u32) -> Result<Hologram, GeneratorError> {
+        let data = vec![0u8; (width * height) as usize];
+
+        Ok(Hologram {
+            width,
+            height,
+            hologram_type: self.config.hologram_type,
+            data,
+            point_count: depth.len(),
+        })
+    }
+
+    /// 从 3D 模型生成全息图
+    pub fn from_mesh(&self, vertices: &[[f32; 3]], indices: &[u32], resolution: (u32, u32)) -> Result<Hologram, GeneratorError> {
+        let (width, height) = resolution;
+        let data = vec![0u8; (width * height) as usize];
+
+        Ok(Hologram {
+            width,
+            height,
+            hologram_type: self.config.hologram_type,
+            data,
+            point_count: vertices.len(),
+        })
+    }
+
+    /// 获取配置
+    pub fn config(&self) -> &GeneratorConfig {
+        &self.config
+    }
+}
+
+/// 全息图数据
+#[derive(Debug, Clone)]
+pub struct Hologram {
+    /// 宽度
+    pub width: u32,
+    /// 高度
+    pub height: u32,
+    /// 类型
+    pub hologram_type: HologramType,
+    /// 数据
+    pub data: Vec<u8>,
+    /// 点数量
+    pub point_count: usize,
+}
+
+/// 生成器错误
+#[derive(Debug, Clone)]
+pub enum GeneratorError {
+    /// 初始化失败
+    InitializationFailed(String),
+    /// 生成失败
+    GenerationFailed(String),
+    /// 输入无效
+    InvalidInput(String),
+}
+
+impl std::fmt::Display for GeneratorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InitializationFailed(msg) => write!(f, "初始化失败: {}", msg),
+            Self::GenerationFailed(msg) => write!(f, "生成失败: {}", msg),
+            Self::InvalidInput(msg) => write!(f, "输入无效: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for GeneratorError {}
