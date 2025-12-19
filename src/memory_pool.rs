@@ -288,6 +288,35 @@ impl SmartMemoryPool {
             self.cleanup_object_pool(&mut pool);
         }
     }
+
+    /// Allocate an object buffer for the memory optimization manager
+    pub fn allocate_object_buffer(&self, size: usize) -> Option<super::memory::AllocationHandle> {
+        // Try to get a buffer from the pool
+        let buffer = self.get_object_buffer(size);
+
+        // Allocate memory for the buffer
+        let layout = std::alloc::Layout::from_size_align(size, 8).ok()?;
+        let ptr = unsafe { std::alloc::alloc(layout) };
+
+        if ptr.is_null() {
+            return None;
+        }
+
+        Some(super::memory::AllocationHandle { ptr, size })
+    }
+
+    /// Try to deallocate an object buffer back to the pool
+    pub fn try_deallocate_object_buffer(&self, ptr: *mut u8, size: usize) -> bool {
+        // For simplicity, we'll just deallocate directly
+        // In a real implementation, we might try to return to pool
+        let layout = unsafe {
+            std::alloc::Layout::from_size_align_unchecked(size, 8)
+        };
+        unsafe {
+            std::alloc::dealloc(ptr, layout);
+        }
+        true
+    }
 }
 
 /// V8对象包装器，使用内存池优化
