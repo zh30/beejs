@@ -387,6 +387,7 @@ fn transform_transform_callback(
 
     // 默认_transform实现
     if callback.is_function(scope) {
+        let this = args.this();
         let mut cb_args = v8::FunctionCallbackArguments::new(scope, &[]);
         let mut cb_retval = v8::ReturnValue::default();
         callback.to_function(scope).unwrap().call(scope, this, &cb_args, &mut cb_retval);

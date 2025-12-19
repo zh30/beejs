@@ -74,20 +74,18 @@ pub fn setup_buffer_api(
         slice_func,
     );
 
-    // length
-    let length_accessor = v8::AccessorBuilder::new(scope)
-        .getter(|scope, args, _| {
-            let this = args.this();
-            let length_key = v8::String::new(scope, "_length").unwrap();
-            let length = this.get(scope, length_key.into()).unwrap_or(v8::Integer::new(scope, 0).into());
-            length
-        })
-        .build();
+    // length 属性
+    let length_getter = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
+        let this = args.this();
+        let length_key = v8::String::new(scope, "_length").unwrap();
+        let length = this.get(scope, length_key.into()).unwrap_or(v8::Integer::new(scope, 0).into());
+        _rv.set(length.into());
+    });
 
     buffer_constructor.set_prototype_property_accessor(
         scope,
         v8::String::new(scope, "length").unwrap().into(),
-        length_accessor,
+        length_getter,
     );
 
     // 设置Buffer到全局
