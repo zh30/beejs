@@ -3,9 +3,67 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-19)**: ✅ V8 API 兼容性修复完成 - Stage 46 完成编译
+**当前状态 (2025-12-19)**: ✅ TypeScript 类成员支持完成 - Stage 51 完成
 
 ## 最新更新 (2025-12-19)
+
+### ✅ Stage 51: TypeScript 类成员支持 (2025-12-19)
+**进度**: ✅ 完成
+
+#### 完成功能:
+1. **ClassMember 枚举**: 属性声明、构造函数、方法声明
+2. **Visibility 枚举**: public, private, protected 访问修饰符
+3. **类继承**: extends 语法支持
+4. **new 表达式**: 完整对象创建支持
+5. **赋值表达式**: =, +=, -=, *=, /= 运算符
+
+#### 测试验证:
+```typescript
+class Student {
+    studentId: number;
+    constructor(id: number, grade: string) { ... }
+    display(): void { ... }
+}
+const student = new Student(1001, "A");
+```
+✅ 编译成功，Node.js 执行输出正确
+
+**提交**: 511c5bf - feat(typescript): Stage 51 - 完善 TypeScript 类成员支持
+
+---
+
+### ✅ Stage 50: TypeScript 编译器功能完善 (2025-12-19)
+**进度**: ✅ 完成
+
+#### 完成功能:
+1. **接口转译**: 正确移除 interface 声明
+2. **对象字面量**: ASTExpression::ObjectLiteral 支持
+3. **V8 集成**: 完整运行时集成
+
+**提交**: 428d9b1 - feat(typescript): Stage 50 - 完善 TypeScript 编译器功能
+
+---
+
+### ✅ Stage 49: TypeScript 编译器集成 (2025-12-19)
+**进度**: ✅ 完成
+
+**提交**: 958873f - feat(typescript): Stage 49 - 修复 TypeScript 编译器并集成执行管道
+
+---
+
+### ✅ Stage 48: 测试套件集成 (2025-12-19)
+**进度**: ✅ 完成
+
+**提交**: 6639cc6 - feat: Stage 48 测试套件集成完成
+
+---
+
+### ✅ Stage 47: 编译错误修复 (2025-12-19)
+**进度**: ✅ 运行时可用
+
+**提交**: 829605a - 🔧 Stage 47 完成: 编译错误修复 - 运行时现已可用
+
+---
 
 ### ✅ Stage 46: V8 API 兼容性修复 - 完成编译 (2025-12-19)
 **进度**: 🎉 所有编译错误已修复 (100% 完成)
