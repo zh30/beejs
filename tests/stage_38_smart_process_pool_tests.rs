@@ -8,7 +8,11 @@
 //! - 性能预测
 
 use beejs::stage_38_smart_process_pool::*;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use beejs::{TaskComplexity, ProcessPoolConfig};
+use std::time::{Duration, SystemTime, UNIX_EPOCH, Instant};
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::collections::HashMap;
 use tokio::time::sleep;
 
 #[tokio::test]
@@ -93,7 +97,7 @@ async fn test_smart_load_balancer_performance_based() {
     let mut worker2_history = Vec::new();
     for i in 0..10 {
         worker2_history.push(WorkerPerformanceRecord {
-            timestamp: System::now(),
+            timestamp: SystemTime::now(),
             execution_time: Duration::from_millis(100 + i as u64), // 100-110ms
             memory_usage: 150 * 1024 * 1024, // 150MB
             cpu_usage: 60.0 + i as f64, // 60-70%

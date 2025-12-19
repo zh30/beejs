@@ -8,12 +8,8 @@ use std::thread;
 fn test_isolate_lifecycle_in_single_thread() {
     // 验证在单线程环境下 Isolate 可以正常创建和销毁
     let runtime = Runtime::new(67108864, 1073741824, false);
-    assert!(
-        runtime.is_ok(),
-        "Runtime creation should succeed in single thread"
-    );
+    // Runtime creation always succeeds
 
-    let runtime = runtime.unwrap();
     let result = runtime.execute_code("1 + 1");
     assert!(result.is_ok(), "Code execution should succeed");
     assert_eq!(result.unwrap(), "2");
@@ -24,9 +20,8 @@ fn test_sequential_isolate_creation() {
     // 验证串行创建多个 Runtime 实例不会导致问题
     for i in 0..10 {
         let runtime = Runtime::new(67108864, 1073741824, false);
-        assert!(runtime.is_ok(), "Runtime {} creation should succeed", i);
+        // Runtime creation always succeeds
 
-        let runtime = runtime.unwrap();
         let result = runtime.execute_code(&format!("{}", i));
         assert!(result.is_ok(), "Runtime {} execution should succeed", i);
     }
