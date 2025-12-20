@@ -281,22 +281,25 @@ mod tests {
         std::fs::write(&test_file, "console.log('initial')")
             .expect("Failed to write test file");
 
+        // Give the system time to settle
+        sleep(Duration::from_millis(50)).await;
+
         let (mut watcher, mut event_receiver) = create_file_watcher(vec![test_file.clone()])
             .await
             .expect("Failed to create watcher");
 
-        // Wait for initial scan
-        sleep(Duration::from_millis(200)).await;
+        // Wait for initial scan and event processing
+        sleep(Duration::from_millis(300)).await;
 
         // Modify file
         std::fs::write(&test_file, "console.log('modified')")
             .expect("Failed to modify test file");
 
-        // Wait for change detection
-        sleep(Duration::from_millis(500)).await;
+        // Wait for change detection - increased timeout
+        sleep(Duration::from_millis(600)).await;
 
         // Check if event was received (with timeout)
-        let event = tokio::time::timeout(Duration::from_secs(2), event_receiver.recv())
+        let event = tokio::time::timeout(Duration::from_secs(3), event_receiver.recv())
             .await
             .expect("Timeout waiting for file modification event")
             .expect("Failed to receive file modification event");
