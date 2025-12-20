@@ -115,8 +115,11 @@ impl VariableInspector {
         &self,
         context: &v8::Global<v8::Context>,
     ) -> DebugResult<Vec<VariableInfo>> {
-        let isolate = context.isolate();
-        let mut scope = v8::HandleScope::new(isolate);
+        // Note: V8 isolate access requires different approach in rusty_v8 0.22
+        // This is a placeholder implementation
+        // TODO: Implement proper global variable access with V8
+
+        let mut scope = v8::HandleScope::new();
         let context_local = v8::Local::new(&mut scope, context);
 
         // Get global object
@@ -213,8 +216,11 @@ impl VariableInspector {
             return Ok(Vec::new());
         }
 
-        let isolate = context.isolate();
-        let mut scope = v8::HandleScope::new(isolate);
+        // Note: V8 isolate access requires different approach in rusty_v8 0.22
+        // This is a placeholder implementation
+        // TODO: Implement proper object inspection with V8
+
+        let mut scope = v8::HandleScope::new();
         let object_local = v8::Local::new(&mut scope, object);
 
         self.object_to_variables(&mut scope, object.clone(), "object".to_string())
@@ -291,8 +297,11 @@ impl ScopeUtils {
     pub fn create_global_scope(
         context: &v8::Global<v8::Context>,
     ) -> DebugResult<VariableScope> {
-        let isolate = context.isolate();
-        let mut scope = v8::HandleScope::new(isolate);
+        // Note: V8 isolate access requires different approach in rusty_v8 0.22
+        // This is a placeholder implementation
+        // TODO: Implement proper scope creation with V8
+
+        let mut scope = v8::HandleScope::new();
         let context_local = v8::Local::new(&mut scope, context);
 
         let global = context_local.global(&mut scope);

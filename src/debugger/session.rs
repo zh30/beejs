@@ -144,16 +144,17 @@ impl DebugSession {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cli::commands::DebugCommand;
+    use crate::cli::commands::SubCommand;
 
     #[test]
     fn test_debug_session_creation() {
         let runtime = RuntimeLite::new(false).unwrap();
-        let cmd = DebugCommand::Script {
-            file: PathBuf::from("test.js"),
+        let cmd = SubCommand::Debug {
+            file: Some(PathBuf::from("test.js")),
             break_at: None,
             port: 9229,
             web: false,
+            pid: None,
         };
 
         let session = DebugSession::new(runtime, cmd).unwrap();
@@ -165,9 +166,12 @@ mod tests {
     #[test]
     fn test_debug_session_attach() {
         let runtime = RuntimeLite::new(false).unwrap();
-        let cmd = DebugCommand::Attach {
-            pid: 1234,
+        let cmd = SubCommand::Debug {
+            file: None,
+            break_at: None,
             port: 9229,
+            web: false,
+            pid: Some(1234),
         };
 
         let session = DebugSession::new(runtime, cmd).unwrap();
@@ -178,9 +182,12 @@ mod tests {
     #[test]
     fn test_debug_session_inspect() {
         let runtime = RuntimeLite::new(false).unwrap();
-        let cmd = DebugCommand::Inspect {
+        let cmd = SubCommand::Debug {
+            file: None,
+            break_at: None,
             port: 8080,
             web: true,
+            pid: None,
         };
 
         let session = DebugSession::new(runtime, cmd).unwrap();

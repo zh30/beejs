@@ -221,7 +221,10 @@ impl StackFrameBuilder {
         let mut is_truncated = false;
 
         // Get total frame count from V8
-        let total_frames = exec_state.frame_count() as usize;
+        // Note: V8 DebugExecutionState API has changed in rusty_v8 0.22
+        // This is a placeholder implementation
+        // TODO: Implement proper frame counting with V8
+        let total_frames = 0;
 
         // Build frames up to max_frames
         for i in 0..std::cmp::min(max_frames, total_frames) {
