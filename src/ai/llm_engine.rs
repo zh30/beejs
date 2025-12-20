@@ -1,7 +1,7 @@
 //! LLM 推理优化引擎
 //! 提供高性能的大语言模型推理能力，包括 KV Cache 优化、并行推理和内存管理
 
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 // TODO: Remove unused import: use std::sync::{Arc, Mutex, RwLock};
 // TODO: Remove unused import: use std::time::{Duration, Instant};
 

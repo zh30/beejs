@@ -8,7 +8,7 @@
 //! - Package.json "main" field support
 //! - Relative and absolute path resolution
 
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::fs;
 // TODO: Remove unused import: use std::path::{Path, PathBuf};
 

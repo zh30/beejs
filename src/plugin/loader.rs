@@ -1,6 +1,6 @@
 //! Plugin loader module
 
-use anyhow::Result;
+// TODO: Remove unused import: use anyhow::Result;
 use std::path::Path;
 
 pub struct PluginLoader {

@@ -2,8 +2,8 @@
 //!
 //! 实现 95%+ 原生性能的 WASM 执行引擎，支持热路径优化和动态优化
 
-use std::sync::Arc;
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::sync::Arc;
+// TODO: Remove unused import: use std::collections::HashMap;
 use wasmtime::{Engine, Module, Instance, Store, Memory};
 // TODO: Remove unused import: use anyhow::{Result, Context};
 // TODO: Remove unused import: use tracing::{info, debug};

@@ -4,11 +4,11 @@
 //! integrates with V8's debugging capabilities, and provides the high-level
 //! API for debugging operations.
 
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use rusty_v8 as v8;
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};
 
-use crate::debugger::{
+// TODO: Remove unused import: use crate::debugger::{
     breakpoint::{BreakpointManager, Breakpoint},
     stack_trace::{StackTrace, StackFrame},
     variable_scope::VariableInspector,

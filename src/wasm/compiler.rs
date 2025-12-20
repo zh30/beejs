@@ -5,7 +5,7 @@
 // TODO: Remove unused import: use wasmtime::{Engine, Module, Config, OptLevel};
 use wasmtime_wasi::{WasiCtxBuilder, WasiCtx};
 // TODO: Remove unused import: use anyhow::{Result, Context, anyhow};
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 
 /// Wasm 编译器结构体
 ///

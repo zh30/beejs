@@ -1,7 +1,7 @@
 //! SIMD vectorization optimization
 //! AVX2/AVX512 instruction utilization
 
-use anyhow::Result;
+// TODO: Remove unused import: use anyhow::Result;
 
 /// SIMD instruction set
 #[derive(Debug, Clone, Copy, PartialEq)]

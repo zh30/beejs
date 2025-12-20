@@ -1,5 +1,5 @@
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};
 // TODO: Remove unused import: use std::time::{Duration, Instant};

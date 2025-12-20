@@ -4,7 +4,7 @@
 use crate::code_cache::{BytecodeCache, CacheConfig};
 // TODO: Remove unused import: use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};

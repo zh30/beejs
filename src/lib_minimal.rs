@@ -1,7 +1,7 @@
 // TODO: Remove unused import: use std::path::{PathBuf, Path};
 // TODO: Remove unused import: use anyhow::{Result, Context, anyhow};
 use std::fs;
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use rusty_v8 as v8;

@@ -13,7 +13,7 @@ use crate::benchmarks::{
     BenchmarkConfig
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 // TODO: Remove unused import: use std::time::{SystemTime, UNIX_EPOCH};

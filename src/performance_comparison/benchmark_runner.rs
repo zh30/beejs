@@ -9,7 +9,7 @@
 use crate::performance_comparison::{BenchmarkTestCase, PerformanceComparisonResult};
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 // TODO: Remove unused import: use anyhow::{Result, Context};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Command;
 // TODO: Remove unused import: use std::time::{Duration, Instant};

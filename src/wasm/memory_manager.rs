@@ -5,7 +5,7 @@
 
 // TODO: Remove unused import: use anyhow::{Result, Context, anyhow};
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use wasmtime::{Memory, Store};

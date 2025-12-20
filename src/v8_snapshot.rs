@@ -4,11 +4,11 @@
 
 use anyhow::{anyhow, Result};
 use rusty_v8 as v8;
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 use std::sync::Mutex;
 // TODO: Remove unused import: use std::time::{SystemTime, UNIX_EPOCH};
 

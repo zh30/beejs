@@ -4,7 +4,7 @@
 //! 使用Wasmtime运行时实现真正的WebAssembly执行
 
 // TODO: Remove unused import: use anyhow::{anyhow, Context, Result};
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 // TODO: Remove unused import: use std::time::{Duration, Instant};
 use wasmtime::*;
 

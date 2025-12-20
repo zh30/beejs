@@ -1,5 +1,5 @@
 use std::alloc::{GlobalAlloc, Layout};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 // TODO: Remove unused import: use std::time::{Duration, Instant};

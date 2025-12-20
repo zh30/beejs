@@ -8,7 +8,7 @@
 //! - Environment variable handling
 //! - Shebang detection
 
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// File type enumeration for script detection

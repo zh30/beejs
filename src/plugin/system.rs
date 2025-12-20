@@ -1,8 +1,8 @@
 //! Plugin system core
 //! Supports both Rust and JavaScript plugins with sandboxing
 
-use anyhow::Result;
-use std::collections::HashMap;
+// TODO: Remove unused import: use anyhow::Result;
+// TODO: Remove unused import: use std::collections::HashMap;
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};
 
 /// Plugin metadata

@@ -10,7 +10,7 @@
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::fs;
 #[allow(unused_imports)]
 use std::io::Write;

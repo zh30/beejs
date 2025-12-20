@@ -5,7 +5,7 @@
 use crate::v8_optimized::embedded_builtins::EmbeddedBuiltinsManager;
 use crate::v8_optimized::snapshot_manager::V8SnapshotOptimizedManager;
 use anyhow::{anyhow, Result};
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 // TODO: Remove unused import: use std::time::{Duration, Instant};
 
 /// V8 启动优化器

@@ -7,12 +7,12 @@ use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipel
 use crate::inline_cache::{CacheKey, CacheEntry};
 use crate::v8_context_pool::{V8ContextPool, ContextPoolStats};
 use crate::runtime_lite::cache::MultiLevelCache;
-use anyhow::Result;
+// TODO: Remove unused import: use anyhow::Result;
 use rusty_v8 as v8;
 use std::cell::OnceCell;
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 // TODO: Remove unused import: use std::time::{Duration, Instant};
 
 /// Lightweight Runtime - minimal V8 runtime for fast startup
@@ -1742,7 +1742,7 @@ impl RuntimeLite {
     }
 }
 
-/// Global lightweight runtime instance for maximum reuse
+/// Global lightweight runtime instance for maximum re// TODO: Remove unused import: use
 static GLOBAL_LITE_RUNTIME: std::sync::OnceLock<std::sync::Arc<RuntimeLite>> = std::sync::OnceLock::new();
 
 /// Get or create the global lightweight runtime (maximum reuse)

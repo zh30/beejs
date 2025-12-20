@@ -1,7 +1,7 @@
 //! Plugin market module
 
-use anyhow::Result;
-use std::collections::HashMap;
+// TODO: Remove unused import: use anyhow::Result;
+// TODO: Remove unused import: use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct PluginInfo {

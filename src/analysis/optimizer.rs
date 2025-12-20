@@ -3,11 +3,11 @@
 //! This module generates actionable optimization suggestions based on
 //! performance analysis and bottleneck detection results.
 
-use crate::analysis::bottleneck_detector::{
+// TODO: Remove unused import: use crate::analysis::bottleneck_detector::{
     Bottleneck, BottleneckSeverity, BottleneckType, BottleneckDetector
 };
 use crate::performance_analyzer::PerformanceReport;
-use serde::{Deserialize, Serialize};use std::collections::HashMap;
+use serde::{Deserialize, Serialize};// TODO: Remove unused import: use std::collections::HashMap;
 
 /// Optimization priority levels
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]

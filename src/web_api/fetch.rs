@@ -1,9 +1,9 @@
 //! Fetch API implementation for Web standard
 //! Provides fetch(), Request, Response, Headers API
 
-use anyhow::Result;
+// TODO: Remove unused import: use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};
 
 /// Fetch API configuration

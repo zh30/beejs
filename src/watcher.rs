@@ -5,7 +5,7 @@
 
 // TODO: Remove unused import: use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 // TODO: Remove unused import: use std::time::{Duration, SystemTime};
 
 use notify::RecursiveMode;

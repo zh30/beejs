@@ -6,7 +6,7 @@
 // TODO: Remove unused import: use anyhow::{Context, Result};
 use prometheus::{Registry, TextEncoder};
 use std::net::SocketAddr;
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tracing::{error, info};

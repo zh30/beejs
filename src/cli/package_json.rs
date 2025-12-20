@@ -1,7 +1,7 @@
 //! Package.json Integration Module
 //! Stage 36.0 - 实现 package.json 解析和脚本执行
 
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::fs;
 // TODO: Remove unused import: use std::path::{Path, PathBuf};
 

@@ -4,7 +4,7 @@
 //! data sharing and pre-allocated buffer pools for minimal allocation overhead.
 
 use super::CacheKey;
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 /// Zero-copy script buffer using Arc for safe sharing

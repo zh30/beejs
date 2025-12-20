@@ -6,7 +6,7 @@
 use wasmtime_wasi::{WasiCtx, WasiCtxBuilder};
 use wasmtime_wasi::p1::wasi_snapshot_preview1::add_to_linker;
 // TODO: Remove unused import: use anyhow::{Result, Context, anyhow};
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 use std::time::Instant;
 
 /// WebAssembly 模块结构体

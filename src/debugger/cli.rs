@@ -3,7 +3,7 @@
 //! Provides a command-line interface for debugging JavaScript/TypeScript code
 //! with support for breakpoints, stepping, and variable inspection.
 
-use anyhow::Result;
+// TODO: Remove unused import: use anyhow::Result;
 use std::io::{self, Write};
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};
 

@@ -1,7 +1,7 @@
 //! Stage 12.2: 字符串Interning优化模块
 //! 通过字符串池化减少内存分配和比较开销
 
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 /// 字符串符号 - 唯一标识一个interned字符串

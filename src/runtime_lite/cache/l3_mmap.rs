@@ -3,8 +3,8 @@
 //! This module provides L3 cache using memory mapping for efficient handling
 //! of large script files and infrequently accessed cold data.
 
-use super::CacheStats;
-use std::collections::HashMap;
+// TODO: Remove unused import: use super::CacheStats;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;

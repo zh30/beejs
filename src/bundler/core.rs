@@ -1,7 +1,7 @@
 //! High-performance bundler core
 //! Designed to exceed esbuild performance (100MB/s+)
 
-use anyhow::Result;
+// TODO: Remove unused import: use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 // TODO: Remove unused import: use std::path::{Path, PathBuf};
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};

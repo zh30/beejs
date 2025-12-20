@@ -5,7 +5,7 @@
 
 use crate::benchmarks::BenchmarkResult;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::time::Duration;
 
 /// 单个基准测试的对比结果

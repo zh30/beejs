@@ -3,7 +3,7 @@
 //! 实现 WebAssembly Threads 支持，支持 SharedArrayBuffer 和 Atomics
 //! 实现线性性能扩展 (8 线程 7x+ 性能提升)
 
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 use wasmtime::Engine;
 // TODO: Remove unused import: use anyhow::{Result, Context};
 // TODO: Remove unused import: use tracing::{info, debug};

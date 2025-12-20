@@ -6,7 +6,7 @@ use crate::v8_snapshot::V8SnapshotManager;
 use anyhow::{anyhow, Result};
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 use std::sync::Mutex;
 // TODO: Remove unused import: use std::time::{Duration, Instant};
 

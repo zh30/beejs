@@ -10,7 +10,7 @@
 //! - Support for both simple and complex script execution
 
 use anyhow::{Context, Result};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};

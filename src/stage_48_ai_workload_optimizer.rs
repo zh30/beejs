@@ -8,7 +8,7 @@
 //! 5. 内存预分配 - 避免运行时内存分配开销
 
 use anyhow::{Result, bail};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};
 // TODO: Remove unused import: use std::time::{Duration, Instant};
 

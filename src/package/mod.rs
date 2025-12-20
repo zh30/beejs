@@ -1,8 +1,8 @@
 //! Package management system
 //! npm/yarn/pnpm compatible package manager
 
-use anyhow::Result;
-use std::collections::HashMap;
+// TODO: Remove unused import: use anyhow::Result;
+// TODO: Remove unused import: use std::collections::HashMap;
 
 /// Package info
 #[derive(Debug, Clone)]

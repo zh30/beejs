@@ -7,7 +7,7 @@
 use std::fs::File;
 use std::io::{self, Write};
 // TODO: Remove unused import: use std::os::unix::io::{AsRawFd, RawFd};
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 // TODO: Remove unused import: use std::time::{Duration, Instant};
 
 /// sendfile 零拷贝文件传输器

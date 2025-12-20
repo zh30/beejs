@@ -4,7 +4,7 @@
 
 use crate::v8_snapshot::V8SnapshotManager;
 use anyhow::{anyhow, Result};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};

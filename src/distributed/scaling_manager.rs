@@ -1,7 +1,7 @@
 //! 扩缩容管理器模块
 //! 负责管理集群的自动扩缩容、资源监控和节点生命周期
 
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};
 // TODO: Remove unused import: use std::time::{Duration, Instant};
 // TODO: Remove unused import: use tracing::{info, warn, debug};

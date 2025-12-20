@@ -2,7 +2,7 @@
 //! 实现跨V8 Isolate的常用对象共享，减少重复分配
 
 use crate::string_interner::StringInterner;
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};
 // TODO: Remove unused import: use std::time::{Duration, Instant};

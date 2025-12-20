@@ -6,7 +6,7 @@
 // TODO: Remove unused import: use anyhow::{Result, Context, anyhow};
 use wasmtime::{Instance, Store, Func, Val};
 // TODO: Remove unused import: use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 // TODO: Remove unused import: use std::time::{Instant, Duration};
 
 /// JavaScript 值枚举

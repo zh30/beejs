@@ -2,7 +2,7 @@
 //! 负责收集Beejs性能数据，与Bun进行对比，生成详细的性能报告
 
 use crate::Runtime;
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 // TODO: Remove unused import: use std::time::{Duration, Instant};
 
 /// 性能指标枚举

@@ -16,7 +16,7 @@ pub mod vercel;
 pub mod load_balancer;
 pub mod distributed_cache;
 
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 
 /// 云平台类型
 #[derive(Debug, Clone, PartialEq)]

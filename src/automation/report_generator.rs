@@ -12,7 +12,7 @@ use crate::benchmarks::BenchmarkResult;
 use crate::performance_regression::{RegressionTestSuite};
 use crate::automation::test_runner::TestSuiteResults;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 // TODO: Remove unused import: use std::time::{SystemTime, UNIX_EPOCH};

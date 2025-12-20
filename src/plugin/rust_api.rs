@@ -1,6 +1,6 @@
 //! Rust plugin API
 
-use anyhow::Result;
+// TODO: Remove unused import: use anyhow::Result;
 
 pub struct RustPluginApi {
     pub version: String,

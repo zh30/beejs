@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 use std::fs::{File, OpenOptions};
 use memmap2::{Mmap, MmapOptions};
 // TODO: Remove unused import: use anyhow::{Result, Context};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 
 /// 访问模式
 #[derive(Debug, Clone, Copy, PartialEq)]

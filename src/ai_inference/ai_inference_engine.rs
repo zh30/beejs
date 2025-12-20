@@ -2,7 +2,7 @@
 //! 提供高性能的 AI 模型推理能力
 
 use crate::ai_inference::{ModelLoader, Tensor, ModelCache, InferenceResult};
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 use tokio::sync::RwLock;
 // TODO: Remove unused import: use anyhow::{Result, Context};
 // TODO: Remove unused import: use std::time::{Duration, Instant};

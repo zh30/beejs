@@ -1,7 +1,7 @@
 // TODO: Remove unused import: use std::path::{Path, PathBuf};
 use std::fs;
 use std::env;
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 use anyhow::{Result, anyhow};
 use rusty_v8 as v8;
 use crate::module_loader::ModuleLoader;

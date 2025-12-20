@@ -17,7 +17,7 @@ pub use v8_bindings::*;
 
 /// Global test registry for collecting test cases during file execution
 // TODO: Remove unused import: use std::sync::{Mutex, OnceLock};
-use std::collections::HashMap;
+// TODO: Remove unused import: use std::collections::HashMap;
 
 static TEST_REGISTRY: OnceLock<Mutex<HashMap<String, TestSuite>>> = OnceLock::new();
 

@@ -1,6 +1,6 @@
 //! Web Crypto API implementation
 
-use anyhow::Result;
+// TODO: Remove unused import: use anyhow::Result;
 use rusty_v8 as v8;
 
 pub fn setup_crypto_api(

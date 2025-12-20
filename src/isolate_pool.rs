@@ -1,7 +1,7 @@
 use rusty_v8 as v8;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
 // TODO: Remove unused import: use std::time::{Duration, Instant};

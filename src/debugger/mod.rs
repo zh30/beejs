@@ -23,7 +23,7 @@ pub use stack_trace::{StackFrame, StackTrace, StackFrameInfo};
 pub use variable_scope::{VariableScope, ScopeType, VariableInspector};
 pub use session::DebugSession;
 
-use std::sync::Arc;
+// TODO: Remove unused import: use std::sync::Arc;
 
 /// Debug event types
 #[derive(Debug, Clone, PartialEq)]
