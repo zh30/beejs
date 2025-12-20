@@ -9,7 +9,7 @@ pub mod visualizer;
 pub mod trend_analyzer;
 
 // Re-export main types
-pub // TODO: Remove unused import: use bottleneck_detector::{
+pub use bottleneck_detector::{
     BottleneckDetector, BottleneckDetectorConfig, Bottleneck, BottleneckType,
     BottleneckSeverity,
 };
