@@ -8,8 +8,9 @@ pub mod url;
 pub mod events;
 pub mod form_data;
 pub mod abort;
-pub mod timers;   // Stage 74: Timer APIs
-pub mod encoding; // Stage 74: TextEncoder/TextDecoder
+pub mod timers;      // Stage 74: Timer APIs
+pub mod encoding;    // Stage 74: TextEncoder/TextDecoder
+pub mod performance; // Stage 74: Performance API
 
 use anyhow::Result;
 use rusty_v8 as v8;
@@ -21,6 +22,7 @@ use encoding::setup_encoding_api;
 use events::setup_events_api;
 use fetch::setup_fetch_api;
 use form_data::setup_form_data_api;
+use performance::setup_performance_api;
 use timers::setup_timer_api;
 use url::setup_url_api;
 use websocket::setup_websocket_api;
@@ -37,7 +39,8 @@ pub fn init_web_api(
     setup_events_api(scope, context)?;
     setup_abort_api(scope, context)?;
     setup_timer_api(scope, context)?;
-    setup_encoding_api(scope, context)?;  // Stage 74: Encoding APIs
+    setup_encoding_api(scope, context)?;     // Stage 74: Encoding APIs
+    setup_performance_api(scope, context)?;  // Stage 74: Performance API
 
     // 2. URL API（依赖 events）
     setup_url_api(scope, context)?;
