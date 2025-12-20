@@ -25,6 +25,7 @@ pub mod analysis;
 pub mod monitor;
 pub mod runtime_lite;
 pub mod v8_context_pool;  // Stage 64: V8 Context Pool for performance optimization
+pub mod v8_engine;  // Stage 69 Phase 2: V8 Engine Deep Optimization
 pub mod smart_cache;  // Stage 60: 智能缓存系统
 // pub mod lib_minimal;
 pub mod memory_pool;

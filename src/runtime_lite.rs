@@ -6,6 +6,7 @@ use crate::memory_pool::{PoolConfig, SmartMemoryPool};
 use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipeline};
 use crate::inline_cache::{CacheKey, CacheEntry};
 use crate::v8_context_pool::{V8ContextPool, ContextPoolStats};
+use crate::v8_engine::flags::{V8EngineFlags, V8ConfigManager};
 use crate::runtime_lite::cache::MultiLevelCache;
 use anyhow::Result;
 use rusty_v8 as v8;
@@ -61,6 +62,10 @@ pub struct RuntimeLite {
     /// Reduces V8 context creation overhead by reusing pre-initialized contexts
     context_pool: Arc<V8ContextPool>,
 
+    /// Stage 69 Phase 2: V8 Engine Configuration for deep optimization
+    /// Provides high-performance V8 engine flags and configuration management
+    v8_config: V8EngineFlags,
+
     /// Stage 65: Multi-level cache for ultra-fast script execution
     /// ⚡ Lazy initialized: only created when actually needed (Stage 67 optimization)
     /// L1: Zero-copy hot cache, L2: Smart LRU/LFU cache, L3: Memory-mapped cache
@@ -89,6 +94,7 @@ impl Clone for RuntimeLite {
             inline_cache: Arc::clone(&self.inline_cache),
             cache_stats: Arc::clone(&self.cache_stats),
             context_pool: Arc::clone(&self.context_pool),
+            v8_config: self.v8_config.clone(),
             multi_cache: Arc::clone(&self.multi_cache),
         }
     }
@@ -132,6 +138,18 @@ impl RuntimeLite {
         // Keep up to 4 contexts, each valid for 10 minutes
         let context_pool = Arc::new(V8ContextPool::new(4, Duration::from_secs(600)));
 
+        // Stage 69 Phase 2: Initialize high-performance V8 configuration
+        // Use high_performance configuration for maximum speed
+        let v8_config = V8EngineFlags::high_performance();
+        if verbose {
+            println!("RuntimeLite: V8 Engine configured for high performance (profile: {})",
+                     v8_config.profile_name());
+            println!("RuntimeLite: V8 Memory config - Old: {}MB, New: {}MB, Code: {}MB",
+                     v8_config.max_old_space_mb,
+                     v8_config.max_new_space_mb,
+                     v8_config.code_range_size_mb);
+        }
+
         // Stage 67: ⚡ LAZY INITIALIZATION - Multi-level Cache
         // Only initialized when actually needed, reducing startup time by ~50-80ms
         let multi_cache = Arc::new(OnceCell::new());
@@ -158,8 +176,107 @@ impl RuntimeLite {
             inline_cache,
             cache_stats,
             context_pool,
+            v8_config,
             multi_cache,
         })
+    }
+
+    /// Create a new lightweight runtime with custom V8 configuration
+    /// This allows fine-tuning V8 engine parameters for specific workloads
+    pub fn new_with_config(verbose: bool, config: V8EngineFlags) -> Result<Self> {
+        // Initialize V8 if not already done (safe to call multiple times)
+        super::initialize_v8();
+
+        // Check if V8 is properly initialized
+        if !super::is_v8_initialized() {
+            return Err(anyhow::anyhow!("V8 engine is not properly initialized"));
+        }
+
+        if verbose {
+            println!("RuntimeLite: Minimal V8 runtime initialized with custom config");
+        }
+
+        // Stage 65: Enable V8 snapshot for faster initialization
+        let v8_snapshot = Some(Vec::new()); // Placeholder for future snapshot implementation
+        if verbose {
+            println!("RuntimeLite: V8 snapshot disabled to avoid lifecycle issues");
+        }
+
+        // Stage 67: ⚡ LAZY INITIALIZATION - JIT optimization components
+        let jit_optimizer = Arc::new(OnceCell::new());
+        let hot_path_optimizer = Arc::new(OnceCell::new());
+        let optimization_pipeline = Arc::new(OnceCell::new());
+
+        // Stage 67: ⚡ LAZY INITIALIZATION - Inline cache
+        let inline_cache = Arc::new(OnceCell::new());
+        let cache_stats = Arc::new(OnceCell::new());
+
+        // Stage 64: Initialize V8 Context Pool for performance optimization
+        let context_pool = Arc::new(V8ContextPool::new(4, Duration::from_secs(600)));
+
+        // Stage 69 Phase 2: Use provided V8 configuration
+        let v8_config = config;
+        if verbose {
+            println!("RuntimeLite: V8 Engine configured with custom profile (profile: {})",
+                     v8_config.profile_name());
+            println!("RuntimeLite: V8 Memory config - Old: {}MB, New: {}MB, Code: {}MB",
+                     v8_config.max_old_space_mb,
+                     v8_config.max_new_space_mb,
+                     v8_config.code_range_size_mb);
+        }
+
+        // Stage 67: ⚡ LAZY INITIALIZATION - Multi-level Cache
+        let multi_cache = Arc::new(OnceCell::new());
+
+        if verbose {
+            println!("RuntimeLite: ⚡ LAZY INITIALIZATION - JIT optimization enabled on-demand");
+            println!("RuntimeLite: ⚡ LAZY INITIALIZATION - Inline cache enabled on-demand");
+            println!("RuntimeLite: ⚡ LAZY INITIALIZATION - Multi-level cache enabled on-demand");
+            println!("RuntimeLite: V8 Context Pool initialized (max 4 contexts)");
+        }
+
+        Ok(Self {
+            execution_count: Arc::new(AtomicUsize::new(0)),
+            script_cache: Arc::new(std::sync::Mutex::new(HashMap::new())),
+            cache_hits: Arc::new(AtomicUsize::new(0)),
+            cache_misses: Arc::new(AtomicUsize::new(0)),
+            max_cache_size: 200,
+            cache_ttl: Duration::from_secs(300),
+            v8_snapshot,
+            memory_pool: Arc::new(SmartMemoryPool::new(PoolConfig::default())),
+            jit_optimizer,
+            hot_path_optimizer,
+            optimization_pipeline,
+            inline_cache,
+            cache_stats,
+            context_pool,
+            v8_config,
+            multi_cache,
+        })
+    }
+
+    // ============================================================================
+    // Stage 69 Phase 2: V8 Configuration Accessors
+    // ============================================================================
+
+    /// Get the current V8 engine configuration
+    pub fn v8_config(&self) -> &V8EngineFlags {
+        &self.v8_config
+    }
+
+    /// Get V8 engine flags as command-line arguments
+    pub fn v8_flags(&self) -> Vec<String> {
+        self.v8_config.to_v8_flags()
+    }
+
+    /// Get V8 configuration profile name
+    pub fn v8_profile_name(&self) -> &str {
+        self.v8_config.profile_name()
+    }
+
+    /// Get estimated V8 memory usage in MB
+    pub fn v8_estimated_memory_mb(&self) -> usize {
+        self.v8_config.estimated_memory_mb()
     }
 
     // ============================================================================
