@@ -1,4 +1,4 @@
-//! Web API modules - Stage 43.0
+//! Web API modules - Stage 43.0 / Stage 74.0
 //! Web标准API实现
 
 pub mod fetch;
@@ -8,6 +8,7 @@ pub mod url;
 pub mod events;
 pub mod form_data;
 pub mod abort;
+pub mod timers;  // Stage 74: Timer APIs
 
 use anyhow::Result;
 use rusty_v8 as v8;
@@ -18,6 +19,7 @@ use crypto::setup_crypto_api;
 use events::setup_events_api;
 use fetch::setup_fetch_api;
 use form_data::setup_form_data_api;
+use timers::setup_timer_api;
 use url::setup_url_api;
 use websocket::setup_websocket_api;
 
@@ -32,6 +34,7 @@ pub fn init_web_api(
     setup_crypto_api(scope, context)?;
     setup_events_api(scope, context)?;
     setup_abort_api(scope, context)?;
+    setup_timer_api(scope, context)?;  // Stage 74: Timer APIs
 
     // 2. URL API（依赖 events）
     setup_url_api(scope, context)?;
