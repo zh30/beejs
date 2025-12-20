@@ -266,11 +266,12 @@ impl MLLoadBalancer {
     }
 
     /// 轮询算法
-    fn select_round_robin(&self) -> Option<&ServiceEndpoint> {
+    fn select_round_robin(&mut self) -> Option<&ServiceEndpoint> {
         let total = self.endpoints.len();
         if total == 0 { return None; }
 
         let index = (self.stats.total_requests as usize) % total;
+        self.stats.total_requests += 1;
         self.endpoints.get(index)
     }
 

@@ -555,6 +555,6 @@ mod tests {
         }
 
         let stats = cache.get_stats().await.unwrap();
-        assert!(stats.total_operations > 1000);
+        assert!(stats.total_operations >= 1000);  // Expect at least 1000 operations (10 tasks * 100 ops)
     }
 }

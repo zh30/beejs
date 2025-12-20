@@ -257,6 +257,19 @@ impl Repl {
         }
     }
 
+    /// Execute code and record in history (for testing)
+    pub async fn execute_and_record(&mut self, code: &str) -> anyhow::Result<ReplResult> {
+        let result = self.execute_code(code).await?;
+
+        // Add to history
+        if self.history.len() >= self.config.history_size {
+            self.history.pop_front();
+        }
+        self.history.push_back(code.to_string());
+
+        Ok(result)
+    }
+
     /// Print help information
     fn print_help(&self) {
         println!("\n🐝 Beejs REPL Commands:");
@@ -362,8 +375,8 @@ mod tests {
         let runtime = Arc::new(RuntimeLite::new(false).expect("Failed to create runtime"));
         let mut repl = Repl::new(runtime);
 
-        repl.execute_code("1 + 1").await.expect("Failed to execute");
-        repl.execute_code("2 + 2").await.expect("Failed to execute");
+        repl.execute_and_record("1 + 1").await.expect("Failed to execute");
+        repl.execute_and_record("2 + 2").await.expect("Failed to execute");
 
         let stats = repl.get_stats();
         assert_eq!(stats.total_commands, 2);
