@@ -1,0 +1,123 @@
+//! PerformanceMonitor 功能演示
+//! 展示性能监控系统的核心功能
+
+use beejs::monitor::performance_monitor::{
+    PerformanceMonitor, MetricType, MetricValue, MonitorConfig, ThresholdConfig
+};
+use std::collections::HashMap;
+use std::time::Duration;
+
+fn main() {
+    println!("=== Beejs PerformanceMonitor 功能演示 ===\n");
+
+    // 1. 创建性能监控器
+    println!("1. 创建性能监控器...");
+    let monitor = PerformanceMonitor::with_default_config();
+    println!("   ✓ 监控器创建成功\n");
+
+    // 2. 收集性能指标
+    println!("2. 收集性能指标...");
+    let metrics = vec![
+        MetricValue {
+            metric_type: MetricType::CpuUsage,
+            value: 65.5,
+            timestamp: 1609459200,
+            tags: HashMap::new(),
+        },
+        MetricValue {
+            metric_type: MetricType::MemoryUsage,
+            value: 1024.0,
+            timestamp: 1609459201,
+            tags: HashMap::new(),
+        },
+        MetricValue {
+            metric_type: MetricType::ExecutionTime,
+            value: 125.5,
+            timestamp: 1609459202,
+            tags: HashMap::new(),
+        },
+    ];
+
+    for metric in &metrics {
+        let result = monitor.collect_metric(metric.clone());
+        match result {
+            Ok(_) => println!("   ✓ 收集指标: {:?} = {}", metric.metric_type, metric.value),
+            Err(e) => println!("   ✗ 收集失败: {}", e),
+        }
+    }
+    println!();
+
+    // 3. 获取实时指标
+    println!("3. 获取实时指标...");
+    match monitor.get_real_time_metrics() {
+        Ok(real_time_metrics) => {
+            println!("   实时指标数量: {}", real_time_metrics.len());
+            for metric in &real_time_metrics {
+                println!("   - {:?}: {} (timestamp: {})",
+                    metric.metric_type, metric.value, metric.timestamp);
+            }
+        }
+        Err(e) => println!("   ✗ 获取失败: {}", e),
+    }
+    println!();
+
+    // 4. 聚合指标
+    println!("4. 聚合指标...");
+    match monitor.aggregate_metrics() {
+        Ok(_) => {
+            match monitor.get_aggregated_metrics() {
+                Ok(aggregated) => {
+                    println!("   聚合指标数量: {}", aggregated.len());
+                    for (metric_type, agg_metric) in &aggregated {
+                        println!("   - {:?}: avg={:.2}, min={:.2}, max={:.2}, count={}",
+                            metric_type, agg_metric.avg, agg_metric.min,
+                            agg_metric.max, agg_metric.count);
+                    }
+                }
+                Err(e) => println!("   ✗ 获取聚合指标失败: {}", e),
+            }
+        }
+        Err(e) => println!("   ✗ 聚合失败: {}", e),
+    }
+    println!();
+
+    // 5. 获取统计信息
+    println!("5. 获取统计信息...");
+    match monitor.get_stats() {
+        Ok(stats) => {
+            println!("   总收集次数: {}", stats.total_collections);
+            println!("   总指标数: {}", stats.total_metrics);
+            println!("   错误次数: {}", stats.error_count);
+            match stats.last_collection_time {
+                Some(time) => println!("   最后收集时间: {:?}", time),
+                None => println!("   最后收集时间: 无"),
+            }
+        }
+        Err(e) => println!("   ✗ 获取统计失败: {}", e),
+    }
+    println!();
+
+    // 6. 自定义配置演示
+    println!("6. 自定义配置演示...");
+    let custom_config = MonitorConfig {
+        aggregation_window: Duration::from_secs(60),
+        retention_period: Duration::from_secs(7200),
+        max_metrics: 5000,
+        thresholds: vec![ThresholdConfig {
+            metric_type: MetricType::CpuUsage,
+            warning: 80.0,
+            critical: 95.0,
+            enabled: true,
+        }],
+    };
+    let custom_monitor = PerformanceMonitor::new(custom_config);
+    println!("   ✓ 自定义配置监控器创建成功\n");
+
+    println!("=== 演示完成 ===");
+    println!("\n📊 PerformanceMonitor 核心功能:");
+    println!("   • 实时性能指标收集");
+    println!("   • 指标聚合和统计分析");
+    println!("   • 可配置的阈值监控");
+    println!("   • 详细的统计信息跟踪");
+    println!("   • 支持多种指标类型和自定义标签");
+}
