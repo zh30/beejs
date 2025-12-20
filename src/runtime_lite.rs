@@ -155,10 +155,11 @@ impl RuntimeLite {
         scope: &mut v8::ContextScope<v8::HandleScope>,
         context: &v8::Local<v8::Context>,
     ) -> Result<()> {
-        use crate::nodejs;
+        // Temporarily disabled for Stage 60 - V8 API compatibility issues
+        // use crate::nodejs;
 
         // Set up process and path APIs
-        nodejs::setup_nodejs_apis(scope, None, context, None)?;
+        // nodejs::setup_nodejs_apis(scope, None, context, None)?;
         Ok(())
     }
 
@@ -167,17 +168,18 @@ impl RuntimeLite {
         scope: &mut v8::ContextScope<v8::HandleScope>,
         context: &v8::Local<v8::Context>,
     ) -> Result<()> {
-        use crate::web_api;
+        // Temporarily disabled for Stage 60 - V8 API compatibility issues
+        // use crate::web_api;
 
-        eprintln!("🔧 Initializing Web APIs...");
+        // eprintln!("🔧 Initializing Web APIs...");
 
         // Set up Fetch, WebSocket, URL, and other Web APIs
-        if let Err(e) = web_api::init_web_api(scope, context) {
-            eprintln!("❌ Web API initialization failed: {:?}", e);
-            return Err(e);
-        }
+        // if let Err(e) = web_api::init_web_api(scope, context) {
+        //     eprintln!("❌ Web API initialization failed: {:?}", e);
+        //     return Err(e);
+        // }
 
-        eprintln!("✅ Web APIs initialized successfully");
+        // eprintln!("✅ Web APIs initialized successfully");
 
         Ok(())
     }

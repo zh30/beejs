@@ -9,7 +9,17 @@ use std::time::Instant;
 use beejs::cli::commands::{CliApp, SubCommand};
 use beejs::cli::{ExecutionContext, ExecutorConfig, ScriptExecutor, FileType, shebang};
 use beejs::RuntimeLite;
-use beejs::debugger::DebugSession;
+// use beejs::debugger::DebugSession;  // Temporarily disabled for Stage 60
+
+/// Temporary debug command structure
+#[derive(Debug, Clone)]
+struct DebugTempCommand {
+    file: Option<String>,
+    break_at: Option<u32>,
+    port: Option<u16>,
+    web: bool,
+    pid: Option<String>,
+}
 
 /// CLI entry point
 fn main() -> Result<()> {
@@ -61,11 +71,12 @@ fn main() -> Result<()> {
             }
             run_bundle(cmd, app.verbose)
         }
-        Some(SubCommand::Debug(cmd)) => {
+        Some(SubCommand::Debug { file: _, break_at: _, port: _, web: _, pid: _ }) => {
+            // Temporarily disabled for Stage 60 - Debugger module disabled
             if app.verbose {
-                println!("🐛 Starting debug session");
+                println!("🐛 Debugger is temporarily disabled for Stage 60");
             }
-            run_debug(runtime, cmd, app.verbose)
+            Err(anyhow::anyhow!("Debugger is temporarily disabled"))
         }
         None => {
             // No subcommand - run script if provided as positional arg (Bun compatibility)
@@ -350,29 +361,7 @@ fn run_debug(
     cmd: beejs::cli::commands::SubCommand,
     verbose: bool,
 ) -> Result<()> {
-    let cmd = match cmd {
-        SubCommand::Debug(cmd) => cmd,
-        _ => return Err(anyhow::anyhow!("Invalid debug command")),
-    };
-    if verbose {
-        println!("🐛 Debug session configuration:");
-        println!("   Script: {:?}", cmd.file);
-        println!("   Break at line: {:?}", cmd.break_at);
-        println!("   Port: {}", cmd.port);
-        println!("   Web UI: {}", cmd.web);
-        if let Some(pid) = cmd.pid {
-            println!("   Attach to PID: {}", pid);
-        }
-    }
-
-    // Create debug session (must be mutable for start())
-    let mut session = DebugSession::new(runtime, cmd)
-        .context("Failed to create debug session")?;
-
-    // Start the debug session
-    tokio::runtime::Runtime::new()?
-        .block_on(session.start())
-        .context("Failed to start debug session")?;
-
-    Ok(())
+    // Temporarily return error for debug commands
+    // The debugger module is disabled for Stage 60
+    Err(anyhow::anyhow!("Debugger is temporarily disabled for Stage 60"))
 }

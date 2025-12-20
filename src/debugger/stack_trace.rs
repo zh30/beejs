@@ -208,7 +208,7 @@ impl StackFrameBuilder {
         };
 
         self.frame_index += 1;
-        Ok(frame)
+        DebugResult::ok(frame)
     }
 
     /// Build stack trace from V8 execution state
@@ -248,7 +248,7 @@ impl StackFrameBuilder {
             is_truncated = true;
         }
 
-        Ok(StackTrace {
+        DebugResult::ok(StackTrace {
             frames,
             total_frames,
             is_truncated,

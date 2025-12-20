@@ -26,11 +26,13 @@ pub mod monitor;
 pub mod runtime_lite;
 // pub mod lib_minimal;
 pub mod memory_pool;
+// pub mod nodejs_core;  // Temporarily disabled for Stage 60
 pub mod process_pool;
 pub mod v8_snapshot;
+// pub mod nodejs_polyfill;  // Temporarily disabled for Stage 60
 pub mod jit_optimizer;
 pub mod inline_cache;
-pub mod nodejs;
+// pub mod nodejs;  // Temporarily disabled for Stage 60
 pub mod code_analyzer;
 pub mod module_loader;
 pub mod package_manager;
@@ -38,7 +40,8 @@ pub mod watcher;
 pub mod repl;
 pub mod cli;
 pub mod edge;
-pub mod debugger;  // Stage 58: Debugger integration
+// pub mod web_api;  // Temporarily disabled for Stage 60
+// pub mod debugger;  // Stage 58: Debugger integration (temporarily disabled for Stage 60)
 pub mod observability;  // 可观测性系统
 pub mod ai_inference;
 pub mod concurrent_execution;
@@ -68,8 +71,8 @@ pub mod immersive_interaction;  // Stage 42.0: 沉浸式交互模块
 pub mod distributed_metaverse;  // Stage 42.0: 分布式元宇宙网络
 
 // Stage 43.0: 完整生态系统与极致性能优化
-pub mod nodejs_core;
-pub mod web_api;
+// pub mod nodejs_core;  // Temporarily disabled for Stage 60
+// pub mod web_api;  // Temporarily disabled for Stage 60
 pub mod bundler;
 pub mod plugin;
 pub mod jit;

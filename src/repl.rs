@@ -208,7 +208,8 @@ impl Repl {
         global.set(scope, console_key.into(), console.into());
 
         // Set up Node.js APIs
-        crate::nodejs::setup_nodejs_apis(scope, None, context, None)?;
+        // Temporarily disabled for Stage 60 - V8 API compatibility issues
+        // crate::nodejs::setup_nodejs_apis(scope, None, context, None)?;
 
         Ok(())
     }

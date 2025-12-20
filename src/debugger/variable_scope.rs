@@ -63,7 +63,7 @@ impl VariableInspector {
         // Get object properties from V8
         // This would integrate with V8's Object API
 
-        Ok(variables)
+        DebugResult::ok(variables)
     }
 
     /// Get variables from all accessible scopes
@@ -75,10 +75,13 @@ impl VariableInspector {
 
         for scope in scopes {
             match self.get_scope_variables(scope) {
-                Ok(vars) => {
+                DebugResult { success: true, data: Some(vars), .. } => {
                     all_vars.insert(scope.scope_type.clone(), vars);
                 }
-                Err(e) => return DebugResult::err(e.to_string()),
+                DebugResult { success: false, error: Some(e), .. } => {
+                    return DebugResult::err(e);
+                }
+                _ => return DebugResult::err("Unknown error".to_string()),
             }
         }
 
@@ -133,7 +136,7 @@ impl VariableInspector {
         );
         if globals_result.success {
             if let Some(globals) = globals_result.data {
-                Ok(globals)
+                DebugResult::ok(globals)
             } else {
                 DebugResult::err("No data returned".to_string())
             }
@@ -202,7 +205,7 @@ impl VariableInspector {
             variables.push(var_info);
         }
 
-        Ok(variables)
+        DebugResult::ok(variables)
     }
 
     /// Get property details for an object
@@ -213,7 +216,7 @@ impl VariableInspector {
         max_depth: usize,
     ) -> DebugResult<Vec<VariableInfo>> {
         if max_depth == 0 {
-            return Ok(Vec::new());
+            return DebugResult::ok(Vec::new());
         }
 
         // Note: V8 isolate access requires different approach in rusty_v8 0.22
@@ -255,9 +258,9 @@ impl VariableInspector {
         if variables_result.success {
             if let Some(variables) = variables_result.data {
                 let found = variables.into_iter().find(|v| v.name == var_name);
-                Ok(found)
+                DebugResult::ok(found)
             } else {
-                Ok(None)
+                DebugResult::ok(None)
             }
         } else {
             DebugResult::err(variables_result.error.unwrap_or_else(|| "Unknown error".to_string()))
@@ -307,7 +310,7 @@ impl ScopeUtils {
         let global = context_local.global(&mut scope);
         let global_obj = v8::Global::new(&mut scope, global);
 
-        Ok(VariableScope {
+        DebugResult::ok(VariableScope {
             scope_type: ScopeType::Global,
             object: global_obj,
             scope_chain_position: 0,
