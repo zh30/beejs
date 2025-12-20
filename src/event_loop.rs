@@ -5,7 +5,7 @@ use rusty_v8 as v8;
 use std::sync::{Arc, Mutex};
 // use std::task::{Context, Poll}; // 未使用的导入
 use std::time::{Duration, Instant};
-use tokio::time::{sleep, timeout};
+use tokio::time::sleep;
 
 /// 事件循环状态
 #[derive(Debug, Clone, PartialEq, Eq)]

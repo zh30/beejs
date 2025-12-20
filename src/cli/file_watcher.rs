@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 use tokio::sync::mpsc;
-use tokio::time::{interval, timeout};
+use tokio::time::interval;
 
 /// File change event
 #[derive(Debug, Clone)]
