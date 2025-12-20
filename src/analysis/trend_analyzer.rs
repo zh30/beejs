@@ -532,11 +532,12 @@ mod tests {
     fn test_detect_anomalies() {
         let mut analyzer = TrendAnalyzer::new();
 
-        // Add normal data
+        // Add normal data with slight variance
         for i in 0..10 {
+            let variance = (i as f64 * 0.1) - 0.5; // Small variance around 0
             let report = PerformanceReport {
                 total_executions: 10,
-                average_time_ms: 10.0,
+                average_time_ms: 10.0 + variance, // Varying slightly around 10.0
                 min_time_ms: 5.0,
                 max_time_ms: 30.0,
                 cache_hit_rate: 70.0,
@@ -545,10 +546,10 @@ mod tests {
             analyzer.add_data_point(report, None);
         }
 
-        // Add anomalous data
+        // Add anomalous data - significantly different from normal
         let report = PerformanceReport {
             total_executions: 10,
-            average_time_ms: 50.0, // Anomaly
+            average_time_ms: 50.0, // Clear anomaly (5x normal)
             min_time_ms: 5.0,
             max_time_ms: 30.0,
             cache_hit_rate: 70.0,
@@ -557,7 +558,7 @@ mod tests {
         analyzer.add_data_point(report, None);
 
         let anomalies = analyzer.detect_anomalies(2.0);
-        assert!(!anomalies.is_empty());
+        assert!(!anomalies.is_empty(), "Should detect at least one anomaly");
     }
 
     #[test]

@@ -286,12 +286,18 @@ mod tests {
 
     #[test]
     fn test_javascript_core_benchmark_creation() {
+        // Ensure V8 is initialized before running the benchmark
+        crate::initialize_v8().expect("Failed to initialize V8");
+
         let benchmark = JavaScriptCoreBenchmark::new();
         assert!(!benchmark.run_all_benchmarks().is_empty());
     }
 
     #[test]
     fn test_v8_startup_benchmark() {
+        // Ensure V8 is initialized before running the benchmark
+        crate::initialize_v8().expect("Failed to initialize V8");
+
         let benchmark = JavaScriptCoreBenchmark::new();
         let result = benchmark.v8_startup_benchmark();
 
@@ -303,6 +309,9 @@ mod tests {
 
     #[test]
     fn test_typescript_compilation_benchmark() {
+        // Ensure V8 is initialized before running the benchmark
+        crate::initialize_v8().expect("Failed to initialize V8");
+
         let benchmark = JavaScriptCoreBenchmark::new();
         let result = benchmark.typescript_compilation_benchmark();
 

@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 use tokio::sync::mpsc;
-use tokio::time::interval;
+use tokio::time::{interval, timeout};
 
 /// File change event
 #[derive(Debug, Clone)]
@@ -282,11 +282,16 @@ mod tests {
             .expect("Failed to modify test file");
 
         // Wait for change detection
-        sleep(Duration::from_millis(200)).await;
+        sleep(Duration::from_millis(500)).await;
 
-        // Check if event was received
-        let event = event_receiver.try_recv();
-        assert!(event.is_ok(), "Should receive file modification event");
+        // Check if event was received (with timeout)
+        let event = tokio::time::timeout(Duration::from_secs(2), event_receiver.recv())
+            .await
+            .expect("Timeout waiting for file modification event")
+            .expect("Failed to receive file modification event");
+
+        // Event should be a FileEvent::Modified
+        assert!(matches!(event, FileEvent::Modified(_)), "Should receive file modification event");
 
         watcher.stop().await.expect("Failed to stop watcher");
         temp_dir.close().expect("Failed to close temp dir");
