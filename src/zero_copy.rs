@@ -5,7 +5,7 @@ use crate::lock_free::{LockFreeBufferPool, AtomicStats, LockFreeCounter};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::marker::PhantomData;
-use tokio::io::AsyncSeekExt;
+use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 use tokio::fs::File;
 
 /// 零拷贝缓冲区

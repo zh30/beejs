@@ -2,7 +2,7 @@
 //! 预编译常用 Node.js 模块并缓存字节码，提升执行速度
 
 use crate::code_cache::{BytecodeCache, CacheConfig};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;

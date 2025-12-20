@@ -14,6 +14,7 @@ pub mod test_discoverer;
 pub mod v8_bindings;
 
 pub use v8_bindings::*;
+pub use test_context::TestSuite;
 
 /// Global test registry for collecting test cases during file execution
 use std::sync::{Mutex, OnceLock};

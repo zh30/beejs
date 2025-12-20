@@ -16,6 +16,9 @@ pub mod leak_detector;
 pub mod zero_copy_allocator;
 
 pub use zero_copy_allocator::*;
+pub use generational_gc::{GenerationalGC, GCStats};
+pub use memory_compression::MemoryCompression;
+pub use leak_detector::MemoryLeakDetector;
 
 use crate::memory_pool::SmartMemoryPool;
 use std::sync::{Arc, Mutex, atomic::AtomicU64};
