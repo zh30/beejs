@@ -80,6 +80,9 @@ impl FileWatcher {
         let event_sender = self.event_sender.clone();
         let running = Arc::clone(&self.running);
 
+        // Extract config early for initial scan
+        let config = self.config.clone();
+
         // Initialize file modification times
         {
             let mut modified = last_modified.lock().unwrap();
@@ -87,13 +90,18 @@ impl FileWatcher {
                 if let Ok(metadata) = std::fs::metadata(path) {
                     if let Ok(modified_time) = metadata.modified() {
                         modified.insert(path.clone(), modified_time);
+
+                        // Send initial scan event for existing files
+                        if metadata.is_file() {
+                            let _ = event_sender.send(FileEvent::Created(path.clone()));
+                        } else if metadata.is_dir() {
+                            // For directories, we'll scan and send events for files inside
+                            let _ = scan_path(path, &last_modified, &event_sender, &config).await;
+                        }
                     }
                 }
             }
         }
-
-        // Extract config to move into the async block
-        let config = self.config.clone();
 
         // Start watching task
         tokio::spawn(async move {
@@ -226,10 +234,13 @@ async fn scan_directory(
             }
         }
 
-        // Only scan files, not subdirectories (to avoid recursion)
+        // Recursively scan directories and files
         if let Ok(metadata) = entry.metadata() {
             if metadata.is_file() {
                 scan_file(&path, last_modified, event_sender).await?;
+            } else if metadata.is_dir() {
+                // Recursively scan subdirectories (boxed to avoid recursion error)
+                Box::pin(scan_directory(&path, last_modified, event_sender, config)).await?;
             }
         }
     }
@@ -332,9 +343,14 @@ mod tests {
             }
         }
 
+        // Debug: print received files
+        println!("Received files: {:?}", received_files);
+        println!("Expected src file: {:?}", src_file);
+        println!("Expected to ignore: {:?}", node_modules_file);
+
         // Verify only src file was tracked
-        assert!(received_files.contains(&src_file));
-        assert!(!received_files.contains(&node_modules_file));
+        assert!(received_files.contains(&src_file), "src file should be tracked");
+        assert!(!received_files.contains(&node_modules_file), "node_modules file should be ignored");
 
         watcher.stop().await.expect("Failed to stop watcher");
         temp_dir.close().expect("Failed to close temp dir");

@@ -334,7 +334,8 @@ impl<T: Clone> DistributedCache<T> {
             "config:app".to_string(),
             "data:popular".to_string(),
         ];
-        let warmup_count = warmup_keys.len();
+
+        let mut actual_warmup_count = 0;
 
         for key in warmup_keys {
             if let Some(value) = load_fn(&key) {
@@ -350,17 +351,18 @@ impl<T: Clone> DistributedCache<T> {
 
                 storage.insert(key.clone(), entry);
                 warmup_queue.push_back(key);
+                actual_warmup_count += 1;
             }
         }
 
         // 更新统计信息
         {
             let mut stats = self.stats.lock().unwrap();
-            stats.warmup_count = warmup_count as u64;
+            stats.warmup_count = actual_warmup_count as u64;
             stats.cache_size = storage.len();
         }
 
-        println!("✅ 缓存预热完成: {} 条记录", warmup_count);
+        println!("✅ 缓存预热完成: {} 条记录", actual_warmup_count);
         Ok(())
     }
 
@@ -411,7 +413,15 @@ impl<T: Clone> DistributedCache<T> {
             return;
         }
 
-        let evict_count = (self.config.max_capacity as f64 * 0.1) as usize; // 驱逐 10%
+        // 计算需要驱逐的项目数量，至少驱逐1个
+        let current_size = storage.len();
+        let max_capacity = self.config.max_capacity;
+        let evict_count = if current_size >= max_capacity {
+            // 驱逐足够的项目为新项目腾出空间
+            (current_size - max_capacity + 1).max(1)
+        } else {
+            (max_capacity as f64 * 0.1) as usize // 驱逐 10%
+        };
 
         match self.config.strategy {
             CacheStrategy::LRU => {
