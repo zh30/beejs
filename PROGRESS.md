@@ -29,15 +29,28 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
    - ✅ btoa: Latin-1 字符串转 Base64
    - ✅ atob: Base64 转 Latin-1 字符串
 
-4. **测试编译错误修复**
+4. **Performance API 实现 (新增 2025-12-21)**
+   - ✅ performance.now(): 高精度相对时间戳（亚毫秒）
+   - ✅ performance.timeOrigin: 运行时启动时间戳
+   - ✅ performance.mark(): 创建性能标记
+   - ✅ performance.measure(): 测量性能区间
+   - ✅ performance.getEntries(): 获取性能条目
+
+5. **真实 HTTP Fetch (新增 2025-12-21)**
+   - ✅ 使用 reqwest 实现真实 HTTP 请求
+   - ✅ 支持 GET/POST/PUT/DELETE 等方法
+   - ✅ 返回 Response 对象（status, ok, headers, body）
+
+6. **测试编译错误修复**
    - ✅ 修复 test_multi_level_cache.rs 类型推断问题
+   - ✅ 修复 V8SnapshotManager → SnapshotManager 类型名
    - ✅ 导出 quantum_computing 模块的公开类型
    - ✅ 公开 runtime_lite::cache 模块
 
 #### 当前 Web API 支持状态
 | API | 状态 | 说明 |
 |-----|------|------|
-| fetch | ✅ 可用 | 基础实现，返回 Response 对象 |
+| fetch | ✅ 可用 | 真实 HTTP 请求 (reqwest) |
 | URL | ✅ 可用 | 完整的 URL 解析和构建 |
 | URLSearchParams | ✅ 可用 | 查询参数操作 |
 | Headers | ✅ 可用 | HTTP 头部操作 |
@@ -52,6 +65,7 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 | TextDecoder | ✅ 可用 | UTF-8 解码 |
 | btoa | ✅ 可用 | Base64 编码 |
 | atob | ✅ 可用 | Base64 解码 |
+| performance | ✅ 可用 | 高精度计时 API |
 | WebSocket | ⚠️ 部分 | 基础构造函数 |
 | EventTarget | ⚠️ 部分 | 事件监听 |
 | crypto | ⚠️ 部分 | getRandomValues 骨架 |
@@ -59,11 +73,19 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 #### 验证结果
 ```javascript
 // Web API 测试通过
-fetch exists: function ✅
+fetch exists: function ✅ (真实 HTTP)
 URL exists: function ✅
 setTimeout exists: function ✅
 TextEncoder exists: function ✅
 btoa exists: function ✅
+performance exists: object ✅
+
+// Fetch 真实 HTTP 测试
+fetch("https://httpbin.org/get") → status: 200, ok: true ✅
+
+// Performance API 测试
+performance.now() → 1.391958 ms ✅
+100000 次循环耗时 → 8.413 ms ✅
 
 // TextEncoder/TextDecoder 往返测试
 "Hello, 世界!" → encode → decode → "Hello, 世界!" ✅
@@ -73,10 +95,10 @@ btoa("Hello, World!") → "SGVsbG8sIFdvcmxkIQ==" ✅
 ```
 
 #### 下一步计划
-- [ ] 实现真正的 HTTP fetch（使用 reqwest）
+- [x] 实现真正的 HTTP fetch（使用 reqwest） ✅ (2025-12-21)
+- [x] 实现 Performance API ✅ (2025-12-21)
 - [ ] 完善 WebSocket 客户端
 - [ ] 添加 Blob/File API
-- [ ] 实现 Performance API
 
 ---
 
