@@ -15,7 +15,7 @@ use crate::benchmarks::{
     // concurrent::ConcurrentBenchmark,
 };
 use crate::performance_regression::{
-    PerformanceRegressionDetector, RegressionError
+    PerformanceRegressionDetector
 };
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};

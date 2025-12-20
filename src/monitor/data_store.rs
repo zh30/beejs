@@ -3,7 +3,6 @@
 
 use crate::monitor::performance_monitor::{MetricType, MetricValue};
 use std::collections::{HashMap, VecDeque};
-use std::io::Write;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 

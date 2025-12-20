@@ -16,7 +16,7 @@ use super::file_watcher::{FileWatcher, FileEvent, FileWatcherConfig};
 use super::repl::Repl;
 use super::package_json::{PackageJson, ScriptExecutor};
 
-use crate::cloud::{CloudAdapter, AwsAdapter, CloudflareAdapter};
+use crate::cloud::{CloudAdapter};
 
 /// Enhanced CLI arguments
 #[derive(Parser, Debug)]

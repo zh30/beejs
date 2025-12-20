@@ -4,9 +4,9 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime};
 use tokio::sync::mpsc;
-use tokio::time::{interval, sleep};
+use tokio::time::interval;
 
 /// File change event
 #[derive(Debug, Clone)]
@@ -258,8 +258,7 @@ pub async fn create_file_watcher(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::{tempdir, TempDir};
-    use tokio::time::sleep;
+    use tempfile::tempdir;
 
     #[tokio::test]
     async fn test_file_watcher_basic() {

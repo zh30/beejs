@@ -9,7 +9,7 @@
 //! - 自动化报告分发
 
 use crate::benchmarks::BenchmarkResult;
-use crate::performance_regression::{RegressionTestSuite, RegressionDetectionResult};
+use crate::performance_regression::{RegressionTestSuite};
 use crate::automation::test_runner::TestSuiteResults;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
