@@ -3,7 +3,6 @@
 //! for simple scripts, dramatically reducing startup time.
 
 use crate::memory_pool::{PoolConfig, SmartMemoryPool};
-use crate::runtime_lite::cache;
 use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipeline};
 use crate::inline_cache::{CacheKey, CacheEntry};
 use crate::v8_context_pool::{V8ContextPool, ContextPoolStats};
