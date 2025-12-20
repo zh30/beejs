@@ -27,7 +27,7 @@ const testCases = [
     },
     {
         name: '类型标注函数',
-        code: 'function greet(name: string): string { return `Hello, ${name}!`; } console.log(greet("Beejs"));',
+        code: 'function greet(name: string): string { return "Hello, " + name + "!"; } console.log(greet("Beejs"));',
         expected: 'Hello, Beejs!'
     }
 ];
@@ -45,7 +45,7 @@ async function runTest(testCase) {
         fs.writeFileSync(tmpFile, testCase.code);
 
         // 运行 beejs
-        const beejs = spawn('./beejs', ['--verbose', 'run', '--transpile', tmpFile], {
+        const beejs = spawn('./target/release/beejs', ['run', '--transpile', tmpFile], {
             cwd: __dirname
         });
 

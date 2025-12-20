@@ -260,7 +260,7 @@ impl TypeScriptCompiler {
                     string_chars.push(c);
                     pos += 1;
                 }
-                tokens.push(Token::String(String::from_iter(string_chars)));
+                tokens.push(Token::String(String::from_iter(string_chars), quote));
                 continue;
             }
 
@@ -395,7 +395,7 @@ impl TypeScriptCompiler {
 pub enum Token {
     Identifier(String),
     Number(String),
-    String(String),
+    String(String, char), // (value, quote_type)
     // 关键字
     Let,
     Const,
@@ -810,7 +810,7 @@ impl Parser {
                         }
                         self.advance();
                     }
-                    Token::String(ref s) => {
+                    Token::String(ref s, _) => {
                         member_value = Some(EnumValue::String(s.clone()));
                         self.advance();
                     }
@@ -1080,7 +1080,7 @@ impl Parser {
                 self.advance();
                 Ok(ASTExpression::Literal(num))
             }
-            Token::String(ref s) => {
+            Token::String(ref s, quote) => {
                 let s = format!("\"{}\"", s.clone());
                 self.advance();
                 Ok(ASTExpression::Literal(s))
@@ -1165,10 +1165,11 @@ impl Parser {
                 self.advance();
                 Some(name)
             }
-            Token::String(ref s) => {
+            Token::String(ref s, quote) => {
                 let s = s.clone();
+                let quote_char = *quote;
                 self.advance();
-                Some(format!("\"{}\"", s))
+                Some(format!("{}{}{}", quote_char, s, quote_char))
             }
             Token::Number(ref n) => {
                 let n = n.clone();
@@ -1377,13 +1378,11 @@ impl CodeEmitter {
                 operator,
                 right,
             } => {
-                self.output.push('(');
                 self.emit_expression(left);
                 self.output.push_str(" ");
                 self.output.push_str(operator);
                 self.output.push_str(" ");
                 self.emit_expression(right);
-                self.output.push(')');
             }
             ASTExpression::CallExpression {
                 callee,
