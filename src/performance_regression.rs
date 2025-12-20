@@ -9,14 +9,13 @@
 //! - 详细性能报告生成
 
 use crate::benchmarks::{
-    BenchmarkFramework, BenchmarkResult, MetricType, PerformanceDelta,
+    BenchmarkResult, MetricType, PerformanceDelta,
     BenchmarkConfig
 };
-use crate::performance_analyzer::PerformanceReport;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 

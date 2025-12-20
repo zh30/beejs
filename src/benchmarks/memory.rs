@@ -7,7 +7,7 @@
 //! - 内存泄漏检测
 //! - 垃圾回收性能测试
 
-use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig, MemoryStats};
+use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use std::time::Duration;
 use std::sync::{Arc, Mutex};
 use tokio::task;

@@ -8,7 +8,7 @@
 //! - 工作窃取性能测试
 
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering}};
 use tokio::task::{self, JoinHandle};
 

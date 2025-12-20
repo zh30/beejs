@@ -9,7 +9,7 @@
 
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use std::time::{Duration, Instant};
-use rusty_v8::{Isolate, StartupData};
+use rusty_v8::Isolate;
 
 /// 启动时间基准测试套件
 pub struct StartupBenchmark;

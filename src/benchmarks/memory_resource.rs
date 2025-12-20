@@ -8,8 +8,8 @@
 //! - CPU 使用率测试
 //! - 系统资源监控
 
-use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig, MemoryStats};
-use std::time::{Duration, Instant};
+use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
+use std::time::Duration;
 use std::alloc::{GlobalAlloc, Layout, System};
 
 /// 内存和资源基准测试套件

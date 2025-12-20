@@ -101,8 +101,6 @@ pub struct PerformanceMonitor {
     raw_metrics: Arc<Mutex<VecDeque<MetricValue>>>,
     /// 聚合指标缓存
     aggregated_metrics: Arc<Mutex<HashMap<MetricType, AggregatedMetric>>>,
-    /// 最后收集时间
-    last_collection: Arc<Mutex<Instant>>,
     /// 指标收集统计
     stats: Arc<Mutex<CollectionStats>>,
 }
@@ -127,7 +125,6 @@ impl PerformanceMonitor {
             config,
             raw_metrics: Arc::new(Mutex::new(VecDeque::new())),
             aggregated_metrics: Arc::new(Mutex::new(HashMap::new())),
-            last_collection: Arc::new(Mutex::new(Instant::now())),
             stats: Arc::new(Mutex::new(CollectionStats {
                 total_collections: 0,
                 total_metrics: 0,
