@@ -259,10 +259,11 @@ mod tests {
     #[test]
     fn test_reusable_context_stale() {
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
-        let mut ctx_reusable = v8::Context::new(&mut isolate);
+        let handle_scope = v8::HandleScope::new(&mut isolate);
+        let ctx_reusable = v8::Context::new(&handle_scope);
         let ctx = ReusableContext {
             isolate,
-            context: v8::Global::new(&mut ctx_reusable, ctx_reusable),
+            context: v8::Global::new(&handle_scope, ctx_reusable),
             created_at: Instant::now() - std::time::Duration::from_secs(600),
             reuse_count: 0,
             last_used: Instant::now(),
