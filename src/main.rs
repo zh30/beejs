@@ -9,7 +9,7 @@ use std::time::Instant;
 use beejs::cli::commands::{CliApp, SubCommand};
 use beejs::cli::{ExecutionContext, ExecutorConfig, ScriptExecutor, FileType, shebang};
 use beejs::RuntimeLite;
-use beejs::debugger::DebugSession;  // Re-enabled with V8 API stubs
+// use beejs::debugger::DebugSession;  // Temporarily disabled - V8 API compatibility issues
 
 /// Temporary debug command structure
 #[derive(Debug, Clone)]
