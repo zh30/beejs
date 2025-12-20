@@ -1136,8 +1136,8 @@ impl RuntimeLite {
         self.execution_count.load(Ordering::SeqCst)
     }
 
-    /// Get cache statistics
-    pub fn get_cache_stats(&self) -> (usize, usize, usize) {
+    /// Get script cache statistics (hits, size, misses)
+    pub fn get_script_cache_stats(&self) -> (usize, usize, usize) {
         let cache_hits = self.cache_hits.load(Ordering::SeqCst);
         let cache_misses = self.cache_misses.load(Ordering::SeqCst);
         let cache_size = self.script_cache.lock().unwrap().len();
