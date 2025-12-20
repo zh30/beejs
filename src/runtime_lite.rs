@@ -4,13 +4,14 @@
 
 use crate::memory_pool::{PoolConfig, SmartMemoryPool};
 use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipeline};
-use crate::inline_cache::{CacheKey, CacheEntry, CacheConfig, fast_hash};
+use crate::inline_cache::{CacheKey, CacheEntry};
+use crate::v8_context_pool::{V8ContextPool, ContextPoolStats};
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 /// Lightweight Runtime - minimal V8 runtime for fast startup
 /// Only initializes essential components needed for basic JS execution
@@ -47,6 +48,10 @@ pub struct RuntimeLite {
     /// Stage 63: Inline cache for fast property access and function calls
     inline_cache: Arc<std::sync::Mutex<HashMap<CacheKey, CacheEntry>>>,
     cache_stats: Arc<CacheStatistics>,
+
+    /// Stage 64: V8 Context Pool for reusing initialized contexts
+    /// Reduces V8 context creation overhead by reusing pre-initialized contexts
+    context_pool: Arc<V8ContextPool>,
 }
 
 // Make RuntimeLite Send + Sync for thread-safe global sharing
@@ -68,6 +73,7 @@ impl Clone for RuntimeLite {
             optimization_pipeline: Arc::clone(&self.optimization_pipeline),
             inline_cache: Arc::clone(&self.inline_cache),
             cache_stats: Arc::clone(&self.cache_stats),
+            context_pool: Arc::clone(&self.context_pool),
         }
     }
 }
@@ -105,9 +111,14 @@ impl RuntimeLite {
         let inline_cache = Arc::new(std::sync::Mutex::new(HashMap::new()));
         let cache_stats = Arc::new(CacheStatistics::new());
 
+        // Stage 64: Initialize V8 Context Pool for performance optimization
+        // Keep up to 4 contexts, each valid for 10 minutes
+        let context_pool = Arc::new(V8ContextPool::new(4, Duration::from_secs(600)));
+
         if verbose {
             println!("RuntimeLite: JIT optimization enabled for improved performance");
             println!("RuntimeLite: Inline cache initialized for fast property access");
+            println!("RuntimeLite: V8 Context Pool initialized (max 4 contexts)");
         }
 
         Ok(Self {
@@ -122,6 +133,7 @@ impl RuntimeLite {
             optimization_pipeline,
             inline_cache,
             cache_stats,
+            context_pool,
         })
     }
 
@@ -1030,6 +1042,28 @@ impl RuntimeLite {
         let cache_misses = self.cache_misses.load(Ordering::SeqCst);
         let cache_size = self.script_cache.lock().unwrap().len();
         (cache_hits, cache_size, cache_misses)
+    }
+
+    /// Stage 64: Initialize the context pool with a certain number of contexts
+    /// This should be called once after runtime creation for optimal performance
+    pub fn initialize_context_pool(&self, pool_size: usize) -> Result<()> {
+        if pool_size == 0 {
+            return Ok(());
+        }
+
+        eprintln!("🚀 Initializing V8 Context Pool with {} contexts...", pool_size);
+        self.context_pool.initialize(self, pool_size)?;
+        Ok(())
+    }
+
+    /// Stage 64: Get context pool statistics
+    pub fn get_context_pool_stats(&self) -> ContextPoolStats {
+        self.context_pool.get_stats()
+    }
+
+    /// Stage 64: Cleanup stale contexts from the pool
+    pub fn cleanup_context_pool(&self) -> usize {
+        self.context_pool.cleanup()
     }
 
     /// Clear script cache

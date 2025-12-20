@@ -13,7 +13,6 @@
 //! - 自动化 CI/CD 集成
 
 use rusty_v8 as v8;
-use std::time::Duration;
 
 // 模块声明
 pub mod benchmarks;
@@ -25,6 +24,7 @@ pub mod automation;
 pub mod analysis;
 pub mod monitor;
 pub mod runtime_lite;
+pub mod v8_context_pool;  // Stage 64: V8 Context Pool for performance optimization
 pub mod smart_cache;  // Stage 60: 智能缓存系统
 // pub mod lib_minimal;
 pub mod memory_pool;
@@ -284,13 +284,6 @@ pub fn initialize_v8() -> Result<()> {
         // Stage 63: JIT 深度优化 - 移除有害标志，添加优化标志
         let v8_flags = vec![
             "--opt".to_string(),                          // 启用优化
-            "--turbofan".to_string(),                     // 启用 TurboFan JIT
-            "--turbo-inlining".to_string(),               // 启用内联优化
-            "--turbo-optimize-queue-size".to_string(),    // 优化编译队列
-            "--max-old-space-size=512".to_string(),       // 设置老年代大小
-            "--max-new-space-size=128".to_string(),       // 设置新生代大小
-            "--gc-interval=100".to_string(),              // GC 间隔
-            "--inline-js-wasm-native".to_string(),        // 内联优化
         ];
 
         let v8_flags_str = v8_flags.join(" ");
