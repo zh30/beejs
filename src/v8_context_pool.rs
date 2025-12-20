@@ -184,14 +184,12 @@ impl V8ContextPool {
         // Create isolate
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
 
-        // Create context with proper scope management
-        let context = {
+        // Create context and global handle within the same scope
+        let context_global = {
             let mut scope = v8::HandleScope::new(&mut isolate);
-            v8::Context::new(&mut scope)
+            let context = v8::Context::new(&mut scope);
+            v8::Global::new(&mut scope, context)
         };
-
-        // Create global context after scope is dropped
-        let context_global = v8::Global::new(&mut isolate, context);
 
         Ok((isolate, context_global))
     }

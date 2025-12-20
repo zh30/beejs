@@ -212,18 +212,18 @@ impl L3MmapCache {
     async fn evict_old_entries(&self) {
         let mut entries = self.entries.write().unwrap();
 
-        // Sort by last accessed time
-        let keys_to_remove: Vec<_> = {
+        // Sort by last accessed time and collect owned keys
+        let keys_to_remove: Vec<String> = {
             let mut sorted_entries: Vec<_> = entries.iter().collect();
             sorted_entries.sort_by(|a, b| a.1.last_accessed.cmp(&b.1.last_accessed));
 
             let to_remove = sorted_entries.len() / 4;
-            sorted_entries.into_iter().take(to_remove).map(|(k, _)| k).collect()
+            sorted_entries.into_iter().take(to_remove).map(|(k, _)| k.clone()).collect()
         };
 
         // Remove collected keys
         for key in keys_to_remove {
-            if let Some(entry) = entries.remove(key) {
+            if let Some(entry) = entries.remove(&key) {
                 let _ = std::fs::remove_file(&entry.file_path);
             }
         }

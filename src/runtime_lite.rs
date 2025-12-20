@@ -1034,7 +1034,7 @@ impl RuntimeLite {
                     .collect();
 
                 // Sort by timestamp (oldest first)
-                entries.sort_by_key(|(_, timestamp)| timestamp);
+                entries.sort_by_key(|(_, timestamp)| *timestamp);
 
                 // Remove oldest entries
                 let to_remove = entries.len() - self.max_cache_size;

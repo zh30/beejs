@@ -112,11 +112,17 @@ impl L2SmartCache {
 
     /// Get data from L2 cache
     pub fn get(&mut self, key: CacheKey) -> Option<Vec<u8>> {
-        if let Some(entry) = self.entries.get_mut(&key) {
+        // First get and update entry, then get the data
+        let data = if let Some(entry) = self.entries.get_mut(&key) {
             // Update access statistics
             entry.access_count += 1;
             entry.last_accessed = Instant::now();
+            Some(entry.data.clone())
+        } else {
+            None
+        };
 
+        if data.is_some() {
             // Update LRU queue
             self.lru_queue.retain(|&k| k != key);
             self.lru_queue.push_back(key);
@@ -125,12 +131,11 @@ impl L2SmartCache {
             self.update_lfu(key);
 
             self.stats.hits += 1;
-
-            Some(entry.data.clone())
         } else {
             self.stats.misses += 1;
-            None
         }
+
+        data
     }
 
     /// Invalidate a cached entry
