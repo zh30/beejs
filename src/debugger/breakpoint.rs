@@ -138,7 +138,7 @@ impl BreakpointManager {
             .or_insert_with(Vec::new)
             .push(id);
 
-        Ok(breakpoint)
+        DebugResult::ok(breakpoint)
     }
 
     /// Add a breakpoint with convenience constructor
@@ -191,9 +191,9 @@ impl BreakpointManager {
     pub fn enable_breakpoint(&mut self, id: &str) -> DebugResult<()> {
         if let Some(breakpoint) = self.breakpoints.get_mut(id) {
             breakpoint.enabled = true;
-            Ok(())
+            DebugResult::ok(())
         } else {
-            Err(DebugResult::err(format!("Breakpoint with ID '{}' not found", id)))
+            DebugResult::err(format!("Breakpoint with ID '{}' not found", id))
         }
     }
 
@@ -201,9 +201,9 @@ impl BreakpointManager {
     pub fn disable_breakpoint(&mut self, id: &str) -> DebugResult<()> {
         if let Some(breakpoint) = self.breakpoints.get_mut(id) {
             breakpoint.enabled = false;
-            Ok(())
+            DebugResult::ok(())
         } else {
-            Err(DebugResult::err(format!("Breakpoint with ID '{}' not found", id)))
+            DebugResult::err(format!("Breakpoint with ID '{}' not found", id))
         }
     }
 
@@ -247,9 +247,9 @@ impl BreakpointManager {
     pub fn increment_hit_count(&mut self, id: &str) -> DebugResult<()> {
         if let Some(breakpoint) = self.breakpoints.get_mut(id) {
             breakpoint.increment_hit();
-            Ok(())
+            DebugResult::ok(())
         } else {
-            Err(DebugResult::err(format!("Breakpoint with ID '{}' not found", id)))
+            DebugResult::err(format!("Breakpoint with ID '{}' not found", id))
         }
     }
 
@@ -261,9 +261,9 @@ impl BreakpointManager {
     ) -> DebugResult<()> {
         if let Some(breakpoint) = self.breakpoints.get_mut(id) {
             breakpoint.condition = condition;
-            Ok(())
+            DebugResult::ok(())
         } else {
-            Err(DebugResult::err(format!("Breakpoint with ID '{}' not found", id)))
+            DebugResult::err(format!("Breakpoint with ID '{}' not found", id))
         }
     }
 

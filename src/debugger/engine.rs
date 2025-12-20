@@ -119,15 +119,15 @@ impl DebuggerEngine {
         script_name: String,
         line_number: u32,
     ) -> DebugResult<Breakpoint> {
-        match self.breakpoint_manager.add(script_id, script_name, line_number, 0) {
-            Ok(breakpoint) => {
-                {
-                    let mut stats = self.stats.lock().unwrap();
-                    stats.breakpoints_set += 1;
-                }
-                DebugResult::ok(breakpoint)
+        let result = self.breakpoint_manager.add(script_id, script_name, line_number, 0);
+        if result.success {
+            if let Some(breakpoint) = &result.data {
+                let mut stats = self.stats.lock().unwrap();
+                stats.breakpoints_set += 1;
             }
-            Err(e) => DebugResult::err(e.to_string()),
+            result
+        } else {
+            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string()))
         }
     }
 
@@ -139,21 +139,21 @@ impl DebuggerEngine {
         line_number: u32,
         condition: crate::debugger::BreakpointCondition,
     ) -> DebugResult<Breakpoint> {
-        match self.breakpoint_manager.add_conditional(
+        let result = self.breakpoint_manager.add_conditional(
             script_id,
             script_name,
             line_number,
             0,
             condition,
-        ) {
-            Ok(breakpoint) => {
-                {
-                    let mut stats = self.stats.lock().unwrap();
-                    stats.breakpoints_set += 1;
-                }
-                DebugResult::ok(breakpoint)
+        );
+        if result.success {
+            if let Some(breakpoint) = &result.data {
+                let mut stats = self.stats.lock().unwrap();
+                stats.breakpoints_set += 1;
             }
-            Err(e) => DebugResult::err(e.to_string()),
+            result
+        } else {
+            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string()))
         }
     }
 
@@ -387,9 +387,15 @@ impl DebuggerEngine {
         expression: &str,
     ) -> DebugResult<String> {
         let inspector = VariableInspector::new(self.config.clone());
-        match inspector.evaluate_expression(context, expression) {
-            Ok(var_info) => DebugResult::ok(var_info.value),
-            Err(e) => DebugResult::err(e.to_string()),
+        let result = inspector.evaluate_expression(context, expression);
+        if result.success {
+            if let Some(var_info) = result.data {
+                DebugResult::ok(var_info.value)
+            } else {
+                DebugResult::err("No data returned".to_string())
+            }
+        } else {
+            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string()))
         }
     }
 
@@ -397,11 +403,20 @@ impl DebuggerEngine {
     pub fn get_current_variables(
         &self,
         context: &v8::Global<v8::Context>,
-    ) -> DebugResult<HashMap<String, Vec<crate::debugger::variable_scope::VariableInfo>>> {
+    ) -> DebugResult<HashMap<crate::debugger::variable_scope::ScopeType, Vec<crate::debugger::variable_scope::VariableInfo>>> {
         let inspector = VariableInspector::new(self.config.clone());
         // This would build scopes from current execution state
         let scopes = Vec::new();
-        inspector.get_all_scope_variables(&scopes)
+        let result = inspector.get_all_scope_variables(&scopes);
+        if result.success {
+            if let Some(data) = result.data {
+                DebugResult::ok(data)
+            } else {
+                DebugResult::err("No data returned".to_string())
+            }
+        } else {
+            DebugResult::err(result.error.unwrap_or_else(|| "Unknown error".to_string()))
+        }
     }
 
     /// Print current stack trace

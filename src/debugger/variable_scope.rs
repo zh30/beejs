@@ -31,6 +31,7 @@ pub struct VariableInfo {
     pub preview: String,
     pub properties: Option<Vec<VariableInfo>>,
     pub length: Option<usize>,
+    pub scope_type: ScopeType,
 }
 
 /// Variable scope representation
@@ -100,6 +101,9 @@ impl VariableInspector {
             name: expression.to_string(),
             value: "undefined".to_string(),
             type_name: "unknown".to_string(),
+            preview: "undefined".to_string(),
+            properties: None,
+            length: None,
             scope_type: ScopeType::Local,
         };
 
@@ -119,13 +123,20 @@ impl VariableInspector {
         let global = context_local.global(&mut scope);
 
         // Convert to VariableInfo
-        let globals = self.object_to_variables(
+        let globals_result = self.object_to_variables(
             &mut scope,
             v8::Global::new(&mut scope, global),
             "global".to_string(),
-        )?;
-
-        Ok(globals)
+        );
+        if globals_result.success {
+            if let Some(globals) = globals_result.data {
+                Ok(globals)
+            } else {
+                DebugResult::err("No data returned".to_string())
+            }
+        } else {
+            DebugResult::err(globals_result.error.unwrap_or_else(|| "Unknown error".to_string()))
+        }
     }
 
     /// Convert V8 object to VariableInfo
@@ -182,6 +193,7 @@ impl VariableInspector {
                 preview,
                 properties: None,
                 length: None,
+                scope_type: ScopeType::Local,
             };
 
             variables.push(var_info);
@@ -215,7 +227,11 @@ impl VariableInspector {
         var_name: &str,
     ) -> Option<(ScopeType, VariableInfo)> {
         for scope in scopes {
-            let variables = self.get_scope_variables(scope).ok()?;
+            let variables_result = self.get_scope_variables(scope);
+            if !variables_result.success {
+                continue;
+            }
+            let variables = variables_result.data.unwrap_or_default();
             if let Some(var) = variables.iter().find(|v| v.name == var_name) {
                 return Some((scope.scope_type.clone(), var.clone()));
             }
@@ -229,8 +245,17 @@ impl VariableInspector {
         scope: &VariableScope,
         var_name: &str,
     ) -> DebugResult<Option<VariableInfo>> {
-        let variables = self.get_scope_variables(scope)?;
-        Ok(variables.into_iter().find(|v| v.name == var_name))
+        let variables_result = self.get_scope_variables(scope);
+        if variables_result.success {
+            if let Some(variables) = variables_result.data {
+                let found = variables.into_iter().find(|v| v.name == var_name);
+                Ok(found)
+            } else {
+                Ok(None)
+            }
+        } else {
+            DebugResult::err(variables_result.error.unwrap_or_else(|| "Unknown error".to_string()))
+        }
     }
 
     /// Format variable for display
