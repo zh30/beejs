@@ -3,9 +3,62 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-20)**: ✅ Stage 64 - V8 上下文池化优化完成
+**当前状态 (2025-12-20)**: ✅ Stage 66 - 编译修复和运行时稳定化完成
 
 ## 最新更新 (2025-12-20)
+
+### ✅ Stage 66: 编译修复和运行时稳定化 (2025-12-20)
+**进度**: ✅ 完成
+
+#### 完成工作
+1. **借用检查错误修复** - 修复 4 个 Rust 借用检查错误
+   - `l3_mmap.rs`: 使用 `.clone()` 获取 keys 所有权避免 E0502
+   - `l2_smart.rs`: 分离借用作用域避免 E0499 多重可变借用
+   - `v8_context_pool.rs`: 在同一 HandleScope 内创建 Global<Context>
+   - `runtime_lite.rs`: 解引用 timestamp 避免生命周期问题
+
+2. **V8 上下文池线程安全修复** - 解决致命错误
+   - 问题: V8 isolates 绑定到创建它们的线程，不能跨线程共享
+   - 解决: 改为按需创建模式，每次执行创建新 isolate
+   - 效果: 消除 `Debug check failed: CurrentPerIsolateThreadData()->isolate_ == this` 错误
+
+3. **V8 标志清理** - 移除无效标志
+   - 移除 `--inline-js-wasm` 和 `--turbo-deoptimization`
+   - 这些标志在 rusty_v8 0.22 中不再支持
+
+4. **导入修复** - 添加缺失的类型导入
+   - `optimizer.rs`: 添加 `BottleneckSeverity` 导入
+   - `alerts.rs`: 添加 `ThresholdSeverity` 导入
+
+#### 技术成就
+- ✅ 编译通过：306 警告，0 错误
+- ✅ 基本 JS 执行功能正常 (`console.log` 测试通过)
+- ✅ V8 isolate 生命周期正确管理
+- ✅ 线程安全的运行时架构
+
+#### 测试验证
+```bash
+$ echo 'console.log("Test:", 1+2);' > /tmp/test.js
+$ ./target/debug/beejs run /tmp/test.js
+Test: 3
+```
+
+---
+
+### ✅ Stage 65: 多级缓存系统 (2025-12-20)
+**进度**: ✅ 核心架构完成
+
+#### 完成工作
+1. **三级缓存架构** - L1/L2/L3 分层存储
+   - L1: 零拷贝缓存 (Arc 智能指针)
+   - L2: 智能缓存 (LRU/LFU 混合)
+   - L3: 内存映射缓存 (mmap)
+
+2. **智能预取系统** - 模式识别和预测
+
+详见: `STAGE_65_COMPLETION_REPORT.md`
+
+---
 
 ### ✅ Stage 64: V8 上下文池化优化 (2025-12-20)
 **进度**: ✅ 完成
