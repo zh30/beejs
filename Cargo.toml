@@ -124,6 +124,9 @@ futures = "0.3"
 # Async runtime
 futures-util = "0.3"
 
+# Serial test support for V8 thread-safe testing
+serial_test = "3.0"
+
 [[bin]]
 name = "beejs-benchmark"
 path = "tools/benchmark_runner.rs"
