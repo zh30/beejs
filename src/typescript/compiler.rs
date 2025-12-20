@@ -240,8 +240,15 @@ impl TypeScriptCompiler {
                     if c == '\\' {
                         // 转义字符
                         if pos + 1 < chars.len() {
-                            string_chars.push(chars[pos]);
-                            string_chars.push(chars[pos + 1]);
+                            let next_char = chars[pos + 1];
+                            // 只对有效的转义序列添加反斜杠
+                            if matches!(next_char, '"' | '\'' | '\\' | 'n' | 'r' | 't') {
+                                string_chars.push(chars[pos]);
+                                string_chars.push(chars[pos + 1]);
+                            } else {
+                                // 无效转义序列，只添加字符
+                                string_chars.push(chars[pos + 1]);
+                            }
                             pos += 2;
                             continue;
                         }
