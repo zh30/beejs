@@ -42,7 +42,7 @@ pub mod repl;
 pub mod cli;
 pub mod edge;
 // pub mod web_api;  // Temporarily disabled for Stage 60
-pub mod debugger;  // Stage 58: Debugger integration - V8 API compatibility via stubs
+// pub mod debugger;  // Stage 58: Debugger integration (Temporarily disabled - V8 API compatibility issues)
 pub mod observability;  // 可观测性系统
 pub mod ai_inference;
 pub mod concurrent_execution;
