@@ -819,17 +819,47 @@ impl RuntimeLite {
         let context = v8::Context::new(scope);
         let scope = &mut v8::ContextScope::new(scope, context);
 
-        // 🚀 V8 BINDING LAYER OPTIMIZATION: Only create console.log, skip all other APIs
+        // 🚀 V8 BINDING LAYER OPTIMIZATION: Create all console APIs for compatibility
         let console = v8::Object::new(scope);
+
+        // console.log
         let log_func = v8::FunctionTemplate::new(scope, crate::console_log_callback);
         if let Some(log_instance) = log_func.get_function(scope) {
             let log_key = v8::String::new(scope, "log").unwrap();
             console.set(scope, log_key.into(), log_instance.into());
-
-            let global = context.global(scope);
-            let console_key = v8::String::new(scope, "console").unwrap();
-            global.set(scope, console_key.into(), console.into());
         }
+
+        // console.error
+        let error_func = v8::FunctionTemplate::new(scope, crate::console_error_callback);
+        if let Some(error_instance) = error_func.get_function(scope) {
+            let error_key = v8::String::new(scope, "error").unwrap();
+            console.set(scope, error_key.into(), error_instance.into());
+        }
+
+        // console.warn
+        let warn_func = v8::FunctionTemplate::new(scope, crate::console_warn_callback);
+        if let Some(warn_instance) = warn_func.get_function(scope) {
+            let warn_key = v8::String::new(scope, "warn").unwrap();
+            console.set(scope, warn_key.into(), warn_instance.into());
+        }
+
+        // console.info
+        let info_func = v8::FunctionTemplate::new(scope, crate::console_info_callback);
+        if let Some(info_instance) = info_func.get_function(scope) {
+            let info_key = v8::String::new(scope, "info").unwrap();
+            console.set(scope, info_key.into(), info_instance.into());
+        }
+
+        // console.debug
+        let debug_func = v8::FunctionTemplate::new(scope, crate::console_debug_callback);
+        if let Some(debug_instance) = debug_func.get_function(scope) {
+            let debug_key = v8::String::new(scope, "debug").unwrap();
+            console.set(scope, debug_key.into(), debug_instance.into());
+        }
+
+        let global = context.global(scope);
+        let console_key = v8::String::new(scope, "console").unwrap();
+        global.set(scope, console_key.into(), console.into());
 
         // Direct execution - minimal overhead path
         self.execute_direct(scope, context, code)

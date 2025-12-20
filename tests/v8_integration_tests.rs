@@ -145,8 +145,19 @@ fn test_v8_async_promise() {
 fn test_v8_error_handling_syntax_error() {
     let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let result = runtime.execute_code("const x = ;");
-    assert!(result.is_err());
+    // Test various syntax errors
+    let test_cases = vec![
+        "const x = ;",
+        "function () {",
+        "if () {",
+        "let y = 123abc",
+    ];
+
+    for code in test_cases {
+        let result = runtime.execute_code(code);
+        // These should all fail with syntax errors
+        assert!(result.is_err(), "Code '{}' should produce a syntax error", code);
+    }
 }
 
 #[test]
