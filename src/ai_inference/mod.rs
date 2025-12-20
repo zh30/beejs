@@ -14,7 +14,7 @@ mod pytorch_engine;
 
 pub use pytorch_engine::*;
 
-pub use ai_inference_engine::AIInferenceEngine;
+pub use ai_inference_engine::{AIInferenceEngine, GPUSimpleAccelerator};
 pub use engine_interface::{InferenceEngine, InferenceResult, ModelHandle, ModelInfo};
 pub use model_loader::ModelLoader;
 pub use tensor_ops::Tensor;
