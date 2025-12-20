@@ -77,7 +77,7 @@ async fn test_l3_mmap_cache() {
     cache.put(script_key, large_content.as_bytes()).await;
 
     // 访问脚本
-    let cached = cache.get(script_key).await;
+    let cached: Option<Vec<u8>> = cache.get(script_key).await;
     assert!(cached.is_some());
 
     // 验证 L3 缓存使用
@@ -132,7 +132,7 @@ async fn test_concurrent_cache_access() {
     // 并发访问
     let handles: Vec<_> = (0..10)
         .map(|thread_id| {
-            let cache = Arc::clone(&cache);
+            let cache: Arc<MultiLevelCache> = Arc::clone(&cache);
             tokio::spawn(async move {
                 for i in 0..100 {
                     let script_key = format!("concurrent_{}.js", i % 100);
@@ -234,13 +234,13 @@ async fn test_cache_invalidation() {
     cache.put(script_key, content.as_bytes()).await;
 
     // 验证存在
-    assert!(cache.get(script_key).await.is_some());
+    assert!(cache.get::<&str>(script_key).await.is_some());
 
     // 失效缓存
     cache.invalidate(script_key).await;
 
     // 验证已删除
-    assert!(cache.get(script_key).await.is_none());
+    assert!(cache.get::<&str>(script_key).await.is_none());
 }
 
 #[tokio::test]

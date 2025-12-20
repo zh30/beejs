@@ -17,7 +17,8 @@ use std::time::{Duration, Instant};
 mod metaverse_engine_tests {
     use super::*;
     use beejs::metaverse::{
-        MetaverseEngine, MetaverseConfig, RenderMode, XRPlatform,
+        engine::{MetaverseEngine, MetaverseConfig},
+        RenderMode, XRPlatform,
         SceneObject, Transform, Material,
     };
 
@@ -213,7 +214,8 @@ mod metaverse_engine_tests {
 mod holographic_engine_tests {
     use super::*;
     use beejs::holographic::{
-        HolographicEngine, HolographicConfig, HologramType,
+        engine::{HolographicEngine, HolographicConfig},
+        HologramType,
         WavefrontPropagator, PropagationMethod,
         HologramGenerator, GeneratorConfig,
         VolumeCapture, CaptureConfig,
@@ -793,8 +795,8 @@ mod distributed_metaverse_tests {
 #[cfg(test)]
 mod integration_tests {
     
-    use beejs::metaverse::MetaverseEngine;
-    use beejs::holographic::HolographicEngine;
+    use beejs::metaverse::engine::MetaverseEngine;
+    use beejs::holographic::engine::HolographicEngine;
     use beejs::immersive_interaction::{HandTracking, EyeTracking};
     use beejs::distributed_metaverse::MetaverseNetwork;
 
@@ -843,8 +845,8 @@ mod integration_tests {
 
     #[test]
     fn test_holographic_display_integration() {
-        use beejs::holographic::{HolographicEngine, HolographicConfig, PropagationMethod};
-        use beejs::metaverse::{MetaverseEngine, MetaverseConfig};
+        use beejs::holographic::{engine::{HolographicEngine, HolographicConfig}, PropagationMethod};
+        use beejs::metaverse::{engine::{MetaverseEngine, MetaverseConfig}};
 
         // 创建全息引擎
         let holo_config = HolographicConfig {
