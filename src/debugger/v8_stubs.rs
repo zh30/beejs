@@ -28,8 +28,10 @@ impl DebugExecutionState {
     }
 
     pub fn get_break_location(&self) -> DebugBreakLocation {
+        // Create a dummy location for the stub
+        // Note: This is a placeholder that will be replaced with real V8 integration
         DebugBreakLocation {
-            script_id: v8::String::new_empty().unwrap(),
+            script_id: "unknown".to_string(),
             line_number: 0,
             column_number: 0,
         }
@@ -39,22 +41,22 @@ impl DebugExecutionState {
 /// Stub for V8 DebugBreakLocation
 #[derive(Debug, Clone)]
 pub struct DebugBreakLocation {
-    pub script_id: v8::Local<'static, v8::String>,
+    pub script_id: String,
     pub line_number: i32,
     pub column_number: i32,
 }
 
 impl DebugBreakLocation {
     pub fn script_id(&self) -> String {
-        "unknown".to_string()
+        self.script_id.clone()
     }
 
     pub fn line_number(&self) -> u32 {
-        0
+        self.line_number as u32
     }
 
     pub fn column_number(&self) -> u32 {
-        0
+        self.column_number as u32
     }
 }
 

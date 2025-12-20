@@ -279,7 +279,7 @@ impl StackTraverser {
     }
 
     /// Move to next frame
-    pub fn next_frame(&mut self, stack: &StackTrace) -> Option<&StackFrame> {
+    pub fn next_frame<'a>(&mut self, stack: &'a StackTrace) -> Option<&'a StackFrame> {
         if self.current_index < stack.frames.len() {
             let frame = &stack.frames[self.current_index];
             self.current_index += 1;
@@ -290,7 +290,7 @@ impl StackTraverser {
     }
 
     /// Move to previous frame
-    pub fn previous_frame(&mut self, stack: &StackTrace) -> Option<&StackFrame> {
+    pub fn previous_frame<'a>(&mut self, stack: &'a StackTrace) -> Option<&'a StackFrame> {
         if self.current_index > 0 {
             self.current_index -= 1;
             Some(&stack.frames[self.current_index])
@@ -300,7 +300,7 @@ impl StackTraverser {
     }
 
     /// Get current frame
-    pub fn current_frame(&self, stack: &StackTrace) -> Option<&StackFrame> {
+    pub fn current_frame<'a>(&self, stack: &'a StackTrace) -> Option<&'a StackFrame> {
         if self.current_index < stack.frames.len() {
             Some(&stack.frames[self.current_index])
         } else {
@@ -314,7 +314,7 @@ impl StackTraverser {
     }
 
     /// Jump to specific frame
-    pub fn jump_to_frame(&mut self, stack: &StackTrace, index: usize) -> Option<&StackFrame> {
+    pub fn jump_to_frame<'a>(&mut self, stack: &'a StackTrace, index: usize) -> Option<&'a StackFrame> {
         if index < stack.frames.len() {
             self.current_index = index;
             Some(&stack.frames[index])

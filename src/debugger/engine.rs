@@ -180,7 +180,7 @@ impl DebuggerEngine {
     }
 
     /// Step over
-    pub fn step_over(&self) -> DebugResult<()> {
+    pub fn step_over(&mut self) -> DebugResult<()> {
         let mut state = self.state.lock().unwrap();
         *state = DebugState::Stepping;
         self.step_type = Some(StepType::Over);
@@ -188,7 +188,7 @@ impl DebuggerEngine {
     }
 
     /// Step into
-    pub fn step_into(&self) -> DebugResult<()> {
+    pub fn step_into(&mut self) -> DebugResult<()> {
         let mut state = self.state.lock().unwrap();
         *state = DebugState::Stepping;
         self.step_type = Some(StepType::Into);
@@ -196,7 +196,7 @@ impl DebuggerEngine {
     }
 
     /// Step out
-    pub fn step_out(&self) -> DebugResult<()> {
+    pub fn step_out(&mut self) -> DebugResult<()> {
         let mut state = self.state.lock().unwrap();
         *state = DebugState::Stepping;
         self.step_type = Some(StepType::Out);
@@ -204,7 +204,7 @@ impl DebuggerEngine {
     }
 
     /// Next (step to next statement)
-    pub fn next(&self) -> DebugResult<()> {
+    pub fn next(&mut self) -> DebugResult<()> {
         let mut state = self.state.lock().unwrap();
         *state = DebugState::Stepping;
         self.step_type = Some(StepType::Next);

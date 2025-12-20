@@ -128,7 +128,7 @@ pub enum DebugCommand {
 }
 
 /// Debug statistics
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct DebugStats {
     pub breakpoints_set: u64,
     pub breakpoints_hit: u64,
@@ -138,12 +138,22 @@ pub struct DebugStats {
     pub start_time: std::time::Instant,
 }
 
+impl Default for DebugStats {
+    fn default() -> Self {
+        Self {
+            breakpoints_set: 0,
+            breakpoints_hit: 0,
+            steps_executed: 0,
+            exceptions_caught: 0,
+            variables_inspected: 0,
+            start_time: std::time::Instant::now(),
+        }
+    }
+}
+
 impl DebugStats {
     pub fn new() -> Self {
-        Self {
-            start_time: std::time::Instant::now(),
-            ..Default::default()
-        }
+        Self::default()
     }
 
     pub fn elapsed(&self) -> std::time::Duration {

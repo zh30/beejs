@@ -28,14 +28,12 @@ impl DebugSession {
         runtime: RuntimeLite,
         cmd: crate::cli::commands::SubCommand,
     ) -> Result<Self> {
-        let cmd = match cmd {
-            crate::cli::commands::SubCommand::Debug(cmd) => cmd,
+        let (script_path, debug_port, web_ui) = match cmd {
+            crate::cli::commands::SubCommand::Debug { file, port, web, .. } => {
+                (file, port, web)
+            },
             _ => return Err(anyhow::anyhow!("Invalid debug command")),
         };
-
-        let script_path = cmd.file;
-        let debug_port = cmd.port;
-        let web_ui = cmd.web;
 
         // Create debugger engine with configuration
         let config = DebugConfig::default();
