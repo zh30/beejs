@@ -3,9 +3,13 @@
 
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, Duration};
+use std::fs;
+use std::io::{Write, Read};
+use std::path::{Path, PathBuf};
 use crate::v8_snapshot::{V8Snapshot, SnapshotConfig};
 use crate::runtime_lite::RuntimeLite;
 use rusty_v8 as v8;
+use serde::{Serialize, Deserialize};
 
 /// 快照管理器
 pub struct SnapshotManager {
@@ -159,6 +163,141 @@ impl SnapshotManager {
     pub fn age(&self) -> Duration {
         self.created_at.elapsed().unwrap_or_default()
     }
+
+    /// 保存快照到磁盘
+    pub fn save_snapshot_to_disk(
+        &self,
+        snapshot: &V8Snapshot,
+        base_dir: &Path,
+    ) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync>> {
+        let snapshot_dir = base_dir.join("snapshots");
+        fs::create_dir_all(&snapshot_dir)?;
+
+        let snapshot_file = snapshot_dir.join(format!("{}.bin", snapshot.version));
+
+        // 写入快照数据
+        let mut file = fs::File::create(&snapshot_file)?;
+        file.write_all(&snapshot.snapshot_data)?;
+
+        // 写入快照元数据
+        let metadata = SnapshotMetadata {
+            version: snapshot.version.clone(),
+            created_at: snapshot.created_at,
+            size_bytes: snapshot.size_bytes,
+            is_compressed: snapshot.is_compressed,
+            builtin_warmup: snapshot.builtin_warmup,
+        };
+
+        let metadata_file = snapshot_dir.join(format!("{}.meta", snapshot.version));
+        let metadata_json = serde_json::to_string(&metadata)?;
+        fs::write(&metadata_file, metadata_json)?;
+
+        // 更新统计
+        {
+            let mut stats = self.stats.lock().unwrap();
+            stats.total_snapshot_size += snapshot.size_bytes;
+        }
+
+        Ok(snapshot_file)
+    }
+
+    /// 从磁盘加载快照
+    pub fn load_snapshot_from_disk(
+        &self,
+        version: &str,
+        base_dir: &Path,
+    ) -> Result<V8Snapshot, Box<dyn std::error::Error + Send + Sync>> {
+        let snapshot_dir = base_dir.join("snapshots");
+        let metadata_file = snapshot_dir.join(format!("{}.meta", version));
+
+        // 检查元数据文件是否存在
+        if !metadata_file.exists() {
+            return Err(format!("Snapshot metadata file not found: {:?}", metadata_file).into());
+        }
+
+        // 读取元数据
+        let metadata_json = fs::read_to_string(&metadata_file)?;
+        let metadata: SnapshotMetadata = serde_json::from_str(&metadata_json)?;
+
+        // 读取快照数据
+        let snapshot_file = snapshot_dir.join(format!("{}.bin", version));
+        let snapshot_data = fs::read(&snapshot_file)?;
+
+        let snapshot = V8Snapshot::new(
+            snapshot_data,
+            metadata.version,
+            metadata.is_compressed,
+            metadata.builtin_warmup,
+        );
+
+        // 更新统计
+        {
+            let mut stats = self.stats.lock().unwrap();
+            stats.snapshots_loaded += 1;
+            stats.last_loaded_at = Some(SystemTime::now());
+        }
+
+        Ok(snapshot)
+    }
+
+    /// 列出持久化的快照
+    pub fn list_persistent_snapshots(
+        &self,
+        base_dir: &Path,
+    ) -> Result<Vec<SnapshotMetadata>, Box<dyn std::error::Error + Send + Sync>> {
+        let snapshot_dir = base_dir.join("snapshots");
+
+        if !snapshot_dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        let entries = fs::read_dir(&snapshot_dir)?;
+        let mut snapshots = Vec::new();
+
+        for entry in entries {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.extension().and_then(|s| s.to_str()) == Some("meta") {
+                let metadata_json = fs::read_to_string(&path)?;
+                let metadata: SnapshotMetadata = serde_json::from_str(&metadata_json)?;
+                snapshots.push(metadata);
+            }
+        }
+
+        Ok(snapshots)
+    }
+
+    /// 删除持久化的快照
+    pub fn delete_persistent_snapshot(
+        &self,
+        version: &str,
+        base_dir: &Path,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let snapshot_dir = base_dir.join("snapshots");
+        let metadata_file = snapshot_dir.join(format!("{}.meta", version));
+        let snapshot_file = snapshot_dir.join(format!("{}.bin", version));
+
+        // 删除文件（如果存在）
+        if metadata_file.exists() {
+            fs::remove_file(&metadata_file)?;
+        }
+        if snapshot_file.exists() {
+            fs::remove_file(&snapshot_file)?;
+        }
+
+        Ok(())
+    }
+}
+
+/// 快照元数据
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SnapshotMetadata {
+    pub version: String,
+    pub created_at: SystemTime,
+    pub size_bytes: usize,
+    pub is_compressed: bool,
+    pub builtin_warmup: bool,
 }
 
 /// 快照统计信息
@@ -223,5 +362,89 @@ mod tests {
         let stats = SnapshotStats::new();
         assert_eq!(stats.snapshots_generated, 0);
         assert_eq!(stats.hit_rate(), 0.0);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_save_and_load_snapshot() {
+        use tempfile::tempdir;
+
+        let dir = tempdir().unwrap();
+        let base_dir = dir.path();
+
+        let mut runtime = RuntimeLite::new(false).unwrap();
+        let manager = SnapshotManager::new(SnapshotConfig::default());
+
+        // 生成快照
+        let snapshot = manager.generate_snapshot(&mut runtime).unwrap();
+
+        // 保存快照
+        let result = manager.save_snapshot_to_disk(&snapshot, base_dir);
+        assert!(result.is_ok());
+
+        // 列出快照
+        let list = manager.list_persistent_snapshots(base_dir).unwrap();
+        assert_eq!(list.len(), 1);
+
+        // 加载快照
+        let loaded = manager.load_snapshot_from_disk(&snapshot.version, base_dir).unwrap();
+        assert_eq!(loaded.version, snapshot.version);
+        assert_eq!(loaded.size_bytes, snapshot.size_bytes);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn test_delete_persistent_snapshot() {
+        use tempfile::tempdir;
+
+        let dir = tempdir().unwrap();
+        let base_dir = dir.path();
+
+        let mut runtime = RuntimeLite::new(false).unwrap();
+        let manager = SnapshotManager::new(SnapshotConfig::default());
+
+        // 生成并保存快照
+        let snapshot = manager.generate_snapshot(&mut runtime).unwrap();
+        manager.save_snapshot_to_disk(&snapshot, base_dir).unwrap();
+
+        // 验证快照存在
+        let list = manager.list_persistent_snapshots(base_dir).unwrap();
+        assert_eq!(list.len(), 1);
+
+        // 删除快照
+        let result = manager.delete_persistent_snapshot(&snapshot.version, base_dir);
+        assert!(result.is_ok());
+
+        // 验证快照已删除
+        let list = manager.list_persistent_snapshots(base_dir).unwrap();
+        assert_eq!(list.len(), 0);
+    }
+
+    #[test]
+    fn test_list_nonexistent_snapshots() {
+        use tempfile::tempdir;
+
+        let dir = tempdir().unwrap();
+        let base_dir = dir.path();
+
+        let manager = SnapshotManager::new(SnapshotConfig::default());
+
+        // 列出不存在的快照
+        let list = manager.list_persistent_snapshots(base_dir).unwrap();
+        assert_eq!(list.len(), 0);
+    }
+
+    #[test]
+    fn test_load_nonexistent_snapshot() {
+        use tempfile::tempdir;
+
+        let dir = tempdir().unwrap();
+        let base_dir = dir.path();
+
+        let manager = SnapshotManager::new(SnapshotConfig::default());
+
+        // 尝试加载不存在的快照
+        let result = manager.load_snapshot_from_disk("nonexistent", base_dir);
+        assert!(result.is_err());
     }
 }
