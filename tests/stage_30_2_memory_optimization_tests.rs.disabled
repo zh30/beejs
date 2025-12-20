@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod memory_optimization_tests {
-    use super::super::memory::{
+    use beejs::memory::{
         UnifiedMemoryManager,
         AllocatorConfig,
         GCConfig,
@@ -11,7 +11,13 @@ mod memory_optimization_tests {
         LeakDetectorConfig,
         ObjectType,
         CompressionAlgorithm,
+        ZeroCopyAllocator,
+        GenerationalGC,
+        MemoryCompression,
+        MemoryLeakDetector,
+        LeakSeverity,
     };
+    use std::sync::Arc;
     use std::time::Duration;
 
     /// 测试 1: 零拷贝内存分配器基础功能
@@ -22,7 +28,7 @@ mod memory_optimization_tests {
             ..Default::default()
         };
 
-        let allocator = crate::memory::ZeroCopyAllocator::new(config);
+        let allocator = ZeroCopyAllocator::new(config);
 
         // 测试基本分配
         let ptr = allocator.allocate(64);
@@ -43,7 +49,7 @@ mod memory_optimization_tests {
             ..Default::default()
         };
 
-        let allocator = crate::memory::ZeroCopyAllocator::new(config);
+        let allocator = ZeroCopyAllocator::new(config);
         let mut ptrs = Vec::new();
 
         // 分配多个小块
@@ -67,7 +73,7 @@ mod memory_optimization_tests {
     /// 测试 3: 大内存直接分配
     #[test]
     fn test_large_memory_allocation() {
-        let allocator = crate::memory::ZeroCopyAllocator::new(Default::default());
+        let allocator = ZeroCopyAllocator::new(Default::default());
 
         // 分配大内存块 (超过阈值)
         let large_size = 128 * 1024; // 128KB
@@ -88,7 +94,7 @@ mod memory_optimization_tests {
             ..Default::default()
         };
 
-        let gc = crate::memory::GenerationalGC::new(config);
+        let gc = GenerationalGC::new(config);
 
         // 分配一些对象
         let mut addresses = Vec::new();
@@ -118,7 +124,7 @@ mod memory_optimization_tests {
             ..Default::default()
         };
 
-        let gc = crate::memory::GenerationalGC::new(config);
+        let gc = GenerationalGC::new(config);
 
         // 分配对象
         let addr = gc.allocate(1024);
@@ -139,7 +145,7 @@ mod memory_optimization_tests {
     /// 测试 6: 内存压缩基础功能
     #[test]
     fn test_memory_compression_basic() {
-        let compressor = crate::memory::MemoryCompression::new(Default::default());
+        let compressor = MemoryCompression::new(Default::default());
 
         let test_data = vec![42u8; 2048]; // 2KB 数据
 
@@ -158,7 +164,7 @@ mod memory_optimization_tests {
     /// 测试 7: 多算法压缩选择
     #[test]
     fn test_compression_algorithm_selection() {
-        let compressor = crate::memory::MemoryCompression::new(Default::default());
+        let compressor = MemoryCompression::new(Default::default());
 
         // 测试小数据 (LZ4)
         let small_data = vec![1u8; 512];
@@ -187,7 +193,7 @@ mod memory_optimization_tests {
             ..Default::default()
         };
 
-        let detector = crate::memory::MemoryLeakDetector::new(config);
+        let detector = MemoryLeakDetector::new(config);
 
         // 分配对象
         detector.track_allocation(0x1000, 1024, ObjectType::Normal, None);
@@ -213,7 +219,7 @@ mod memory_optimization_tests {
             ..Default::default()
         };
 
-        let detector = crate::memory::MemoryLeakDetector::new(config);
+        let detector = MemoryLeakDetector::new(config);
 
         // 分配大对象
         detector.track_allocation(0x2000, 1024 * 1024, ObjectType::Normal, None); // 1MB
@@ -226,7 +232,7 @@ mod memory_optimization_tests {
         if !report.leak_details.is_empty() {
             let detail = &report.leak_details[0];
             // 大对象长时间存活应该是高严重程度
-            assert!(detail.severity != crate::memory::LeakSeverity::Low);
+            assert!(detail.severity != LeakSeverity::Low);
         }
 
         println!("✅ 测试 9 通过: 泄漏严重程度评估");
@@ -316,7 +322,7 @@ mod memory_optimization_tests {
             ..Default::default()
         };
 
-        let gc = crate::memory::GenerationalGC::new(config);
+        let gc = GenerationalGC::new(config);
 
         let start = std::time::Instant::now();
 
@@ -340,7 +346,7 @@ mod memory_optimization_tests {
     /// 测试 14: 压缩效率测试
     #[test]
     fn test_compression_efficiency() {
-        let compressor = crate::memory::MemoryCompression::new(Default::default());
+        let compressor = MemoryCompression::new(Default::default());
 
         // 创建可压缩的数据
         let data = vec![0u8; 8192]; // 8KB 零数据
@@ -366,7 +372,7 @@ mod memory_optimization_tests {
         for _ in 0..10 {
             let manager_clone = Arc::clone(&manager);
             let handle = std::thread::spawn(move || {
-                let mut ptrs = Vec::new();
+                let mut ptrs: Vec<*mut u8> = Vec::new();
                 for _ in 0..100 {
                     let ptr = manager_clone.allocate(128);
                     if !ptr.is_null() {
@@ -379,9 +385,9 @@ mod memory_optimization_tests {
         }
 
         // 收集所有指针
-        let mut all_ptrs = Vec::new();
+        let mut all_ptrs: Vec<*mut u8> = Vec::new();
         for handle in handles {
-            let ptrs = handle.join().unwrap();
+            let ptrs: Vec<*mut u8> = handle.join().unwrap();
             all_ptrs.extend(ptrs);
         }
 
@@ -392,7 +398,7 @@ mod memory_optimization_tests {
             manager.deallocate(ptr, 128);
         }
 
-        println!("✅ 测试 15 通过: 并发分配测试 ({} 个分配)", all_ptrs.len());
+        println!("✅ 测试 15 通过: 并发分配测试");
     }
 
     /// 测试 16: 内存泄漏自动清理
@@ -405,7 +411,7 @@ mod memory_optimization_tests {
             ..Default::default()
         };
 
-        let detector = crate::memory::MemoryLeakDetector::new(config);
+        let detector = MemoryLeakDetector::new(config);
 
         // 分配泄漏对象
         detector.track_allocation(0x3000, 2048, ObjectType::Normal, None);
@@ -413,7 +419,7 @@ mod memory_optimization_tests {
         // 等待触发泄漏检测
         std::thread::sleep(Duration::from_millis(1100));
 
-        let report = detector.detect_leaks();
+        let _report = detector.detect_leaks();
 
         // 自动清理应该已经发生
         let stats = detector.get_stats();

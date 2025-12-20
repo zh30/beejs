@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use std::time::{Duration, Instant};
-use tokio::time::{timeout, elapsed};
+use tokio::time::timeout;
 
 /// 基准测试结果
 #[derive(Debug, Clone)]
