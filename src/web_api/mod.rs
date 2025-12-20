@@ -12,6 +12,15 @@ pub mod abort;
 use anyhow::Result;
 use rusty_v8 as v8;
 
+// 从各模块导入设置函数
+use abort::setup_abort_api;
+use crypto::setup_crypto_api;
+use events::setup_events_api;
+use fetch::setup_fetch_api;
+use form_data::setup_form_data_api;
+use url::setup_url_api;
+use websocket::setup_websocket_api;
+
 /// 初始化所有 Web API 到 V8 上下文
 pub fn init_web_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -38,6 +47,3 @@ pub fn init_web_api(
 
     Ok(())
 }
-
-// 重新导出各个模块的设置函数
-pub use abort::setup_abort_api;

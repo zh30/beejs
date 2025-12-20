@@ -44,7 +44,7 @@ pub mod watcher;
 pub mod repl;
 pub mod cli;
 pub mod edge;
-// pub mod web_api;  // Temporarily disabled for Stage 60
+pub mod web_api;  // Stage 74: Web API 生态系统完善
 pub mod debugger;  // Stage 58: Debugger integration
 pub mod observability;  // 可观测性系统
 pub mod ai_inference;
@@ -76,7 +76,6 @@ pub mod distributed_metaverse;  // Stage 42.0: 分布式元宇宙网络
 
 // Stage 43.0: 完整生态系统与极致性能优化
 // pub mod nodejs_core;  // Temporarily disabled for Stage 60
-// pub mod web_api;  // Temporarily disabled for Stage 60
 pub mod bundler;
 pub mod plugin;
 pub mod jit;

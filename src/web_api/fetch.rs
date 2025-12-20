@@ -175,7 +175,7 @@ fn fetch_callback(
     let ok_key = v8::String::new(scope, "ok").unwrap();
     let ok_key_val = v8::Boolean::new(scope, true).into();
 
-    response_obj.set(scope, ok_key.into(), ok_key_val);;
+    response_obj.set(scope, ok_key.into(), ok_key_val);
 
     let status_key = v8::String::new(scope, "status").unwrap();
     let status_key_val = v8::Integer::new(scope, 200).into();
