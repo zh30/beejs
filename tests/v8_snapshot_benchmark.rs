@@ -23,7 +23,7 @@ mod v8_snapshot_benchmark_tests {
     fn test_snapshot_creation_performance() {
         init_v8();
 
-        let manager = V8SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
 
         let iterations = 10;
         let mut total_time = 0u128;
@@ -63,7 +63,7 @@ mod v8_snapshot_benchmark_tests {
     fn test_snapshot_loading_performance() {
         init_v8();
 
-        let manager = V8SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
 
         // First create a snapshot
         let snapshot = manager.create_snapshot("v0.1.0-benchmark")
@@ -111,7 +111,7 @@ mod v8_snapshot_benchmark_tests {
     fn test_snapshot_vs_fresh_creation() {
         init_v8();
 
-        let manager = V8SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
 
         // Test fresh V8 Isolate creation (baseline)
         let fresh_iterations = 5;
@@ -160,7 +160,7 @@ mod v8_snapshot_benchmark_tests {
     fn test_snapshot_cache_effectiveness() {
         init_v8();
 
-        let manager = V8SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
 
         // First call - should create snapshot (cache miss)
         let start1 = Instant::now();
@@ -192,7 +192,7 @@ mod v8_snapshot_benchmark_tests {
     fn test_snapshot_stats_tracking() {
         init_v8();
 
-        let manager = V8SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
 
         // Get initial stats
         let stats_before = manager.get_stats();
@@ -236,7 +236,7 @@ mod v8_snapshot_benchmark_tests {
     fn test_multiple_snapshot_versions() {
         init_v8();
 
-        let manager = V8SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
 
         // Create snapshots for different versions
         let versions = vec!["v0.1.0", "v0.2.0", "v0.3.0"];

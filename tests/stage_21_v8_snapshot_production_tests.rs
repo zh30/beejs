@@ -1,7 +1,7 @@
 //! Stage 21.1: V8 Snapshot Production Environment Tests
 //! Tests to verify V8 snapshot is properly enabled and working in production builds
 
-use beejs::{v8_snapshot::V8SnapshotManager, initialize_v8};
+use beejs::{v8_snapshot::SnapshotManager, initialize_v8};
 use std::time::Instant;
 
 #[cfg(test)]
@@ -23,7 +23,7 @@ mod stage_21_v8_snapshot_tests {
         println!("\n🧪 Test: V8 Snapshot Creation");
 
         // In test mode, V8 snapshot creation returns mock data
-        let manager = V8SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
 
         let start = Instant::now();
         let snapshot = manager.create_snapshot("test-v0.1.0");
@@ -51,7 +51,7 @@ mod stage_21_v8_snapshot_tests {
         init_v8();
         println!("\n🧪 Test: V8 Snapshot Caching");
 
-        let manager = V8SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
 
         // First call - should create snapshot
         let start1 = Instant::now();
@@ -111,7 +111,7 @@ mod stage_21_v8_snapshot_tests {
         init_v8();
         println!("\n🧪 Test: Snapshot Stats Tracking");
 
-        let manager = V8SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
 
         // Get initial stats
         let stats1 = manager.get_stats();
