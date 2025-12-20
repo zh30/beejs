@@ -303,7 +303,11 @@ impl TypeScriptCompiler {
                     }
                 },
                 '=' => {
-                    if pos + 1 < chars.len() && chars[pos + 1] == '=' {
+                    if pos + 1 < chars.len() && chars[pos + 1] == '>' {
+                        // 处理 FatArrow (=>)
+                        pos += 1;
+                        Token::FatArrow
+                    } else if pos + 1 < chars.len() && chars[pos + 1] == '=' {
                         if pos + 2 < chars.len() && chars[pos + 2] == '=' {
                             pos += 2;
                             Token::EqEqEq
@@ -331,14 +335,6 @@ impl TypeScriptCompiler {
                 '<' => Token::Lt,
                 '>' => Token::Gt,
                 '|' => Token::Pipe,
-                '=' => {
-                    if pos + 1 < chars.len() && chars[pos + 1] == '>' {
-                        pos += 1;
-                        Token::FatArrow
-                    } else {
-                        Token::Eq
-                    }
-                },
                 _ => Token::Unknown(ch.to_string()),
             });
 
@@ -878,29 +874,20 @@ impl Parser {
                     };
                 }
                 Token::LParen => {
-                    // 检查这是否是函数调用还是参数列表
-                    if matches!(expr, ASTExpression::Identifier(_)) {
-                        // 这可能是函数调用，如 func(a, b)
-                        self.advance();
-                        let mut arguments = Vec::new();
-                        while !self.current_token_eq(&Token::RParen) {
-                            arguments.push(self.parse_expression()?);
-                            if self.current_token_eq(&Token::Comma) {
-                                self.advance();
-                            }
+                    // 函数调用: expr(args)
+                    self.advance();
+                    let mut arguments = Vec::new();
+                    while !self.current_token_eq(&Token::RParen) {
+                        arguments.push(self.parse_expression()?);
+                        if self.current_token_eq(&Token::Comma) {
+                            self.advance();
                         }
-                        self.consume(Token::RParen)?;
-                        expr = ASTExpression::CallExpression {
-                            callee: Box::new(expr),
-                            arguments,
-                        };
-                    } else {
-                        // 括号表达式，如 (a + b)
-                        self.advance();
-                        let inner_expr = self.parse_expression()?;
-                        self.consume(Token::RParen)?;
-                        expr = inner_expr;
                     }
+                    self.consume(Token::RParen)?;
+                    expr = ASTExpression::CallExpression {
+                        callee: Box::new(expr),
+                        arguments,
+                    };
                 }
                 Token::LBracket => {
                     // 索引访问: expr[index]
@@ -954,25 +941,28 @@ impl Parser {
             // 带括号的参数列表: (a, b, c)
             self.consume(Token::LParen)?;
 
-            while !self.current_token_eq(&Token::RParen) {
-                let param_name_token = self.consume(Token::Identifier("".to_string()))?;
-                let param_name = match param_name_token {
-                    Token::Identifier(name) => name,
-                    _ => bail!("Expected parameter name"),
-                };
+            // 处理空参数列表的情况
+            if !self.current_token_eq(&Token::RParen) {
+                while !self.current_token_eq(&Token::RParen) {
+                    let param_name_token = self.consume(Token::Identifier("".to_string()))?;
+                    let param_name = match param_name_token {
+                        Token::Identifier(name) => name,
+                        _ => bail!("Expected parameter name"),
+                    };
 
-                // 检查参数类型注解
-                let param_type = if self.current_token_eq(&Token::Colon) {
-                    self.consume(Token::Colon)?;
-                    self.parse_type_annotation()
-                } else {
-                    None
-                };
+                    // 检查参数类型注解
+                    let param_type = if self.current_token_eq(&Token::Colon) {
+                        self.consume(Token::Colon)?;
+                        self.parse_type_annotation()
+                    } else {
+                        None
+                    };
 
-                params.push((param_name, param_type));
+                    params.push((param_name, param_type));
 
-                if self.current_token_eq(&Token::Comma) {
-                    self.consume(Token::Comma)?;
+                    if self.current_token_eq(&Token::Comma) {
+                        self.consume(Token::Comma)?;
+                    }
                 }
             }
 
