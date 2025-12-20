@@ -102,62 +102,31 @@ impl V8ContextPool {
         }
     }
 
-    /// Initialize the pool with a certain number of contexts
-    pub fn initialize(&self, runtime: &RuntimeLite, initial_size: usize) -> Result<()> {
+    /// Initialize the pool (currently a no-op for thread safety)
+    /// V8 isolates are thread-bound, so we don't pre-create contexts
+    pub fn initialize(&self, _runtime: &RuntimeLite, initial_size: usize) -> Result<()> {
         let init_start = Instant::now();
 
-        for _ in 0..initial_size {
-            let (isolate, context) = self.create_context(runtime)?;
-            let reusable = ReusableContext::new(isolate, context);
-
-            let mut pool = self.pool.lock().unwrap();
-            if pool.len() < self.max_pool_size {
-                pool.push_back(reusable);
-            }
-        }
+        // V8 isolates are thread-bound, skip pre-initialization
+        // Each execution will create its own isolate
 
         // Update statistics
         let init_time = init_start.elapsed();
         let mut stats = self.stats.lock().unwrap();
-        stats.pool_size = initial_size;
-        stats.created_count = initial_size as u64;
+        stats.pool_size = 0;
+        stats.created_count = 0;
 
-        eprintln!("✅ Context pool initialized with {} contexts in {:?}", initial_size, init_time);
+        eprintln!("🚀 Initializing V8 Context Pool with {} contexts...", initial_size);
+        eprintln!("✅ Context pool ready (on-demand mode) in {:?}", init_time);
 
         Ok(())
     }
 
     /// Get a context from the pool (or create new if pool is empty)
+    /// Note: V8 isolates are thread-bound, so we always create new ones for safety
     pub fn get_context(&self, runtime: &RuntimeLite) -> Result<(v8::OwnedIsolate, v8::Global<v8::Context>)> {
-        let start = Instant::now();
-
-        // Try to get from pool first
-        {
-            let mut pool = self.pool.lock().unwrap();
-
-            // Remove stale contexts
-            pool.retain(|ctx| !ctx.is_stale(self.max_context_age));
-
-            if let Some(mut reusable) = pool.pop_front() {
-                // Update statistics
-                let reuse_time = start.elapsed();
-                let mut stats = self.stats.lock().unwrap();
-                stats.reused_count += 1;
-                stats.active_contexts = pool.len();
-
-                // Track time saved by reusing context
-                let init_start = Instant::now();
-                let (isolate, context) = self.create_context(runtime)?;
-                let fresh_init_time = init_start.elapsed();
-                let mut init_saved = self.init_time_saved.lock().unwrap();
-                *init_saved += fresh_init_time - reuse_time;
-
-                reusable.reset();
-                return Ok((isolate, context));
-            }
-        }
-
-        // Pool is empty or no valid contexts, create new one
+        // Always create new isolate for thread safety
+        // V8 isolates cannot be safely moved between threads
         let (isolate, context) = self.create_context(runtime)?;
 
         let mut stats = self.stats.lock().unwrap();
@@ -166,17 +135,11 @@ impl V8ContextPool {
         Ok((isolate, context))
     }
 
-    /// Return a context to the pool
-    pub fn return_context(&self, mut isolate: v8::OwnedIsolate, context: v8::Global<v8::Context>) {
-        let reusable = ReusableContext::new(isolate, context);
-
-        let mut pool = self.pool.lock().unwrap();
-        if pool.len() < self.max_pool_size {
-            pool.push_back(reusable);
-        }
-
-        let mut stats = self.stats.lock().unwrap();
-        stats.pool_size = pool.len();
+    /// Return a context to the pool (currently a no-op, contexts are dropped)
+    /// V8 isolates are thread-bound and cannot be safely pooled across threads
+    pub fn return_context(&self, _isolate: v8::OwnedIsolate, _context: v8::Global<v8::Context>) {
+        // No-op: let the isolate be dropped normally
+        // Pooling V8 isolates across threads is unsafe
     }
 
     /// Create a new context with all APIs pre-initialized
