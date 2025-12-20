@@ -54,13 +54,13 @@ fn qs_parse_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
-    let sep = args
+    let _sep = args
         .get(1)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_else(|| "&".to_string());
 
-    let eq = args
+    let _eq = args
         .get(2)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
@@ -80,7 +80,7 @@ fn qs_stringify_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let obj = args.get(0);
+    let _obj = args.get(0);
 
     // 简化实现
     let result = "key=value";

@@ -488,7 +488,7 @@ mod tests {
         let node_manager = Arc::new(NodeManager::new(service_discovery.clone()));
         let health_monitor = Arc::new(HealthMonitor::new(node_manager.clone()));
 
-        let fault_config = FaultDetectionConfig {
+        let _fault_config = FaultDetectionConfig {
             detection_interval: Duration::from_millis(100),
             failure_threshold: 3,
             recovery_threshold: 2,

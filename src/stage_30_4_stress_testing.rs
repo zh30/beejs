@@ -322,7 +322,7 @@ fn get_fault_injection_script(fault_id: usize) -> String {
     match fault_type {
         "ReferenceError" => "nonExistentVariable;".to_string(),
         "TypeError" => "null.someMethod();".to_string(),
-        "SyntaxError" => "let invalid = {;".to_string(),
+        "SyntaxError" => "let _invalid = {;".to_string(),
         "RangeError" => "Array(-1);".to_string(),
         "Error" => "throw new Error('Injected fault');".to_string(),
         _ => "throw new Error('Unknown fault');".to_string(),

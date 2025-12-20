@@ -42,7 +42,7 @@ fn fs_read_file_sync_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
-    let encoding = args
+    let _encoding = args
         .get(1)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))
@@ -64,7 +64,7 @@ fn fs_write_file_sync_callback(
         .map(|s| s.to_rust_string_lossy(scope))
         .unwrap_or_default();
 
-    let data = args
+    let _data = args
         .get(1)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))

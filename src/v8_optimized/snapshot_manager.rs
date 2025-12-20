@@ -117,7 +117,7 @@ impl V8SnapshotOptimizedManager {
     /// 预加载快照到 L1 缓存
     pub fn preload_snapshots(&self, versions: &[&str]) {
         let l1_cache = Arc::clone(&self.l1_cache);
-        let preloaded = Arc::clone(&self.preloaded_snapshots);
+        let _preloaded = Arc::clone(&self.preloaded_snapshots);
         let stats = Arc::clone(&self.stats);
 
         for version in versions {

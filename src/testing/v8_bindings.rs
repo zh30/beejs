@@ -31,7 +31,7 @@ fn test_callback(
         return;
     }
 
-    let func = v8::Local::<v8::Function>::try_from(args.get(1)).unwrap();
+    let _func = v8::Local::<v8::Function>::try_from(args.get(1)).unwrap();
 
     // Temporarily disabled test registration
     // Will be re-implemented with proper V8 function handling
@@ -70,7 +70,7 @@ fn expect_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let value = args.get(0);
+    let _value = args.get(0);
 
     // Create a simple expect object (matchers disabled for now)
     let expect_obj = v8::Object::new(scope);

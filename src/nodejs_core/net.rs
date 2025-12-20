@@ -98,8 +98,8 @@ fn connection_write_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let data = args.get(0);
-    let encoding = args
+    let _data = args.get(0);
+    let _encoding = args
         .get(1)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))

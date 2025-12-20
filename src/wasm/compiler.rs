@@ -119,7 +119,7 @@ impl WasmCompiler {
         let mut exports = ExportSection::new();
         exports.function("add", functions_id, 0);
         exports.function("main", functions_id, 1);
-        let exports_id = module.section(&exports);
+        let _exports_id = module.section(&exports);
 
         // Code section
         let mut codes = CodeSection::new();

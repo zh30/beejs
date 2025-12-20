@@ -193,7 +193,7 @@ impl SendFile {
             // 降级到传统的读写方式
             let mut buffer = vec![0u8; count as usize];
             self.file.seek(SeekFrom::Start(self.current_pos))?;
-            let read_bytes = self.file.read(&mut buffer)?;
+            let _read_bytes = self.file.read(&mut buffer)?;
             self.file.seek(SeekFrom::Start(self.current_pos))?; // 重置位置
 
             // 这里需要输出流的写入方法，但 AsRawFd 限制了我们

@@ -112,7 +112,7 @@ fn cp_exec_file_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let file = args
+    let _file = args
         .get(0)
         .to_string(scope)
         .map(|s| s.to_rust_string_lossy(scope))

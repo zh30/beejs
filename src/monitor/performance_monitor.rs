@@ -315,7 +315,7 @@ impl PerformanceMonitor {
     /// 清理过期指标
     fn cleanup_old_metrics(&self) -> Result<(), String> {
         let mut raw_metrics = self.raw_metrics.lock().map_err(|e| e.to_string())?;
-        let cutoff_time = Instant::now()
+        let _cutoff_time = Instant::now()
             .checked_sub(self.config.retention_period)
             .unwrap();
 

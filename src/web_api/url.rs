@@ -290,7 +290,7 @@ fn url_search_params_constructor_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let init = args.get(0);
+    let _init = args.get(0);
     let search_params_obj = v8::Object::new(scope);
 
     // Add methods to prototype
@@ -298,7 +298,7 @@ fn url_search_params_constructor_callback(
 
     let get_key = v8::String::new(scope, "get").unwrap();
     let get_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
-        let name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
+        let _name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
         _rv.set(v8::String::new(scope, "").unwrap().into());
     });
     let get_func_instance = get_func.get_function(scope).unwrap();

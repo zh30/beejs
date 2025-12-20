@@ -78,11 +78,11 @@ fn test_callback(
     let func = v8::Local::<v8::Function>::try_from(args.get(1)).unwrap();
 
     // Store function in the test registry
-    let test_case = TestCase::new(name.clone(), v8::Global::new(scope, func), Duration::from_secs(5));
+    let _test_case = TestCase::new(name.clone(), v8::Global::new(scope, func), Duration::from_secs(5));
 
     // For now, we'll use a default suite name
     // In a real implementation, we'd track the current describe context
-    let suite_name = "default".to_string();
+    let _suite_name = "default".to_string();
 
     // Register the test case (this is a simplified approach)
     // In practice, we'd need a more sophisticated registry system

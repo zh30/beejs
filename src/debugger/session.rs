@@ -88,7 +88,7 @@ impl DebugSession {
             println!("\n📄 Loading script: {}", script_path.display());
 
             // Read script content
-            let code = std::fs::read_to_string(script_path)
+            let _code = std::fs::read_to_string(script_path)
                 .context("Failed to read script file")?;
 
             // Set initial breakpoint if specified

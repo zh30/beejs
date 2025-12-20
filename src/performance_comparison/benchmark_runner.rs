@@ -389,7 +389,7 @@ impl BenchmarkRunner {
             compare_with_baseline: self.config.compare_with_baseline,
         };
 
-        let framework = BenchmarkFramework::new(config);
+        let _framework = BenchmarkFramework::new(config);
 
         // 使用简化的时间测量（实际实现会更复杂）
         Ok(BenchmarkResult {

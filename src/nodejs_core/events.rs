@@ -367,7 +367,7 @@ fn event_emitter_listener_count_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let emitter = args.get(0);
+    let _emitter = args.get(0);
     let event_name = args
         .get(1)
         .to_string(scope)

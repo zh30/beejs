@@ -112,7 +112,7 @@ fn util_inspect_callback(
     let object = args.get(0);
     let options = args.get(1);
 
-    let show_hidden = if !options.is_undefined() {
+    let _show_hidden = if !options.is_undefined() {
         let show_hidden_key = v8::String::new(scope, "showHidden").unwrap();
         options.to_object(scope).and_then(|obj| {
             obj.get(scope, show_hidden_key.into())
@@ -424,7 +424,7 @@ fn util_promisified_callback(
     // 简化的promisify实现 - 返回Promise对象
     let this = args.this();
     let original_key = v8::String::new(scope, "_original").unwrap();
-    let original_func = this.get(scope, original_key.into());
+    let _original_func = this.get(scope, original_key.into());
 
     // 返回一个模拟的Promise
     let promise_obj = v8::Object::new(scope);

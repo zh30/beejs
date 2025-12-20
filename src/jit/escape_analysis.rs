@@ -499,8 +499,8 @@ mod tests {
         let optimizer = EscapeAnalysisOptimizer::new();
         let code = r#"
             let obj = { value: 42 };
-            let x = obj.value;
-            let y = obj.value * 2;
+            let _x = obj.value;
+            let _y = obj.value * 2;
         "#;
 
         let objects = optimizer.analyze_escape(code);

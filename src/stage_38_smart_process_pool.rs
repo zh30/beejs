@@ -733,7 +733,7 @@ impl SmartProcessPool {
             .map(|d| d.throughput)
             .collect();
 
-        let trend = if recent_throughput.len() >= 2 {
+        let _trend = if recent_throughput.len() >= 2 {
             recent_throughput[0] - recent_throughput[recent_throughput.len() - 1]
         } else {
             0.0

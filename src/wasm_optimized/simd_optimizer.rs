@@ -67,13 +67,13 @@ impl WasmSimdOptimizer {
         info!("🔧 开始 SIMD 优化");
 
         // 1. 向量数学运算优化
-        let vector_math_optimization = self.optimize_vector_math(module)?;
+        let _vector_math_optimization = self.optimize_vector_math(module)?;
 
         // 2. 内存操作优化
-        let memory_optimization = self.optimize_memory_operations(module)?;
+        let _memory_optimization = self.optimize_memory_operations(module)?;
 
         // 3. 检测并优化特定模式
-        let pattern_optimizations = self.detect_and_optimize_patterns(module)?;
+        let _pattern_optimizations = self.detect_and_optimize_patterns(module)?;
 
         let scalar_time = 100.0; // 假设标量执行时间
         let simd_time = scalar_time / 4.0; // SIMD 优化后时间

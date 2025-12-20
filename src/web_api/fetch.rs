@@ -243,7 +243,7 @@ fn headers_constructor_callback(
     // Add common headers methods
     let get_key = v8::String::new(scope, "get").unwrap();
     let get_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut _rv: v8::ReturnValue| {
-        let name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
+        let _name = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
         // TODO: Implement actual header storage and retrieval
         _rv.set(v8::String::new(scope, "").unwrap().into());
     });

@@ -159,7 +159,7 @@ impl BenchmarkTestCase {
             }
             BenchmarkTestCase::MemoryUsage => {
                 // 内存使用测试代码
-                "let arr = new Array(1000000).fill(0);".to_string()
+                "let _arr = new Array(1000000).fill(0);".to_string()
             }
             BenchmarkTestCase::ConcurrentPerformance => {
                 // 并发性能测试代码
@@ -173,7 +173,7 @@ impl BenchmarkTestCase {
             }
             BenchmarkTestCase::Matrix { size } => {
                 format!(
-                    "let matrix = Array.from({{length: {}}}, (_, i) => Array.from({{length: {}}}, (_, j) => i * j));",
+                    "let _matrix = Array.from({{length: {}}}, (_, i) => Array.from({{length: {}}}, (_, j) => i * j));",
                     size, size
                 )
             }
