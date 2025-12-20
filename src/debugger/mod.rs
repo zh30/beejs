@@ -21,7 +21,6 @@ pub use engine::{DebuggerEngine, DebugState, SimpleEventListener};
 pub use breakpoint::{Breakpoint, BreakpointManager, BreakpointCondition};
 pub use stack_trace::{StackFrame, StackTrace, StackFrameInfo};
 pub use variable_scope::{VariableScope, ScopeType, VariableInspector};
-pub use config::DebugConfig;
 pub use session::DebugSession;
 
 use std::sync::Arc;

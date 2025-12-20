@@ -8,10 +8,6 @@ pub mod enhanced_cli;
 pub mod commands;
 pub mod script_executor;
 
-pub use file_watcher::FileWatcher;
-pub use repl::Repl;
-pub use package_json::PackageJson;
-pub use enhanced_cli::EnhancedArgs;
 pub use commands::{CliApp, SubCommand, RunCommand, TestCommand, ReplCommand, BundleCommand};
 pub use script_executor::{
     FileType, ModuleSystem, ExecutionContext, ExecutorConfig, ScriptExecutor,

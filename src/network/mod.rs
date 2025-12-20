@@ -19,17 +19,12 @@ pub mod zero_copy;  // Stage 39.0: 零拷贝 I/O 优化
 pub mod memory_mapper;  // Stage 39.0: 内存映射管理器
 
 // 重新导出主要类型
-pub use epoll_manager::EpollManager;
-pub use zero_copy_io::ZeroCopyIO;
 pub use batch_processor::BatchProcessor;
 
 // 扩展类型
-pub use connection_pool::ConnectionPool;
-pub use http2_server::Http2Server;
 pub use http3_server::Http3Server;
 
 // 网络缓冲区和统计类型
-pub use buffer_pool::NetworkBufferPool;
 pub use statistics::NetworkIoStatistics;
 
 use std::time::Duration;

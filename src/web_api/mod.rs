@@ -40,10 +40,4 @@ pub fn init_web_api(
 }
 
 // 重新导出各个模块的设置函数
-pub use fetch::setup_fetch_api;
-pub use websocket::setup_websocket_api;
-pub use crypto::setup_crypto_api;
-pub use url::setup_url_api;
-pub use events::setup_events_api;
-pub use form_data::setup_form_data_api;
 pub use abort::setup_abort_api;

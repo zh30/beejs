@@ -8,7 +8,6 @@ pub mod ray_tracer;
 pub mod multiuser_renderer;
 pub mod spatial_audio;
 
-pub use engine::*;
 pub use xr_runtime::{XRRuntime, XRConfig, XRMode};
 pub use ray_tracer::{RayTracer, RayTracerConfig, BounceLimit};
 pub use multiuser_renderer::{MultiuserRenderer, UserAvatar, AvatarConfig, SyncMode as MultiuserSyncMode};

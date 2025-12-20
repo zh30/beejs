@@ -10,8 +10,4 @@ pub mod zero_copy_loader;
 pub mod cache_manager;
 
 // 重新导出主要类型
-pub use executor::WasmOptimizedExecutor;
-pub use multithread::WasmMultithread;
-pub use simd_optimizer::WasmSimdOptimizer;
-pub use zero_copy_loader::WasmZeroCopyLoader;
 pub use cache_manager::WasmCacheManager;

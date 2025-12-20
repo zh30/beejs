@@ -15,9 +15,6 @@ pub mod memory_compression;
 pub mod leak_detector;
 pub mod zero_copy_allocator;
 
-pub use generational_gc::*;
-pub use memory_compression::*;
-pub use leak_detector::*;
 pub use zero_copy_allocator::*;
 
 use crate::memory_pool::SmartMemoryPool;

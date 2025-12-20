@@ -10,8 +10,5 @@ pub mod end_to_end_encrypt;
 pub mod permission_audit;
 
 // 重新导出主要类型
-pub use collaboration::RealtimeCollaboration;
 pub use ot_crdt_sync::{OperationTransformer, CRDTList};
-pub use incremental_sync::IncrementalSync;
-pub use end_to_end_encrypt::EndToEndEncrypt;
 pub use permission_audit::PermissionAudit;

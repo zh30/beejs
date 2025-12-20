@@ -275,9 +275,6 @@ pub struct Metrics {
 
 /// 云平台统一接口
 pub mod cloud_manager {
-    pub use super::CloudAdapter;
-    pub use super::FunctionConfig;
-    pub use super::DeploymentResult;
     pub use super::Metrics;
 }
 

@@ -10,10 +10,7 @@ pub mod l2_smart;
 pub mod l3_mmap;
 pub mod prefetcher;
 
-pub use l1_zero_copy::L1ZeroCopyCache;
-pub use l2_smart::L2SmartCache;
-pub use l3_mmap::L3MmapCache;
-pub use prefetcher::PatternAnalyzer;
+// TODO: Remove unused export: pub use prefetcher::PatternAnalyzer;
 
 use crate::runtime_lite::RuntimeLite;
 use anyhow::Result;

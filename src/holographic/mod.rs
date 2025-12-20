@@ -8,7 +8,6 @@ pub mod hologram_generator;
 pub mod volume_capture;
 pub mod holographic_storage;
 
-pub use engine::*;
 pub use wavefront_propagator::{WavefrontPropagator, PropagationMethod};
 pub use hologram_generator::{HologramGenerator, GeneratorConfig, HologramType, HologramEncoding};
 pub use volume_capture::{VolumeCapture, CaptureConfig, ColorFormat};

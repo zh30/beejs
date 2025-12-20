@@ -13,10 +13,6 @@ pub mod test_runner;
 pub mod test_discoverer;
 pub mod v8_bindings;
 
-pub use test_context::*;
-pub use assertions::*;
-pub use test_runner::*;
-pub use test_discoverer::*;
 pub use v8_bindings::*;
 
 /// Global test registry for collecting test cases during file execution

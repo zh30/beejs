@@ -27,10 +27,6 @@ pub mod metrics;
 pub mod alerting;
 pub mod jaeger_tracer;
 
-pub use prometheus_exporter::*;
-pub use structured_logging::*;
-pub use metrics::*;
-pub use alerting::*;
 pub use jaeger_tracer::*;
 
 use anyhow::Result;
