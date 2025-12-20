@@ -8,7 +8,7 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 ## 最新更新 (2025-12-21)
 
 ### 🔄 Stage 72: TypeScript 原生支持 (2025-12-21)
-**进度**: 🔄 Phase 1 完成
+**进度**: 🔄 Phase 2 进行中 - 箭头函数支持
 
 #### 完成工作
 1. **TypeScript 转译集成**
@@ -16,13 +16,20 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
    - ✅ .ts 文件现在会先经过转译再执行
    - ✅ 类型标注被正确移除
 
+2. **箭头函数支持（初步实现）**
+   - ✅ 在 Token 枚举中添加 FatArrow (=>) token
+   - ✅ 在词法分析器中添加对 `=>` 符号的识别
+   - ✅ 在 ASTExpression 枚举中添加 ArrowFunctionExpression
+   - ✅ 实现箭头函数的解析和转译逻辑框架
+   - ✅ 添加 TypeScript 编译器集成测试
+
 #### 当前能力
 | 语法 | 支持状态 |
 |------|----------|
 | 函数类型标注 | ✅ 支持 |
 | 变量类型标注 | ✅ 支持 |
 | 返回类型标注 | ✅ 支持 |
-| 箭头函数 | ❌ 待实现 |
+| 箭头函数 | 🔄 解析框架完成，细节待完善 |
 | interface | ⚠️ 部分支持 |
 | type alias | ⚠️ 部分支持 |
 | 泛型 | ❌ 待实现 |
@@ -35,14 +42,24 @@ function add(a: number, b: number): number {
 }
 console.log("Sum:", add(10, 20));  // 输出: Sum: 30
 
-// ❌ 暂不支持
+// 🔄 基本框架完成，细节待完善
 const add = (a: number, b: number): number => a + b;
 ```
 
+#### 测试用例状态
+- `test_simple_typescript_transpilation`: ✅ 通过
+- `test_arrow_function_typescript`: 🔄 解析逻辑待完善
+
 #### 下一步任务
-- [ ] 添加箭头函数支持
+- [x] 初步实现箭头函数支持框架 ✅
+- [ ] 完善箭头函数解析逻辑细节
 - [ ] 完善 interface 解析
 - [ ] 考虑集成 SWC 以获得完整 TypeScript 支持
+
+#### 当前挑战
+1. **箭头函数解析**: Token 识别正常，但解析逻辑需要微调
+2. **错误处理**: "Unexpected token in expression: Eq" 需要深入调试
+3. **测试覆盖**: 需要更多边界情况测试
 
 ---
 
