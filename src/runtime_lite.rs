@@ -4,10 +4,11 @@
 
 use crate::memory_pool::{PoolConfig, SmartMemoryPool};
 use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipeline};
+use crate::inline_cache::{CacheKey, CacheEntry, CacheConfig, fast_hash};
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -42,6 +43,10 @@ pub struct RuntimeLite {
     jit_optimizer: Arc<JITOptimizer>,
     hot_path_optimizer: Arc<HotPathOptimizer>,
     optimization_pipeline: Arc<OptimizationPipeline>,
+
+    /// Stage 63: Inline cache for fast property access and function calls
+    inline_cache: Arc<std::sync::Mutex<HashMap<CacheKey, CacheEntry>>>,
+    cache_stats: Arc<CacheStatistics>,
 }
 
 // Make RuntimeLite Send + Sync for thread-safe global sharing
@@ -61,6 +66,8 @@ impl Clone for RuntimeLite {
             jit_optimizer: Arc::clone(&self.jit_optimizer),
             hot_path_optimizer: Arc::clone(&self.hot_path_optimizer),
             optimization_pipeline: Arc::clone(&self.optimization_pipeline),
+            inline_cache: Arc::clone(&self.inline_cache),
+            cache_stats: Arc::clone(&self.cache_stats),
         }
     }
 }
@@ -93,8 +100,14 @@ impl RuntimeLite {
         let jit_optimizer = Arc::new(JITOptimizer::new());
         let hot_path_optimizer = Arc::new(HotPathOptimizer::new());
         let optimization_pipeline = Arc::new(OptimizationPipeline::new());
+
+        // Stage 63: Initialize inline cache for fast property access
+        let inline_cache = Arc::new(std::sync::Mutex::new(HashMap::new()));
+        let cache_stats = Arc::new(CacheStatistics::new());
+
         if verbose {
             println!("RuntimeLite: JIT optimization enabled for improved performance");
+            println!("RuntimeLite: Inline cache initialized for fast property access");
         }
 
         Ok(Self {
@@ -107,6 +120,8 @@ impl RuntimeLite {
             jit_optimizer,
             hot_path_optimizer,
             optimization_pipeline,
+            inline_cache,
+            cache_stats,
         })
     }
 
@@ -1603,4 +1618,48 @@ pub fn get_global_lite_runtime(verbose: bool) -> Result<std::sync::Arc<RuntimeLi
     });
 
     Ok(GLOBAL_LITE_RUNTIME.get().unwrap().clone())
+}
+
+/// Stage 63: Cache statistics for monitoring inline cache performance
+#[derive(Debug, Clone, Default)]
+pub struct CacheStatistics {
+    pub hits: Arc<AtomicU64>,
+    pub misses: Arc<AtomicU64>,
+    pub evictions: Arc<AtomicU64>,
+    pub total_operations: Arc<AtomicU64>,
+}
+
+impl CacheStatistics {
+    pub fn new() -> Self {
+        Self {
+            hits: Arc::new(AtomicU64::new(0)),
+            misses: Arc::new(AtomicU64::new(0)),
+            evictions: Arc::new(AtomicU64::new(0)),
+            total_operations: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    pub fn record_hit(&self) {
+        self.hits.fetch_add(1, Ordering::Relaxed);
+        self.total_operations.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_miss(&self) {
+        self.misses.fetch_add(1, Ordering::Relaxed);
+        self.total_operations.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_eviction(&self) {
+        self.evictions.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn hit_rate(&self) -> f64 {
+        let hits = self.hits.load(Ordering::Relaxed);
+        let total = self.total_operations.load(Ordering::Relaxed);
+        if total > 0 {
+            hits as f64 / total as f64
+        } else {
+            0.0
+        }
+    }
 }

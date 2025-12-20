@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 /// 使用更快、抗碰撞的哈希算法（FNV-1a变种）
 /// 比标准DefaultHasher快约30%，碰撞率更低
-fn fast_hash(input: &str) -> u64 {
+pub fn fast_hash(input: &str) -> u64 {
     let mut hash: u64 = 0xcbf29ce484222325; // FNV offset basis
     let prime: u64 = 0x100000001b3; // FNV prime
 
