@@ -169,7 +169,7 @@ mod performance_benchmark_tests {
     /// Run a computational benchmark test
     fn run_benchmark_test(runtime: &RuntimeLite) -> i32 {
         // Simple computational test: calculate sum of squares
-        let mut result = 0;
+        let mut result: i32 = 0;
         for i in 0..ITERATIONS {
             result = result.wrapping_add(i * i);
             if i % 1_000_000 == 0 {

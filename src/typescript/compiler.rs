@@ -331,6 +331,14 @@ impl TypeScriptCompiler {
                 '<' => Token::Lt,
                 '>' => Token::Gt,
                 '|' => Token::Pipe,
+                '=' => {
+                    if pos + 1 < chars.len() && chars[pos + 1] == '>' {
+                        pos += 1;
+                        Token::FatArrow
+                    } else {
+                        Token::Eq
+                    }
+                },
                 _ => Token::Unknown(ch.to_string()),
             });
 
@@ -436,6 +444,7 @@ pub enum Token {
     Lt,
     Gt,
     Pipe,
+    FatArrow,
     Unknown(String),
     Eof,
 }
@@ -509,6 +518,11 @@ pub enum ASTExpression {
     ObjectLiteral {
         properties: Vec<(String, ASTExpression)>,
     },
+    ArrowFunctionExpression {
+        params: Vec<(String, Option<String>)>,
+        body: Box<ASTExpression>,
+        return_type: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -570,7 +584,10 @@ impl Parser {
             _ => {
                 // 表达式语句
                 let expr = self.parse_expression()?;
-                self.consume(Token::SemiColon)?;
+                // 检查是否有分号，如果没有就尝试消费它
+                if self.current_token_eq(&Token::SemiColon) {
+                    self.consume(Token::SemiColon)?;
+                }
                 Ok(ASTNode::Statement(ASTStatement::Expression(expr)))
             }
         }
@@ -617,13 +634,29 @@ impl Parser {
         // 可能的初始化器
         let initializer = if self.current_token_eq(&Token::Eq) {
             self.consume(Token::Eq)?;
-            let expr = self.parse_expression()?;
-            Some(Box::new(ASTNode::Expression(expr)))
+            // 检查是否是箭头函数
+            if self.current_token_eq(&Token::LParen) || self.current_token_eq(&Token::Identifier("".to_string())) {
+                // 这可能是箭头函数
+                match self.parse_arrow_function_from_assignment() {
+                    Ok(expr) => Some(Box::new(ASTNode::Expression(expr))),
+                    Err(_) => {
+                        // 如果不是箭头函数，尝试解析普通表达式
+                        let expr = self.parse_expression()?;
+                        Some(Box::new(ASTNode::Expression(expr)))
+                    }
+                }
+            } else {
+                let expr = self.parse_expression()?;
+                Some(Box::new(ASTNode::Expression(expr)))
+            }
         } else {
             None
         };
 
-        self.consume(Token::SemiColon)?;
+        // 检查是否有分号
+        if self.current_token_eq(&Token::SemiColon) {
+            self.consume(Token::SemiColon)?;
+        }
 
         Ok(ASTNode::VariableDeclaration {
             kind: kind.to_string(),
@@ -806,6 +839,28 @@ impl Parser {
         // 解析主表达式 (标识符、字面量、括号表达式)
         let mut expr = self.parse_primary_expression()?;
 
+        // 处理箭头函数
+        if self.current_token_eq(&Token::FatArrow) {
+            // 检查是否是带括号的参数列表
+            let params = if let ASTExpression::Identifier(name) = expr {
+                vec![(name, None)]
+            } else if let ASTExpression::CallExpression { callee, arguments } = &expr {
+                // 处理带括号的参数列表，如 (a, b)
+                let mut params = Vec::new();
+                for arg in arguments {
+                    if let ASTExpression::Identifier(name) = arg {
+                        params.push((name.clone(), None));
+                    } else {
+                        return Err(anyhow::anyhow!("Arrow function parameters must be identifiers"));
+                    }
+                }
+                params
+            } else {
+                return Err(anyhow::anyhow!("Arrow function parameter must be identifier or parameter list"));
+            };
+            return self.parse_arrow_function_expression(params);
+        }
+
         // 处理后缀操作符 (成员访问、函数调用、二元运算符)
         loop {
             match self.current_token() {
@@ -823,22 +878,29 @@ impl Parser {
                     };
                 }
                 Token::LParen => {
-                    // 函数调用: expr(args)
-                    self.advance();
-                    let mut arguments = Vec::new();
-
-                    while !self.current_token_eq(&Token::RParen) {
-                        arguments.push(self.parse_expression()?);
-                        if self.current_token_eq(&Token::Comma) {
-                            self.advance();
+                    // 检查这是否是函数调用还是参数列表
+                    if matches!(expr, ASTExpression::Identifier(_)) {
+                        // 这可能是函数调用，如 func(a, b)
+                        self.advance();
+                        let mut arguments = Vec::new();
+                        while !self.current_token_eq(&Token::RParen) {
+                            arguments.push(self.parse_expression()?);
+                            if self.current_token_eq(&Token::Comma) {
+                                self.advance();
+                            }
                         }
+                        self.consume(Token::RParen)?;
+                        expr = ASTExpression::CallExpression {
+                            callee: Box::new(expr),
+                            arguments,
+                        };
+                    } else {
+                        // 括号表达式，如 (a + b)
+                        self.advance();
+                        let inner_expr = self.parse_expression()?;
+                        self.consume(Token::RParen)?;
+                        expr = inner_expr;
                     }
-                    self.consume(Token::RParen)?;
-
-                    expr = ASTExpression::CallExpression {
-                        callee: Box::new(expr),
-                        arguments,
-                    };
                 }
                 Token::LBracket => {
                     // 索引访问: expr[index]
@@ -884,6 +946,93 @@ impl Parser {
         Ok(expr)
     }
 
+    fn parse_arrow_function_from_assignment(&mut self) -> Result<ASTExpression> {
+        // 解析箭头函数的参数部分
+        let mut params = Vec::new();
+
+        if self.current_token_eq(&Token::LParen) {
+            // 带括号的参数列表: (a, b, c)
+            self.consume(Token::LParen)?;
+
+            while !self.current_token_eq(&Token::RParen) {
+                let param_name_token = self.consume(Token::Identifier("".to_string()))?;
+                let param_name = match param_name_token {
+                    Token::Identifier(name) => name,
+                    _ => bail!("Expected parameter name"),
+                };
+
+                // 检查参数类型注解
+                let param_type = if self.current_token_eq(&Token::Colon) {
+                    self.consume(Token::Colon)?;
+                    self.parse_type_annotation()
+                } else {
+                    None
+                };
+
+                params.push((param_name, param_type));
+
+                if self.current_token_eq(&Token::Comma) {
+                    self.consume(Token::Comma)?;
+                }
+            }
+
+            self.consume(Token::RParen)?;
+        } else if self.current_token_eq(&Token::Identifier("".to_string())) {
+            // 单个参数无括号: x
+            let param_name_token = self.consume(Token::Identifier("".to_string()))?;
+            let param_name = match param_name_token {
+                Token::Identifier(name) => name,
+                _ => bail!("Expected parameter name"),
+            };
+
+            // 检查参数类型注解
+            let param_type = if self.current_token_eq(&Token::Colon) {
+                self.consume(Token::Colon)?;
+                self.parse_type_annotation()
+            } else {
+                None
+            };
+
+            params.push((param_name, param_type));
+        } else {
+            bail!("Expected parameter list or parameter name");
+        }
+
+        // 检查返回类型注解
+        let return_type = if self.current_token_eq(&Token::Colon) {
+            self.consume(Token::Colon)?;
+            self.parse_type_annotation()
+        } else {
+            None
+        };
+
+        // 检查 FatArrow
+        self.consume(Token::FatArrow)?;
+
+        // 解析函数体
+        let body = self.parse_expression()?;
+
+        Ok(ASTExpression::ArrowFunctionExpression {
+            params,
+            body: Box::new(body),
+            return_type,
+        })
+    }
+
+    fn parse_arrow_function_expression(&mut self, mut params: Vec<(String, Option<String>)>) -> Result<ASTExpression> {
+        // 消耗 FatArrow token
+        self.consume(Token::FatArrow)?;
+
+        // 解析函数体
+        let body = self.parse_expression()?;
+
+        Ok(ASTExpression::ArrowFunctionExpression {
+            params,
+            body: Box::new(body),
+            return_type: None,
+        })
+    }
+
     fn parse_postfix(&mut self, mut expr: ASTExpression) -> Result<ASTExpression> {
         // Handle postfix operators after parsing right side of binary expression
         loop {
@@ -901,19 +1050,11 @@ impl Parser {
                     };
                 }
                 Token::LParen => {
+                    // 处理分组表达式 (a + b)
                     self.advance();
-                    let mut arguments = Vec::new();
-                    while !self.current_token_eq(&Token::RParen) {
-                        arguments.push(self.parse_expression()?);
-                        if self.current_token_eq(&Token::Comma) {
-                            self.advance();
-                        }
-                    }
+                    let inner_expr = self.parse_expression()?;
                     self.consume(Token::RParen)?;
-                    expr = ASTExpression::CallExpression {
-                        callee: Box::new(expr),
-                        arguments,
-                    };
+                    expr = inner_expr;
                 }
                 Token::LBracket => {
                     self.advance();
@@ -1291,6 +1432,29 @@ impl CodeEmitter {
                     self.emit_expression(value);
                 }
                 self.output.push('}');
+            }
+            ASTExpression::ArrowFunctionExpression {
+                params,
+                body,
+                return_type,
+            } => {
+                // 转译箭头函数参数（跳过类型注解）
+                self.output.push('(');
+                for (i, (param_name, _)) in params.iter().enumerate() {
+                    if i > 0 {
+                        self.output.push_str(", ");
+                    }
+                    self.output.push_str(param_name);
+                }
+                self.output.push_str(") => ");
+
+                // 转译函数体
+                self.emit_expression(body);
+
+                // 跳过返回类型注解（在转译时移除）
+                if let Some(_) = return_type {
+                    // 已移除
+                }
             }
         }
     }
