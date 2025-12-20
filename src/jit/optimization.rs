@@ -222,8 +222,8 @@ impl FunctionInliner {
     /// Extract function name
     fn extract_function_name(&self, func: &str) -> String {
         if let Some(start) = func.find("function ") {
-            if let Some(end) = func.find("(", start) {
-                return func[start + 9..end].trim().to_string();
+            if let Some(end) = func[start..].find("(") {
+                return func[start + 9..start + end].trim().to_string();
             }
         }
         "unknown".to_string()
@@ -271,7 +271,7 @@ impl EscapeAnalyzer {
     }
 
     /// Analyze code for escape patterns
-    pub fn analyze(&mut self, code: &str) -> EscapeAnalysis {
+    pub fn analyze(&mut self, code: &str) -> bool {
         let mut has_escape = false;
         let mut can_stack_allocate = true;
 
@@ -301,25 +301,7 @@ impl EscapeAnalyzer {
             }
         }
 
-        EscapeAnalysis {
-            has_escape,
-            can_stack_allocate,
-            escape_count: self.escape_graph.values().filter(|info| info.escapes).count(),
-        }
-    }
-
-    /// Extract variable name from declaration
-    fn extract_variable_name(&self, line: &str) -> Option<String> {
-        if let Some(start) = line.find("let ").or_else(|| line.find("const ").or_else(|| line.find("var "))) {
-            let after_keyword = &line[start + 4..];
-            if let Some(end) = after_paren = after_keyword.find('=') {
-                let name = after_keyword[..end].trim();
-                if name.chars().all(|c| c.is_alphanumeric() || c == '_') {
-                    return Some(name.to_string());
-                }
-            }
-        }
-        None
+        can_stack_allocate
     }
 
     /// Extract variable name from declaration
@@ -428,8 +410,8 @@ impl DeadCodeEliminator {
     /// Extract function name from definition
     fn extract_function_name(&self, line: &str) -> Option<String> {
         if let Some(start) = line.find("function ") {
-            if let Some(end) = line.find("(", start) {
-                return Some(line[start + 9..end].trim().to_string());
+            if let Some(end) = line[start..].find("(") {
+                return Some(line[start + 9..start + end].trim().to_string());
             }
         }
         None
@@ -446,12 +428,37 @@ pub struct OptimizationPipeline {
     optimization_level: OptimizationLevel,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OptimizationLevel {
     None,
     Simple,
     Aggressive,
     Extreme,
+}
+
+impl PartialOrd for OptimizationLevel {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for OptimizationLevel {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match (self, other) {
+            (OptimizationLevel::None, OptimizationLevel::None) => std::cmp::Ordering::Equal,
+            (OptimizationLevel::None, _) => std::cmp::Ordering::Less,
+            (OptimizationLevel::Simple, OptimizationLevel::None) => std::cmp::Ordering::Greater,
+            (OptimizationLevel::Simple, OptimizationLevel::Simple) => std::cmp::Ordering::Equal,
+            (OptimizationLevel::Simple, OptimizationLevel::Aggressive) => std::cmp::Ordering::Less,
+            (OptimizationLevel::Simple, OptimizationLevel::Extreme) => std::cmp::Ordering::Less,
+            (OptimizationLevel::Aggressive, OptimizationLevel::None) => std::cmp::Ordering::Greater,
+            (OptimizationLevel::Aggressive, OptimizationLevel::Simple) => std::cmp::Ordering::Greater,
+            (OptimizationLevel::Aggressive, OptimizationLevel::Aggressive) => std::cmp::Ordering::Equal,
+            (OptimizationLevel::Aggressive, OptimizationLevel::Extreme) => std::cmp::Ordering::Less,
+            (OptimizationLevel::Extreme, OptimizationLevel::Extreme) => std::cmp::Ordering::Equal,
+            (OptimizationLevel::Extreme, _) => std::cmp::Ordering::Greater,
+        }
+    }
 }
 
 impl OptimizationPipeline {

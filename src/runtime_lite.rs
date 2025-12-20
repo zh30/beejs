@@ -3,6 +3,7 @@
 //! for simple scripts, dramatically reducing startup time.
 
 use crate::memory_pool::{PoolConfig, SmartMemoryPool};
+use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipeline};
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::HashMap;
@@ -14,6 +15,7 @@ use std::time::Instant;
 /// Only initializes essential components needed for basic JS execution
 /// Stage 20.3 Optimization: Optimized memory layout for better cache locality
 /// Stage 21.1 Enhancement: V8 Snapshot integration for faster startup
+/// Stage 63: JIT Optimization integration for improved performance
 pub struct RuntimeLite {
     /// Stage 20.3: Group frequently accessed fields together for better cache locality
     /// Execution count (most frequently accessed)
@@ -35,6 +37,11 @@ pub struct RuntimeLite {
     /// Stage 20.4 Optimization: Integrated memory pool for better performance
     #[allow(dead_code)]
     memory_pool: Arc<SmartMemoryPool>,
+
+    /// Stage 63: JIT optimization for improved code execution performance
+    jit_optimizer: Arc<JITOptimizer>,
+    hot_path_optimizer: Arc<HotPathOptimizer>,
+    optimization_pipeline: Arc<OptimizationPipeline>,
 }
 
 // Make RuntimeLite Send + Sync for thread-safe global sharing
@@ -51,6 +58,9 @@ impl Clone for RuntimeLite {
             cache_misses: Arc::clone(&self.cache_misses),
             v8_snapshot: self.v8_snapshot.clone(),
             memory_pool: Arc::clone(&self.memory_pool),
+            jit_optimizer: Arc::clone(&self.jit_optimizer),
+            hot_path_optimizer: Arc::clone(&self.hot_path_optimizer),
+            optimization_pipeline: Arc::clone(&self.optimization_pipeline),
         }
     }
 }
@@ -79,6 +89,14 @@ impl RuntimeLite {
             println!("RuntimeLite: V8 snapshot disabled to avoid lifecycle issues");
         }
 
+        // Stage 63: Initialize JIT optimization components
+        let jit_optimizer = Arc::new(JITOptimizer::new());
+        let hot_path_optimizer = Arc::new(HotPathOptimizer::new());
+        let optimization_pipeline = Arc::new(OptimizationPipeline::new());
+        if verbose {
+            println!("RuntimeLite: JIT optimization enabled for improved performance");
+        }
+
         Ok(Self {
             execution_count: Arc::new(AtomicUsize::new(0)),
             script_cache: Arc::new(std::sync::Mutex::new(HashMap::new())),
@@ -86,6 +104,9 @@ impl RuntimeLite {
             cache_misses: Arc::new(AtomicUsize::new(0)),
             v8_snapshot,
             memory_pool: Arc::new(SmartMemoryPool::new(PoolConfig::default())),
+            jit_optimizer,
+            hot_path_optimizer,
+            optimization_pipeline,
         })
     }
 
