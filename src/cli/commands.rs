@@ -3,7 +3,7 @@
 //!
 //! Implements a proper subcommand-based CLI structure similar to Bun
 
-use clap::{Command, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 /// Main CLI application

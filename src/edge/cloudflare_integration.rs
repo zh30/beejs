@@ -3,7 +3,7 @@
 
 use super::cdn_provider::{CdnProvider, CdnProviderType, CdnEndpoint, DeploymentResult, DeploymentStatus, ProviderHealth, EndpointStatus};
 use std::collections::HashMap;
-use anyhow::{Result, Context};
+use anyhow::Result;
 use tokio::time::Duration;
 
 /// Cloudflare Workers integration
