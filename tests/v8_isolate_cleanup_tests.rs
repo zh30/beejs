@@ -12,7 +12,7 @@ mod tests {
     /// 测试正常情况下的 Isolate 清理
     #[test]
     fn test_isolate_cleanup_normal_case() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
 
         // 执行正常代码
         let result = runtime.execute_code("const x = 1; x + 1;");
@@ -27,7 +27,7 @@ mod tests {
     /// 测试异常情况下的 Isolate 清理
     #[test]
     fn test_isolate_cleanup_with_exception() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
 
         // 执行会导致异常的代码
         let result = runtime.execute_code("throw new Error('test error');");
@@ -42,7 +42,7 @@ mod tests {
     /// 测试文件执行异常情况下的清理
     #[test]
     fn test_isolate_cleanup_with_file_exception() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
 
         // 创建一个包含异常的文件
         let mut file = NamedTempFile::new().unwrap();
@@ -62,7 +62,7 @@ mod tests {
     /// 测试连续异常情况下的清理
     #[test]
     fn test_isolate_cleanup_multiple_exceptions() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
 
         // 执行多个会导致异常的代码
         for i in 1..=5 {
@@ -80,7 +80,7 @@ mod tests {
     /// 测试正常和异常代码混合执行
     #[test]
     fn test_isolate_cleanup_mixed_execution() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
 
         // 正常执行
         let result = runtime.execute_code("const a = 1;");

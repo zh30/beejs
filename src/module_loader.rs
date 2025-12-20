@@ -59,6 +59,12 @@ impl ModuleLoader {
             return self.resolve_builtin_module(module_name);
         }
 
+        // Try relative to base_dir first (for paths like "level1/level2/module")
+        let relative_result = self.resolve_relative_module(module_name);
+        if relative_result.is_ok() {
+            return relative_result;
+        }
+
         // Handle node_modules
         self.resolve_node_modules(module_name)
     }
@@ -68,35 +74,42 @@ impl ModuleLoader {
     fn resolve_relative_module(&self, module_name: &str) -> Result<PathBuf> {
         let mut path = self.base_dir.clone();
 
-        // Remove leading ./ or ../
+        // Remove leading ./ or ../ if present
         let relative_part = if module_name.starts_with("./") {
             &module_name[2..]
         } else if module_name.starts_with("../") {
             &module_name[3..]
         } else {
+            // No prefix, use the full module_name
             module_name
         };
 
         path = path.join(relative_part);
 
-        // Add .js extension if not present
-        if !path.extension().is_some() {
-            path.set_extension("js");
-        }
-
-        // Check if file exists
-        if !path.exists() {
-            // Try as a directory with index.js
+        // First, check if the path exists as-is (for directories with index.js)
+        if path.exists() {
+            // If it's a directory, try to find index.js
             if path.is_dir() {
                 let index_path = path.join("index.js");
                 if index_path.exists() {
                     return Ok(index_path);
                 }
             }
-            return Err(anyhow!("Module not found: {}", module_name));
+            // If it's a file, return it
+            return Ok(path);
         }
 
-        Ok(path)
+        // If not found, try adding .js extension
+        let mut js_path = path.clone();
+        if !path.extension().is_some() {
+            js_path.set_extension("js");
+        }
+
+        if js_path.exists() {
+            return Ok(js_path);
+        }
+
+        Err(anyhow!("Module not found: {}", module_name))
     }
 
     /// Resolve built-in modules

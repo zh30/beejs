@@ -7,7 +7,7 @@ fn test_memory_pool_optimization() {
     let start = Instant::now();
 
     // 创建运行时（启用内存池）
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // 执行大量字符串操作
     for i in 0..1000 {
@@ -54,7 +54,7 @@ fn test_memory_pool_optimization() {
 #[ignore = "Memory pool not yet integrated into runtime execution flow"]
 fn test_memory_pool_vs_no_pool_comparison() {
     // 测试有内存池的性能
-    let runtime_with_pool = Runtime::new(67108864, 1073741824, false);
+    let runtime_with_pool = Runtime::new(67108864, 1073741824, false, false);
 
     let start = Instant::now();
     for i in 0..100 {
@@ -91,7 +91,7 @@ fn test_memory_pool_vs_no_pool_comparison() {
 
 #[test]
 fn test_memory_cleanup() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // 执行一些操作
     for _ in 0..50 {

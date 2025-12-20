@@ -236,7 +236,7 @@ mod tests {
         initialize_v8();
 
         // 创建运行时实例
-        let runtime = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false)
+        let runtime = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)
             .expect("Failed to create runtime");
 
         // 验证网络 API 可以被调用

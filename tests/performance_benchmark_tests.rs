@@ -256,7 +256,7 @@ mod tests {
 
     #[test]
     fn test_simple_code_execution_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
         let runner = BenchmarkRunner::new(10, 2);
 
         let code = "1 + 1";
@@ -270,7 +270,7 @@ mod tests {
 
     #[test]
     fn test_startup_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
         let runner = BenchmarkRunner::new(10, 2);
 
         let result = runner.benchmark_startup(&runtime);
@@ -322,7 +322,7 @@ mod tests {
 
     #[test]
     fn test_complex_code_execution_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
         let runner = BenchmarkRunner::new(5, 1);
 
         let code = r#"
@@ -344,7 +344,7 @@ mod tests {
 
     #[test]
     fn test_nodejs_api_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
         let runner = BenchmarkRunner::new(10, 2);
 
         let code = "path.join('a', 'b', 'c')";
@@ -357,7 +357,7 @@ mod tests {
 
     #[test]
     fn test_module_require_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
         let runner = BenchmarkRunner::new(10, 2);
 
         let code = "const p = require('path'); p.join('x', 'y')";
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn test_console_api_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
         let runner = BenchmarkRunner::new(10, 2);
 
         let code = "console.log('benchmark test')";
@@ -383,7 +383,7 @@ mod tests {
 
     #[test]
     fn test_arithmetic_operations_benchmark() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
         let runner = BenchmarkRunner::new(10, 2);
 
         let code = r#"

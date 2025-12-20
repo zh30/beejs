@@ -282,7 +282,7 @@ fn test_console_api_complete() {
 #[ignore = "Known issue: V8 Isolate lifecycle crash when multiple tests create/destroy Runtime instances"]
 fn test_initialization_with_custom_params() {
     // Test with smaller stack and heap sizes
-    let runtime = Runtime::new(33554432, 536870912, true, false); // 32MB stack, 512MB heap
+    let runtime = Runtime::new(33554432, 536870912, true, false, false); // 32MB stack, 512MB heap
     // Note: is_ok() and unwrap() removed - Runtime is not a Result type
     // assert!(runtime.is_initialized());
     // Note: execution_count() method removed - runtime doesn't track this

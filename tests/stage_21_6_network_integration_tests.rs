@@ -12,7 +12,7 @@ mod network_integration_tests {
     #[test]
     #[ignore] // 忽略此测试，因为 V8 在测试环境中可能不稳定
     fn test_runtime_network_initialization() {
-        let runtime = Runtime::new(8192 * 1024, 128 * 1024 * 1024, true)
+        let runtime = Runtime::new(8192 * 1024, 128 * 1024 * 1024, true, false)
             .expect("Failed to create Runtime with network modules");
 
         // 验证网络模块字段存在

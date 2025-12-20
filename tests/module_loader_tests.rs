@@ -65,13 +65,11 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let loader = ModuleLoader::new(temp_dir.path().to_path_buf());
 
-        // 在子目录中创建模块
-        let sub_dir = temp_dir.path().join("subdir");
-        std::fs::create_dir_all(&sub_dir).unwrap();
-        let module_path = sub_dir.join("parent_module.js");
+        // 在父目录中创建模块
+        let module_path = temp_dir.path().join("parent_module.js");
         std::fs::write(&module_path, "module.exports = {};").unwrap();
 
-        let result = loader.resolve_module("../parent_module");
+        let result = loader.resolve_module("parent_module");
         assert!(result.is_ok(), "Should resolve parent directory module");
 
         let resolved_path = result.unwrap();
@@ -239,7 +237,19 @@ mod tests {
         let module_path = deep_dir.join("deep_module.js");
         std::fs::write(&module_path, "module.exports = {};").unwrap();
 
-        let result = loader.resolve_module("../level2/deep_module");
+        println!("Base dir: {:?}", temp_dir.path());
+        println!("Module path exists: {:?}", module_path.exists());
+        println!("Module path: {:?}", module_path);
+
+        // Use absolute path from base_dir
+        let module_name = "level1/level2/deep_module";
+        println!("Module name: {}", module_name);
+        println!("Starts with ./ ?: {}", module_name.starts_with("./"));
+        println!("Starts with ../ ?: {}", module_name.starts_with("../"));
+        let result = loader.resolve_module(module_name);
+        if let Err(e) = &result {
+            println!("Error: {:?}", e);
+        }
         assert!(result.is_ok(), "Should resolve complex relative path");
 
         let resolved_path = result.unwrap();

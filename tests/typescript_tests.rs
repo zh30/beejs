@@ -4,7 +4,7 @@ use tempfile::NamedTempFile;
 
 #[test]
 fn test_typescript_basic_types() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test TypeScript-style code (which is valid JavaScript too)
     // Note: TypeScript type annotations are removed as V8 doesn't support them
@@ -23,7 +23,7 @@ fn test_typescript_basic_types() {
 
 #[test]
 fn test_typescript_interfaces() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test interface-like object structure
     // Note: TypeScript interfaces are removed as V8 doesn't support them
@@ -43,7 +43,7 @@ fn test_typescript_interfaces() {
 
 #[test]
 fn test_typescript_functions() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test typed function
     // Note: TypeScript type annotations are removed as V8 doesn't support them
@@ -64,7 +64,7 @@ fn test_typescript_functions() {
 
 #[test]
 fn test_typescript_arrow_functions() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test typed arrow function
     // Note: TypeScript type annotations are removed as V8 doesn't support them
@@ -85,7 +85,7 @@ fn test_typescript_arrow_functions() {
 
 #[test]
 fn test_typescript_classes() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test class with type annotations
     // Note: TypeScript type annotations are removed as V8 doesn't support them
@@ -119,7 +119,7 @@ fn test_typescript_classes() {
 
 #[test]
 fn test_typescript_generics() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test generic function (TypeScript syntax)
     // Note: TypeScript generics are removed as V8 doesn't support them
@@ -140,7 +140,7 @@ fn test_typescript_generics() {
 
 #[test]
 fn test_typescript_unions() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test union types
     // Note: TypeScript union types are removed as V8 doesn't support them
@@ -159,7 +159,7 @@ fn test_typescript_unions() {
 
 #[test]
 fn test_typescript_enums() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test enum
     // Note: TypeScript enums are removed as V8 doesn't support them
@@ -182,7 +182,7 @@ fn test_typescript_enums() {
 
 #[test]
 fn test_typescript_file_execution() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Create a temporary TypeScript file
     let mut file = NamedTempFile::new().unwrap();
@@ -209,7 +209,7 @@ fn test_typescript_file_execution() {
 
 #[test]
 fn test_typescript_optional_properties() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test optional properties
     // Note: TypeScript interfaces are removed as V8 doesn't support them
@@ -229,7 +229,7 @@ fn test_typescript_optional_properties() {
 
 #[test]
 fn test_typescript_literal_types() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test literal types
     // Note: TypeScript type aliases are removed as V8 doesn't support them
@@ -246,7 +246,7 @@ fn test_typescript_literal_types() {
 
 #[test]
 fn test_typescript_namespace() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test namespace
     // Note: TypeScript namespaces are removed as V8 doesn't support them

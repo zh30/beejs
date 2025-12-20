@@ -9,7 +9,7 @@ use std::time::Instant;
 #[test]
 fn test_basic_runtime_startup_time() {
     let start = Instant::now();
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let startup_time = start.elapsed();
 
     // Runtime creation always succeeds
@@ -27,7 +27,7 @@ fn test_basic_runtime_startup_time() {
 /// Test that first code execution is fast
 #[test]
 fn test_first_execution_time() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     let start = Instant::now();
     let result = runtime.execute_code("1 + 1");
@@ -52,7 +52,7 @@ fn test_lazy_ai_modules_startup() {
     let start = Instant::now();
 
     // Create runtime and execute simple code (should not need AI modules)
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let _ = runtime.execute_code("console.log('Hello')");
 
     let total_time = start.elapsed();
@@ -80,7 +80,7 @@ fn test_startup_time_breakdown() {
 
     // Measure runtime creation (without V8 init)
     let runtime_start = Instant::now();
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let runtime_time = runtime_start.elapsed();
     println!("Runtime creation (after V8 init): {:?}", runtime_time);
 
@@ -106,7 +106,7 @@ fn test_startup_time_breakdown() {
 #[test]
 fn test_precompiled_cache_startup_impact() {
     // Create runtime
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // First execution with simple code
     let start = Instant::now();
@@ -135,7 +135,7 @@ fn test_precompiled_cache_startup_impact() {
 /// Test multiple executions performance
 #[test]
 fn test_multiple_executions_performance() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     let iterations = 100;
     let start = Instant::now();

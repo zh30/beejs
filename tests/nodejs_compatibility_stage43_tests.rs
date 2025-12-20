@@ -7,7 +7,7 @@ use tempfile::{NamedTempFile, TempDir};
 
 #[test]
 fn test_nodejs_crypto_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let code = r#"
         const crypto = require('crypto');
         const hash = crypto.createHash('sha256');
@@ -23,7 +23,7 @@ fn test_nodejs_crypto_basic() {
 
 #[test]
 fn test_nodejs_buffer_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let code = r#"
         const buf = Buffer.from('Hello, World!', 'utf8');
         buf.toString('utf8') === 'Hello, World!';
@@ -36,7 +36,7 @@ fn test_nodejs_buffer_basic() {
 
 #[test]
 fn test_nodejs_events_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let code = r#"
         const EventEmitter = require('events');
         const emitter = new EventEmitter();
@@ -55,7 +55,7 @@ fn test_nodejs_events_basic() {
 
 #[test]
 fn test_nodejs_util_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let code = r#"
         const util = require('util');
         const obj = { name: 'test', value: 42 };
@@ -70,7 +70,7 @@ fn test_nodejs_util_basic() {
 
 #[test]
 fn test_nodejs_os_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let code = r#"
         const os = require('os');
         const platform = os.platform();
@@ -84,7 +84,7 @@ fn test_nodejs_os_basic() {
 
 #[test]
 fn test_nodejs_path_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let code = r#"
         const path = require('path');
         const result = path.join('foo', 'bar', 'baz');
@@ -98,7 +98,7 @@ fn test_nodejs_path_basic() {
 
 #[test]
 fn test_nodejs_url_basic() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let code = r#"
         const { URL } = require('url');
         const url = new URL('https://example.com:8080/path?query=value#hash');

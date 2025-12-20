@@ -28,7 +28,7 @@ mod tests {
         for i in 0..concurrent_count {
             // 每个循环创建一个 Runtime，执行脚本，然后立即销毁
             // 这样避免真正的并发 Runtime 创建
-            let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false);
+            let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
             let code = format!("let x = {}; x * 2;", i);
             let result = rt.execute_code(&code);
 
@@ -65,7 +65,7 @@ mod tests {
         let start = Instant::now();
 
         // 创建单个 Runtime，执行多个脚本
-        let rt = Runtime::new(16 * 1024 * 1024, 128 * 1024 * 1024, false);
+        let rt = Runtime::new(16 * 1024 * 1024, 128 * 1024 * 1024, false, false);
         let mut success_count = 0;
 
         for i in 0..batch_size {
@@ -164,7 +164,7 @@ mod tests {
             ("type_error", "null.someMethod()", false),
         ];
 
-        let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false);
+        let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
 
         for (name, code, should_succeed) in test_cases {
             let result = rt.execute_code(code);

@@ -66,7 +66,7 @@ pub struct OptimizationVerifier {
 
 impl OptimizationVerifier {
     pub fn new() -> Self {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
         Self { runtime }
     }
 

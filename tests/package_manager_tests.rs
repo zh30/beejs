@@ -4,7 +4,7 @@ use tempfile::{NamedTempFile, TempDir};
 
 #[test]
 fn test_parse_package_json() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Create a temporary package.json
     let mut package_json = NamedTempFile::new().unwrap();
@@ -28,7 +28,7 @@ fn test_parse_package_json() {
 
 #[test]
 fn test_require_basic_module() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Create a temp directory to ensure both files are in the same location
     let temp_dir = TempDir::new().unwrap();
@@ -72,7 +72,7 @@ fn test_require_basic_module() {
 
 #[test]
 fn test_require_relative_path() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Create a module in a subdirectory
     let temp_dir = TempDir::new().unwrap();
@@ -110,7 +110,7 @@ fn test_require_relative_path() {
 
 #[test]
 fn test_module_exports_object() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     let temp_dir = TempDir::new().unwrap();
 
@@ -150,7 +150,7 @@ fn test_module_exports_object() {
 
 #[test]
 fn test_multiple_requires() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     let temp_dir = TempDir::new().unwrap();
 
@@ -182,7 +182,7 @@ fn test_multiple_requires() {
 
 #[test]
 fn test_nested_require() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Create nested module structure
     let temp_dir = TempDir::new().unwrap();
@@ -212,7 +212,7 @@ fn test_nested_require() {
 
 #[test]
 fn test_builtin_modules() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // Test require of built-in module (will fail for now, but structure is correct)
     let code = r#"
@@ -231,7 +231,7 @@ fn test_builtin_modules() {
 
 #[test]
 fn test_circular_dependency() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     let temp_dir = TempDir::new().unwrap();
 
@@ -281,7 +281,7 @@ fn test_circular_dependency() {
 
 #[test]
 fn test_module_caching() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     let temp_dir = TempDir::new().unwrap();
 

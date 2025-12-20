@@ -11,7 +11,7 @@ use futures_util::{StreamExt, SinkExt};
 #[tokio::test]
 async fn test_websocket_server_startup() {
     // 创建运行时
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let server = Server::new(runtime)
         .host("127.0.0.1")
         .port(3001);
@@ -24,7 +24,7 @@ async fn test_websocket_server_startup() {
 #[tokio::test]
 async fn test_websocket_connection_establishment() {
     // 启动服务器（在后台）
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let server = Server::new(runtime)
         .host("127.0.0.1")
         .port(3002);
@@ -56,7 +56,7 @@ async fn test_websocket_connection_establishment() {
 #[tokio::test]
 async fn test_websocket_code_execution() {
     // 测试通过 WebSocket 发送代码并接收结果
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let server = Server::new(runtime)
         .host("127.0.0.1")
         .port(3003);
@@ -96,7 +96,7 @@ async fn test_websocket_code_execution() {
 #[tokio::test]
 async fn test_websocket_multiple_connections() {
     // 测试多个并发 WebSocket 连接
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let server = Server::new(runtime)
         .host("127.0.0.1")
         .port(3004);
@@ -145,7 +145,7 @@ async fn test_websocket_multiple_connections() {
 #[tokio::test]
 async fn test_websocket_error_handling() {
     // 测试 WebSocket 错误处理
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let server = Server::new(runtime)
         .host("127.0.0.1")
         .port(3005);
@@ -182,7 +182,7 @@ async fn test_websocket_error_handling() {
 #[tokio::test]
 async fn test_websocket_streaming_output() {
     // 测试 WebSocket 流式输出（用于长-running 代码）
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     let server = Server::new(runtime)
         .host("127.0.0.1")
         .port(3006);

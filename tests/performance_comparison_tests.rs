@@ -65,7 +65,7 @@ mod tests {
     /// 测试性能数据收集
     #[test]
     fn test_collect_performance_metrics() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
 
         // 测试1: 启动时间测量
         let start = Instant::now();

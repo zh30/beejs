@@ -7,7 +7,7 @@ use std::thread;
 #[test]
 fn test_isolate_lifecycle_in_single_thread() {
     // 验证在单线程环境下 Isolate 可以正常创建和销毁
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     // Runtime creation always succeeds
 
     let result = runtime.execute_code("1 + 1");
@@ -19,7 +19,7 @@ fn test_isolate_lifecycle_in_single_thread() {
 fn test_sequential_isolate_creation() {
     // 验证串行创建多个 Runtime 实例不会导致问题
     for i in 0..10 {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
         // Runtime creation always succeeds
 
         let result = runtime.execute_code(&format!("{}", i));
@@ -30,8 +30,8 @@ fn test_sequential_isolate_creation() {
 #[test]
 fn test_isolate_reuse_safety() {
     // 验证 Isolate 重用的安全性
-    let runtime1 = Runtime::new(67108864, 1073741824, false);
-    let runtime2 = Runtime::new(67108864, 1073741824, false);
+    let runtime1 = Runtime::new(67108864, 1073741824, false, false);
+    let runtime2 = Runtime::new(67108864, 1073741824, false, false);
 
     // 两个 Runtime 应该能独立工作
     let result1 = runtime1.execute_code("42");
@@ -47,12 +47,12 @@ fn test_isolate_reuse_safety() {
 fn test_runtime_drop_safety() {
     // 验证 Runtime Drop 的安全性
     {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
         let _ = runtime.execute_code("console.log('test')");
     } // runtime 在这里被 drop，应该不会导致问题
 
     // 再次创建 Runtime 应该还能工作
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     assert!(
         runtime.is_ok(),
         "New runtime creation after drop should succeed"
@@ -69,7 +69,7 @@ fn test_sequential_runtime_creation() {
     for i in 0..5 {
         handles.push(thread::spawn(move || {
             // 每个线程串行执行自己的测试
-            let runtime = Runtime::new(67108864, 1073741824, false);
+            let runtime = Runtime::new(67108864, 1073741824, false, false);
             match runtime {
                 Ok(runtime) => {
                     let result = runtime.execute_code(&format!("{}", i));
@@ -116,7 +116,7 @@ fn test_v8_initialization_safety() {
 
     // 多次调用 Runtime::new 应该不会导致问题
     for _ in 0..3 {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
         assert!(runtime.is_ok(), "Runtime creation should always succeed");
 
         // 立即 drop
@@ -124,7 +124,7 @@ fn test_v8_initialization_safety() {
     }
 
     // 验证 V8 仍然可用
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
     assert!(
         runtime.is_ok(),
         "V8 should still be available after multiple creations"
@@ -138,7 +138,7 @@ fn test_nodejs_api_sequential_execution() {
     let handles: Vec<_> = (0..3)
         .map(|i| {
             thread::spawn(move || {
-                let runtime = Runtime::new(67108664, 1073741824, false);
+                let runtime = Runtime::new(67108664, 1073741824, false, false);
                 if let Ok(runtime) = runtime {
                     // 测试不同的 Node.js API
                     let tests = vec![

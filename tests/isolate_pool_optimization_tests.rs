@@ -3,7 +3,7 @@ use std::time::Instant;
 
 #[test]
 fn test_isolate_pool_optimization() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // 测试重复执行同一段代码的性能（利用Isolate池化）
     let code = r#"
@@ -46,7 +46,7 @@ fn test_isolate_pool_optimization() {
 
 #[test]
 fn test_isolate_pool_concurrent_execution() {
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // 测试多个不同代码段的并发执行
     let codes = vec![

@@ -30,7 +30,7 @@ mod tests {
                     barrier.wait();
 
                     // 每个线程执行一个简单的脚本
-                    let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false);
+                    let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
                     let code = format!("let x = {}; x * 2;", i);
                     let result = rt.execute_code(&code);
 
@@ -220,7 +220,7 @@ mod tests {
                 let results = results.clone();
                 s.spawn(move || {
                     // 每个任务使用独立的Runtime实例
-                    let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false);
+                    let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
                     let result = rt.execute_code("1 + 1");
 
                     if result.is_ok() {
@@ -262,7 +262,7 @@ mod tests {
         let start = Instant::now();
 
         for i in 0..batch_size {
-            let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false);
+            let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
             let code = format!("let result = {} * {}; result;", i, i + 1);
             let _ = rt.execute_code(&code);
         }
@@ -295,7 +295,7 @@ mod tests {
         let mut memory_snapshots = Vec::new();
 
         for i in 0..iterations {
-            let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false);
+            let rt = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
             let code = "let x = { a: 1, b: 2, c: 3 }; x;";
             let _ = rt.execute_code(code);
 

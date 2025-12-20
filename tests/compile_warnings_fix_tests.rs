@@ -10,7 +10,7 @@ mod tests {
     /// 测试内联缓存统计功能正常
     #[test]
     fn test_inline_cache_stats_functionality() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
 
         // 测试内联缓存基本功能
         let result = runtime.execute_cached_code("const x = 1; x + 1;");
@@ -27,7 +27,7 @@ mod tests {
     #[test]
     #[ignore = "Known issue: V8 Isolate lifecycle crash when running multiple tests with Runtime creation/destruction"]
     fn test_jit_optimizer_stats_functionality() {
-        let runtime = Runtime::new(67108864, 1073741824, false);
+        let runtime = Runtime::new(67108864, 1073741824, false, false);
 
         // 执行一些代码以触发JIT优化器
         let result =

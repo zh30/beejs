@@ -26,7 +26,7 @@ fn test_error_stats_reset() {
 #[test]
 #[ignore = "Known issue: V8 Isolate lifecycle crash when tests create multiple Runtimes in parallel"]
 fn test_runtime_error_handling() {
-    let runtime = Runtime::new(67108864, 1073741824, true);
+    let runtime = Runtime::new(67108864, 1073741824, true, false);
 
     // 测试语法错误
     let syntax_error_code = "const x = ;";
@@ -59,7 +59,7 @@ fn test_v8_isolate_cleanup() {
     let _handler = ErrorHandler::new(true);
 
     // 测试多次执行，确保没有内存泄漏
-    let runtime = Runtime::new(67108864, 1073741824, false);
+    let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     for i in 0..10 {
         let code = format!("let x = {}; x * 2;", i);

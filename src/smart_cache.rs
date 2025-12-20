@@ -98,7 +98,7 @@ impl Default for CacheConfig {
             max_size: 1000,
             default_ttl: Duration::from_secs(3600), // 1小时
             cleanup_interval: Duration::from_secs(300), // 5分钟
-            prewarm_threshold: 3,
+            prewarm_threshold: 4,
             enable_lru: true,
             enable_ttl: true,
         }
@@ -225,15 +225,15 @@ impl<T> SmartCache<T> {
         // 添加到 LRU 队列
         if self.config.enable_lru {
             let mut lru_queue = self.lru_queue.lock().unwrap();
-            if !lru_queue.contains(&key) {
-                lru_queue.push_back(key.clone());
-            }
+            // Remove if exists (to avoid duplicates) and add to back (most recent)
+            lru_queue.retain(|k| k != &key);
+            lru_queue.push_back(key.clone());
         }
 
         // 初始化访问频率
         {
             let mut access_freq = self.access_frequency.lock().unwrap();
-            access_freq.entry(key).or_insert(1);
+            access_freq.entry(key).or_insert(0);
         }
 
         // 更新统计
