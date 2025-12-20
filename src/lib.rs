@@ -13,6 +13,7 @@
 //! - 自动化 CI/CD 集成
 
 use rusty_v8 as v8;
+use std::time::Duration;
 
 // 模块声明
 pub mod benchmarks;
@@ -278,6 +279,15 @@ pub fn initialize_v8() -> Result<()> {
     // Only initialize if not already done
     if !initialized_flag.load(std::sync::atomic::Ordering::SeqCst) {
         use rusty_v8 as v8;
+
+        // Set V8 flags for maximum performance
+        let v8_flags = vec![
+            "--opt".to_string(),
+            "--always-opt".to_string(),
+        ];
+
+        let v8_flags_str = v8_flags.join(" ");
+        v8::V8::set_flags_from_string(&v8_flags_str);
 
         // Create platform
         let platform = v8::new_default_platform()
