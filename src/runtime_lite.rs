@@ -1138,6 +1138,25 @@ impl RuntimeLite {
         result
     }
 
+    /// Get an isolate and context for snapshot operations
+    /// Returns a tuple of (isolate, context_global) that must be returned to the pool after use
+    pub fn get_isolate_and_context(&self) -> Result<(v8::OwnedIsolate, v8::Global<v8::Context>)> {
+        self.context_pool.get_context(self)
+    }
+
+    /// Get just the isolate for simple operations
+    /// Note: This creates a new isolate with default settings
+    pub fn isolate(&self) -> v8::OwnedIsolate {
+        v8::Isolate::new(v8::CreateParams::default())
+    }
+
+    /// Get a context - NOTE: This is a placeholder for compatibility
+    /// In a real implementation, you would need to manage the isolate/context lifetime properly
+    /// For now, this just returns a default context (which won't work for actual V8 operations)
+    pub fn context(&self) -> Option<v8::Local<v8::Context>> {
+        None // Placeholder - real implementation would require proper scope management
+    }
+
     /// Direct execution helper - with script caching optimization
     fn execute_direct(
         &self,

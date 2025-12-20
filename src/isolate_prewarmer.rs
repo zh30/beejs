@@ -121,7 +121,8 @@ struct CompiledSnippet {
 impl IsolatePrewarmer {
     /// Create new Isolate Prewarmer
     pub fn new(max_prewarm: usize, config: PrewarmConfig) -> Result<Self> {
-        let snapshot_manager = Arc::new(V8SnapshotManager::new()?);
+        let snapshot_config = crate::v8_snapshot::SnapshotConfig::default();
+        let snapshot_manager = Arc::new(crate::v8_snapshot::SnapshotManager::new(snapshot_config));
 
         Ok(Self {
             snapshot_manager,
