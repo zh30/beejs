@@ -2,7 +2,7 @@
 //! Enhanced pre-warming mechanism with V8 snapshots and context preparation
 //! Integrates with IsolatePool to provide fully-prepared isolates ready for execution
 
-use crate::v8_snapshot::V8SnapshotManager;
+use crate::v8_snapshot::SnapshotManager;
 use anyhow::{anyhow, Result};
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 pub struct IsolatePrewarmer {
     /// V8 Snapshot Manager for creating and loading snapshots
     #[allow(dead_code)]
-    snapshot_manager: Arc<V8SnapshotManager>,
+    snapshot_manager: Arc<SnapshotManager>,
 
     /// Pre-warmed isolates with prepared contexts
     prewarmed_isolates: Arc<Mutex<Vec<v8::OwnedIsolate>>>,

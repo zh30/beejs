@@ -32,6 +32,7 @@ pub mod memory_pool;
 // pub mod nodejs_core;  // Temporarily disabled for Stage 60
 pub mod process_pool;
 pub mod v8_snapshot;
+pub mod startup_optimizer;
 // pub mod nodejs_polyfill;  // Temporarily disabled for Stage 60
 pub mod jit_optimizer;
 pub mod inline_cache;
