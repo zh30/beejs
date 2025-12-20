@@ -2,9 +2,11 @@
 //! Provides fetch(), Request, Response, Headers API
 
 use anyhow::Result;
+use reqwest;
 use rusty_v8 as v8;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use tokio::runtime::Runtime;
 
 /// Fetch API configuration
 #[derive(Debug, Clone)]
@@ -163,30 +165,136 @@ fn fetch_callback(
         return;
     }
 
-    // Create async fetch (simplified for now)
-    // In a real implementation, this would:
-    // 1. Parse init options
-    // 2. Create HTTP request
-    // 3. Send request asynchronously
-    // 4. Return Promise that resolves with Response
+    // Parse init options if provided
+    let method = HttpMethod::GET;
+    let mut headers: HashMap<String, String> = HashMap::new();
+    let mut body: Option<Vec<u8>> = None;
 
-    // For now, create a simple response
-    let response_obj = v8::Object::new(scope);
-    let ok_key = v8::String::new(scope, "ok").unwrap();
-    let ok_key_val = v8::Boolean::new(scope, true).into();
+    // TODO: Parse init options - simplified for now to avoid type issues
+    // In a full implementation, we would parse:
+    // - method (GET, POST, etc.)
+    // - headers object
+    // - body string or ArrayBuffer
 
-    response_obj.set(scope, ok_key.into(), ok_key_val);
+    // Execute fetch synchronously in a blocking task
+    let url = url_str.clone();
+    let result = std::thread::spawn(move || {
+        let rt = Runtime::new().map_err(|e| anyhow::anyhow!("Failed to create runtime: {}", e))?;
+        rt.block_on(execute_fetch(&url, method, headers, body))
+    });
 
-    let status_key = v8::String::new(scope, "status").unwrap();
-    let status_key_val = v8::Integer::new(scope, 200).into();
+    match result.join() {
+        Ok(Ok(response)) => {
+            // Convert response to V8 object
+            let response_obj = v8::Object::new(scope);
 
-    response_obj.set(scope, status_key.into(), status_key_val);
+            let ok_key = v8::String::new(scope, "ok").unwrap();
+            let ok_key_val = v8::Boolean::new(scope, response.ok).into();
+            response_obj.set(scope, ok_key.into(), ok_key_val);
 
-    let status_text_key = v8::String::new(scope, "statusText").unwrap();
-    let status_text_val = v8::String::new(scope, "OK").unwrap();
-    response_obj.set(scope, status_text_key.into(), status_text_val.into());
+            let status_key = v8::String::new(scope, "status").unwrap();
+            let status_key_val = v8::Integer::new(scope, response.status as i32).into();
+            response_obj.set(scope, status_key.into(), status_key_val);
 
-    retval.set(response_obj.into());
+            let status_text_key = v8::String::new(scope, "statusText").unwrap();
+            let status_text_val: v8::Local<v8::Value> = v8::String::new(scope, &response.status_text).unwrap().into();
+            response_obj.set(scope, status_text_key.into(), status_text_val);
+
+            // Add body if available
+            if let Some(body_vec) = response.body {
+                let body_str = String::from_utf8(body_vec).unwrap_or_default();
+                let body_key = v8::String::new(scope, "body").unwrap();
+                let body_val = v8::String::new(scope, &body_str).unwrap().into();
+                response_obj.set(scope, body_key.into(), body_val);
+            }
+
+            // Add headers
+            let headers_obj = v8::Object::new(scope);
+            for (key, value) in response.headers {
+                let header_key = v8::String::new(scope, &key).unwrap();
+                let header_val = v8::String::new(scope, &value).unwrap().into();
+                headers_obj.set(scope, header_key.into(), header_val);
+            }
+            let headers_key = v8::String::new(scope, "headers").unwrap();
+            response_obj.set(scope, headers_key.into(), headers_obj.into());
+
+            retval.set(response_obj.into());
+        }
+        Ok(Err(e)) => {
+            let error = v8::String::new(scope, &format!("Fetch error: {}", e)).unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
+        }
+        Err(_) => {
+            let error = v8::String::new(scope, "Fetch panic").unwrap();
+            let error_obj = v8::Exception::error(scope, error);
+            scope.throw_exception(error_obj.into());
+        }
+    }
+}
+
+/// Execute actual HTTP fetch using reqwest
+async fn execute_fetch(
+    url: &str,
+    method: HttpMethod,
+    headers: HashMap<String, String>,
+    body: Option<Vec<u8>>,
+) -> Result<FetchResponse> {
+    let client = reqwest::Client::builder()
+        .user_agent("Beejs/0.1.0")
+        .timeout(std::time::Duration::from_secs(30))
+        .build()?;
+
+    let request = client
+        .request(
+            match method {
+                HttpMethod::GET => reqwest::Method::GET,
+                HttpMethod::POST => reqwest::Method::POST,
+                HttpMethod::PUT => reqwest::Method::PUT,
+                HttpMethod::DELETE => reqwest::Method::DELETE,
+                HttpMethod::PATCH => reqwest::Method::PATCH,
+                HttpMethod::HEAD => reqwest::Method::HEAD,
+                HttpMethod::OPTIONS => reqwest::Method::OPTIONS,
+            },
+            url,
+        );
+
+    let request = if let Some(body_vec) = body {
+        request.body(body_vec)
+    } else {
+        request
+    };
+
+    // Add headers
+    let mut req_builder = request;
+    for (key, value) in headers {
+        req_builder = req_builder.header(&key, &value);
+    }
+
+    let response = req_builder.send().await?;
+
+    let status = response.status().as_u16();
+    let status_text = response.status().canonical_reason().unwrap_or("Unknown").to_string();
+    let ok = response.status().is_success();
+
+    // Extract headers BEFORE consuming the response
+    let mut response_headers = HashMap::new();
+    for (key, value) in response.headers() {
+        response_headers.insert(key.to_string(), value.to_str().unwrap_or("").to_string());
+    }
+
+    // Get response body
+    let body_vec = response.bytes().await?.to_vec();
+
+    Ok(FetchResponse {
+        url: url.to_string(),
+        status,
+        status_text,
+        ok,
+        headers: response_headers,
+        body: Some(body_vec),
+        body_used: false,
+    })
 }
 
 /// Request constructor callback

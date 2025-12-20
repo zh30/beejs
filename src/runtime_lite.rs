@@ -428,39 +428,29 @@ impl RuntimeLite {
         // Increment execution count
         self.execution_count.fetch_add(1, Ordering::SeqCst);
 
-        println!("[DEBUG] execute_code called with code length: {}", code.len());
-        println!("[DEBUG] Code preview (first 100 chars): {:?}", &code[..std::cmp::min(code.len(), 100)]);
-
         // 🚀 ULTRA-FAST PATH: Bypass V8 entirely for simple constants
         if let Some(value) = self.try_fast_constant_path(code) {
-            eprintln!("🚀 Using fast constant path");
             return Ok(value);
         }
 
         // Check if code contains Web API usage - if so, force standard path
         let code_trimmed = code.trim();
-        eprintln!("🔍 Checking for Web API usage in trimmed code: {:?}", code_trimmed);
 
         let has_web_api = code_trimmed.contains("new URL") ||
                           code_trimmed.contains("new URLSearchParams") ||
                           code_trimmed.contains("fetch(") ||
                           code_trimmed.contains("new WebSocket");
 
-        eprintln!("🔍 Web API detected: {}", has_web_api);
-
         if has_web_api {
-            eprintln!("🚀 Web API detected, using standard path");
             return self.execute_standard(code);
         }
 
         // Optimized path: Skip setup for pure eval scripts with no console output
         if code_trimmed.starts_with("console.log") || code_trimmed.starts_with("console.error") {
-            eprintln!("🚀 Using simple print path");
             // For scripts that only print, use minimal setup
             return self.execute_simple_print(code);
         }
 
-        eprintln!("🚀 Using standard path");
         // Standard execution path for other scripts
         self.execute_standard(code)
     }
@@ -1122,9 +1112,7 @@ impl RuntimeLite {
             // Set up Node.js APIs for compatibility
             Self::setup_nodejs_apis(scope, &context)?;
 
-            // Set up Web APIs for modern web compatibility (Stage 53.0)
-            Self::setup_web_apis(scope, &context)?;
-
+            // Web APIs are already initialized in the context pool
             self.execute_direct(scope, context, code)
         }; // scope ends here
 
