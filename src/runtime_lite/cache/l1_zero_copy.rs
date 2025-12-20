@@ -3,10 +3,9 @@
 //! This module provides the fastest cache level using Arc<[u8]> for zero-copy
 //! data sharing and pre-allocated buffer pools for minimal allocation overhead.
 
-use super::{CacheKey, CacheStats};
+use super::CacheKey;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use std::time::{Duration, Instant};
 
 /// Zero-copy script buffer using Arc for safe sharing
 #[derive(Debug, Clone)]
@@ -83,8 +82,8 @@ impl L1ZeroCopyCache {
             // Check if we're at capacity
             if hot_scripts.len() >= self.max_hot_scripts {
                 // Remove least recently used script
-                if let Some((oldest_key, _)) = hot_scripts.iter().next() {
-                    hot_scripts.remove(oldest_key);
+                if let Some(oldest_key) = hot_scripts.keys().next().cloned() {
+                    hot_scripts.remove(&oldest_key);
 
                     let mut stats = self.stats.write().unwrap();
                     stats.evictions += 1;
@@ -158,9 +157,11 @@ impl L1ZeroCopyCache {
         let keys_to_remove: Vec<CacheKey> = hot_scripts.keys().cloned().collect();
         let half = keys_to_remove.len() / 2;
 
+        // Update stats before releasing the lock
+        let mut stats = self.stats.write().unwrap();
+
         for key in keys_to_remove.into_iter().take(half) {
             if let Some(script_buffer) = hot_scripts.remove(&key) {
-                let mut stats = self.stats.write().unwrap();
                 stats.memory_usage_bytes -= script_buffer.len;
                 stats.evictions += 1;
             }

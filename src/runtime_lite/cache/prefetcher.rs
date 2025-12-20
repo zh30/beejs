@@ -3,7 +3,7 @@
 //! This module analyzes access patterns and predicts which scripts to prefetch
 //! based on frequency, timing, and dependency relationships.
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
 
 /// Access pattern for a script
@@ -59,42 +59,48 @@ impl PatternAnalyzer {
 
         // Maintain history size
         if self.access_history.len() > self.max_history {
-            if let Some((key, _)) = self.access_history.iter().next() {
-                self.access_history.remove(key);
+            if let Some(key) = self.access_history.keys().next().cloned() {
+                self.access_history.remove(&key);
             }
         }
 
         // Update pattern
-        let pattern = self.patterns.entry(script_name.to_string()).or_insert_with(|| AccessPattern {
-            access_count: 0,
-            last_access: now,
-            access_times: Vec::with_capacity(100),
-            average_interval: Duration::from_secs(60),
-            confidence: 0.0,
-        });
+        let script_name_owned = script_name.to_string();
+        {
+            let pattern = self.patterns.entry(script_name_owned.clone()).or_insert_with(|| AccessPattern {
+                access_count: 0,
+                last_access: now,
+                access_times: Vec::with_capacity(100),
+                average_interval: Duration::from_secs(60),
+                confidence: 0.0,
+            });
 
-        pattern.access_count += 1;
-        pattern.last_access = now;
+            pattern.access_count += 1;
+            pattern.last_access = now;
 
-        // Track access times (keep last 100)
-        pattern.access_times.push(now);
-        if pattern.access_times.len() > 100 {
-            pattern.access_times.remove(0);
-        }
-
-        // Recalculate average interval
-        if pattern.access_times.len() >= 2 {
-            let mut total_interval = Duration::from_secs(0);
-            for i in 1..pattern.access_times.len() {
-                let interval = pattern.access_times[i].duration_since(pattern.access_times[i - 1]);
-                total_interval += interval;
+            // Track access times (keep last 100)
+            pattern.access_times.push(now);
+            if pattern.access_times.len() > 100 {
+                pattern.access_times.remove(0);
             }
-            let count = pattern.access_times.len() - 1;
-            pattern.average_interval = Duration::from_nanos(total_interval.as_nanos() as u64 / count as u64);
+
+            // Recalculate average interval
+            if pattern.access_times.len() >= 2 {
+                let mut total_interval = Duration::from_secs(0);
+                for i in 1..pattern.access_times.len() {
+                    let interval = pattern.access_times[i].duration_since(pattern.access_times[i - 1]);
+                    total_interval += interval;
+                }
+                let count = pattern.access_times.len() - 1;
+                pattern.average_interval = Duration::from_nanos(total_interval.as_nanos() as u64 / count as u64);
+            }
         }
 
-        // Update confidence score
-        pattern.confidence = self.calculate_confidence(script_name);
+        // Update confidence score (after releasing the mutable borrow)
+        let confidence = self.calculate_confidence(&script_name);
+        if let Some(pattern) = self.patterns.get_mut(&script_name_owned) {
+            pattern.confidence = confidence;
+        }
     }
 
     /// Predict which scripts to prefetch

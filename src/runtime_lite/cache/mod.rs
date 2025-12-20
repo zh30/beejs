@@ -14,7 +14,6 @@ pub use l1_zero_copy::L1ZeroCopyCache;
 pub use l2_smart::L2SmartCache;
 pub use l3_mmap::L3MmapCache;
 pub use prefetcher::PatternAnalyzer;
-pub use MultiLevelCache;
 
 use crate::runtime_lite::RuntimeLite;
 use anyhow::Result;
@@ -137,7 +136,7 @@ impl MultiLevelCache {
 
         // Try L2
         {
-            let l2 = self.l2_cache.read().unwrap();
+            let mut l2 = self.l2_cache.write().unwrap();
             if let Some(data) = l2.get(cache_key) {
                 // Promote to L1
                 self.l1_cache.put(cache_key, &data).await;

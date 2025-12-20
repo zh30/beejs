@@ -3,7 +3,7 @@
 //! This module implements an intelligent cache that combines LRU (Least Recently Used)
 //! and LFU (Least Frequently Used) strategies with adaptive weight adjustment.
 
-use super::{CacheKey, CacheStats};
+use super::CacheKey;
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::time::{Duration, Instant};
 
@@ -83,7 +83,7 @@ impl L2SmartCache {
 
         // Check if we're at capacity
         if self.entries.len() >= self.max_entries || self.stats.memory_usage_bytes + data_size > self.max_size_bytes {
-            self.evict_entries(data_size).await;
+            self.evict_entries(data_size);
         }
 
         // Create entry
@@ -171,7 +171,7 @@ impl L2SmartCache {
 
     /// Update LFU tree with new access count
     fn update_lfu(&mut self, key: CacheKey) {
-        if let Some(entry) = &self.entries[&key] {
+        if let Some(entry) = self.entries.get(&key).cloned() {
             // Remove old entry from LFU tree
             self.remove_from_lfu(key);
 
@@ -188,7 +188,7 @@ impl L2SmartCache {
     }
 
     /// Evict entries to make space
-    async fn evict_entries(&mut self, required_bytes: usize) {
+    fn evict_entries(&mut self, required_bytes: usize) {
         // Calculate how much space we need to free
         let target_free = required_bytes * 2;
         let mut freed_bytes = 0;
@@ -213,7 +213,7 @@ impl L2SmartCache {
             EvictionStrategy::LFU => {
                 // Evict least frequently used
                 while freed_bytes < target_free && !self.lfu_tree.is_empty() {
-                    if let Some((_, key)) = self.lfu_tree.iter().next().cloned() {
+                    if let Some((_, &key)) = self.lfu_tree.iter().next() {
                         if let Some(entry) = self.entries.remove(&key) {
                             freed_bytes += entry.size;
                             self.stats.lfu_evictions += 1;

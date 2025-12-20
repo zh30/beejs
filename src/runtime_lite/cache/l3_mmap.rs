@@ -3,12 +3,11 @@
 //! This module provides L3 cache using memory mapping for efficient handling
 //! of large script files and infrequently accessed cold data.
 
-use super::{CacheStats};
+use super::CacheStats;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, Read, Write};
-use std::os::unix::io::AsRawFd;
-use std::path::{Path, PathBuf};
+use std::io::{Read, Write};
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
@@ -214,14 +213,19 @@ impl L3MmapCache {
         let mut entries = self.entries.write().unwrap();
 
         // Sort by last accessed time
-        let mut sorted_entries: Vec<_> = entries.iter().collect();
-        sorted_entries.sort_by(|a, b| a.1.last_accessed.cmp(&b.1.last_accessed));
+        let keys_to_remove: Vec<_> = {
+            let mut sorted_entries: Vec<_> = entries.iter().collect();
+            sorted_entries.sort_by(|a, b| a.1.last_accessed.cmp(&b.1.last_accessed));
 
-        // Remove 25% of oldest entries
-        let to_remove = sorted_entries.len() / 4;
-        for (key, entry) in sorted_entries.into_iter().take(to_remove) {
-            let _ = std::fs::remove_file(&entry.file_path);
-            entries.remove(key);
+            let to_remove = sorted_entries.len() / 4;
+            sorted_entries.into_iter().take(to_remove).map(|(k, _)| k).collect()
+        };
+
+        // Remove collected keys
+        for key in keys_to_remove {
+            if let Some(entry) = entries.remove(key) {
+                let _ = std::fs::remove_file(&entry.file_path);
+            }
         }
     }
 

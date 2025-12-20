@@ -184,20 +184,14 @@ impl V8ContextPool {
         // Create isolate
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
 
-        // Create context in a scope, then convert to global
+        // Create context with proper scope management
         let context = {
             let mut scope = v8::HandleScope::new(&mut isolate);
             v8::Context::new(&mut scope)
         };
 
-        // Now create global context
-        // Note: We use unsafe here because rusty_v8 requires &mut Isolate for Global::new,
-        // but we've already used &mut isolate for the HandleScope
-        let context_global = unsafe {
-            let isolate_ptr = &mut isolate as *mut v8::OwnedIsolate;
-            let context_local = std::mem::replace(&mut *std::mem::transmute::<&v8::Context, &v8::Context>(std::ptr::addr_of!(context)), v8::Context::new(&mut *isolate_ptr));
-            v8::Global::new(&mut *isolate_ptr, context_local)
-        };
+        // Create global context after scope is dropped
+        let context_global = v8::Global::new(&mut isolate, context);
 
         Ok((isolate, context_global))
     }
