@@ -316,9 +316,102 @@ fn run_bundle(
         println!("   Source maps: {}", cmd.sourcemap);
     }
 
-    // Placeholder implementation
-    println!("⚠️  Bundler not fully implemented yet");
-    println!("   This feature is planned for future stages");
+    // Read entry file
+    let entry_code = std::fs::read_to_string(&cmd.entry)
+        .with_context(|| format!("Failed to read entry file: {:?}", cmd.entry))?;
+
+    // Determine output file
+    let output_file = cmd.outfile.clone()
+        .unwrap_or_else(|| {
+            let mut path = cmd.entry.clone();
+            path.set_extension("js");
+            path
+        });
+
+    if verbose {
+        println!("📝 Entry file size: {} bytes", entry_code.len());
+        println!("💾 Output file: {:?}", output_file);
+    }
+
+    // Determine module type
+    let module_type = if cmd.entry.extension().and_then(|s| s.to_str()) == Some("ts") {
+        beejs::bundler::core::ModuleType::TypeScript
+    } else {
+        beejs::bundler::core::ModuleType::JavaScript
+    };
+
+    // Create build options
+    let options = beejs::bundler::core::BuildOptions {
+        minify: cmd.minify,
+        sourcemap: cmd.sourcemap,
+        target: format!("{:?}", cmd.target).to_lowercase(),
+        format: "esm".to_string(), // Default to ES modules
+        splitting: false,
+        tree_shaking: cmd.tree_shake,
+        optimization_level: if cmd.minify { 3 } else { 1 },
+        parallel_jobs: num_cpus::get(),
+    };
+
+    // Create bundler
+    let bundler = beejs::bundler::core::Bundler::new(options);
+
+    // Create module
+    let module = beejs::bundler::core::Module {
+        id: cmd.entry.to_string_lossy().to_string(),
+        path: cmd.entry.clone(),
+        code: entry_code,
+        module_type,
+        dependencies: Vec::new(), // TODO: Parse dependencies
+        exports: Vec::new(), // TODO: Parse exports
+        size: 0,
+    };
+
+    // Add module to bundler
+    bundler.add_module(module)?;
+
+    // Get all modules from bundler
+    let modules = bundler.get_modules();
+
+    // Generate bundle code
+    let mut bundle_code = String::new();
+    for module in &modules {
+        bundle_code.push_str("// Module: ");
+        bundle_code.push_str(&module.id);
+        bundle_code.push('\n');
+        bundle_code.push_str(&module.code);
+        bundle_code.push('\n');
+        bundle_code.push('\n');
+    }
+
+    // Apply minification if requested
+    if cmd.minify {
+        if verbose {
+            println!("🔧 Minifying bundle...");
+        }
+        // Simple minification: remove extra whitespace
+        bundle_code = bundle_code
+            .split('\n')
+            .map(|line| line.trim())
+            .filter(|line| !line.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
+    }
+
+    // Calculate bundle size
+    let bundle_size = bundle_code.len();
+
+    // Write to file
+    std::fs::write(&output_file, bundle_code)
+        .with_context(|| format!("Failed to write output file: {:?}", output_file))?;
+
+    if verbose {
+        println!("✅ Bundle created successfully");
+        println!("   Output: {:?}", output_file);
+        println!("   Size: {} bytes", bundle_size);
+        println!("   Modules: {}", modules.len());
+    } else {
+        println!("Bundle created: {:?}", output_file);
+    }
 
     Ok(())
 }

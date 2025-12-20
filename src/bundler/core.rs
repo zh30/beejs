@@ -102,6 +102,12 @@ impl Bundler {
         Ok(())
     }
 
+    /// Get all modules (clone the data)
+    pub fn get_modules(&self) -> Vec<Module> {
+        let modules = self.modules.lock().unwrap();
+        modules.values().cloned().collect()
+    }
+
     /// Parse module dependencies
     pub fn analyze_dependencies(&self, code: &str, module_type: &ModuleType) -> Vec<String> {
         let mut dependencies = Vec::new();
