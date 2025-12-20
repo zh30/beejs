@@ -259,6 +259,7 @@ pub async fn create_file_watcher(
 mod tests {
     use super::*;
     use tempfile::tempdir;
+    use tokio::time::sleep;
 
     #[tokio::test]
     async fn test_file_watcher_basic() {
