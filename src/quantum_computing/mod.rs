@@ -15,7 +15,10 @@ mod optimizer;
 mod hybrid;
 
 pub use qubit::{Qubit, QubitState};
+pub use gates::QuantumGate;
 pub use circuit::{QuantumCircuit, CircuitResult};
+pub use simulator::QuantumSimulator;
+pub use optimizer::QuantumOptimizer;
 pub use hybrid::{HybridComputing, VariationalResult, QaoaResult};
 
 /// 复数类型别名

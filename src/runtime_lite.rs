@@ -1935,4 +1935,4 @@ impl CacheStatistics {
 }
 
 // Stage 65: Multi-level cache module
-mod cache;
+pub mod cache;
