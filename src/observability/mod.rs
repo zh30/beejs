@@ -38,7 +38,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn};use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};use serde_json::Value;
+use tracing::{info};
 
 /// Configuration for observability system
 #[derive(Debug, Clone)]

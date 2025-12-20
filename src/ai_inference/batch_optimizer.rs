@@ -6,7 +6,7 @@ use anyhow::Result;
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
+// serde imports removed - unused
 
 /// 批处理优化策略
 #[derive(Debug, Clone, PartialEq)]
