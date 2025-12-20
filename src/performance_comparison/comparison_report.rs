@@ -7,7 +7,7 @@
 //! - JSON 数据导出
 //! - 图表生成
 
-use crate::performance_comparison::{ComparisonResult, PerformanceSummary};
+use crate::performance_comparison::ComparisonResult;
 use std::fs;
 use std::path::PathBuf;
 

@@ -4,7 +4,7 @@
 //! in JavaScript/TypeScript execution, identifying slow operations,
 //! memory leaks, and other performance issues.
 
-use crate::performance_analyzer::{PerformanceAnalyzer, ExecutionMetrics, PerformanceReport};
+use crate::performance_analyzer::{ExecutionMetrics, PerformanceReport};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

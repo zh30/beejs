@@ -8,13 +8,13 @@
 //! - 性能对比报告
 //! - 自动化报告分发
 
-use crate::benchmarks::{BenchmarkResult, BenchmarkFramework, MetricType};
+use crate::benchmarks::BenchmarkResult;
 use crate::performance_regression::{RegressionTestSuite, RegressionDetectionResult};
-use crate::automation::test_runner::{TestSuiteResults, TestExecutionResult};
+use crate::automation::test_runner::TestSuiteResults;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 

@@ -24,6 +24,7 @@ pub mod automation;
 pub mod analysis;
 pub mod monitor;
 pub mod runtime_lite;
+pub mod smart_cache;  // Stage 60: 智能缓存系统
 // pub mod lib_minimal;
 pub mod memory_pool;
 // pub mod nodejs_core;  // Temporarily disabled for Stage 60
@@ -41,7 +42,7 @@ pub mod repl;
 pub mod cli;
 pub mod edge;
 // pub mod web_api;  // Temporarily disabled for Stage 60
-// pub mod debugger;  // Stage 58: Debugger integration (temporarily disabled for Stage 60)
+pub mod debugger;  // Stage 58: Debugger integration
 pub mod observability;  // 可观测性系统
 pub mod ai_inference;
 pub mod concurrent_execution;
@@ -515,7 +516,7 @@ pub fn generate_performance_report(
 
 /// Console callback functions for V8 integration
 pub fn console_log_callback(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
     _rv: v8::ReturnValue,
 ) {
@@ -526,14 +527,14 @@ pub fn console_log_callback(
             output.push(' ');
         }
         let arg = args.get(i);
-        let arg_str = arg.to_string(scope).unwrap_or_else(|| v8::String::new(scope, "<unknown>").unwrap());
-        output.push_str(&arg_str.to_rust_string_lossy(scope));
+        let arg_str = arg.to_string(_scope).unwrap_or_else(|| v8::String::new(_scope, "<unknown>").unwrap());
+        output.push_str(&arg_str.to_rust_string_lossy(_scope));
     }
     println!("{}", output);
 }
 
 pub fn console_error_callback(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     _rv: v8::ReturnValue,
 ) {
@@ -541,7 +542,7 @@ pub fn console_error_callback(
 }
 
 pub fn console_warn_callback(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     _rv: v8::ReturnValue,
 ) {
@@ -549,7 +550,7 @@ pub fn console_warn_callback(
 }
 
 pub fn console_info_callback(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     _rv: v8::ReturnValue,
 ) {
@@ -557,7 +558,7 @@ pub fn console_info_callback(
 }
 
 pub fn console_debug_callback(
-    scope: &mut v8::HandleScope,
+    _scope: &mut v8::HandleScope,
     _args: v8::FunctionCallbackArguments,
     _rv: v8::ReturnValue,
 ) {

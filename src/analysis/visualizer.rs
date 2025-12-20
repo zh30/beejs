@@ -3,9 +3,9 @@
 //! This module provides tools to generate visualizations of performance data,
 //! including charts, graphs, and HTML reports.
 
-use crate::performance_analyzer::{PerformanceAnalyzer, ExecutionMetrics, PerformanceReport};
+use crate::performance_analyzer::{PerformanceReport};
 use crate::analysis::bottleneck_detector::{Bottleneck, BottleneckSeverity};
-use crate::analysis::optimizer::{OptimizationSuggestion, OptimizationCategory};
+use crate::analysis::optimizer::OptimizationSuggestion;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;

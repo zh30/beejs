@@ -8,11 +8,11 @@
 //! - 智能阈值建议
 //! - 阈值历史追踪
 
-use crate::performance_regression::{PerformanceThresholds, RegressionSeverity};
+use crate::performance_regression::{RegressionSeverity};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 

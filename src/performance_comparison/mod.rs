@@ -14,7 +14,7 @@ pub use benchmark_runner::{BenchmarkRunner, RuntimeConfig, TestCase};
 pub use result_collector::{ResultCollector, ComparisonResult, BenchmarkComparison};
 pub use comparison_report::{ReportGenerator, ReportFormat, ReportConfig};
 
-use crate::benchmarks;
+// use crate::benchmarks;  // Unused import
 use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
