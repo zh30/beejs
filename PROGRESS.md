@@ -3,9 +3,48 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-21)**: ✅ Stage 71 全部任务完成 - 快照持久化系统上线
+**当前状态 (2025-12-21)**: 🔄 Stage 72 进行中 - TypeScript 原生支持
 
 ## 最新更新 (2025-12-21)
+
+### 🔄 Stage 72: TypeScript 原生支持 (2025-12-21)
+**进度**: 🔄 Phase 1 完成
+
+#### 完成工作
+1. **TypeScript 转译集成**
+   - ✅ 修复 `beejs run test.ts` 执行流程
+   - ✅ .ts 文件现在会先经过转译再执行
+   - ✅ 类型标注被正确移除
+
+#### 当前能力
+| 语法 | 支持状态 |
+|------|----------|
+| 函数类型标注 | ✅ 支持 |
+| 变量类型标注 | ✅ 支持 |
+| 返回类型标注 | ✅ 支持 |
+| 箭头函数 | ❌ 待实现 |
+| interface | ⚠️ 部分支持 |
+| type alias | ⚠️ 部分支持 |
+| 泛型 | ❌ 待实现 |
+
+#### 测试结果
+```typescript
+// ✅ 可以工作
+function add(a: number, b: number): number {
+    return a + b;
+}
+console.log("Sum:", add(10, 20));  // 输出: Sum: 30
+
+// ❌ 暂不支持
+const add = (a: number, b: number): number => a + b;
+```
+
+#### 下一步任务
+- [ ] 添加箭头函数支持
+- [ ] 完善 interface 解析
+- [ ] 考虑集成 SWC 以获得完整 TypeScript 支持
+
+---
 
 ### ✅ Stage 71: V8 快照预热与启动优化系统 (2025-12-21)
 **进度**: ✅ RuntimeLite 集成完成
