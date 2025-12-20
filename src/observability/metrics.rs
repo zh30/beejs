@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use prometheus::core::Collector;
-use prometheus::{Counter, CounterVec, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec, Registry, Opts};
+use prometheus::{Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Registry, Opts};
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant};

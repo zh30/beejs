@@ -1,12 +1,11 @@
 //! Edge Runtime Management
 //! High-performance edge runtime with minimal cold start times
 
-use super::cdn_provider::CdnEndpoint;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use anyhow::{Result, Context};
 use tokio::time::{Duration, Instant};
+use anyhow::{Result, anyhow};
 
 /// Edge Runtime instance
 #[derive(Debug)]
@@ -306,7 +305,7 @@ impl FailoverManager {
             .filter(|(region, healthy)| *region != failed_region && **healthy)
             .min_by(|a, b| a.0.cmp(b.0))
             .map(|(region, _)| region.clone())
-            .context("No healthy fallback regions available")?;
+            .ok_or_else(|| anyhow!("No healthy fallback regions available"))?;
 
         println!("Failed over from {} to {}", failed_region, fallback);
 

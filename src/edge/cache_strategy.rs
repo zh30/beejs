@@ -4,8 +4,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use anyhow::{Result, Context};
 use tokio::time::{Duration, Instant};
+use anyhow::Result;
 
 /// Multi-layer edge cache
 #[derive(Debug)]

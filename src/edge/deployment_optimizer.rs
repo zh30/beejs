@@ -1,12 +1,10 @@
 //! Edge Deployment Optimizer
 //! Optimizes edge deployments for minimal cold start and maximum throughput
 
-use super::cdn_provider::{CdnProvider, CdnEndpoint, DeploymentStatus};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use anyhow::{Result, Context};
-use tokio::time::{Duration, Instant};
+use anyhow::Result;
 
 /// Edge Deployment Optimizer
 #[derive(Debug)]

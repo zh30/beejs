@@ -4,7 +4,6 @@
 //! deletion, enabling/disabling, and condition evaluation.
 
 use std::collections::HashMap;
-use rusty_v8 as v8;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::debugger::{DebugResult, SourceLocation};

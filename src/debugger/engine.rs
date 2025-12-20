@@ -10,8 +10,8 @@ use std::sync::{Arc, Mutex};
 
 use crate::debugger::{
     breakpoint::{BreakpointManager, Breakpoint},
-    stack_trace::{StackTrace, StackFrame, StackFrameBuilder},
-    variable_scope::{VariableScope, VariableInspector},
+    stack_trace::{StackTrace, StackFrame},
+    variable_scope::VariableInspector,
     DebugEvent, DebugCommand, DebugResult, DebugStats, StepType, SourceLocation,
     config::DebugConfig,
     v8_stubs::{DebugEvent as V8DebugEvent, DebugExecutionState},

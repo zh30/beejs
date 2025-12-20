@@ -6,7 +6,6 @@
 use anyhow::Result;
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use crate::debugger::DebuggerEngine;
 use crate::RuntimeLite;
