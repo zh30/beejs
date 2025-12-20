@@ -3,7 +3,7 @@
 //! This module provides HTTP server functionality to expose Prometheus metrics.
 //! The exporter runs an HTTP server that serves metrics in Prometheus format.
 
-use anyhow::{Context, Result};
+// TODO: Remove unused import: use anyhow::{Context, Result};
 use prometheus::{Registry, TextEncoder};
 use std::net::SocketAddr;
 use std::sync::Arc;

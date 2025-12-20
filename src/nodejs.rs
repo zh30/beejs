@@ -4,8 +4,8 @@ use rusty_v8 as v8;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+// TODO: Remove unused import: use std::path::{Path, PathBuf};
+// TODO: Remove unused import: use std::sync::{Arc, Mutex};
 
 // Module cache - stores loaded modules for current execution
 // Note: thread_local means each V8 isolate has its own cache

@@ -4,7 +4,7 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+// TODO: Remove unused import: use std::sync::{Arc, Mutex};
 
 /// Fetch API configuration
 #[derive(Debug, Clone)]

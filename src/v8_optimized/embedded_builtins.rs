@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+// TODO: Remove unused import: use std::time::{Duration, Instant};
 
 /// 嵌入式内置函数管理器
 /// 管理所有高频操作的 Rust 实现

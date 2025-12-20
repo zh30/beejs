@@ -9,7 +9,7 @@
 //! - Dead code elimination
 
 use std::collections::{HashMap, HashSet};
-use std::time::{Duration, Instant};
+// TODO: Remove unused import: use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
 /// V8 optimization configuration for maximum performance

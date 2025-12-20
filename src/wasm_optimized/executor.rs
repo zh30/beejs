@@ -5,8 +5,8 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use wasmtime::{Engine, Module, Instance, Store, Memory};
-use anyhow::{Result, Context};
-use tracing::{info, debug};
+// TODO: Remove unused import: use anyhow::{Result, Context};
+// TODO: Remove unused import: use tracing::{info, debug};
 
 /// WASM 执行结果
 #[derive(Debug, Clone)]

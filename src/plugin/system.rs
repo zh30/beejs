@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+// TODO: Remove unused import: use std::sync::{Arc, Mutex};
 
 /// Plugin metadata
 #[derive(Debug, Clone)]

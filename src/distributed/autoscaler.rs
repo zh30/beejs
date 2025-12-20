@@ -2,8 +2,8 @@
 //! 负责根据集群负载自动调整节点数量
 
 use std::collections::VecDeque;
-use std::time::{Duration, Instant};
-use tracing::{info, debug};
+// TODO: Remove unused import: use std::time::{Duration, Instant};
+// TODO: Remove unused import: use tracing::{info, debug};
 
 /// 集群指标
 #[derive(Debug, Clone)]

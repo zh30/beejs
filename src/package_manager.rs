@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::fs;
 #[allow(unused_imports)]
 use std::io::Write;
-use std::path::{Path, PathBuf};
+// TODO: Remove unused import: use std::path::{Path, PathBuf};
 
 /// Package manager configuration
 #[derive(Debug, Clone)]

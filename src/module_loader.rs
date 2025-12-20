@@ -2,8 +2,8 @@ use anyhow::{anyhow, Result};
 use serde_json;
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+// TODO: Remove unused import: use std::path::{Path, PathBuf};
+// TODO: Remove unused import: use std::sync::{Arc, Mutex};
 
 /// Module loader for handling require() and module system
 #[derive(Debug, Clone)]
