@@ -280,10 +280,14 @@ pub fn initialize_v8() -> Result<()> {
     if !initialized_flag.load(std::sync::atomic::Ordering::SeqCst) {
         use rusty_v8 as v8;
 
-        // Set V8 flags for maximum performance
-        // Stage 63: JIT 深度优化 - 移除有害标志，添加优化标志
+        // Stage 65: V8 初始化优化 - 添加更多性能标志
         let v8_flags = vec![
             "--opt".to_string(),                          // 启用优化
+            "--max-old-space-size=2048".to_string(),      // 设置堆大小限制
+            "--max-heap-size=2048".to_string(),           // 最大堆大小
+            "--gc-interval=100".to_string(),              // GC 间隔优化
+            "--inline-js-wasm".to_string(),               // 内联优化
+            "--turbo-deoptimization".to_string(),         // 反优化支持
         ];
 
         let v8_flags_str = v8_flags.join(" ");
@@ -577,6 +581,7 @@ pub fn console_debug_callback(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
 
     #[test]
     fn test_runtime_creation() {

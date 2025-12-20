@@ -100,8 +100,14 @@ fn create_runtime(verbose: bool) -> Result<RuntimeLite> {
     let runtime = RuntimeLite::new(verbose)
         .context("Failed to create Beejs runtime")?;
 
+    // Stage 64: Initialize V8 Context Pool for optimal performance
+    // Initialize with 4 contexts by default for concurrent execution
+    runtime.initialize_context_pool(4)
+        .context("Failed to initialize V8 Context Pool")?;
+
     if verbose {
         println!("✅ Runtime created successfully");
+        println!("🔄 V8 Context Pool initialized with 4 contexts");
     }
 
     Ok(runtime)
