@@ -34,6 +34,7 @@ pub use alerting::*;
 pub use jaeger_tracer::*;
 
 use anyhow::Result;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
