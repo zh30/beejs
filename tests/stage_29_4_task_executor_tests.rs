@@ -2,14 +2,11 @@
 //! 测试任务执行、监控和容错功能
 
 use beejs::distributed::{
-    TaskExecutor, ExecutorConfig, ExecutionMode,
-    ExecutorStats, ExecutorWorker, WorkerStatus, WorkerConfig,
-    TaskExecution, ExecutionResult, ExecutionError,
+    TaskExecutor, ExecutorConfig, ExecutorWorker, WorkerStatus, WorkerConfig, ExecutionError,
     FaultHandler, FaultConfig, RetryPolicy, FaultAction,
-    ExecutionMonitor, MonitorConfig, ExecutionMetrics, AlertType,
-    ResourceTracker, ResourceConfig, ResourceUsage,
-    Checkpoint, CheckpointManager, RecoveryManager, RecoveryConfig,
-    Task, TaskType, TaskStatus, TaskResult,
+    ExecutionMonitor, MonitorConfig, AlertType,
+    ResourceTracker, ResourceConfig, CheckpointManager, RecoveryManager, RecoveryConfig,
+    Task, TaskType, TaskStatus,
 };
 use std::time::{Duration, Instant};
 use std::collections::HashMap;

@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use beejs::inline_cache::{
-        CacheType, InlineCache, CacheEntry, CacheConfig, CacheStats
+        CacheType, InlineCache
     };
     use std::time::Duration;
 

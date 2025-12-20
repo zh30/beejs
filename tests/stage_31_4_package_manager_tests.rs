@@ -3,8 +3,8 @@
 
 #[cfg(test)]
 mod stage_31_4_package_manager_tests {
-    use std::path::PathBuf;
-    use std::collections::HashMap;
+    
+    
 
     // ==================== 包管理器创建测试 ====================
 

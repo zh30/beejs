@@ -4,8 +4,8 @@
 #[cfg(test)]
 mod wasm_optimization_tests {
     use std::collections::HashMap;
-    use std::sync::Arc;
-    use rand::Rng;
+    
+    
 
     /// 测试 1: WASM 执行性能 - 接近原生速度
     #[test]
@@ -13,7 +13,7 @@ mod wasm_optimization_tests {
         println!("🚀 开始测试: WASM 执行性能");
 
         // 模拟 WASM 模块执行
-        let wasm_module_size = 1024 * 1024; // 1MB WASM 模块
+        let _wasm_module_size = 1024 * 1024; // 1MB WASM 模块
         let native_execution_time = 100.0; // 假设原生代码执行时间 100ms
         let wasm_execution_time = 105.0; // WASM 执行时间 105ms
 
@@ -98,7 +98,7 @@ mod wasm_optimization_tests {
 
         // 模拟加载 1000 个 WASM 模块
         for i in 0..module_count {
-            let module_id = format!("module_{}", i % 100); // 100 个唯一模块
+            let _module_id = format!("module_{}", i % 100); // 100 个唯一模块
             let is_cached = i > 100; // 前 100 个模块加载后，后面的都命中缓存
 
             if is_cached {

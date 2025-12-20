@@ -481,7 +481,7 @@ impl DevServer {
         }
     }
 
-    pub async fn start(&mut self, host: &str, port: u16) {
+    pub async fn start(&mut self, _host: &str, port: u16) {
         self.is_running = true;
         self.port = port;
         // Simulate server startup

@@ -693,7 +693,7 @@ mod script_executor {
 /// ============================================
 
 mod shebang_detection {
-    use std::path::PathBuf;
+    
 
     /// Detect shebang from file content
     pub fn detect_shebang(content: &str) -> Option<String> {

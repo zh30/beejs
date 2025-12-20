@@ -18,8 +18,7 @@ mod metaverse_engine_tests {
     use super::*;
     use beejs::metaverse::{
         MetaverseEngine, MetaverseConfig, RenderMode, XRPlatform,
-        SceneObject, Transform, Material, Light, LightType,
-        Camera, CameraMode, RenderStats,
+        SceneObject, Transform, Material,
     };
 
     #[test]
@@ -131,7 +130,7 @@ mod metaverse_engine_tests {
     #[test]
     fn test_multiuser_renderer() {
         use beejs::metaverse::multiuser_renderer::{
-            MultiuserRenderer, UserAvatar, AvatarConfig, SyncMode,
+            MultiuserRenderer, AvatarConfig, SyncMode,
         };
 
         let renderer = MultiuserRenderer::new(SyncMode::LockStep);
@@ -355,10 +354,10 @@ mod immersive_interaction_tests {
     use super::*;
     use beejs::immersive_interaction::{
         HandTracking, HandTrackingConfig, HandPose, Gesture,
-        EyeTracking, EyeTrackingConfig, GazePoint, FoveatedRegion,
+        EyeTracking, EyeTrackingConfig, GazePoint,
         HapticFeedback, HapticConfig, HapticPattern, HapticIntensity,
-        VoiceRecognition, VoiceConfig, SpeechResult, VoiceCommand,
-        MotionCapture, MotionConfig, BodyPose, JointPosition,
+        VoiceRecognition, VoiceConfig, VoiceCommand,
+        MotionCapture, MotionConfig,
     };
 
     #[test]
@@ -580,10 +579,10 @@ mod distributed_metaverse_tests {
     use super::*;
     use beejs::distributed_metaverse::{
         MetaverseNetwork, NetworkConfig, NetworkNode, NodeRole,
-        EdgeComputing, EdgeConfig, EdgeTask, EdgeResult,
+        EdgeComputing, EdgeConfig, EdgeTask,
         StateSync, SyncConfig, SyncMode, StateChange,
-        AssetInterop, AssetFormat, Asset, AssetTransform,
-        DecentralizedAuth, AuthConfig, Identity, Credential,
+        AssetInterop, AssetFormat, Asset,
+        DecentralizedAuth, AuthConfig, Credential,
     };
 
     #[test]
@@ -793,7 +792,7 @@ mod distributed_metaverse_tests {
 
 #[cfg(test)]
 mod integration_tests {
-    use super::*;
+    
     use beejs::metaverse::MetaverseEngine;
     use beejs::holographic::HolographicEngine;
     use beejs::immersive_interaction::{HandTracking, EyeTracking};
@@ -805,11 +804,11 @@ mod integration_tests {
         let metaverse = MetaverseEngine::new(Default::default()).unwrap();
 
         // 2. 初始化全息计算
-        let holographic = HolographicEngine::new(Default::default()).unwrap();
+        let _holographic = HolographicEngine::new(Default::default()).unwrap();
 
         // 3. 初始化交互系统
-        let hand_tracking = HandTracking::new(Default::default()).unwrap();
-        let eye_tracking = EyeTracking::new(Default::default()).unwrap();
+        let _hand_tracking = HandTracking::new(Default::default()).unwrap();
+        let _eye_tracking = EyeTracking::new(Default::default()).unwrap();
 
         // 4. 初始化分布式网络
         let network = MetaverseNetwork::new(Default::default()).unwrap();
@@ -822,7 +821,7 @@ mod integration_tests {
     #[test]
     fn test_multiuser_session() {
         use beejs::metaverse::multiuser_renderer::{MultiuserRenderer, SyncMode, AvatarConfig};
-        use beejs::distributed_metaverse::{StateSync, SyncConfig};
+        
 
         // 创建多用户渲染器
         let mut renderer = MultiuserRenderer::new(SyncMode::LockStep).unwrap();

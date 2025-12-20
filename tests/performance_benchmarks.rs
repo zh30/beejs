@@ -3,7 +3,6 @@
 
 use anyhow::Result;
 use std::time::{Duration, Instant};
-use tokio::time::timeout;
 
 /// 基准测试结果
 #[derive(Debug, Clone)]
@@ -54,7 +53,7 @@ let end = Date.now();
 "#;
 
         let start_time = Instant::now();
-        let result = self.execute_js_code(test_code).await?;
+        let _result = self.execute_js_code(test_code).await?;
         let duration = start_time.elapsed();
 
         Ok(BenchmarkResult {
@@ -89,7 +88,7 @@ let end = Date.now();
 "#;
 
         let start_time = Instant::now();
-        let result = self.execute_js_code(test_code).await?;
+        let _result = self.execute_js_code(test_code).await?;
         let duration = start_time.elapsed();
 
         Ok(BenchmarkResult {
@@ -124,7 +123,7 @@ let end = Date.now();
 "#;
 
         let start_time = Instant::now();
-        let result = self.execute_js_code(test_code).await?;
+        let _result = self.execute_js_code(test_code).await?;
         let duration = start_time.elapsed();
 
         Ok(BenchmarkResult {
@@ -155,7 +154,7 @@ let end = Date.now();
 "#;
 
         let start_time = Instant::now();
-        let result = self.execute_js_code(test_code).await?;
+        let _result = self.execute_js_code(test_code).await?;
         let duration = start_time.elapsed();
 
         Ok(BenchmarkResult {
@@ -208,7 +207,7 @@ let end = Date.now();
 "#;
 
         let start_time = Instant::now();
-        let result = self.execute_js_code(test_code).await?;
+        let _result = self.execute_js_code(test_code).await?;
         let duration = start_time.elapsed();
 
         Ok(BenchmarkResult {
@@ -222,7 +221,7 @@ let end = Date.now();
     }
 
     /// 执行 JavaScript 代码（需要实现）
-    async fn execute_js_code(&self, code: &str) -> Result<String> {
+    async fn execute_js_code(&self, _code: &str) -> Result<String> {
         // TODO: 实现与 Beejs 运行时交互
         // 目前返回模拟结果
         tokio::time::sleep(Duration::from_millis(10)).await;

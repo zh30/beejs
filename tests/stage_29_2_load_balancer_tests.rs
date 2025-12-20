@@ -1,11 +1,7 @@
 //! Stage 29.2: 分布式负载均衡测试套件
 //! 测试一致性哈希、智能路由、流量熔断等功能
 
-use beejs::distributed::{
-    NodeManager, NodeStatus, NodeLoad, NodeMetadata, HealthStatus,
-};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::Duration;
 
 // ============================================================================
@@ -465,7 +461,7 @@ mod circuit_breaker_tests {
 
         // 获取或创建熔断器
         let breaker1 = registry.get_or_create("service-a");
-        let breaker2 = registry.get_or_create("service-b");
+        let _breaker2 = registry.get_or_create("service-b");
         let breaker1_again = registry.get_or_create("service-a");
 
         assert_eq!(registry.breaker_count(), 2);
@@ -577,7 +573,7 @@ mod load_balancer_integration_tests {
     #[tokio::test]
     async fn test_load_balancer_dynamic_scaling() {
         use beejs::distributed::load_balancer::{
-            LoadBalancer, LoadBalancerConfig, RoutingStrategy,
+            LoadBalancer, LoadBalancerConfig,
         };
 
         let config = LoadBalancerConfig::default();

@@ -44,7 +44,7 @@ impl SingleFileBundler {
         Self { config }
     }
 
-    pub fn bundle(&self, source_files: Vec<PathBuf>) -> BundleResult {
+    pub fn bundle(&self, _source_files: Vec<PathBuf>) -> BundleResult {
         // 模拟打包过程
         BundleResult {
             success: true,
@@ -54,7 +54,7 @@ impl SingleFileBundler {
         }
     }
 
-    pub fn validate_output(&self, output: &Path) -> bool {
+    pub fn validate_output(&self, _output: &Path) -> bool {
         // 模拟输出验证 - 对于测试，我们总是返回 true
         true
     }
@@ -145,7 +145,7 @@ impl CrossCompiler {
         self.targets.clone()
     }
 
-    pub fn compile_for(&self, target: &CrossCompileTarget) -> Result<(), String> {
+    pub fn compile_for(&self, _target: &CrossCompileTarget) -> Result<(), String> {
         // 模拟交叉编译
         Ok(())
     }

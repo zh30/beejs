@@ -8,7 +8,7 @@
 //! - 硬件感知优化
 
 use beejs::neural_network::{
-    Tensor, TensorShape, DType,
+    Tensor, DType,
     Layer, DenseLayer, ConvLayer, ActivationLayer, ActivationType,
     Model, ModelConfig,
     GraphOptimizer, OptimizationLevel,

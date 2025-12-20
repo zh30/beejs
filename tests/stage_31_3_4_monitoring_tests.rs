@@ -3,8 +3,8 @@
 
 #[cfg(test)]
 mod stage_31_3_4_monitoring_tests {
-    use std::collections::HashMap;
-    use std::time::{Duration, Instant};
+    
+    
 
     // ==================== 性能监控器测试 ====================
 

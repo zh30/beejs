@@ -9,7 +9,7 @@ use std::time::Instant;
 #[test]
 fn test_basic_runtime_startup_time() {
     let start = Instant::now();
-    let runtime = Runtime::new(67108864, 1073741824, false, false);
+    let _runtime = Runtime::new(67108864, 1073741824, false, false);
     let startup_time = start.elapsed();
 
     // Runtime creation always succeeds

@@ -22,7 +22,7 @@ mod tests {
     #[serial]
     fn test_module_loader_creation() {
         let temp_dir = TempDir::new().unwrap();
-        let loader = ModuleLoader::new(temp_dir.path().to_path_buf());
+        let _loader = ModuleLoader::new(temp_dir.path().to_path_buf());
 
         // ModuleLoader 创建成功即可，内部状态通过公共方法验证
         assert!(true, "ModuleLoader created successfully");
@@ -263,7 +263,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let loader = ModuleLoader::new(temp_dir.path().to_path_buf());
 
-        let result = loader.resolve_module("");
+        let _result = loader.resolve_module("");
         // 空字符串应该被当作当前目录或失败
         // 具体行为取决于实现
         // 这里我们只验证它不会 panic

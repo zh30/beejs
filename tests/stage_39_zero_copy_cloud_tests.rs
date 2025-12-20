@@ -33,7 +33,7 @@ mod stage_39_tests {
         println!("🚀 开始测试: 零拷贝网络接收");
 
         // 模拟零拷贝接收操作
-        let socket_buffer = vec![0u8; 64 * 1024]; // 64KB 缓冲区
+        let _socket_buffer = vec![0u8; 64 * 1024]; // 64KB 缓冲区
         let mut received_data = Vec::new();
 
         // 模拟接收数据
@@ -80,7 +80,7 @@ mod stage_39_tests {
         let mut system_call_count = 0;
 
         // 模拟批处理操作
-        for i in 0..1000 {
+        for _i in 0..1000 {
             // 添加到批次
             batch_size += 1;
 
@@ -176,7 +176,7 @@ mod stage_39_tests {
         println!("🚀 开始测试: 智能负载均衡器");
 
         // 模拟服务器节点
-        let nodes = vec![
+        let _nodes = vec![
             "server1:8080",
             "server2:8080",
             "server3:8080",
@@ -278,14 +278,14 @@ mod stage_39_tests {
     fn test_failover() {
         println!("🚀 开始测试: 故障转移");
 
-        let mut servers = vec![
+        let servers = vec![
             ("server1", true),
             ("server2", true),
             ("server3", false), // 故障服务器
         ];
 
         // 模拟故障检测和转移
-        let mut available_servers: Vec<&str> = servers
+        let available_servers: Vec<&str> = servers
             .iter()
             .filter(|(_, healthy)| *healthy)
             .map(|(name, _)| *name)

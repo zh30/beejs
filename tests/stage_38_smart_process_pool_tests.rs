@@ -9,7 +9,7 @@
 
 use beejs::stage_38_smart_process_pool::*;
 use beejs::{TaskComplexity, ProcessPoolConfig};
-use std::time::{Duration, SystemTime, UNIX_EPOCH, Instant};
+use std::time::{Duration, SystemTime, Instant};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::collections::HashMap;
@@ -365,7 +365,7 @@ async fn test_memory_sharing_operations() {
 #[tokio::test]
 async fn test_performance_event_system() {
     let config = ProcessPoolConfig::default();
-    let pool = SmartProcessPool::new(config).unwrap();
+    let _pool = SmartProcessPool::new(config).unwrap();
 
     // 创建性能事件
     let task_event = PerformanceEvent::TaskSubmitted {
@@ -457,7 +457,7 @@ async fn test_end_to_end_smart_pool_workflow() {
 
     // 5. 清理资源
     pool.stop_monitoring();
-    let cleaned_regions = pool.cleanup_unused_regions().await.unwrap();
+    let _cleaned_regions = pool.cleanup_unused_regions().await.unwrap();
     println!("步骤5: 资源清理 ✓");
 
     // 6. 性能瓶颈预测

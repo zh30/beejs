@@ -10,7 +10,7 @@
 //! - 预热机制测试
 
 use beejs::smart_cache::{
-    SmartCache, CacheConfig, CacheStats, CacheEntry,
+    SmartCache, CacheConfig,
     create_smart_cache, create_high_performance_cache, create_persistent_cache,
     AccessPattern
 };
@@ -280,7 +280,7 @@ mod tests {
         // 只访问一次
         let _ = cache.get("cold_key");
 
-        let pattern = cache.get_access_pattern("cold_key");
+        let _pattern = cache.get_access_pattern("cold_key");
         // After set (1) + 1 get = 2, which is Warm with new threshold
         // To test Cold, we should NOT access it after set
         // Let's create a key that we never access

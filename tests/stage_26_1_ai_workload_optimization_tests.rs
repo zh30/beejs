@@ -11,10 +11,8 @@
 // - 内存使用效率提升 30%
 
 use beejs::{
-    AiBatchProcessor, AiTaskType, AiTaskResult, BatchConfig,
-    AiMemoryPool, ModelMemoryConfig, create_llm_memory_pool
+    AiBatchProcessor, AiTaskType, BatchConfig, ModelMemoryConfig, create_llm_memory_pool
 };
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 #[cfg(test)]
@@ -51,7 +49,7 @@ mod stage_26_1_tests {
     /// Verifies 2x throughput improvement with dynamic batch size adjustment
     #[tokio::test]
     async fn test_ai_batch_processing_throughput_improvement() {
-        let mut processor = AiBatchProcessor::new(BatchConfig::default());
+        let processor = AiBatchProcessor::new(BatchConfig::default());
 
         // Add multiple tasks
         for i in 0..50 {
@@ -89,7 +87,7 @@ mod stage_26_1_tests {
         let mut results = Vec::new();
 
         for batch_size in batch_sizes {
-            let mut processor = AiBatchProcessor::new(BatchConfig::default());
+            let processor = AiBatchProcessor::new(BatchConfig::default());
 
             // Add tasks
             for i in 0..batch_size {
@@ -178,7 +176,7 @@ mod stage_26_1_tests {
     async fn test_model_parallel_inference() {
         let model_shards = 4;
         let tasks_per_shard = 10;
-        let mut processor = AiBatchProcessor::new(BatchConfig::default());
+        let processor = AiBatchProcessor::new(BatchConfig::default());
 
         // Add tasks for each shard
         for shard in 0..model_shards {
@@ -313,7 +311,7 @@ mod stage_26_1_tests {
     /// Integration test combining all optimizations
     #[tokio::test]
     async fn test_comprehensive_ai_workload_performance() {
-        let mut processor = AiBatchProcessor::new(BatchConfig::default());
+        let processor = AiBatchProcessor::new(BatchConfig::default());
         let pool = create_llm_memory_pool();
 
         // Add various AI tasks

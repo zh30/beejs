@@ -3,17 +3,15 @@
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
+    
     use std::time::{Duration, Instant};
-    use tracing::{info, warn};
+    use tracing::info;
 
     // 导入分布式模块
     use beejs::distributed::{
         scaling_manager::{ScalingManager, ScalingConfig},
-        autoscaler::{Autoscaler, AutoscalerConfig, ScalingPolicy, ScalingAction, ScalingStrategy, ClusterMetrics},
-        resource_tracker::{ResourceTracker, ResourceConfig, ResourceUsage},
-        node_manager::NodeManager,
-        load_balancer::LoadBalancer,
+        autoscaler::{Autoscaler, AutoscalerConfig, ScalingAction, ClusterMetrics},
+        resource_tracker::{ResourceTracker, ResourceConfig},
     };
 
     // ========================================================================
@@ -216,7 +214,7 @@ mod tests {
 
     #[test]
     fn test_scaling_manager_resource_monitoring() {
-        let mut manager = ScalingManager::new(create_scaling_config());
+        let _manager = ScalingManager::new(create_scaling_config());
 
         // 直接测试自动扩缩容器，使用高负载指标
         let mut autoscaler = Autoscaler::new(AutoscalerConfig {
@@ -295,7 +293,7 @@ mod tests {
         assert_eq!(manager.get_current_node_count(), 3);
 
         // 4. 资源分配测试
-        let mut tracker = manager.get_resource_tracker();
+        let tracker = manager.get_resource_tracker();
         let allocation = tracker.allocate("task-1", 1024, 20);
         assert!(allocation.is_ok(), "资源分配失败");
         assert_eq!(tracker.get_allocated_memory(), 1024);
@@ -342,7 +340,7 @@ mod tests {
         }
 
         // 尝试扩容到超过最大值应该被限制
-        let initial_count = manager.get_current_node_count();
+        let _initial_count = manager.get_current_node_count();
         let action = ScalingAction::ScaleUp(10);
         let result = manager.execute_scaling_action(action);
         assert!(result.is_ok());
@@ -368,7 +366,7 @@ mod tests {
         });
 
         // 分配大量资源触发扩容
-        let mut tracker = manager.get_resource_tracker();
+        let tracker = manager.get_resource_tracker();
         for i in 0..100 {
             let allocation = tracker.allocate(
                 &format!("task-{}", i),

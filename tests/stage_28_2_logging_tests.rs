@@ -288,7 +288,7 @@ impl MetricsCollector {
             output.push_str(&format!("{} {}\n", name, value));
         }
 
-        for (name, values) in &self.histograms {
+        for (name, _values) in &self.histograms {
             if let Some(stats) = self.get_histogram_stats(name) {
                 output.push_str(&format!("# TYPE {} histogram\n", name));
                 output.push_str(&format!("{}_count {}\n", name, stats.count));

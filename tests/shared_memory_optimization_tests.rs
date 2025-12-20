@@ -523,7 +523,7 @@ mod tests {
         let config = SharedMemoryConfig::default();
         let manager = Arc::new(SharedMemoryManager::new(config));
 
-        let mut handle = manager.create_region("concurrent_test".to_string(), Some(1024)).unwrap();
+        let _handle = manager.create_region("concurrent_test".to_string(), Some(1024)).unwrap();
 
         // 启动多个线程并发访问
         let mut handles = vec![];

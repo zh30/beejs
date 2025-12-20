@@ -9,8 +9,8 @@
 //! - 配置管理测试
 
 use beejs::monitor::performance_monitor::{
-    PerformanceMonitor, MetricType, MetricValue, AggregatedMetric,
-    MonitorConfig, ThresholdConfig, CollectionStats
+    PerformanceMonitor, MetricType, MetricValue,
+    MonitorConfig, ThresholdConfig
 };
 use std::collections::HashMap;
 use std::time::Duration;

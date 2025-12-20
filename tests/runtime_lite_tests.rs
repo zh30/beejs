@@ -9,7 +9,6 @@
 //! - 性能监控测试
 
 use beejs::runtime_lite::RuntimeLite;
-use std::time::Duration;
 
 #[cfg(test)]
 mod tests {

@@ -3,7 +3,6 @@
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use std::path::PathBuf;
 use std::time::Instant;
 
 use beejs::cli::commands::{CliApp, SubCommand};
@@ -357,9 +356,9 @@ fn print_no_command_help() {
 
 /// Run debug session
 fn run_debug(
-    runtime: RuntimeLite,
-    cmd: beejs::cli::commands::SubCommand,
-    verbose: bool,
+    _runtime: RuntimeLite,
+    _cmd: beejs::cli::commands::SubCommand,
+    _verbose: bool,
 ) -> Result<()> {
     // Temporarily return error for debug commands
     // The debugger module is disabled for Stage 60

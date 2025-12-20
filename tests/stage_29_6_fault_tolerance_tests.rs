@@ -2,7 +2,6 @@
 //! 测试智能故障检测、自动恢复和容错机制
 
 use beejs::distributed::fault_tolerance::{
-    FaultDetector,
     FaultDetectionConfig,
     FaultEvent,
     FaultSeverity,
@@ -11,9 +10,9 @@ use beejs::distributed::fault_tolerance::{
     RecoveryAction,
     FaultStatistics,
 };
-use beejs::distributed::health_monitor::{HealthMonitor, HealthCheckConfig};
+use beejs::distributed::health_monitor::HealthMonitor;
 use beejs::distributed::node_manager::NodeManager;
-use beejs::distributed::service_discovery::{ServiceDiscovery, NodeInfo, DiscoveryConfig};
+use beejs::distributed::service_discovery::{ServiceDiscovery, DiscoveryConfig};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -27,9 +26,9 @@ async fn test_fault_detector_creation() {
 
     let service_discovery = ServiceDiscovery::new(config);
     let node_manager = Arc::new(NodeManager::new(service_discovery.clone()));
-    let health_monitor = Arc::new(HealthMonitor::new(node_manager.clone()));
+    let _health_monitor = Arc::new(HealthMonitor::new(node_manager.clone()));
 
-    let fault_config = FaultDetectionConfig {
+    let _fault_config = FaultDetectionConfig {
         detection_interval: Duration::from_millis(100),
         failure_threshold: 3,
         recovery_threshold: 2,

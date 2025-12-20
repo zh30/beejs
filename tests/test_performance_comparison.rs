@@ -79,14 +79,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_benchmark_runner_creation() {
-        let runner = BenchmarkRunner::new();
+        let _runner = BenchmarkRunner::new();
         // Just verify it can be created without panicking
         assert!(true);
     }
 
     #[test]
     fn test_report_generator_creation() {
-        let generator = ReportGenerator::new();
+        let _generator = ReportGenerator::new();
         // Just verify it can be created without panicking
         assert!(true);
     }

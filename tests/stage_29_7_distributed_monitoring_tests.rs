@@ -2,7 +2,6 @@
 //! 测试分布式指标收集、链路追踪和集群可视化控制台功能
 
 use beejs::distributed::distributed_metrics::{
-    DistributedMetrics,
     MetricsConfig,
     MetricType,
     MetricValue,
@@ -13,17 +12,13 @@ use beejs::distributed::distributed_metrics::{
     SystemMetrics,
 };
 use beejs::distributed::distributed_tracer::{
-    DistributedTracer,
     TracingConfig,
-    Trace,
-    Span,
     TraceEvent,
     TraceEventType,
     TraceContext,
     PerformanceStats,
 };
 use beejs::distributed::cluster_console::{
-    ClusterConsole,
     ConsoleConfig,
     ClusterOverview,
     NodeStatusDetail,

@@ -3,8 +3,8 @@
 
 #[cfg(test)]
 mod stage_32_gitops_tests {
-    use std::collections::HashMap;
-    use std::path::PathBuf;
+    
+    
 
     // ==================== Git 集成测试 ====================
 

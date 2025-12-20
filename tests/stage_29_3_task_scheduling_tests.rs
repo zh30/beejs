@@ -7,7 +7,6 @@ use beejs::distributed::task_scheduler::{
     TaskType, TaskStatus, Task, TaskResult, SchedulerNodeInfo,
 };
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 // ============================================================================
@@ -269,7 +268,7 @@ mod task_distributor_tests {
     #[test]
     fn test_distribute_task_failure() {
         let config = DistributorConfig::default();
-        let mut distributor = TaskDistributor::new(config).unwrap();
+        let distributor = TaskDistributor::new(config).unwrap();
 
         let task = Task {
             id: "task-1".to_string(),

@@ -21,7 +21,7 @@
 
 #[cfg(test)]
 mod tests {
-    use std::time::{Duration, Instant};
+    use std::time::Instant;
     use std::hint::black_box;
     use beejs::RuntimeLite;
 
@@ -293,7 +293,7 @@ mod tests {
 
         for code in dangerous_codes {
             // 尝试执行，如果失败则记录，这是预期的安全行为
-            let result = runtime.execute_standard(code);
+            let _result = runtime.execute_standard(code);
             // 我们期望这些代码要么执行失败（安全），要么在沙箱中安全执行
             println!("✅ 安全性测试: {} -> 安全处理", code);
         }

@@ -10,7 +10,6 @@ use beejs::{
 };
 
 use beejs::network::statistics::StatisticsConfig;
-use beejs::network::buffer_pool::BufferPoolConfig;
 
 #[cfg(test)]
 mod tests {

@@ -1,7 +1,7 @@
 //! Stage 55: 性能基准测试套件测试
 //! 测试 Beejs 的性能基准测试功能
 
-use beejs::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
+use beejs::benchmarks::{BenchmarkFramework, MetricType, BenchmarkConfig};
 use std::time::Duration;
 
 #[cfg(test)]

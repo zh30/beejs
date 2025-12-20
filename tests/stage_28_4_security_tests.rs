@@ -72,8 +72,8 @@ impl SandboxManager {
 
     pub fn execute_in_sandbox(
         &self,
-        id: &str,
-        code: &str,
+        _id: &str,
+        _code: &str,
     ) -> SandboxResult {
         // 模拟沙箱执行
         SandboxResult::Success("Executed successfully".to_string())
@@ -81,8 +81,8 @@ impl SandboxManager {
 
     pub fn check_permission(
         &self,
-        id: &str,
-        operation: &str,
+        _id: &str,
+        _operation: &str,
     ) -> bool {
         // 模拟权限检查
         true
@@ -147,7 +147,7 @@ impl ResourceMonitor {
         });
     }
 
-    pub fn check_limits(&self, process_id: &str) -> Result<(), String> {
+    pub fn check_limits(&self, _process_id: &str) -> Result<(), String> {
         // 模拟限制检查
         Ok(())
     }
@@ -198,7 +198,7 @@ impl DataFilter {
         // 过滤密码后面的值
         if filtered.contains("password:") {
             if let Some(colon_pos) = filtered.find(':') {
-                let (before, after) = filtered.split_at(colon_pos + 1);
+                let (before, _after) = filtered.split_at(colon_pos + 1);
                 filtered = format!("{}: [FILTERED]", before.trim_end());
             }
         }
@@ -206,7 +206,7 @@ impl DataFilter {
         filtered
     }
 
-    pub fn is_sensitive(&self, data: &str) -> bool {
+    pub fn is_sensitive(&self, _data: &str) -> bool {
         // 模拟敏感数据检测
         false
     }
@@ -431,7 +431,7 @@ mod tests {
 
                 // 过滤敏感数据
                 let data = "api_key: abc123";
-                let filtered = filter.filter_sensitive_data(data);
+                let _filtered = filter.filter_sensitive_data(data);
 
                 // 检查资源
                 assert!(monitor.check_limits("app").is_ok());

@@ -2,8 +2,6 @@
 //! 验证新实现的Node.js API兼容性
 
 use beejs::Runtime;
-use std::io::Write;
-use tempfile::{NamedTempFile, TempDir};
 
 #[test]
 fn test_nodejs_crypto_basic() {

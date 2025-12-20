@@ -3,8 +3,6 @@
 //!
 //! 本文件展示如何为 Beejs 添加新的性能监控功能
 
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 /// 性能指标结构
