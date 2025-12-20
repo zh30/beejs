@@ -165,7 +165,29 @@ fn run_script(
 
     // Prepend context setup code
     let setup_code = ctx.to_setup_code();
-    let full_code = format!("{}\n{}", setup_code, code);
+
+    // Transpile TypeScript if needed
+    let js_code = if file_type == FileType::TypeScript {
+        if verbose {
+            println!("🔄 Transpiling TypeScript to JavaScript...");
+        }
+        match beejs::typescript::compile_typescript(&code, &script_path.to_string_lossy()) {
+            Ok(output) => {
+                if verbose {
+                    println!("✅ TypeScript transpilation complete");
+                }
+                output.js_code
+            }
+            Err(e) => {
+                println!("❌ TypeScript transpilation failed: {}", e);
+                return Err(anyhow::anyhow!("TypeScript transpilation error: {}", e));
+            }
+        }
+    } else {
+        code.clone()
+    };
+
+    let full_code = format!("{}\n{}", setup_code, js_code);
 
     // Execute based on type
     match file_type {
