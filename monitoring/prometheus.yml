@@ -1,0 +1,82 @@
+# Prometheus configuration for Beejs runtime monitoring
+# This file configures Prometheus to scrape metrics from Beejs instances
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'beejs-cluster'
+    environment: 'production'
+
+# Scrape configuration for Beejs runtime
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+
+  # Beejs runtime instances
+  - job_name: 'beejs-runtime'
+    static_configs:
+      - targets: ['localhost:3000']  # Default Beejs metrics port
+    scrape_interval: 5s
+    scrape_timeout: 3s
+    metrics_path: '/metrics'
+    honor_labels: true
+    relabel_configs:
+      # Add instance label
+      - source_labels: [__address__]
+        target_label: instance
+      # Add job label
+      - source_labels: [__address__]
+        target_label: job
+        replacement: 'beejs-runtime'
+
+  # Beejs runtime instances with custom port
+  - job_name: 'beejs-runtime-custom'
+    static_configs:
+      - targets: ['localhost:8080', 'localhost:8081']
+    scrape_interval: 5s
+    scrape_timeout: 3s
+    metrics_path: '/metrics'
+    honor_labels: true
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+
+  # Node exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 30s
+
+  # cAdvisor for container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['localhost:8080']
+    scrape_interval: 30s
+    metrics_path: '/metrics'
+
+# Alert manager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Rule files for alerting
+rule_files:
+  - "beejs_alerts.yml"
+
+# Storage configuration
+storage:
+  tsdb:
+    retention.time: 30d
+    retention.size: 10GB
+
+# Remote write configuration (optional - for long-term storage)
+# remote_write:
+#   - url: "https://prometheus-remote-write-endpoint/api/v1/write"
+#     headers:
+#       Authorization: "Bearer <token>"

@@ -231,7 +231,7 @@ impl TypeScriptCompiler {
             // 处理字符串
             if ch == '\'' || ch == '"' || ch == '`' {
                 let quote = ch;
-                let start = pos;
+                let _start = pos;
                 pos += 1;
                 let mut string_chars = Vec::new();
 

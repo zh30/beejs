@@ -194,7 +194,7 @@ where
         let timestamp = chrono::Utc::now();
 
         // Extract fields
-        let mut fields = HashMap::new();
+        let fields = HashMap::new();
         let mut message = String::new();
 
         // Use simplified approach for field extraction

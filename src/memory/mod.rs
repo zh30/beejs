@@ -21,7 +21,6 @@ pub use leak_detector::*;
 pub use zero_copy_allocator::*;
 
 use crate::memory_pool::SmartMemoryPool;
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex, atomic::AtomicU64};
 use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};

@@ -5,12 +5,10 @@
 
 use anyhow::Result;
 use prometheus::core::Collector;
-use prometheus::{Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Registry, Opts};
-use std::collections::VecDeque;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
+use prometheus::{Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Registry, Opts};use std::collections::VecDeque;use std::sync::Arc;
+use std::time::{Duration};
 use tokio::sync::RwLock;
-use tracing::{debug, error};
+use tracing::{debug};
 
 /// Custom metrics system that manages all runtime metrics
 pub struct CustomMetrics {
@@ -65,54 +63,54 @@ impl CustomMetrics {
     /// Record a script execution
     pub async fn record_script_execution(&self, duration: Duration, success: bool) {
         {
-            let mut metrics = self.runtime_metrics.write().await;
+            let metrics = self.runtime_metrics.write().await;
             metrics.record_execution(duration).await;
         }
 
         {
-            let mut metrics = self.performance_metrics.write().await;
+            let metrics = self.performance_metrics.write().await;
             metrics.record_script_execution(duration).await;
         }
 
         {
-            let mut metrics = self.business_metrics.write().await;
+            let metrics = self.business_metrics.write().await;
             metrics.record_script(success).await;
         }
     }
 
     /// Record memory usage
     pub async fn record_memory_usage(&self, bytes: usize) {
-        let mut metrics = self.runtime_metrics.write().await;
+        let metrics = self.runtime_metrics.write().await;
         metrics.record_memory(bytes).await;
     }
 
     /// Record JIT compilation
     pub async fn record_jit_compilation(&self, duration: Duration) {
-        let mut metrics = self.performance_metrics.write().await;
+        let metrics = self.performance_metrics.write().await;
         metrics.record_jit_compilation(duration).await;
     }
 
     /// Record GC pause
     pub async fn record_gc_pause(&self, duration: Duration) {
-        let mut metrics = self.performance_metrics.write().await;
+        let metrics = self.performance_metrics.write().await;
         metrics.record_gc_pause(duration).await;
     }
 
     /// Record network I/O
     pub async fn record_network_io(&self, operation: &str, bytes: usize, duration: Duration) {
-        let mut metrics = self.performance_metrics.write().await;
+        let metrics = self.performance_metrics.write().await;
         metrics.record_network_io(operation, bytes, duration).await;
     }
 
     /// Record package load
     pub async fn record_package_load(&self, package_name: &str, size_bytes: usize) {
-        let mut metrics = self.business_metrics.write().await;
+        let metrics = self.business_metrics.write().await;
         metrics.record_package_load(package_name, size_bytes).await;
     }
 
     /// Record hot reload
     pub async fn record_hot_reload(&self, file_path: &str) {
-        let mut metrics = self.business_metrics.write().await;
+        let metrics = self.business_metrics.write().await;
         metrics.record_hot_reload(file_path).await;
     }
 

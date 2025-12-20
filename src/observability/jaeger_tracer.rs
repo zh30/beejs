@@ -4,11 +4,10 @@
 //! It allows tracking the execution of scripts, network operations,
 //! and other runtime activities across service boundaries.
 
-use anyhow::{Context, Result};
-use std::collections::HashMap;
+use anyhow::{Result};use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tracing::{debug, error, info, instrument};
+use tracing::{debug, error, info};
 
 /// Jaeger tracer for distributed tracing
 pub struct JaegerTracer {

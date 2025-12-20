@@ -4,7 +4,6 @@
 //! call stacks, including stack frames, function information, and
 //! variable scopes.
 
-use std::collections::HashMap;
 use rusty_v8 as v8;
 
 use crate::debugger::{SourceLocation, DebugResult, v8_stubs::DebugExecutionState};

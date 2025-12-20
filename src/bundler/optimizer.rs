@@ -16,7 +16,7 @@ pub fn optimize_code(code: &str, level: u8) -> Result<String> {
                         let before_comment = &line[..pos];
                         let mut in_string = false;
                         let mut string_char = '\0';
-                        let mut inside_string = false;
+                        let _inside_string = false;
 
                         for (i, c) in before_comment.chars().enumerate() {
                             if c == '"' || c == '\'' {

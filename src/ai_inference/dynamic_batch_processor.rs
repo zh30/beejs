@@ -158,8 +158,8 @@ impl DynamicBatchProcessor {
                             let result = inference_engine.infer(&model_id, &input).await;
                             match result {
                                 Ok(inference_result) => {
-                                    let mut result_queue = result_queue.lock().await;
-                                    result_queue.push_back(inference_result);
+                                    let mut queue = result_queue.lock().await;
+                                    queue.push_back(inference_result);
                                 }
                                 Err(e) => {
                                     eprintln!("推理失败 (任务 {}): {}", i, e);

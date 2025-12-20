@@ -6,11 +6,10 @@
 use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
 use anyhow::{Context, Result};
-use rusty_v8 as v8;
 
 use crate::{RuntimeLite, debugger::{DebuggerEngine, DebugConfig}};
 use crate::debugger::engine::SimpleEventListener;
-use crate::debugger::cli::{DebugConsole, DebugCliCommand};
+use crate::debugger::cli::{DebugConsole};
 
 /// Debug session that manages the runtime and debugger
 pub struct DebugSession {

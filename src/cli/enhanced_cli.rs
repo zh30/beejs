@@ -603,7 +603,7 @@ impl EnhancedArgs {
                 let adapter = crate::cloud::aws::AwsAdapter::new(self.cloud_region.clone());
 
                 // 部署 Lambda 函数
-                let mut config = crate::cloud::cloud_manager::FunctionConfig {
+                let config = crate::cloud::cloud_manager::FunctionConfig {
                     name: "beejs-function".to_string(),
                     code: "module.exports.handler = async (event) => ({ statusCode: 200, body: 'Hello from Beejs!' });".to_string(),
                     runtime: "nodejs18.x".to_string(),
@@ -636,7 +636,7 @@ impl EnhancedArgs {
                 let adapter = crate::cloud::cloudflare::CloudflareAdapter::new("test-account".to_string());
 
                 // 部署 Workers 函数
-                let mut config = crate::cloud::cloud_manager::FunctionConfig {
+                let config = crate::cloud::cloud_manager::FunctionConfig {
                     name: "beejs-worker".to_string(),
                     code: "addEventListener('fetch', event => event.respondWith(new Response('Hello from Beejs Workers!')))".to_string(),
                     runtime: "javascript".to_string(),

@@ -4,7 +4,6 @@
 use rusty_v8 as v8;
 use crate::testing::{register_suite, get_all_suites};
 use crate::testing::test_context::{TestSuite, TestCase};
-use std::time::Duration;
 
 /// Register all testing functions in the V8 global scope
 pub fn register_testing_api(_scope: &mut v8::HandleScope, _global: v8::Local<v8::Object>) {
@@ -48,7 +47,7 @@ fn describe_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let name = args.get(0).to_rust_string_lossy(scope);
+    let _name = args.get(0).to_rust_string_lossy(scope);
 
     // For now, just return undefined
     // TODO: Implement suite registration
@@ -150,7 +149,7 @@ fn to_be_matcher(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let expected = args.get(0);
+    let _expected = args.get(0);
 
     // Simple implementation - just return true for now
     retval.set(v8::Boolean::new(scope, true).into());
@@ -162,7 +161,7 @@ fn to_equal_matcher(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
-    let expected = args.get(0);
+    let _expected = args.get(0);
 
     // Simple implementation - just return true for now
     retval.set(v8::Boolean::new(scope, true).into());

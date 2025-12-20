@@ -6,15 +6,12 @@
 //! 异步数据传输，最小化系统调用和上下文切换开销。
 
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::{self, Seek, SeekFrom};
 use tokio::io::AsyncWriteExt;
-use std::io::Seek as IoSeek;
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::sync::{Mutex as TokioMutex, Semaphore};
 
@@ -152,7 +149,7 @@ impl AsyncZeroCopy {
             id: task_id,
             src_fd,
             dst_fd,
-            offset: IoSeek::seek(file, SeekFrom::Current(0)).unwrap_or(0),
+            offset: file.seek(SeekFrom::Current(0)).unwrap_or(0),
             length: max_bytes,
             direction: ZeroCopyDirection::FileToSocket,
             status: TaskStatus::Pending,

@@ -20,7 +20,6 @@ use tokio::sync::{mpsc, RwLock};
 use tokio::time::sleep;
 
 use crate::process_pool::{ProcessPoolConfig, WorkerMetrics, TaskComplexity, ProcessPoolStats};
-use crate::Runtime;
 
 /// 智能预热策略
 #[derive(Debug, Clone)]
@@ -417,9 +416,9 @@ impl SmartProcessPool {
 
         // 启动性能监控任务
         let monitoring_active = self.monitoring_active.clone();
-        let perf_channel = self.perf_channel.clone();
+        let _perf_channel = self.perf_channel.clone();
         let predictor = self.predictor.clone();
-        let pattern_analyzer = self.pattern_analyzer.clone();
+        let _pattern_analyzer = self.pattern_analyzer.clone();
 
         tokio::spawn(async move {
             while monitoring_active.load(Ordering::Relaxed) {
@@ -478,7 +477,7 @@ impl SmartProcessPool {
 
         // 分析任务特征
         let complexity = TaskComplexity::from_script(task);
-        let task_size = task.len();
+        let _task_size = task.len();
 
         // 获取任务预测
         let prediction = {
@@ -514,7 +513,7 @@ impl SmartProcessPool {
     /// 智能负载均衡：选择最佳工作进程
     pub async fn select_optimal_worker(&self, task: &str) -> Result<u32> {
         let complexity = TaskComplexity::from_script(task);
-        let task_size = task.len();
+        let _task_size = task.len();
 
         // 获取所有可用工作进程
         let available_workers = self.get_available_workers().await;
@@ -523,7 +522,7 @@ impl SmartProcessPool {
             return Err(anyhow::anyhow!("没有可用的工作进程"));
         }
 
-        let mut load_balancer = self.load_balancer.write().await;
+        let load_balancer = self.load_balancer.write().await;
 
         match load_balancer.strategy {
             LoadBalancingStrategy::RoundRobin => {
@@ -560,7 +559,7 @@ impl SmartProcessPool {
             }
             LoadBalancingStrategy::MachineLearning => {
                 // 使用机器学习模型预测最佳工作进程
-                let features = self.extract_worker_features(available_workers[0]).await;
+                let _features = self.extract_worker_features(available_workers[0]).await;
                 let mut best_worker = available_workers[0];
                 let mut best_prediction = f64::MAX;
                 let predictor = self.predictor.read().await;

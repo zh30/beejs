@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::os::unix::io::AsRawFd;
-use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 

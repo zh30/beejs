@@ -1,7 +1,7 @@
 //! 张量操作模块
 //! 提供高性能的张量计算和操作
 
-use anyhow::{Result, Context};
+use anyhow::{Result};
 use std::fmt;
 
 /// 张量结构体
@@ -248,7 +248,7 @@ impl Tensor {
     }
 
     /// 转换为 PyTorch 张量
-    #[cfg(feature = "pytorch")]
+    #[cfg(feature = "tch")]
     pub fn to_tch_tensor(&self, device: &tch::Device) -> Result<tch::Tensor> {
         let tensor = tch::Tensor::from(&self.data[..])
             .reshape(self.shape.as_slice())
@@ -257,7 +257,7 @@ impl Tensor {
     }
 
     /// 从 PyTorch 张量创建
-    #[cfg(feature = "pytorch")]
+    #[cfg(feature = "tch")]
     pub fn from_tch_tensor(tch_tensor: tch::Tensor, _device: &tch::Device) -> Result<Self> {
         // 获取张量数据和形状
         let data_vec: Vec<f32> = tch_tensor
@@ -275,15 +275,15 @@ impl Tensor {
     }
 
     /// 转换为 PyTorch 张量（未启用功能时的占位符）
-    #[cfg(not(feature = "pytorch"))]
+    #[cfg(not(feature = "tch"))]
     pub fn to_tch_tensor(&self, _device: &()) -> Result<Box<dyn std::fmt::Debug>> {
-        Err(anyhow::anyhow!("PyTorch support not enabled. Enable with --features pytorch"))
+        Err(anyhow::anyhow!("PyTorch support not enabled. Enable with --features tch"))
     }
 
     /// 从 PyTorch 张量创建（未启用功能时的占位符）
-    #[cfg(not(feature = "pytorch"))]
+    #[cfg(not(feature = "tch"))]
     pub fn from_tch_tensor(_tch_tensor: Box<dyn std::fmt::Debug>, _device: &()) -> Result<Self> {
-        Err(anyhow::anyhow!("PyTorch support not enabled. Enable with --features pytorch"))
+        Err(anyhow::anyhow!("PyTorch support not enabled. Enable with --features tch"))
     }
 }
 
@@ -389,8 +389,8 @@ impl TensorOps {
             ));
         }
 
-        let mut result = Vec::new();
-        let mut start = 0;
+        let result = Vec::new();
+        let _start = 0;
 
         for &section_size in &sections {
             // 这里需要实现复杂的切片逻辑

@@ -263,7 +263,6 @@ impl Server {
 }
 
 // 核心运行时
-use std::time::Duration;
 use anyhow::{Result, anyhow};
 
 /// Global flag to track V8 initialization state
@@ -478,7 +477,7 @@ pub fn get_global_runtime(
 
 /// 运行完整的性能测试套件
 pub fn run_performance_suite() -> Result<TestSuiteResults, crate::automation::test_runner::TestRunnerError> {
-    let config = crate::PerformanceConfig::default();
+    let _config = crate::PerformanceConfig::default();
 
     // 创建回归检测器
     let regression_detector = std::sync::Arc::new(std::sync::Mutex::new(

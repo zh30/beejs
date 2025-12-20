@@ -24,9 +24,7 @@ pub use variable_scope::{VariableScope, ScopeType, VariableInspector};
 pub use config::DebugConfig;
 pub use session::DebugSession;
 
-use std::collections::HashMap;
 use std::sync::Arc;
-use rusty_v8 as v8;
 
 /// Debug event types
 #[derive(Debug, Clone, PartialEq)]

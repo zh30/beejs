@@ -1,8 +1,7 @@
 //! 告警系统模块
 //! 负责管理告警规则、触发告警、通知渠道和告警历史
 
-use crate::monitor::performance_monitor::{MetricType, ThresholdSeverity, ThresholdViolation};
-use std::collections::{HashMap, VecDeque};
+use crate::monitor::performance_monitor::{MetricType, ThresholdViolation};use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -321,7 +320,7 @@ impl AlertSystem {
         &self,
         violations: Vec<ThresholdViolation>,
     ) -> Result<Vec<AlertInstance>, String> {
-        let mut rules = self.rules.lock().map_err(|e| e.to_string())?;
+        let rules = self.rules.lock().map_err(|e| e.to_string())?;
         let mut active_alerts = self.active_alerts.lock().map_err(|e| e.to_string())?;
         let mut alert_history = self.alert_history.lock().map_err(|e| e.to_string())?;
         let mut stats = self.stats.lock().map_err(|e| e.to_string())?;

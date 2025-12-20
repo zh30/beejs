@@ -337,7 +337,7 @@ impl WasmCacheManager {
             }
             CacheStrategy::Adaptive => {
                 // 自适应策略：根据访问模式调整
-                let patterns = self.access_patterns.read().await;
+                let _patterns = self.access_patterns.read().await;
                 // TODO: 实现自适应逐出策略
             }
         }

@@ -1,7 +1,6 @@
 //! Plugin system module
 
 use anyhow::Result;
-use std::collections::HashMap;
 
 pub trait Plugin {
     fn name(&self) -> &str;

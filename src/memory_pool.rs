@@ -292,7 +292,7 @@ impl SmartMemoryPool {
     /// Allocate an object buffer for the memory optimization manager
     pub fn allocate_object_buffer(&self, size: usize) -> Option<super::memory::AllocationHandle> {
         // Try to get a buffer from the pool
-        let buffer = self.get_object_buffer(size);
+        let _buffer = self.get_object_buffer(size);
 
         // Allocate memory for the buffer
         let layout = std::alloc::Layout::from_size_align(size, 8).ok()?;

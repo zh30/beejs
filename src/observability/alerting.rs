@@ -3,8 +3,7 @@
 //! This module provides an alerting system that can monitor metrics,
 //! detect anomalies, and send notifications via various channels.
 
-use anyhow::{Context, Result};
-use prometheus::proto::MetricFamily;
+use anyhow::{Context, Result};use prometheus::proto::MetricFamily;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -13,7 +12,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 use tokio::sync::RwLock;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 /// Alert severity levels
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

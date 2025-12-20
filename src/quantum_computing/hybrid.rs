@@ -8,7 +8,6 @@
 use num_complex::Complex64;
 
 use super::circuit::QuantumCircuit;
-use super::simulator::QuantumSimulator;
 
 /// 变分计算结果
 #[derive(Debug, Clone)]

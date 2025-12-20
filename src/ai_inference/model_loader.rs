@@ -115,7 +115,7 @@ impl ModelLoader {
         println!("Loading ONNX model from: {}", path);
 
         // 读取 ONNX 模型文件（简化实现）
-        let model_data = tokio::fs::read(path).await
+        let _model_data = tokio::fs::read(path).await
             .context("Failed to read ONNX model file")?;
 
         // 解析 ONNX 模型元数据（简化实现）
@@ -204,7 +204,7 @@ impl ModelLoader {
         println!("Loading PyTorch model from: {}", path);
 
         // 读取 PyTorch 模型文件
-        let model_data = tokio::fs::read(path).await
+        let _model_data = tokio::fs::read(path).await
             .context("Failed to read PyTorch model file")?;
 
         // PyTorch .pth 文件格式解析（简化实现）

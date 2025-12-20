@@ -8,7 +8,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::num::NonZero;
 use wasmtime::{Engine, Module, Config};
-use wasmtime_wasi::WasiCtx;
 use anyhow::{Result, Context};
 use tracing::{info, debug, warn};
 use memmap2::{Mmap, MmapOptions};

@@ -7,8 +7,7 @@ use crate::analysis::bottleneck_detector::{
     Bottleneck, BottleneckType, BottleneckSeverity, BottleneckDetector
 };
 use crate::performance_analyzer::PerformanceReport;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use serde::{Deserialize, Serialize};use std::collections::HashMap;
 
 /// Optimization priority levels
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]

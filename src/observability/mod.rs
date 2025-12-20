@@ -38,9 +38,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-use serde_json::Value;
+use tracing::{info, warn};use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};use serde_json::Value;
 
 /// Configuration for observability system
 #[derive(Debug, Clone)]
@@ -148,7 +146,7 @@ impl ObservableSystem {
         success: bool,
     ) {
         // Update metrics
-        let mut metrics = self.custom_metrics.write().await;
+        let metrics = self.custom_metrics.write().await;
         metrics.record_script_execution(duration, success).await;
 
         // Log event
@@ -169,7 +167,7 @@ impl ObservableSystem {
 
     /// Record memory usage
     pub async fn record_memory_usage(&self, bytes: usize) {
-        let mut metrics = self.custom_metrics.write().await;
+        let metrics = self.custom_metrics.write().await;
         metrics.record_memory_usage(bytes).await;
     }
 
@@ -180,7 +178,7 @@ impl ObservableSystem {
         bytes: usize,
         duration: std::time::Duration,
     ) {
-        let mut metrics = self.custom_metrics.write().await;
+        let metrics = self.custom_metrics.write().await;
         metrics.record_network_io(operation, bytes, duration).await;
     }
 

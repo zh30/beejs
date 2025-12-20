@@ -5,7 +5,6 @@
 
 use std::collections::HashMap;
 use rusty_v8 as v8;
-use std::convert::TryFrom;
 
 use crate::debugger::{DebugResult, config::DebugConfig};
 
@@ -58,7 +57,7 @@ impl VariableInspector {
         &self,
         scope: &VariableScope,
     ) -> DebugResult<Vec<VariableInfo>> {
-        let mut variables = Vec::new();
+        let variables = Vec::new();
 
         // Get object properties from V8
         // This would integrate with V8's Object API

@@ -3,7 +3,6 @@
 //! 实现高效的变更检测、压缩传输和同步状态管理
 //! 目标：90%+ 传输压缩率
 
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::{Result, Context};

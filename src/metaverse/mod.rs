@@ -14,7 +14,6 @@ pub use ray_tracer::{RayTracer, RayTracerConfig, BounceLimit};
 pub use multiuser_renderer::{MultiuserRenderer, UserAvatar, AvatarConfig, SyncMode as MultiuserSyncMode};
 pub use spatial_audio::{SpatialAudioSystem, AudioSource, AudioConfig, HRTFProfile};
 
-use std::time::Instant;
 
 /// XR 平台类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

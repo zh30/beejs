@@ -1,7 +1,6 @@
 //! Test Context Management
 //! Manages test suites, test cases, and lifecycle hooks
 
-use std::collections::HashMap;
 use std::time::Duration;
 use rusty_v8 as v8;
 
@@ -123,8 +122,8 @@ pub struct ExecutionContext<'a> {
 
 impl<'a> ExecutionContext<'a> {
     pub fn new(suite: &'a TestSuite) -> Self {
-        let mut suite_stack = vec![suite];
-        let mut current = suite;
+        let suite_stack = vec![suite];
+        let current = suite;
 
         // Build suite stack from root to current
         while let Some(parent_name) = &current.parent {

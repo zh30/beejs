@@ -1,8 +1,7 @@
 //! ONNX 批处理优化器
 //! 智能批处理算法，动态调整批处理大小，优化推理性能
 
-use crate::ai_inference::engine_interface::{InferenceResult, ModelHandle};
-use crate::ai_inference::tensor_ops::Tensor;
+use crate::ai_inference::engine_interface::{InferenceResult, ModelHandle};use crate::ai_inference::tensor_ops::Tensor;
 use anyhow::Result;
 use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
@@ -179,7 +178,7 @@ impl BatchProcessor {
 
         // 启动处理任务
         let items_count = items.len();
-        let current_batch = Arc::clone(&self.current_batch);
+        let _current_batch = Arc::clone(&self.current_batch);
         let stats = Arc::clone(&self.stats);
 
         let handle = tokio::spawn(async move {

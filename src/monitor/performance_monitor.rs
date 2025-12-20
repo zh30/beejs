@@ -210,7 +210,7 @@ impl PerformanceMonitor {
 
     /// 计算聚合指标
     pub fn aggregate_metrics(&self) -> Result<(), String> {
-        let mut raw_metrics = self.raw_metrics.lock().map_err(|e| e.to_string())?;
+        let raw_metrics = self.raw_metrics.lock().map_err(|e| e.to_string())?;
         let mut aggregated_metrics = self.aggregated_metrics.lock().map_err(|e| e.to_string())?;
 
         // 按指标类型分组

@@ -253,7 +253,7 @@ impl DebugConsole {
 
     /// List all breakpoints
     fn list_breakpoints(&self) {
-        let debugger = self.debugger.lock().unwrap();
+        let _debugger = self.debugger.lock().unwrap();
         println!("\n📍 Breakpoints:");
         // TODO: Implement actual breakpoint listing
         println!("   (No breakpoints set)");

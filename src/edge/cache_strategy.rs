@@ -125,7 +125,7 @@ impl EdgeCache {
 
     /// Get a value from the cache (multi-layer)
     pub async fn get(&self, key: &str) -> Result<Option<Vec<u8>>> {
-        let start = Instant::now();
+        let _start = Instant::now();
 
         // Try L1 cache first
         {
