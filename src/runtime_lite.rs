@@ -6,6 +6,7 @@ use crate::memory_pool::{PoolConfig, SmartMemoryPool};
 use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipeline};
 use crate::inline_cache::{CacheKey, CacheEntry};
 use crate::v8_context_pool::{V8ContextPool, ContextPoolStats};
+use crate::runtime_lite::cache::MultiLevelCache;
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::HashMap;
@@ -56,6 +57,10 @@ pub struct RuntimeLite {
     /// Stage 64: V8 Context Pool for reusing initialized contexts
     /// Reduces V8 context creation overhead by reusing pre-initialized contexts
     context_pool: Arc<V8ContextPool>,
+
+    /// Stage 65: Multi-level cache for ultra-fast script execution
+    /// L1: Zero-copy hot cache, L2: Smart LRU/LFU cache, L3: Memory-mapped cache
+    multi_cache: Arc<MultiLevelCache>,
 }
 
 // Make RuntimeLite Send + Sync for thread-safe global sharing
@@ -80,6 +85,7 @@ impl Clone for RuntimeLite {
             inline_cache: Arc::clone(&self.inline_cache),
             cache_stats: Arc::clone(&self.cache_stats),
             context_pool: Arc::clone(&self.context_pool),
+            multi_cache: Arc::clone(&self.multi_cache),
         }
     }
 }
