@@ -24,8 +24,6 @@ pub use variable_scope::{VariableScope, ScopeType, VariableInspector};
 pub use session::DebugSession;
 pub use config::DebugConfig;
 
-use std::sync::Arc;
-
 /// Debug event types
 #[derive(Debug, Clone, PartialEq)]
 pub enum DebugEvent {

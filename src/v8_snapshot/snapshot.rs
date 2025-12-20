@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 use std::time::SystemTime;
-use crate::v8::{Isolate, CreateParams};
+use crate::v8::CreateParams;
 
 /// V8 快照结构体
 #[derive(Debug, Clone)]

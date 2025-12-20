@@ -6,7 +6,7 @@ use crate::memory_pool::{PoolConfig, SmartMemoryPool};
 use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipeline};
 use crate::inline_cache::{CacheKey, CacheEntry};
 use crate::v8_context_pool::{V8ContextPool, ContextPoolStats};
-use crate::v8_engine::flags::{V8EngineFlags, V8ConfigManager};
+use crate::v8_engine::flags::V8EngineFlags;
 use crate::runtime_lite::cache::MultiLevelCache;
 use anyhow::Result;
 use rusty_v8 as v8;

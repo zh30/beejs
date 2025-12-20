@@ -7,7 +7,6 @@
 use anyhow::Result;
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::time::UNIX_EPOCH;
 use tracing::{debug, error, info};
 
 /// Jaeger tracer for distributed tracing
