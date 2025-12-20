@@ -17,7 +17,7 @@ pub mod v8_stubs;
 pub mod session;
 pub mod cli;
 
-pub use engine::DebuggerEngine;
+pub use engine::{DebuggerEngine, DebugState, SimpleEventListener};
 pub use breakpoint::{Breakpoint, BreakpointManager, BreakpointCondition};
 pub use stack_trace::{StackFrame, StackTrace, StackFrameInfo};
 pub use variable_scope::{VariableScope, ScopeType, VariableInspector};
@@ -101,6 +101,15 @@ impl<T> DebugResult<T> {
             success: false,
             data: None,
             error: Some(error),
+        }
+    }
+
+    /// Unwrap the result, panicking if not successful
+    pub fn unwrap(self) -> T {
+        if self.success {
+            self.data.expect("DebugResult unwrap called on successful result but data is None")
+        } else {
+            panic!("DebugResult unwrap failed: {}", self.error.unwrap_or_else(|| "Unknown error".to_string()))
         }
     }
 }

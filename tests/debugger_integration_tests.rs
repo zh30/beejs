@@ -7,7 +7,8 @@ use beejs::debugger::{
     DebuggerEngine, BreakpointManager, Breakpoint, StackFrame, StackTrace,
     VariableInspector, DebugConfig, DebugState, DebugEvent,
     StepType, SourceLocation, SimpleEventListener,
-    breakpoint::BreakpointCondition
+    breakpoint::BreakpointCondition,
+    engine::DebugEventListener
 };
 
 #[cfg(test)]
@@ -269,7 +270,7 @@ mod tests {
     /// Test 15: Step over
     #[test]
     fn test_step_over() {
-        let engine = DebuggerEngine::new_default();
+        let mut engine = DebuggerEngine::new_default();
 
         let result = engine.step_over();
         assert!(result.success, "Should step over successfully");
@@ -279,7 +280,7 @@ mod tests {
     /// Test 16: Step into
     #[test]
     fn test_step_into() {
-        let engine = DebuggerEngine::new_default();
+        let mut engine = DebuggerEngine::new_default();
 
         let result = engine.step_into();
         assert!(result.success, "Should step into successfully");
@@ -289,7 +290,7 @@ mod tests {
     /// Test 17: Step out
     #[test]
     fn test_step_out() {
-        let engine = DebuggerEngine::new_default();
+        let mut engine = DebuggerEngine::new_default();
 
         let result = engine.step_out();
         assert!(result.success, "Should step out successfully");
@@ -299,7 +300,7 @@ mod tests {
     /// Test 18: Next (step to next statement)
     #[test]
     fn test_next() {
-        let engine = DebuggerEngine::new_default();
+        let mut engine = DebuggerEngine::new_default();
 
         let result = engine.next();
         assert!(result.success, "Should step next successfully");
@@ -343,12 +344,15 @@ mod tests {
 
         let mut stack_trace = StackTrace::new();
         let frame = StackFrame {
+            index: 0,
+            script_id: "test.js".to_string(),
             script_name: "test.js".to_string(),
             function_name: "main".to_string(),
             line_number: 10,
             column_number: 0,
             is_eval: false,
             is_constructor: false,
+            is_async: false,
         };
         stack_trace.frames.push(frame);
 
@@ -380,7 +384,7 @@ mod tests {
         let result2 = engine.set_breakpoint("test2.js".to_string(), "test2.js".to_string(), 20).unwrap();
 
         // Disable one breakpoint
-        engine.disable_breakpoint(&result1.data.as_ref().unwrap().id).unwrap();
+        engine.disable_breakpoint(&result1.id).unwrap();
 
         let enabled = engine.get_enabled_breakpoints();
         assert_eq!(enabled.len(), 1, "Should have 1 enabled breakpoint");
@@ -440,7 +444,7 @@ mod tests {
     /// Test 29: Is stepping check
     #[test]
     fn test_is_stepping() {
-        let engine = DebuggerEngine::new_default();
+        let mut engine = DebuggerEngine::new_default();
 
         assert!(!engine.is_stepping(), "Should not be stepping initially");
 
@@ -477,12 +481,15 @@ mod tests {
     #[test]
     fn test_stack_frame_structure() {
         let frame = StackFrame {
+            index: 0,
+            script_id: "test.js".to_string(),
             script_name: "test.js".to_string(),
             function_name: "func".to_string(),
             line_number: 10,
             column_number: 5,
             is_eval: false,
             is_constructor: false,
+            is_async: false,
         };
 
         assert_eq!(frame.script_name, "test.js");
@@ -631,7 +638,7 @@ mod tests {
     /// Test 40: DebuggerEngine state transitions
     #[test]
     fn test_debugger_state_transitions() {
-        let engine = DebuggerEngine::new_default();
+        let mut engine = DebuggerEngine::new_default();
 
         // Initial state
         assert_eq!(engine.get_state(), DebugState::Running);

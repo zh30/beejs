@@ -13,7 +13,7 @@ use crate::debugger::{DebugResult, SourceLocation};
 static BREAKPOINT_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Breakpoint condition type
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BreakpointCondition {
     None,
     Expression(String),
