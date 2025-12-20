@@ -4,7 +4,7 @@
 //! based on frequency, timing, and dependency relationships.
 
 use std::collections::{BTreeMap, HashMap};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 
 /// Access pattern for a script
 #[derive(Debug, Clone)]

@@ -3,11 +3,11 @@
 //! 提供高性能的 JavaScript 与 WebAssembly 之间的互操作功能，
 //! 包括零拷贝参数传递、批量调用优化、智能缓存等功能
 
-// TODO: Remove unused import: use anyhow::{Result, Context, anyhow};
+use anyhow::{Result, Context, anyhow};
 use wasmtime::{Instance, Store, Func, Val};
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: use std::time::{Instant, Duration};
+use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use std::time::{Instant, Duration};
 
 /// JavaScript 值枚举
 #[derive(Debug, Clone)]

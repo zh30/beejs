@@ -10,11 +10,11 @@
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::fs;
 #[allow(unused_imports)]
 use std::io::Write;
-// TODO: Remove unused import: use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 /// Package manager configuration
 #[derive(Debug, Clone)]

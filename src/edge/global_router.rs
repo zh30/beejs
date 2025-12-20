@@ -2,11 +2,11 @@
 //! Intelligent routing across global edge locations
 
 use super::cdn_provider::{CdnEndpoint, EndpointStatus, CdnProviderType};
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::RwLock;
-// TODO: Remove unused import: use anyhow::{Result, Context};
-// TODO: Remove unused import: use tokio::time::{Duration, Instant};
+use anyhow::{Result, Context};
+use tokio::time::{Duration, Instant};
 
 /// Global Router for edge distribution
 #[derive(Debug)]

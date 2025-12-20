@@ -1,7 +1,7 @@
 //! Beejs CLI - Stage 56.2
 //! High-performance JavaScript/TypeScript runtime with Bun-compatible CLI
 
-// TODO: Remove unused import: use anyhow::{Context, Result};
+use anyhow::{Context, Result};
 use clap::Parser;
 use std::time::Instant;
 

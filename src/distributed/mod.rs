@@ -1,7 +1,7 @@
 //! 分布式运行时模块
 //! 提供集群管理、负载均衡、任务调度等分布式功能
 
-// TODO: Remove unused import: use std::sync::Arc;
+use std::sync::Arc;
 use tracing::info;
 
 pub mod service_discovery;

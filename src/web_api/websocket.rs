@@ -1,10 +1,10 @@
 //! WebSocket API implementation for Web standard
 //! Provides WebSocket constructor and event handling
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use rusty_v8 as v8;
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// WebSocket ready state
 #[derive(Debug, Clone, PartialEq)]

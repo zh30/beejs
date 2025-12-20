@@ -2,7 +2,7 @@
 //! 支持 HTTP/2 协议的多路复用特性
 
 use crate::network::{NetworkConfig, NetworkError};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::net::TcpListener;
 
 /// HTTP/2 路由处理器类型

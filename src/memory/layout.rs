@@ -1,7 +1,7 @@
 //! Memory layout optimization
 //! Structure packing and cache-friendly layouts
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 
 /// Memory alignment
 #[derive(Debug, Clone, Copy, PartialEq)]

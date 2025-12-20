@@ -6,9 +6,9 @@ use crate::v8_snapshot::V8SnapshotManager;
 use anyhow::{anyhow, Result};
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicUsize, Ordering};
-// TODO: Remove unused import: use std::sync::Arc;
+use std::sync::Arc;
 use std::sync::Mutex;
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 
 /// Enhanced Isolate Pre-warming System
 /// Stage 21.3: Integrates V8 snapshots and context preparation for optimal performance

@@ -7,7 +7,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering as AtomicOrdering},
     Arc, Mutex,
 };
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinHandle;
 

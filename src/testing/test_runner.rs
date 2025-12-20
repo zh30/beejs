@@ -2,8 +2,8 @@
 //! Executes test suites and collects results
 
 use crate::testing::test_context::{TestSuite, TestCase, TestResult};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
 
 /// Test runner configuration
 #[derive(Debug, Clone)]

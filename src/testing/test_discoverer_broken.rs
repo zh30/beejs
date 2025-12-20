@@ -1,7 +1,7 @@
 //! Test Discoverer
 //! Finds and loads test files
 
-// TODO: Remove unused import: use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::fs;
 use crate::testing::test_context::TestSuite;
 

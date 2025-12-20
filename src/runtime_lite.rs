@@ -7,13 +7,13 @@ use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipel
 use crate::inline_cache::{CacheKey, CacheEntry};
 use crate::v8_context_pool::{V8ContextPool, ContextPoolStats};
 use crate::runtime_lite::cache::MultiLevelCache;
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use rusty_v8 as v8;
 use std::cell::OnceCell;
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-// TODO: Remove unused import: use std::sync::Arc;
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 /// Lightweight Runtime - minimal V8 runtime for fast startup
 /// Only initializes essential components needed for basic JS execution

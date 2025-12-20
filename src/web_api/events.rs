@@ -1,10 +1,10 @@
 //! EventTarget and Event API implementation for Web standard
 //! Provides addEventListener, removeEventListener, dispatchEvent
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use rusty_v8 as v8;
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 /// Event type enum
 #[derive(Debug, Clone)]

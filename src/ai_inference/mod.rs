@@ -14,6 +14,14 @@ mod pytorch_engine;
 
 pub use pytorch_engine::*;
 
+pub use ai_inference_engine::AIInferenceEngine;
+pub use engine_interface::{InferenceEngine, InferenceResult, ModelHandle, ModelInfo};
+pub use model_loader::ModelLoader;
+pub use tensor_ops::Tensor;
+pub use model_cache::ModelCache;
+pub use dynamic_batch_processor::DynamicBatchProcessor;
+pub use batch_optimizer::BatchProcessor;
+
 #[cfg(test)]
 mod tests {
     use super::*;

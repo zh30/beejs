@@ -3,9 +3,9 @@
 //! 该模块将零拷贝网络功能暴露给 JavaScript
 
 use crate::network::{ConnectionPool, NetworkStats};
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use rusty_v8 as v8;
-// TODO: Remove unused import: // TODO: Remove unused import: use std::sync::Arc;
+use std::sync::Arc;
 
 /// 设置所有零拷贝网络 I/O API
 pub fn setup_network_apis(
@@ -49,7 +49,7 @@ pub fn setup_network_apis(
 #[cfg(test)]
 mod tests {
     use crate::network::{ConnectionPool, NetworkStats};
-    // TODO: Remove unused import: // TODO: Remove unused import: use std::sync::Arc;
+    use std::sync::Arc;
 
     #[test]
     fn test_setup_network_apis() {

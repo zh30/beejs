@@ -9,7 +9,7 @@
 
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use std::time::Duration;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use tokio::task;
 
 /// 内存使用基准测试套件

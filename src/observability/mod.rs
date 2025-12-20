@@ -29,11 +29,16 @@ pub mod jaeger_tracer;
 
 pub use jaeger_tracer::*;
 
-// TODO: Remove unused import: use anyhow::Result;
+pub use prometheus_exporter::PrometheusExporter;
+pub use structured_logging::StructuredLogger;
+pub use metrics::{CustomMetrics, RuntimeMetrics, PerformanceMetrics, BusinessMetrics};
+pub use alerting::AlertingSystem;
+
+use anyhow::Result;
 use serde_json::Value;
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::net::SocketAddr;
-// TODO: Remove unused import: use std::sync::Arc;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info};
 

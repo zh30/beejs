@@ -3,9 +3,9 @@
 //! Provides a command-line interface for debugging JavaScript/TypeScript code
 //! with support for breakpoints, stepping, and variable inspection.
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use std::io::{self, Write};
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex};
 
 use crate::debugger::DebuggerEngine;
 use crate::RuntimeLite;

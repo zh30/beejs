@@ -3,12 +3,14 @@
 //! This module provides a comprehensive metrics system for monitoring
 //! runtime performance, resource usage, and business metrics.
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use prometheus::core::Collector;
-use prometheus::{Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Registry, Opts};use std::collections::VecDeque;// TODO: Remove unused import: use std::sync::Arc;
-// TODO: Remove unused import: use std::time::{Duration};
+use prometheus::{Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Registry, Opts};
+use std::collections::VecDeque;
+use std::sync::Arc;
+use std::time::{Duration};
 use tokio::sync::RwLock;
-// TODO: Remove unused import: use tracing::{debug};
+use tracing::debug;
 
 /// Custom metrics system that manages all runtime metrics
 pub struct CustomMetrics {

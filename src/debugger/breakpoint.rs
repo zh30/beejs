@@ -3,7 +3,7 @@
 //! This module handles the management of breakpoints, including creation,
 //! deletion, enabling/disabling, and condition evaluation.
 
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::debugger::{DebugResult, SourceLocation};

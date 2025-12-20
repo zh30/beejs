@@ -1,9 +1,10 @@
 //! 自动扩缩容器模块
 //! 负责根据集群负载自动调整节点数量
 
+use tracing::{debug, info};
+
 use std::collections::VecDeque;
-// TODO: Remove unused import: use std::time::{Duration, Instant};
-// TODO: Remove unused import: use tracing::{info, debug};
+use std::time::{Duration, Instant};
 
 /// 集群指标
 #[derive(Debug, Clone)]

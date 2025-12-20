@@ -2,10 +2,10 @@
 //!
 //! 提供 Wasmtime 引擎管理和 JavaScript 到 WebAssembly 的编译功能
 
-// TODO: Remove unused import: use wasmtime::{Engine, Module, Config, OptLevel};
+use wasmtime::{Engine, Module, Config, OptLevel};
 use wasmtime_wasi::{WasiCtxBuilder, WasiCtx};
-// TODO: Remove unused import: use anyhow::{Result, Context, anyhow};
-// TODO: Remove unused import: use std::sync::Arc;
+use anyhow::{Result, Context, anyhow};
+use std::sync::Arc;
 
 /// Wasm 编译器结构体
 ///

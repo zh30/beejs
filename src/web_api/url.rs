@@ -1,9 +1,9 @@
 //! URL API implementation for Web standard
 //! Provides URL, URLSearchParams API
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use rusty_v8 as v8;
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 
 /// URL class implementation
 #[derive(Debug, Clone)]

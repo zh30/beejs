@@ -1,11 +1,11 @@
 use crate::module_loader::ModuleLoader;
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use rusty_v8 as v8;
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::env;
 use std::fs;
-// TODO: Remove unused import: use std::path::{Path, PathBuf};
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 // Module cache - stores loaded modules for current execution
 // Note: thread_local means each V8 isolate has its own cache

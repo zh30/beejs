@@ -3,11 +3,11 @@
 //! 提供高效的 WebAssembly 模块缓存功能，包括多级缓存（L1 内存 + L2 文件）、
 //! 智能缓存策略、缓存预热和更新机制等
 
-// TODO: Remove unused import: use anyhow::{Result, Context, anyhow};
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex, RwLock};
-// TODO: Remove unused import: use std::time::{Instant, Duration};
-// TODO: Remove unused import: use std::path::{Path, PathBuf};
+use anyhow::{Result, Context, anyhow};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Instant, Duration};
+use std::path::{Path, PathBuf};
 use blake3::Hasher;
 
 /// 缓存条目结构体

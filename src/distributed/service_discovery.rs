@@ -1,12 +1,13 @@
 //! 服务发现模块
 //! 实现基于 Gossip 协议的集群节点自动发现和注册
 
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: use std::sync::Arc;
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tracing::{debug, info, warn};
+
 use tokio::sync::RwLock;
 use tokio::time::{interval};
-// TODO: Remove unused import: use tracing::{info, warn, debug};
 use rand::prelude::IteratorRandom;
 
 use super::node_manager::{NodeMetadata, NodeStatus};

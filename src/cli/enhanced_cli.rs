@@ -1,12 +1,12 @@
 //! Enhanced CLI Module
 //! Stage 36.0 - 集成所有 CLI 增强功能
 
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::path::PathBuf;
-// TODO: Remove unused import: use std::sync::Arc;
+use std::sync::Arc;
 use std::time::Instant;
 
-// TODO: Remove unused import: use anyhow::{Context, Result};
+use anyhow::{Context, Result};
 use clap::Parser;
 use tokio::sync::mpsc;
 

@@ -11,11 +11,11 @@
 //! - 动态资源分配：根据实时负载动态调整资源分配
 //! - 性能预测：使用历史数据预测性能瓶颈
 
-// TODO: Remove unused import: use anyhow::{Context, Result};
+use anyhow::{Context, Result};
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: // TODO: Remove unused import: use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::{mpsc, RwLock};
 use tokio::time::sleep;
 

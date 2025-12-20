@@ -1,9 +1,9 @@
 //! Node.js URL模块实现
 //! WHATWG URL标准支持
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use rusty_v8 as v8;
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 
 /// 设置URL API
 pub fn setup_url_api(

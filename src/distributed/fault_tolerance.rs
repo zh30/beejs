@@ -3,12 +3,13 @@
 //!
 //! Stage 29.6: 故障检测与恢复 - 提供企业级容错能力
 
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: use std::sync::Arc;
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tracing::{debug, info, warn};
+
 use tokio::sync::RwLock;
 use tokio::time::{interval, sleep};
-// TODO: Remove unused import: use tracing::{info, warn, debug};
 
 use super::health_monitor::HealthMonitor;
 use super::task_executor::TaskExecutor;

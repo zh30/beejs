@@ -1,10 +1,10 @@
 //! Edge Deployment Optimizer
 //! Optimizes edge deployments for minimal cold start and maximum throughput
 
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::RwLock;
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 
 /// Edge Deployment Optimizer
 #[derive(Debug)]

@@ -10,7 +10,7 @@
 
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use rusty_v8 as v8;
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 
 /// JavaScript 核心基准测试套件
 pub struct JavaScriptCoreBenchmark;
@@ -223,7 +223,7 @@ impl JavaScriptCoreBenchmark {
             "concurrent_execution_performance",
             MetricType::ExecutionTime,
             || {
-                // TODO: Remove unused import: use std::sync::{Arc, Mutex};
+                use std::sync::{Arc, Mutex};
                 use std::thread;
 
                 let num_threads = 10;

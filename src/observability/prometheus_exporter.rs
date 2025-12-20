@@ -3,10 +3,10 @@
 //! This module provides HTTP server functionality to expose Prometheus metrics.
 //! The exporter runs an HTTP server that serves metrics in Prometheus format.
 
-// TODO: Remove unused import: use anyhow::{Context, Result};
+use anyhow::{Context, Result};
 use prometheus::{Registry, TextEncoder};
 use std::net::SocketAddr;
-// TODO: Remove unused import: use std::sync::Arc;
+use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tracing::{error, info};

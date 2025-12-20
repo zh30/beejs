@@ -20,6 +20,8 @@ pub mod memory_mapper;  // Stage 39.0: 内存映射管理器
 
 // 重新导出主要类型
 pub use batch_processor::BatchProcessor;
+pub use buffer_pool::NetworkBufferPool;
+pub use connection_pool::ConnectionPool;
 
 // 扩展类型
 pub use http3_server::Http3Server;

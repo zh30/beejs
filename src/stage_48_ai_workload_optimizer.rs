@@ -8,9 +8,9 @@
 //! 5. 内存预分配 - 避免运行时内存分配开销
 
 use anyhow::{Result, bail};
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// AI 工作负载类型
 #[derive(Debug, Clone, Copy, PartialEq)]

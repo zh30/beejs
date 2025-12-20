@@ -1,6 +1,6 @@
 //! 去中心化认证系统
 
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 
 /// 认证配置
 #[derive(Debug, Clone)]

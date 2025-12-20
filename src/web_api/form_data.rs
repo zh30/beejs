@@ -1,6 +1,6 @@
 //! FormData API implementation
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use rusty_v8 as v8;
 
 pub fn setup_form_data_api(

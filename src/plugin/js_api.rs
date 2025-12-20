@@ -1,6 +1,6 @@
 //! JavaScript plugin API
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 
 pub struct JsPluginApi {
     pub runtime: String,

@@ -2,8 +2,8 @@
 //! 实现硬件加速和并行推理引擎，包括 GPU 加速、流水线并行和动态批处理
 
 use std::collections::{VecDeque, HashMap};
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use crate::Runtime;
 

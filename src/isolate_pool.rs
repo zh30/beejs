@@ -1,10 +1,10 @@
 use rusty_v8 as v8;
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicUsize, Ordering};
-// TODO: Remove unused import: use std::sync::Arc;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 
 /// V8 Isolate Pool - 高性能Isolate复用池（优化版）
 /// 通过复用预创建的V8 Isolates来减少启动时间

@@ -20,9 +20,9 @@ pub mod javascript_core;
 pub mod ai_inference_core;
 pub mod memory_resource;
 
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 
 /// 性能指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

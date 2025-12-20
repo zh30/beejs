@@ -8,9 +8,9 @@
 //! - Package.json "main" field support
 //! - Relative and absolute path resolution
 
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::fs;
-// TODO: Remove unused import: use std::path::{Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use crate::script_executor::ModuleSystem;
 

@@ -101,7 +101,7 @@ impl MemoryResourceBenchmark {
             MetricType::OperationsPerSecond,
             || {
                 // 模拟内存池操作
-                // TODO: Remove unused import: // TODO: Remove unused import: use std::sync::{Arc, Mutex};
+                use std::sync::{Arc, Mutex};
                 use std::thread;
 
                 let pool_size = 100;
@@ -251,7 +251,7 @@ impl MemoryResourceBenchmark {
             MetricType::OperationsPerSecond,
             || {
                 // CPU 密集型计算
-                // TODO: Remove unused import: // TODO: Remove unused import: use std::sync::{Arc, Mutex};
+                use std::sync::{Arc, Mutex};
                 use std::thread;
 
                 let num_threads = num_cpus::get();

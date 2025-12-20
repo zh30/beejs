@@ -3,7 +3,7 @@
 //! Only initializes modules when they're actually used
 
 use once_cell::sync::Lazy;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex};
 
 /// Lazy loading statistics
 #[derive(Debug, Clone, Default)]

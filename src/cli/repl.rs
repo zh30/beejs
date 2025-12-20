@@ -3,7 +3,7 @@
 
 use std::collections::VecDeque;
 use std::io::{self, Write};
-// TODO: Remove unused import: use std::sync::Arc;
+use std::sync::Arc;
 use std::time::Instant;
 
 use crate::RuntimeLite;

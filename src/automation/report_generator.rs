@@ -12,10 +12,10 @@ use crate::benchmarks::BenchmarkResult;
 use crate::performance_regression::{RegressionTestSuite};
 use crate::automation::test_runner::TestSuiteResults;
 use serde::{Deserialize, Serialize};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-// TODO: Remove unused import: use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use thiserror::Error;
 
 /// 报告生成错误

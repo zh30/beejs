@@ -1,7 +1,7 @@
 //! Hot Module Replacement (HMR) module
 
-// TODO: Remove unused import: use anyhow::Result;
-// TODO: Remove unused import: use std::collections::HashMap;
+use anyhow::Result;
+use std::collections::HashMap;
 
 pub struct HMRManager {
     watchers: HashMap<String, Box<dyn Fn() + Send + Sync>>,

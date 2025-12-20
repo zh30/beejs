@@ -1,6 +1,6 @@
 //! 语音识别系统
 
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 
 /// 语音配置
 #[derive(Debug, Clone)]

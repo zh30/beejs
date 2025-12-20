@@ -1,9 +1,9 @@
 //! AI内存预分配系统
 //! 专为AI推理工作负载设计的高效内存管理系统
 
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// 内存块
 #[derive(Debug, Clone)]

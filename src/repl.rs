@@ -3,7 +3,7 @@
 //! This module provides an interactive shell that maintains V8 context
 //! across commands, enabling maximum performance for repeated executions.
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use rusty_v8 as v8;
 use std::io::{self, Write};
 

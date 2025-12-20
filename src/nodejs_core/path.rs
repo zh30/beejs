@@ -1,7 +1,7 @@
 //! Node.js Path模块实现
 //! 路径操作工具
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use rusty_v8 as v8;
 
 /// 设置Path API

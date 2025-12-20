@@ -17,7 +17,7 @@ pub use comparison_report::{ReportGenerator, ReportFormat, ReportConfig};
 // use crate::benchmarks;  // Unused import
 use serde::{Deserialize, Serialize};
 
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::time::Duration;
 
 /// 性能对比结果

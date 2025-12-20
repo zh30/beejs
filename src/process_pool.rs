@@ -10,11 +10,11 @@
 //! - Support for both simple and complex script execution
 
 use anyhow::{Context, Result};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixStream, UnixListener};
 use num_cpus;

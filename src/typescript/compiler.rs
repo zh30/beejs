@@ -2,7 +2,7 @@
 //! 将 TypeScript 代码转译为 JavaScript
 
 use anyhow::{Result, bail};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::path::Path;
 
 /// TypeScript 编译器配置

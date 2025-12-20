@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
-// TODO: Remove unused import: use crate::runtime_lite::RuntimeLite;
+use crate::runtime_lite::RuntimeLite;
 
     #[test]
     fn test_fast_path_constant_execution() {

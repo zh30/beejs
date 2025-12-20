@@ -1,10 +1,10 @@
 //! High-performance bundler core
 //! Designed to exceed esbuild performance (100MB/s+)
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use std::collections::{HashMap, HashSet};
-// TODO: Remove unused import: use std::path::{Path, PathBuf};
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 /// Module type
 #[derive(Debug, Clone, PartialEq)]

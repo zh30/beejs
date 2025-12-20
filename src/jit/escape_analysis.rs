@@ -3,7 +3,7 @@
 //! 实现栈上分配优化，减少堆分配的逃逸分析技术
 
 use std::collections::{HashMap, HashSet};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 
 /// 逃逸分析决策
 #[derive(Debug, Clone, PartialEq)]

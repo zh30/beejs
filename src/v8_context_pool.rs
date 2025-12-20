@@ -4,12 +4,12 @@
 //!
 //! Stage 64: Performance optimization - Reduce V8 context creation overhead
 
-// TODO: Remove unused import: use crate::runtime_lite::RuntimeLite;
-// TODO: Remove unused import: use anyhow::Result;
+use crate::runtime_lite::RuntimeLite;
+use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::VecDeque;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// Statistics for context pool performance monitoring
 #[derive(Debug, Clone)]

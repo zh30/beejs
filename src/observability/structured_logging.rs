@@ -3,13 +3,13 @@
 //! This module provides structured logging capabilities with JSON formatting,
 //! correlation IDs, and context-aware logging for better observability.
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use serde_json::{json, Value};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-// TODO: Remove unused import: use std::sync::Arc;
+use std::sync::Arc;
 use std::sync::Mutex;
 use tokio::sync::RwLock;
 use tracing::{Event, Level, Subscriber};

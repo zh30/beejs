@@ -1,6 +1,6 @@
 //! Plugin system module
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 
 pub trait Plugin {
     fn name(&self) -> &str;

@@ -1,6 +1,6 @@
 //! Development server module
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};
 

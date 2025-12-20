@@ -1,8 +1,8 @@
 use crate::code_analyzer::{CodeAnalyzer, CodeComplexity};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-// TODO: Remove unused import: use std::sync::Arc;
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 /// 热路径代码信息
 #[derive(Debug, Clone)]

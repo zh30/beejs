@@ -3,10 +3,11 @@
 //! 实现 WebAssembly SIMD (Single Instruction, Multiple Data) 优化
 //! 支持 128 位向量操作，实现 4x+ 性能提升
 
-// TODO: Remove unused import: use std::sync::Arc;
-// TODO: Remove unused import: use wasmtime::{Module, Config};
-// TODO: Remove unused import: use anyhow::{Result, Context};
-// TODO: Remove unused import: use tracing::{info, debug};
+use std::sync::Arc;
+use wasmtime::{Module, Config};
+use anyhow::{Result, Context};
+use tracing::{debug, info};
+
 use rayon::prelude::*;
 
 /// SIMD 优化结果

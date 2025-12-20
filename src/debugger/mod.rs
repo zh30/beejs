@@ -22,8 +22,9 @@ pub use breakpoint::{Breakpoint, BreakpointManager, BreakpointCondition};
 pub use stack_trace::{StackFrame, StackTrace, StackFrameInfo};
 pub use variable_scope::{VariableScope, ScopeType, VariableInspector};
 pub use session::DebugSession;
+pub use config::DebugConfig;
 
-// TODO: Remove unused import: use std::sync::Arc;
+use std::sync::Arc;
 
 /// Debug event types
 #[derive(Debug, Clone, PartialEq)]

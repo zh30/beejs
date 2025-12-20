@@ -9,7 +9,7 @@
 
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use std::time::Duration;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering}};
+use std::sync::{Arc, Mutex, atomic::{AtomicUsize, Ordering}};
 use tokio::task::{self, JoinHandle};
 
 /// 并发性能基准测试套件

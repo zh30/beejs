@@ -3,9 +3,9 @@
 //! Orchestrates the interaction between RuntimeLite and DebuggerEngine
 //! to provide a complete debugging experience.
 
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
-// TODO: Remove unused import: use anyhow::{Context, Result};
+use anyhow::{Context, Result};
 
 use crate::{RuntimeLite, debugger::{DebuggerEngine, DebugConfig}};
 use crate::debugger::engine::SimpleEventListener;

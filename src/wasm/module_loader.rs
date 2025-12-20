@@ -2,11 +2,11 @@
 //!
 //! 负责高效加载、验证和实例化 WebAssembly 模块
 
-// TODO: Remove unused import: use wasmtime::{Engine, Module, Instance, Store, Linker, Config};
+use wasmtime::{Engine, Module, Instance, Store, Linker, Config};
 use wasmtime_wasi::{WasiCtx, WasiCtxBuilder};
 use wasmtime_wasi::p1::wasi_snapshot_preview1::add_to_linker;
-// TODO: Remove unused import: use anyhow::{Result, Context, anyhow};
-// TODO: Remove unused import: use std::sync::Arc;
+use anyhow::{Result, Context, anyhow};
+use std::sync::Arc;
 use std::time::Instant;
 
 /// WebAssembly 模块结构体

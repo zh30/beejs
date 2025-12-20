@@ -1,7 +1,7 @@
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::string::String;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// 使用更快、抗碰撞的哈希算法（FNV-1a变种）
 /// 比标准DefaultHasher快约30%，碰撞率更低

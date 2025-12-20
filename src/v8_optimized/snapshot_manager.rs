@@ -4,12 +4,12 @@
 
 use crate::v8_snapshot::V8SnapshotManager;
 use anyhow::{anyhow, Result};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// V8 快照优化管理器
 /// Stage 27.1: 实现 < 1ms 快照加载

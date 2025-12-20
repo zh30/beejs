@@ -2,8 +2,8 @@
 //! 专为AI推理工作负载设计的高性能批量处理系统
 
 use std::collections::VecDeque;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tokio::sync::Semaphore;
 
 /// AI任务类型

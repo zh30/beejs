@@ -3,14 +3,14 @@
 //! This module provides an alerting system that can monitor metrics,
 //! detect anomalies, and send notifications via various channels.
 
-// TODO: Remove unused import: use anyhow::{Context, Result};use prometheus::proto::MetricFamily;
+use anyhow::{Context, Result};use prometheus::proto::MetricFamily;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-// TODO: Remove unused import: use std::sync::Arc;
-// TODO: Remove unused import: use std::time::{Duration, Instant, SystemTime};
+use std::sync::Arc;
+use std::time::{Duration, Instant, SystemTime};
 use tokio::sync::RwLock;
 use tracing::{error, info};
 

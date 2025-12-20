@@ -6,7 +6,7 @@
 
 use crate::performance_analyzer::{ExecutionMetrics, PerformanceReport};
 use serde::{Deserialize, Serialize};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 
 /// Types of performance bottlenecks
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

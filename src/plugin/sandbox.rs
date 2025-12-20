@@ -1,6 +1,6 @@
 //! Plugin sandbox module
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 
 pub struct PluginSandbox {
     enabled: bool,

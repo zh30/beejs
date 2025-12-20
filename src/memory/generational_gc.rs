@@ -1,8 +1,8 @@
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 use std::thread;
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 
 /// 分代垃圾回收器 - 基于对象生命周期的智能垃圾回收
 /// 通过分代策略和并发回收，最小化 GC 停顿时间，提升性能

@@ -1,10 +1,10 @@
 //! 性能分析器模块
 //! 用于收集和分析运行时性能指标，帮助识别瓶颈
 
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-// TODO: Remove unused import: use std::sync::Arc;
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 /// 性能分析器
 pub struct Profiler {

@@ -3,13 +3,14 @@
 //! 实现智能缓存管理，支持 LRU、LFU、TTL 策略
 //! 实现 99%+ 缓存命中率和 < 1ms 缓存访问延迟
 
-// TODO: Remove unused import: use std::sync::Arc;
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: // TODO: Remove unused import: use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::sync::Arc;
+use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use tracing::{debug, info, warn};
+
 use std::num::NonZero;
 use wasmtime::Module;
-// TODO: Remove unused import: use anyhow::{Result, Context};
-// TODO: Remove unused import: use tracing::{info, debug, warn};
+use anyhow::{Result, Context};
 use lru::LruCache;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};

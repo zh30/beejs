@@ -1,11 +1,12 @@
 //! Stage 29.2: 分布式负载均衡模块
 //! 提供一致性哈希、智能路由、流量熔断等功能
 
+use tracing::{debug, info, warn};
+
 use std::collections::{HashMap, BTreeMap};
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, RwLock, atomic::{AtomicU64, AtomicUsize, Ordering}};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
-// TODO: Remove unused import: use tracing::{debug, info, warn};
+use std::time::{Duration, Instant};
 
 // ============================================================================
 // 一致性哈希 (Consistent Hashing)

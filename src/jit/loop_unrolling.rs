@@ -3,7 +3,7 @@
 //! 实现自动循环展开，提升执行效率的优化技术
 
 use std::collections::{HashMap, VecDeque};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 
 /// 循环展开决策
 #[derive(Debug, Clone, PartialEq)]

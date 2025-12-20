@@ -1,6 +1,6 @@
 //! Tree shaking module
 
-// TODO: Remove unused import: use anyhow::Result;
+use anyhow::Result;
 
 pub fn tree_shake(code: &str, exports: &[String]) -> Result<String> {
     let mut result = String::new();

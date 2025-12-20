@@ -1,8 +1,8 @@
 use std::collections::hash_map::DefaultHasher;
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// 字节码缓存条目
 #[derive(Debug, Clone)]

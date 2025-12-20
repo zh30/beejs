@@ -3,10 +3,10 @@
 //!
 //! 该模块提供 AWS 云平台支持，包括 Lambda、ECS、EKS、EC2 等服务
 
-// TODO: Remove unused import: use std::collections::HashMap;
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::collections::HashMap;
+use std::time::{Duration, Instant};
 
-use super::cloud_manager::{CloudAdapter, DeploymentResult, FunctionConfig, Metrics};
+use super::{CloudAdapter, DeploymentResult, FunctionConfig, Metrics};
 
 /// AWS 适配器
 pub struct AwsAdapter {

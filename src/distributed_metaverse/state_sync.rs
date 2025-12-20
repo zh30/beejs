@@ -1,6 +1,6 @@
 //! 状态同步系统
 
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::time::SystemTime;
 
 /// 同步模式

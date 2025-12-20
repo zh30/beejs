@@ -3,7 +3,7 @@
 //! 实现函数内联阈值提升至50层的激进优化策略
 
 use std::collections::{HashMap, HashSet};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 
 /// 内联决策结果
 #[derive(Debug, Clone, PartialEq)]

@@ -5,7 +5,7 @@
 
 use super::CacheKey;
 use std::collections::{BTreeMap, HashMap, VecDeque};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::time::{Duration, Instant};
 
 /// L2 Cache entry with access tracking
 #[derive(Debug, Clone)]

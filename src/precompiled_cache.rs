@@ -2,13 +2,13 @@
 //! 预编译常用 Node.js 模块并缓存字节码，提升执行速度
 
 use crate::code_cache::{BytecodeCache, CacheConfig};
-// TODO: Remove unused import: use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-// TODO: Remove unused import: use std::collections::HashMap;
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-// TODO: Remove unused import: use std::sync::{Arc, Mutex};
-// TODO: Remove unused import: use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// 预编译模块缓存统计
 #[derive(Debug, Clone, Default)]

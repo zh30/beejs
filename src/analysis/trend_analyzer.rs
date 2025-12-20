@@ -6,7 +6,7 @@
 use crate::performance_analyzer::PerformanceReport;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
-// TODO: Remove unused import: // TODO: Remove unused import: use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// A historical performance data point
 #[derive(Debug, Clone, Serialize, Deserialize)]
