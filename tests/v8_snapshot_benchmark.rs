@@ -3,7 +3,7 @@
 //! These tests measure the performance improvements provided by V8 snapshots
 //! compared to standard V8 initialization.
 
-use beejs::{v8_snapshot::V8SnapshotManager, initialize_v8};
+use beejs::{v8_snapshot::SnapshotManager, initialize_v8};
 use std::time::Instant;
 
 #[cfg(test)]
