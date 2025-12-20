@@ -45,7 +45,7 @@ async function runTest(testCase) {
         fs.writeFileSync(tmpFile, testCase.code);
 
         // 运行 beejs
-        const beejs = spawn('./target/release/beejs', ['--verbose', 'run', '--transpile', tmpFile], {
+        const beejs = spawn('./beejs', ['--verbose', 'run', '--transpile', tmpFile], {
             cwd: __dirname
         });
 
