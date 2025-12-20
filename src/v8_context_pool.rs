@@ -261,9 +261,13 @@ mod tests {
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
         let mut handle_scope = v8::HandleScope::new(&mut isolate);
         let ctx_reusable = v8::Context::new(&mut handle_scope);
+
+        // 先创建 Global，再构建 ReusableContext
+        let context_global = v8::Global::new(&mut isolate, ctx_reusable);
+
         let ctx = ReusableContext {
             isolate,
-            context: v8::Global::new(&mut isolate, ctx_reusable),
+            context: context_global,
             created_at: Instant::now() - std::time::Duration::from_secs(600),
             reuse_count: 0,
             last_used: Instant::now(),
