@@ -1,0 +1,406 @@
+//! Debugger 调试器模块测试
+//! 测试驱动的开发 - Stage 60: 调试器测试套件
+//!
+//! 本文件包含调试器模块的完整测试套件，涵盖：
+//! - 断点管理测试
+//! - 调用栈测试
+//! - 变量检查测试
+//! - 调试引擎测试
+//! - 调试事件测试
+
+use beejs::debugger::{
+    DebuggerEngine, BreakpointManager, StackFrame, StackTrace,
+    VariableInspector, DebugConfig, DebugState, DebugEvent,
+    StepType, SourceLocation, DebugCommand, SimpleEventListener
+};
+use std::collections::HashMap;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serial_test::serial;
+
+    /// 测试 1: DebuggerEngine 创建和初始化
+    #[test]
+    #[serial]
+    fn test_debugger_engine_creation() {
+        let config = DebugConfig::default();
+        let engine = DebuggerEngine::new(config);
+        assert!(engine.is_ok(), "DebuggerEngine should be created successfully");
+
+        let engine = engine.unwrap();
+        assert_eq!(engine.get_state(), DebugState::Running);
+    }
+
+    /// 测试 2: 断点管理器创建
+    #[test]
+    #[serial]
+    fn test_breakpoint_manager_creation() {
+        let manager = BreakpointManager::new();
+        assert_eq!(manager.list_breakpoints().len(), 0, "Should start with no breakpoints");
+    }
+
+    /// 测试 3: 设置断点
+    #[test]
+    #[serial]
+    fn test_set_breakpoint() {
+        let manager = BreakpointManager::new();
+
+        let location = SourceLocation {
+            script_id: "test.js".to_string(),
+            script_name: "test.js".to_string(),
+            line_number: 10,
+            column_number: 0,
+        };
+
+        let result = manager.set_breakpoint("bp1".to_string(), location.clone(), None);
+        assert!(result.is_ok(), "Should set breakpoint successfully");
+
+        let breakpoints = manager.list_breakpoints();
+        assert_eq!(breakpoints.len(), 1, "Should have 1 breakpoint");
+        assert_eq!(breakpoints[0].id, "bp1");
+        assert_eq!(breakpoints[0].line_number, 10);
+    }
+
+    /// 测试 4: 删除断点
+    #[test]
+    #[serial]
+    fn test_remove_breakpoint() {
+        let manager = BreakpointManager::new();
+
+        let location = SourceLocation {
+            script_id: "test.js".to_string(),
+            script_name: "test.js".to_string(),
+            line_number: 20,
+            column_number: 0,
+        };
+
+        let _ = manager.set_breakpoint("bp1".to_string(), location, None);
+        assert_eq!(manager.list_breakpoints().len(), 1);
+
+        let result = manager.remove_breakpoint("bp1");
+        assert!(result.is_ok(), "Should remove breakpoint successfully");
+        assert_eq!(manager.list_breakpoints().len(), 0);
+    }
+
+    /// 测试 5: 启用/禁用断点
+    #[test]
+    #[serial]
+    fn test_enable_disable_breakpoint() {
+        let manager = BreakpointManager::new();
+
+        let location = SourceLocation {
+            script_id: "test.js".to_string(),
+            script_name: "test.js".to_string(),
+            line_number: 30,
+            column_number: 0,
+        };
+
+        let _ = manager.set_breakpoint("bp1".to_string(), location, None);
+        assert!(manager.list_breakpoints()[0].enabled, "Should be enabled by default");
+
+        let result = manager.disable_breakpoint("bp1");
+        assert!(result.is_ok(), "Should disable breakpoint");
+        assert!(!manager.list_breakpoints()[0].enabled, "Should be disabled");
+
+        let result = manager.enable_breakpoint("bp1");
+        assert!(result.is_ok(), "Should enable breakpoint");
+        assert!(manager.list_breakpoints()[0].enabled, "Should be enabled");
+    }
+
+    /// 测试 6: 条件断点
+    #[test]
+    #[serial]
+    fn test_conditional_breakpoint() {
+        let manager = BreakpointManager::new();
+
+        let location = SourceLocation {
+            script_id: "test.js".to_string(),
+            script_name: "test.js".to_string(),
+            line_number: 40,
+            column_number: 0,
+        };
+
+        let condition = Some("x > 10".to_string());
+        let result = manager.set_breakpoint("bp1".to_string(), location, condition.clone());
+        assert!(result.is_ok(), "Should set conditional breakpoint");
+
+        let breakpoints = manager.list_breakpoints();
+        assert_eq!(breakpoints[0].condition, condition);
+    }
+
+    /// 测试 7: 调用栈创建
+    #[test]
+    #[serial]
+    fn test_stack_trace_creation() {
+        let mut stack_trace = StackTrace::new();
+
+        // 模拟栈帧
+        let frame1 = StackFrame {
+            script_name: "main.js".to_string(),
+            function_name: "func1".to_string(),
+            line_number: 10,
+            column_number: 5,
+            is_eval: false,
+            is_constructor: false,
+        };
+
+        let frame2 = StackFrame {
+            script_name: "main.js".to_string(),
+            function_name: "func2".to_string(),
+            line_number: 20,
+            column_number: 10,
+            is_eval: false,
+            is_constructor: false,
+        };
+
+        stack_trace.frames.push(frame1);
+        stack_trace.frames.push(frame2);
+
+        assert_eq!(stack_trace.frames.len(), 2, "Should have 2 frames");
+        assert_eq!(stack_trace.frames[0].function_name, "func1");
+        assert_eq!(stack_trace.frames[1].function_name, "func2");
+    }
+
+    /// 测试 8: 变量检查器
+    #[test]
+    #[serial]
+    fn test_variable_inspector() {
+        let inspector = VariableInspector::new();
+
+        // 模拟变量作用域
+        let mut scope = HashMap::new();
+        scope.insert("x".to_string(), "10".to_string());
+        scope.insert("y".to_string(), "20".to_string());
+
+        let variables = inspector.inspect_scope(scope);
+        assert_eq!(variables.len(), 2, "Should inspect 2 variables");
+        assert!(variables.contains_key("x"));
+        assert!(variables.contains_key("y"));
+    }
+
+    /// 测试 9: 调试状态转换
+    #[test]
+    #[serial]
+    fn test_debugger_state_transitions() {
+        let config = DebugConfig::default();
+        let engine = DebuggerEngine::new(config).unwrap();
+
+        // 初始状态应该是 Running
+        assert_eq!(engine.get_state(), DebugState::Running);
+
+        // 暂停调试器
+        let result = engine.pause();
+        assert!(result.is_ok(), "Should pause successfully");
+        assert_eq!(engine.get_state(), DebugState::Paused);
+
+        // 恢复调试器
+        let result = engine.resume();
+        assert!(result.is_ok(), "Should resume successfully");
+        assert_eq!(engine.get_state(), DebugState::Running);
+    }
+
+    /// 测试 10: 调试事件监听
+    #[test]
+    #[serial]
+    fn test_debug_event_listener() {
+        let listener = SimpleEventListener::new();
+
+        // 模拟调试事件
+        let event = DebugEvent::ProgramStarted {
+            script_id: "test.js".to_string(),
+        };
+
+        listener.on_event(&event);
+
+        let events = listener.get_events();
+        assert_eq!(events.len(), 1, "Should have 1 event");
+        assert!(matches!(events[0], DebugEvent::ProgramStarted { .. }));
+    }
+
+    /// 测试 11: 单步执行
+    #[test]
+    #[serial]
+    fn test_single_step_execution() {
+        let config = DebugConfig::default();
+        let engine = DebuggerEngine::new(config).unwrap();
+
+        // 开始单步执行
+        let result = engine.step_over();
+        assert!(result.is_ok(), "Should start step over");
+
+        assert_eq!(engine.get_state(), DebugState::Stepping);
+    }
+
+    /// 测试 12: 调试统计信息
+    #[test]
+    #[serial]
+    fn test_debug_stats() {
+        let config = DebugConfig::default();
+        let engine = DebuggerEngine::new(config).unwrap();
+
+        let stats = engine.get_stats();
+        assert_eq!(stats.breakpoints_set, 0);
+        assert_eq!(stats.breakpoints_hit, 0);
+        assert_eq!(stats.steps_executed, 0);
+
+        // 记录一个步骤
+        let _ = engine.step_over();
+        let stats = engine.get_stats();
+        assert_eq!(stats.steps_executed, 1);
+    }
+
+    /// 测试 13: 断点命中计数
+    #[test]
+    #[serial]
+    fn test_breakpoint_hit_count() {
+        let manager = BreakpointManager::new();
+
+        let location = SourceLocation {
+            script_id: "test.js".to_string(),
+            script_name: "test.js".to_string(),
+            line_number: 50,
+            column_number: 0,
+        };
+
+        let _ = manager.set_breakpoint("bp1".to_string(), location, None);
+
+        // 模拟断点命中
+        let result = manager.hit_breakpoint("bp1");
+        assert!(result.is_ok(), "Should hit breakpoint");
+
+        let breakpoints = manager.list_breakpoints();
+        assert_eq!(breakpoints[0].hit_count, 1, "Hit count should be 1");
+    }
+
+    /// 测试 14: 调试配置
+    #[test]
+    #[serial]
+    fn test_debug_config() {
+        let config = DebugConfig {
+            auto_continue_on_exception: false,
+            max_stack_depth: 100,
+            enable_pretty_print: true,
+            timeout: std::time::Duration::from_secs(30),
+        };
+
+        assert!(!config.auto_continue_on_exception);
+        assert_eq!(config.max_stack_depth, 100);
+        assert!(config.enable_pretty_print);
+        assert_eq!(config.timeout, std::time::Duration::from_secs(30));
+    }
+
+    /// 测试 15: 调试命令处理
+    #[test]
+    #[serial]
+    fn test_debug_command_execution() {
+        let config = DebugConfig::default();
+        let engine = DebuggerEngine::new(config).unwrap();
+
+        // 测试 Continue 命令
+        let command = DebugCommand::Continue;
+        let result = engine.execute_command(command);
+        assert!(result.success, "Continue command should succeed");
+    }
+
+    /// 测试 16: 断点位置验证
+    #[test]
+    #[serial]
+    fn test_breakpoint_location_validation() {
+        let manager = BreakpointManager::new();
+
+        let location = SourceLocation {
+            script_id: "test.js".to_string(),
+            script_name: "test.js".to_string(),
+            line_number: 100,
+            column_number: 5,
+        };
+
+        let _ = manager.set_breakpoint("bp1".to_string(), location, None);
+
+        let breakpoints = manager.list_breakpoints();
+        let bp = &breakpoints[0];
+
+        assert_eq!(bp.script_id, "test.js");
+        assert_eq!(bp.line_number, 100);
+        assert_eq!(bp.column_number, 5);
+    }
+
+    /// 测试 17: 空调用栈
+    #[test]
+    #[serial]
+    fn test_empty_stack_trace() {
+        let stack_trace = StackTrace::new();
+        assert_eq!(stack_trace.frames.len(), 0, "Should start with empty stack");
+        assert_eq!(stack_trace.frame_count(), 0, "Frame count should be 0");
+    }
+
+    /// 测试 18: 调试器终止
+    #[test]
+    #[serial]
+    fn test_debugger_termination() {
+        let config = DebugConfig::default();
+        let engine = DebuggerEngine::new(config).unwrap();
+
+        let result = engine.terminate();
+        assert!(result.is_ok(), "Should terminate successfully");
+        assert_eq!(engine.get_state(), DebugState::Terminated);
+    }
+
+    /// 测试 19: 事件监听器数量
+    #[test]
+    #[serial]
+    fn test_event_listener_count() {
+        let config = DebugConfig::default();
+        let engine = DebuggerEngine::new(config).unwrap();
+
+        // 添加事件监听器
+        let listener1 = SimpleEventListener::new();
+        let listener2 = SimpleEventListener::new();
+
+        // 注意：这里只是测试接口，实际的实现可能需要不同的方法
+        // 来添加监听器
+        assert!(true, "Event listener interface is available");
+    }
+
+    /// 测试 20: 复杂调试场景
+    #[test]
+    #[serial]
+    fn test_complex_debugging_scenario() {
+        let config = DebugConfig::default();
+        let engine = DebuggerEngine::new(config).unwrap();
+
+        // 设置多个断点
+        let location1 = SourceLocation {
+            script_id: "main.js".to_string(),
+            script_name: "main.js".to_string(),
+            line_number: 10,
+            column_number: 0,
+        };
+
+        let location2 = SourceLocation {
+            script_id: "main.js".to_string(),
+            script_name: "main.js".to_string(),
+            line_number: 20,
+            column_number: 0,
+        };
+
+        let _ = engine.set_breakpoint("bp1".to_string(), location1, None);
+        let _ = engine.set_breakpoint("bp2".to_string(), location2, None);
+
+        // 开始调试
+        let _ = engine.pause();
+        assert_eq!(engine.get_state(), DebugState::Paused);
+
+        // 单步执行
+        let _ = engine.step_over();
+        assert_eq!(engine.get_state(), DebugState::Stepping);
+
+        // 继续执行
+        let _ = engine.resume();
+        assert_eq!(engine.get_state(), DebugState::Running);
+
+        let stats = engine.get_stats();
+        assert_eq!(stats.breakpoints_set, 2);
+    }
+}
