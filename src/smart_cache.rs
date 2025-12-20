@@ -8,7 +8,7 @@
 //! - 基于访问频率的优化
 //! - 预热机制
 
-use serde::{Deserialize, Serialize};
+// use serde::{Deserialize, Serialize};  // Unused import
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
