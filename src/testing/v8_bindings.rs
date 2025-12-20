@@ -188,7 +188,7 @@ fn to_be_falsy_matcher(
 /// toContain matcher
 fn to_contain_matcher(
     scope: &mut v8::HandleScope,
-    args: v8::FunctionCallbackArguments,
+    _args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
     retval.set(v8::Boolean::new(scope, true).into());
