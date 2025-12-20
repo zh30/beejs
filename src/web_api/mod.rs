@@ -8,7 +8,8 @@ pub mod url;
 pub mod events;
 pub mod form_data;
 pub mod abort;
-pub mod timers;  // Stage 74: Timer APIs
+pub mod timers;   // Stage 74: Timer APIs
+pub mod encoding; // Stage 74: TextEncoder/TextDecoder
 
 use anyhow::Result;
 use rusty_v8 as v8;
@@ -16,6 +17,7 @@ use rusty_v8 as v8;
 // 从各模块导入设置函数
 use abort::setup_abort_api;
 use crypto::setup_crypto_api;
+use encoding::setup_encoding_api;
 use events::setup_events_api;
 use fetch::setup_fetch_api;
 use form_data::setup_form_data_api;
@@ -34,7 +36,8 @@ pub fn init_web_api(
     setup_crypto_api(scope, context)?;
     setup_events_api(scope, context)?;
     setup_abort_api(scope, context)?;
-    setup_timer_api(scope, context)?;  // Stage 74: Timer APIs
+    setup_timer_api(scope, context)?;
+    setup_encoding_api(scope, context)?;  // Stage 74: Encoding APIs
 
     // 2. URL API（依赖 events）
     setup_url_api(scope, context)?;
