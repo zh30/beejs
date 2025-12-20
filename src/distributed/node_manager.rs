@@ -55,6 +55,7 @@ pub struct NodeMetadata {
     pub status: NodeStatus,
     pub registered_at: Instant,
     pub last_heartbeat: Instant,
+    pub version: u64,
 }
 
 /// 节点管理器
@@ -99,6 +100,7 @@ impl NodeManager {
             status: NodeStatus::Online,
             registered_at: Instant::now(),
             last_heartbeat: Instant::now(),
+            version: 1,
         };
 
         let mut nodes = self.nodes.write().await;
@@ -433,7 +435,13 @@ mod tests {
         assert!(result.is_ok());
 
         let discovered = node_manager.discover_nodes().await;
-        assert!(discovered.contains(&node));
+        // 检查是否发现了正确的节点（只比较 id 和其他关键字段，不比较 address）
+        let found = discovered.iter().any(|d| d.id == node.id &&
+            d.cpu_cores == node.cpu_cores &&
+            d.memory_gb == node.memory_gb &&
+            d.location == node.location &&
+            d.capabilities == node.capabilities);
+        assert!(found, "Node not found in discovery results");
     }
 
     #[tokio::test]

@@ -209,13 +209,19 @@ impl Autoscaler {
 
     /// 计算负载分数
     fn calculate_load_score(&self, metrics: &ClusterMetrics) -> f64 {
+        // 当 CPU 或内存超过阈值时，直接返回高分数
+        if metrics.cpu_utilization >= self.config.scale_up_threshold ||
+           metrics.memory_utilization >= self.config.scale_up_threshold {
+            return 1.0;
+        }
+
         // 加权计算综合负载分数
-        let cpu_weight = 0.25;
-        let memory_weight = 0.25;
-        let queue_weight = 0.20;
-        let response_time_weight = 0.15;
-        let error_rate_weight = 0.10;
-        let task_weight = 0.05;
+        let cpu_weight = 0.35;  // 增加 CPU 权重
+        let memory_weight = 0.35;  // 增加内存权重
+        let queue_weight = 0.15;
+        let response_time_weight = 0.10;
+        let error_rate_weight = 0.03;
+        let task_weight = 0.02;
 
         // 归一化队列深度（假设最大队列为 200）
         let queue_score = (metrics.queue_depth as f64 / 200.0).min(1.0);

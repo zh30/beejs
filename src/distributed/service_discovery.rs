@@ -9,6 +9,8 @@ use tokio::time::{interval};
 use tracing::{info, warn, debug};
 use rand::prelude::IteratorRandom;
 
+use super::node_manager::{NodeMetadata, NodeStatus};
+
 /// 服务发现配置
 #[derive(Debug, Clone)]
 pub struct DiscoveryConfig {
@@ -26,14 +28,6 @@ pub struct NodeInfo {
     pub memory_gb: usize,
     pub location: String,
     pub capabilities: Vec<String>,
-}
-
-/// 节点元数据
-#[derive(Debug, Clone)]
-pub struct NodeMetadata {
-    pub registered_at: Instant,
-    pub last_heartbeat: Instant,
-    pub version: u64,
 }
 
 /// Gossip 消息
@@ -86,6 +80,11 @@ impl ServiceDiscovery {
     pub async fn register_self(&self, node_info: NodeInfo) {
         let mut nodes = self.nodes.write().await;
         let metadata = NodeMetadata {
+            cpu_cores: node_info.cpu_cores,
+            memory_gb: node_info.memory_gb,
+            location: node_info.location.clone(),
+            capabilities: node_info.capabilities.clone(),
+            status: NodeStatus::Online,
             registered_at: Instant::now(),
             last_heartbeat: Instant::now(),
             version: 1,
@@ -107,11 +106,25 @@ impl ServiceDiscovery {
             metadata.version += 1;
 
             info!("Updated node: {}", node_info.id);
-            self.broadcast_gossip(&node_info).await;
-            Ok(())
         } else {
-            Err(format!("Node not found: {}", node_info.id))
+            // 新节点注册
+            let metadata = NodeMetadata {
+                cpu_cores: node_info.cpu_cores,
+                memory_gb: node_info.memory_gb,
+                location: node_info.location.clone(),
+                capabilities: node_info.capabilities.clone(),
+                status: NodeStatus::Online,
+                registered_at: Instant::now(),
+                last_heartbeat: Instant::now(),
+                version: 1,
+            };
+
+            nodes.insert(node_info.id.clone(), metadata);
+            info!("Registered new node: {}", node_info.id);
         }
+
+        self.broadcast_gossip(&node_info).await;
+        Ok(())
     }
 
     /// 获取已知节点列表
@@ -199,6 +212,11 @@ impl ServiceDiscovery {
         let node_id = message.node_id.clone();
         let mut nodes = self.nodes.write().await;
         let metadata = NodeMetadata {
+            cpu_cores: message.node_info.cpu_cores,
+            memory_gb: message.node_info.memory_gb,
+            location: message.node_info.location.clone(),
+            capabilities: message.node_info.capabilities.clone(),
+            status: NodeStatus::Online,
             registered_at: message.timestamp,
             last_heartbeat: Instant::now(),
             version: 1,
