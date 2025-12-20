@@ -17,7 +17,7 @@ pub struct TypeScriptCompilerConfig {
     pub source_map: bool,
     pub remove_comments: bool,
     pub es_module_interop: bool,
-    pub allowSyntheticDefaultImports: bool,
+    pub allow_synthetic_default_imports: bool,
 }
 
 impl Default for TypeScriptCompilerConfig {
@@ -32,7 +32,7 @@ impl Default for TypeScriptCompilerConfig {
             source_map: true,
             remove_comments: false,
             es_module_interop: true,
-            allowSyntheticDefaultImports: true,
+            allow_synthetic_default_imports: true,
         }
     }
 }

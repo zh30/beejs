@@ -354,8 +354,7 @@ impl MLLoadBalancer {
 
         // 在释放借用之后训练模型
         if let Some(index) = best_endpoint_index {
-            let endpoint = &self.endpoints[index];
-            drop(endpoint);
+            let _ = &self.endpoints[index];
         }
         self.train_model();
 
