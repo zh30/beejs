@@ -47,6 +47,14 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
    - ✅ 导出 quantum_computing 模块的公开类型
    - ✅ 公开 runtime_lite::cache 模块
 
+7. **WebSocket 客户端完善 (2025-12-21 新增)**
+   - ✅ 修复方法和属性在 V8 中的正确暴露
+   - ✅ 添加 send, close, addEventListener, removeEventListener 方法
+   - ✅ 修复事件处理器属性为 null (符合 Web 标准)
+   - ✅ 添加 ReadyState 常量 (CONNECTING, OPEN, CLOSING, CLOSED)
+   - ✅ 完善错误处理 (无效 URL 检查)
+   - ✅ 编写全面测试 (10个测试用例)
+
 #### 当前 Web API 支持状态
 | API | 状态 | 说明 |
 |-----|------|------|
@@ -66,7 +74,7 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 | btoa | ✅ 可用 | Base64 编码 |
 | atob | ✅ 可用 | Base64 解码 |
 | performance | ✅ 可用 | 高精度计时 API |
-| WebSocket | ⚠️ 部分 | 基础构造函数 |
+| WebSocket | ✅ 可用 | 基础完整（构造函数、属性、方法） |
 | EventTarget | ⚠️ 部分 | 事件监听 |
 | crypto | ⚠️ 部分 | getRandomValues 骨架 |
 
@@ -92,12 +100,22 @@ performance.now() → 1.391958 ms ✅
 
 // Base64 编解码测试
 btoa("Hello, World!") → "SGVsbG8sIFdvcmxkIQ==" ✅
+
+// WebSocket 基础功能测试 (2025-12-21)
+WebSocket 构造函数存在 ✅
+ws.url, ws.readyState 等属性正确 ✅
+ws.send, ws.close, ws.addEventListener 等方法存在 ✅
+事件处理器属性为 null (符合标准) ✅
+ReadyState 常量可用 (CONNECTING=0, OPEN=1, CLOSING=2, CLOSED=3) ✅
+错误处理正常 (无效 URL 抛出错误) ✅
 ```
 
 #### 下一步计划
 - [x] 实现真正的 HTTP fetch（使用 reqwest） ✅ (2025-12-21)
 - [x] 实现 Performance API ✅ (2025-12-21)
-- [ ] 完善 WebSocket 客户端
+- [x] 完善 WebSocket 客户端基础实现 ✅ (2025-12-21)
+- [ ] 添加真实 WebSocket 网络连接支持 (tokio-tungstenite)
+- [ ] 实现 WebSocket 事件系统完整集成
 - [ ] 添加 Blob/File API
 
 ---
