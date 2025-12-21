@@ -136,16 +136,39 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_data_encryption() {
-        // TODO: 测试数据加密
-        // 验证 AES-256 加密和解密
-        panic!("数据加密引擎尚未实现");
+        use beejs::security::encryption::{EncryptionEngine, CryptoKey};
+
+        let encryption_engine = EncryptionEngine::new();
+
+        // 测试数据加密
+        let plaintext = b"Hello, Beejs Security!";
+        let encrypted = encryption_engine.encrypt(plaintext).await.unwrap();
+        assert!(!encrypted.is_empty());
+
+        // 测试数据解密
+        let decrypted = encryption_engine.decrypt(&encrypted).await.unwrap();
+        assert_eq!(decrypted, plaintext);
     }
 
     #[tokio::test]
     async fn test_key_rotation() {
-        // TODO: 测试密钥轮换
-        // 验证密钥轮换机制
-        panic!("密钥轮换系统尚未实现");
+        use beejs::security::encryption::{EncryptionEngine, KeyManager};
+
+        let key_manager = KeyManager::new();
+
+        // 获取初始密钥
+        let initial_key = key_manager.get_active_key().await.unwrap();
+        let initial_key_id = initial_key.id.clone();
+
+        // 测试密钥轮换
+        let result = key_manager.rotate_keys().await;
+        assert!(result.is_ok());
+
+        // 验证新密钥生成且与旧密钥不同
+        let new_key = key_manager.get_active_key().await.unwrap();
+        assert_ne!(new_key.id, initial_key_id);
+        assert!(!new_key.key_data.is_empty());
+        assert_ne!(new_key.key_data, initial_key.key_data);
     }
 
     #[tokio::test]

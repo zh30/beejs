@@ -129,6 +129,7 @@ jsonwebtoken = "9.0"
 oauth2 = "1.0"
 openssl = "0.10"
 sled = "0.34"
+getrandom = { version = "0.2", features = ["js"] }
 
 # Testing
 [dev-dependencies]
