@@ -1,0 +1,11 @@
+[package]
+name = "test_stage89_phase3"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+
+[[bin]]
+name = "test_stage89_phase3"
+path = "test_stage89_phase3.rs"
