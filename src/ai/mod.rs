@@ -3,10 +3,16 @@
 
 pub mod matrix_accelerator;
 pub mod tensor_optimizer;
+pub mod code_generator;
 
 // Re-export 公共 API
 pub use matrix_accelerator::{Matrix, MatrixAccelerator, MatrixPair, OptimizedMatrix, MatrixAcceleratorStats};
 pub use tensor_optimizer::{Tensor, TensorShape, TensorData, TensorOptimizer, Gradients, TensorShard};
+pub use code_generator::{
+    AICodeGenerator, CodeContext, CodeCompletion, CompletionItem, GeneratedCode,
+    Language, TestType, TestFramework, ProjectInfo, CodeSuggestion, TestFile,
+    RefactorSuggestion, MockAiModel, AiModel, CompletionKind
+};
 
 // Re-export HardwareFeatures from wasm::simd_engine for AI operations
 pub use crate::wasm::simd_engine::HardwareFeatures as AiHardwareFeatures;
