@@ -135,7 +135,7 @@ async fn test_memory_sharing_manager() {
         id: "test_region".to_string(),
         size: region_data.len(),
         access_count: AtomicUsize::new(0),
-        last_accessed: Instant::now(),
+        last_accessed: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
         is_read_only: true,
         data: region_data.clone(),
     };

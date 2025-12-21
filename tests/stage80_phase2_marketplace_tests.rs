@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 80 Phase 2: 模块市场测试套件
 //! 测试模块注册、搜索、AI 推荐和版本管理功能
 
@@ -338,7 +339,7 @@ mod tests {
     async fn test_search_performance() {
         let registry = Arc::new(ModuleRegistry::new());
 
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         for i in 0..100 {
             let query = SearchQuery {
                 query: format!("dep-{}", i % 5),
@@ -346,7 +347,7 @@ mod tests {
             };
             let _ = registry.search_modules(&query).await.unwrap();
         }
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         // 100 次搜索应该在合理时间内完成（这里是测试环境，确保不会太慢）
         println!("Search performance: 100 searches took {:?}", elapsed);

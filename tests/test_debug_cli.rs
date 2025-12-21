@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Test Stage 59: CLI Debugger Integration
 //!
 //! This test suite verifies the CLI debug command functionality

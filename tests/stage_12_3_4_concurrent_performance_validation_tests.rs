@@ -32,7 +32,7 @@ mod tests {
         }
 
         let concurrent_scripts = 15000;
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // Create pool with default config
         let mut config = ConcurrentConfig::default();
@@ -65,7 +65,7 @@ mod tests {
             }
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         // Performance assertions
         assert_eq!(completed, concurrent_scripts, "All 15,000 scripts should complete");
@@ -93,7 +93,7 @@ mod tests {
         config.enable_prewarm = false;
         let pool = Arc::new(ConcurrentRuntimePool::new(config));
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // Submit mixed task types: simple, medium, complex
         let mut handles = Vec::new();
@@ -170,7 +170,7 @@ mod tests {
             }
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let expected_tasks = tasks_per_type * 3;
         assert_eq!(completed, expected_tasks, "All mixed tasks should complete");
 
@@ -196,7 +196,7 @@ mod tests {
         config.enable_prewarm = false;
         let pool = Arc::new(ConcurrentRuntimePool::new(config));
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // Submit unbalanced workload to trigger work stealing
         for worker_id in 0..pool_size {
@@ -223,7 +223,7 @@ mod tests {
         // Wait for completion
         tokio::time::sleep(Duration::from_secs(5)).await;
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         println!("Work stealing: {:.2}s elapsed for unbalanced workload", elapsed.as_secs_f64());
     }
@@ -273,7 +273,7 @@ mod tests {
             }
         }
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // Wait for completion
         let mut completed = 0;
@@ -283,7 +283,7 @@ mod tests {
             }
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let expected_operations = shared_regions * operations_per_region;
 
         assert_eq!(completed, expected_operations, "All shared memory operations should complete");
@@ -348,7 +348,7 @@ mod tests {
         config.enable_prewarm = false;
         let pool = Arc::new(ConcurrentRuntimePool::new(config));
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // Submit tasks with varying priorities
         for i in 0..total_tasks {
@@ -365,7 +365,7 @@ mod tests {
         // Wait for completion
         tokio::time::sleep(Duration::from_secs(10)).await;
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         println!("Load balancing: {:.2} tasks/sec, {:.2}s total time",
                  total_tasks as f64 / elapsed.as_secs_f64(), elapsed.as_secs_f64());
@@ -390,7 +390,7 @@ mod tests {
             let mut config = ConcurrentConfig::default();
             config.enable_prewarm = false;
             let pool = Arc::new(ConcurrentRuntimePool::new(config));
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             // Submit tasks
             let mut handles = Vec::new();
@@ -415,7 +415,7 @@ mod tests {
                 let _ = handle.await.unwrap_or(false);
             }
 
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
             iteration_times.push(elapsed);
 
             println!("Iteration {}: {:.2}ms for {} tasks",
@@ -452,7 +452,7 @@ mod tests {
 
         // Benchmark 1: High concurrency mixed workload
         println!("Benchmark 1: 10,000 mixed workload scripts");
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false;
         let pool = Arc::new(ConcurrentRuntimePool::new(config));
@@ -496,7 +496,7 @@ mod tests {
             }
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let throughput = completed as f64 / elapsed.as_secs_f64();
 
         println!("Completed: {} scripts", completed);
@@ -506,7 +506,7 @@ mod tests {
 
         // Benchmark 2: Memory-intensive workload
         println!("\nBenchmark 2: 5,000 memory-intensive scripts");
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut config2 = ConcurrentConfig::default();
         config2.enable_prewarm = false;
         let pool2 = Arc::new(ConcurrentRuntimePool::new(config2));
@@ -539,7 +539,7 @@ mod tests {
             }
         }
 
-        let elapsed2 = start.elapsed();
+        let elapsed2 = start.elapsed().unwrap();
         let throughput2 = completed2 as f64 / elapsed2.as_secs_f64();
 
         println!("Completed: {} scripts", completed2);
@@ -548,7 +548,7 @@ mod tests {
 
         // Benchmark 3: CPU-intensive workload
         println!("\nBenchmark 3: 2,000 CPU-intensive scripts");
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut config3 = ConcurrentConfig::default();
         config3.enable_prewarm = false;
         let pool3 = Arc::new(ConcurrentRuntimePool::new(config3));
@@ -582,7 +582,7 @@ mod tests {
             }
         }
 
-        let elapsed3 = start.elapsed();
+        let elapsed3 = start.elapsed().unwrap();
         let throughput3 = completed3 as f64 / elapsed3.as_secs_f64();
 
         println!("Completed: {} scripts", completed3);

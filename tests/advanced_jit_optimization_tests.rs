@@ -298,9 +298,9 @@ impl AdvancedJITOptimizer {
         // 基线测试
         let mut baseline_times = Vec::new();
         for _ in 0..self.iterations {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let _ = self.runtime.execute_code(baseline_code);
-            baseline_times.push(start.elapsed());
+            baseline_times.push(start.elapsed().unwrap());
         }
         let baseline_duration: Duration = baseline_times.iter().sum();
         let baseline_avg = baseline_duration / self.iterations as u32;
@@ -308,9 +308,9 @@ impl AdvancedJITOptimizer {
         // 优化测试
         let mut optimized_times = Vec::new();
         for _ in 0..self.iterations {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let _ = self.runtime.execute_code(optimized_code);
-            optimized_times.push(start.elapsed());
+            optimized_times.push(start.elapsed().unwrap());
         }
         let optimized_duration: Duration = optimized_times.iter().sum();
         let optimized_avg = optimized_duration / self.iterations as u32;

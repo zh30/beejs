@@ -50,7 +50,7 @@ fn test_task_executor_execute_single_task() {
         task_type: TaskType::JavaScriptExecution,
         payload: b"console.log('hello')".to_vec(),
         priority: 5,
-        created_at: Instant::now(),
+        created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
         timeout: Duration::from_secs(30),
         metadata: HashMap::new(),
     };
@@ -72,7 +72,7 @@ fn test_task_executor_batch_execution() {
         task_type: TaskType::DataProcessing,
         payload: vec![i as u8; 100],
         priority: 5,
-        created_at: Instant::now(),
+        created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
         timeout: Duration::from_secs(30),
         metadata: HashMap::new(),
     }).collect();
@@ -95,7 +95,7 @@ fn test_task_executor_priority_ordering() {
             task_type: TaskType::DataProcessing,
             payload: vec![],
             priority: 1, // 低优先级
-            created_at: Instant::now(),
+            created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             timeout: Duration::from_secs(30),
             metadata: HashMap::new(),
         },
@@ -104,7 +104,7 @@ fn test_task_executor_priority_ordering() {
             task_type: TaskType::AIInference,
             payload: vec![],
             priority: 10, // 高优先级
-            created_at: Instant::now(),
+            created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             timeout: Duration::from_secs(30),
             metadata: HashMap::new(),
         },
@@ -143,7 +143,7 @@ fn test_executor_worker_execute_task() {
         task_type: TaskType::JavaScriptExecution,
         payload: b"1 + 1".to_vec(),
         priority: 5,
-        created_at: Instant::now(),
+        created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
         timeout: Duration::from_secs(30),
         metadata: HashMap::new(),
     };
@@ -182,7 +182,7 @@ fn test_executor_worker_stats() {
             task_type: TaskType::DataProcessing,
             payload: vec![],
             priority: 5,
-            created_at: Instant::now(),
+            created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             timeout: Duration::from_secs(30),
             metadata: HashMap::new(),
         };
@@ -561,7 +561,7 @@ fn test_executor_end_to_end_workflow() {
         task_type: TaskType::JavaScriptExecution,
         payload: b"console.log('hello')".to_vec(),
         priority: 5,
-        created_at: Instant::now(),
+        created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
         timeout: Duration::from_secs(30),
         metadata: HashMap::new(),
     };
@@ -592,7 +592,7 @@ fn test_executor_with_checkpointing() {
         task_type: TaskType::DataProcessing,
         payload: vec![0; 1000],
         priority: 5,
-        created_at: Instant::now(),
+        created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
         timeout: Duration::from_secs(30),
         metadata: HashMap::new(),
     };
@@ -625,7 +625,7 @@ fn test_executor_failure_with_retry() {
         task_type: TaskType::JavaScriptExecution,
         payload: b"throw new Error('test')".to_vec(),
         priority: 5,
-        created_at: Instant::now(),
+        created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
         timeout: Duration::from_secs(30),
         metadata: {
             let mut m = HashMap::new();
@@ -660,14 +660,14 @@ fn test_concurrent_task_execution_50_tasks() {
         task_type: TaskType::DataProcessing,
         payload: vec![i as u8; 10],
         priority: (i % 10) as u8,
-        created_at: Instant::now(),
+        created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
         timeout: Duration::from_secs(30),
         metadata: HashMap::new(),
     }).collect();
 
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let results = executor.execute_batch(tasks).unwrap();
-    let elapsed = start.elapsed();
+    let elapsed = start.elapsed().unwrap();
 
     assert_eq!(results.len(), 50);
     let successful = results.iter().filter(|r| r.status == TaskStatus::Completed).count();

@@ -1,15 +1,13 @@
 //! Stage 81 AI 增强平台集成测试
 //! 测试 AI 代码生成、智能调试、自动性能优化和预测性扩展功能
 
-use std::path::Path;
-use std::sync::Arc;
-use tokio::runtime::Runtime;
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use beejs::ai::code_generator::{
-        AICodeGenerator, CodeContext, Language, ProjectInfo, TestFramework, TestType,
+        AICodeGenerator, CodeContext, Language, ProjectInfo,
     };
 
     #[tokio::test]
@@ -163,14 +161,14 @@ mod tests {
             classes: vec![],
         };
 
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
 
         let result = generator
             .generate_from_prompt("测试性能", Language::JavaScript, &context)
             .await
             .expect("代码生成失败");
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         // 验证性能：代码生成时间 < 200ms
         assert!(

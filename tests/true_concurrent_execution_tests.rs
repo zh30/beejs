@@ -203,7 +203,7 @@ mod tests {
             return;
         }
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 生成 1000 个简单脚本
         let scripts: Vec<String> = (0..1000)
@@ -223,7 +223,7 @@ mod tests {
         // 使用 BatchExecutor 执行
         let results = executor.execute_batch(scripts_with_priority, Duration::from_secs(10)).await.unwrap();
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         // 验证
         assert_eq!(results.len(), 1000, "应该返回1000个结果");
@@ -243,7 +243,7 @@ mod tests {
         // - 内存使用 < 200MB
         // - 吞吐量 > 2000 scripts/sec
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 生成 5000 个脚本
         let _scripts: Vec<String> = (0..5000)
@@ -253,7 +253,7 @@ mod tests {
         // TODO: 使用 BatchExecutor 执行
         let results_count = 5000; // 占位
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let throughput = results_count as f64 / elapsed.as_secs_f64();
 
         println!("5000 脚本并发执行:");
@@ -280,7 +280,7 @@ mod tests {
         // - 吞吐量 > 5000 scripts/sec
         // - 峰值并发数正确追踪
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 生成 10000 个复杂脚本
         let _scripts: Vec<String> = (0..10000)
@@ -295,7 +295,7 @@ mod tests {
         // TODO: 使用 BatchExecutor 执行
         let results_count = 10000; // 占位
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let throughput = results_count as f64 / elapsed.as_secs_f64();
 
         println!("10000 脚本并发执行:");
@@ -603,13 +603,13 @@ mod tests {
         let config = ConcurrentConfig::default();
         let executor = BatchExecutor::new(config);
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 执行
         let results = executor.execute_batch(scripts_with_priority, Duration::from_secs(30)).await.unwrap();
         let results_count = results.len();
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let throughput = results_count as f64 / elapsed.as_secs_f64();
 
         println!("\n=== 性能基准测试 ===");
@@ -657,12 +657,12 @@ mod tests {
                 .map(|code| (code, 1))
                 .collect();
 
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             // 执行
             let results_batch = executor.execute_batch(scripts_with_priority, Duration::from_secs(30)).await.unwrap();
 
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
             let throughput = script_count as f64 / elapsed.as_secs_f64();
 
             results.push((script_count, throughput));

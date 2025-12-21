@@ -208,14 +208,14 @@ mod tests {
 
         // 测量标准执行时间
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-        let standard_start = Instant::now();
+        let standard_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for _ in 0..iterations {
             let _result = runtime.execute_standard("1 + 1").expect("执行失败");
             black_box(_result);
         }
 
-        let standard_time = standard_start.elapsed();
+        let standard_time = standard_start.elapsed().unwrap();
         let standard_avg = standard_time.as_secs_f64() / iterations as f64 * 1_000_000.0;
 
         println!("✅ 快路径性能基准测试:");

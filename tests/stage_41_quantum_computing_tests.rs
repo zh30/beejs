@@ -448,7 +448,7 @@ fn test_quantum_phase_estimation() {
 fn test_quantum_simulation_performance() {
     use std::time::Instant;
 
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
     // 创建 15 量子比特模拟器
     let mut simulator = QuantumSimulator::new(15);
@@ -463,7 +463,7 @@ fn test_quantum_simulation_performance() {
         simulator.apply_cnot(i, i + 1);
     }
 
-    let elapsed = start.elapsed();
+    let elapsed = start.elapsed().unwrap();
 
     // 15 量子比特电路应该在 1 秒内完成
     assert!(elapsed.as_secs() < 1);
@@ -474,7 +474,7 @@ fn test_circuit_execution_throughput() {
     use std::time::Instant;
 
     let iterations = 100;
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
     for _ in 0..iterations {
         let mut circuit = QuantumCircuit::new(5);
@@ -486,7 +486,7 @@ fn test_circuit_execution_throughput() {
         circuit.execute();
     }
 
-    let elapsed = start.elapsed();
+    let elapsed = start.elapsed().unwrap();
     let throughput = iterations as f64 / elapsed.as_secs_f64();
 
     // 至少 100 次/秒的执行吞吐量

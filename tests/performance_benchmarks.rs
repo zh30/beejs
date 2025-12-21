@@ -52,9 +52,9 @@ let end = Date.now();
 (end - start) / iterations;
 "#;
 
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _result = self.execute_js_code(test_code).await?;
-        let duration = start_time.elapsed();
+        let duration = start_time.elapsed().unwrap();
 
         Ok(BenchmarkResult {
             runtime_name: self.runtime_name.clone(),
@@ -87,9 +87,9 @@ let end = Date.now();
 (end - start) / iterations;
 "#;
 
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _result = self.execute_js_code(test_code).await?;
-        let duration = start_time.elapsed();
+        let duration = start_time.elapsed().unwrap();
 
         Ok(BenchmarkResult {
             runtime_name: self.runtime_name.clone(),
@@ -122,9 +122,9 @@ let end = Date.now();
 (end - start) / iterations;
 "#;
 
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _result = self.execute_js_code(test_code).await?;
-        let duration = start_time.elapsed();
+        let duration = start_time.elapsed().unwrap();
 
         Ok(BenchmarkResult {
             runtime_name: self.runtime_name.clone(),
@@ -153,9 +153,9 @@ let end = Date.now();
 (end - start) / iterations;
 "#;
 
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _result = self.execute_js_code(test_code).await?;
-        let duration = start_time.elapsed();
+        let duration = start_time.elapsed().unwrap();
 
         Ok(BenchmarkResult {
             runtime_name: self.runtime_name.clone(),
@@ -206,9 +206,9 @@ let end = Date.now();
 (end - start) / iterations;
 "#;
 
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _result = self.execute_js_code(test_code).await?;
-        let duration = start_time.elapsed();
+        let duration = start_time.elapsed().unwrap();
 
         Ok(BenchmarkResult {
             runtime_name: self.runtime_name.clone(),

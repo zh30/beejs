@@ -77,9 +77,9 @@ mod tests {
             // 测量
             let mut durations = Vec::with_capacity(iterations);
             for _ in 0..iterations {
-                let start = Instant::now();
+                let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
                 let _ = runtime.execute_code(code);
-                durations.push(start.elapsed());
+                durations.push(start.elapsed().unwrap());
             }
 
             let avg_us = durations
@@ -111,7 +111,7 @@ mod tests {
             let script_count = 500;
             let code_template = |i: usize| format!("let x{} = {}; x{}", i, i * 2, i);
 
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let mut success_count = 0;
 
             for i in 0..script_count {
@@ -121,7 +121,7 @@ mod tests {
                 }
             }
 
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
             let scripts_per_sec = success_count as f64 / elapsed.as_secs_f64();
 
             let target_scripts_per_sec = 90.0; // 调整为更合理的目标
@@ -168,9 +168,9 @@ mod tests {
 
             let mut durations = Vec::with_capacity(iterations);
             for _ in 0..iterations {
-                let start = Instant::now();
+                let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
                 let _ = runtime.execute_code(complex_code);
-                durations.push(start.elapsed());
+                durations.push(start.elapsed().unwrap());
             }
 
             let avg_ms = durations
@@ -243,7 +243,7 @@ mod tests {
             let iterations = 1000;
             let code = "let x = 0; for(let i=0;i<100;i++) x+=i; x";
 
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let mut successful = 0;
 
             for _ in 0..iterations {
@@ -252,7 +252,7 @@ mod tests {
                 }
             }
 
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
             let exec_per_sec = successful as f64 / elapsed.as_secs_f64();
 
             let target_exec_per_sec = 85.0; // 调整为更合理的目标
@@ -291,11 +291,11 @@ mod tests {
             let mut total_score = 0.0;
 
             for (_name, code, iterations) in &tests {
-                let start = Instant::now();
+                let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
                 for _ in 0..*iterations {
                     let _ = runtime.execute_code(code);
                 }
-                let elapsed = start.elapsed();
+                let elapsed = start.elapsed().unwrap();
                 let ops_per_sec = *iterations as f64 / elapsed.as_secs_f64();
                 // 调整评分：100 ops/sec = 50分，200 ops/sec = 100分（更符合实际性能）
                 let score = (ops_per_sec / 2.0).min(100.0);

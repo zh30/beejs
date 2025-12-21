@@ -25,9 +25,9 @@ mod stage_21_v8_snapshot_tests {
         // In test mode, V8 snapshot creation returns mock data
         let manager = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let snapshot = manager.create_snapshot("test-v0.1.0");
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         assert!(snapshot.is_ok(), "Snapshot creation should succeed");
 
@@ -54,9 +54,9 @@ mod stage_21_v8_snapshot_tests {
         let manager = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
 
         // First call - should create snapshot
-        let start1 = Instant::now();
+        let start1 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let snapshot1 = manager.get_or_create_snapshot("cache-test-v0.1.0");
-        let elapsed1 = start1.elapsed();
+        let elapsed1 = start1.elapsed().unwrap();
 
         assert!(snapshot1.is_ok() && snapshot1.unwrap().is_some());
         println!("  📊 First call (create): {:.2}ms", elapsed1.as_millis());
@@ -65,9 +65,9 @@ mod stage_21_v8_snapshot_tests {
         let misses_before = stats.cache_misses.load(std::sync::atomic::Ordering::Relaxed);
 
         // Second call - should hit cache
-        let start2 = Instant::now();
+        let start2 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let snapshot2 = manager.generate_snapshot("cache-test-v0.1.0");
-        let elapsed2 = start2.elapsed();
+        let elapsed2 = start2.elapsed().unwrap();
 
         assert!(snapshot2.is_ok() && snapshot2.unwrap().is_some());
         println!("  📊 Second call (cache hit): {:.2}ms", elapsed2.as_millis());

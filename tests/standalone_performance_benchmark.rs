@@ -27,9 +27,9 @@ impl Benchmark {
     where
         F: FnMut(),
     {
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         func();
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         self.iterations += 1;
         self.total_time += duration;

@@ -643,11 +643,11 @@ mod performance_tests {
         }
 
         // 基准测试: 100000 次查找
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for i in 0..100_000 {
             ring.get_node(&format!("key-{}", i));
         }
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         // 应该在 100ms 内完成
         assert!(elapsed < Duration::from_millis(100),
@@ -680,11 +680,11 @@ mod performance_tests {
         }
 
         // 基准测试: 50000 次路由决策
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for i in 0..50_000 {
             router.route(&format!("request-{}", i));
         }
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         // 应该在 200ms 内完成
         assert!(elapsed < Duration::from_millis(200),
@@ -706,7 +706,7 @@ mod performance_tests {
         let breaker = CircuitBreaker::new("test-service", config);
 
         // 基准测试: 100000 次操作
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for i in 0..100_000 {
             breaker.allow_request();
             if i % 10 == 0 {
@@ -715,7 +715,7 @@ mod performance_tests {
                 breaker.record_success();
             }
         }
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         // 应该在 50ms 内完成
         assert!(elapsed < Duration::from_millis(50),

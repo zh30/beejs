@@ -36,7 +36,7 @@ mod runtime_reuse_integration_tests {
         let iterations = 5;
 
         // 第一次执行（初始化）
-        let start1 = Instant::now();
+        let start1 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..iterations {
             let output = Command::new("./target/release/beejs")
                 .arg("--eval")
@@ -45,10 +45,10 @@ mod runtime_reuse_integration_tests {
                 .expect("Failed to execute beejs");
             assert!(output.status.success());
         }
-        let time1 = start1.elapsed();
+        let time1 = start1.elapsed().unwrap();
 
         // 后续执行（复用 Runtime）
-        let start2 = Instant::now();
+        let start2 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..iterations {
             let output = Command::new("./target/release/beejs")
                 .arg("--eval")
@@ -57,7 +57,7 @@ mod runtime_reuse_integration_tests {
                 .expect("Failed to execute beejs");
             assert!(output.status.success());
         }
-        let time2 = start2.elapsed();
+        let time2 = start2.elapsed().unwrap();
 
         println!("Initial execution time: {:?}", time1);
         println!("Reuse execution time: {:?}", time2);

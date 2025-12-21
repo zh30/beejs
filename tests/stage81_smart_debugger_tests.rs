@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 81 智能调试建议测试套件
 //! 测试 AI 驱动的错误诊断、根因分析和修复建议功能
 
@@ -557,7 +558,7 @@ function processData(data) {
         let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let start = std::time::Instant::now();
+            let start = SystemTime::now();
 
             let debugger = MockSmartDebugger::new(100, 0.95);
             let error = ErrorInfo {
@@ -575,7 +576,7 @@ function processData(data) {
             let root_cause = debugger.find_root_cause(&error.stack_trace).await.unwrap();
             let suggestions = debugger.suggest_fix(&diagnosis).await.unwrap();
 
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
 
             // 验证性能
             assert!(elapsed.as_millis() < 500, "智能调试总时间应 < 500ms，当前: {}ms", elapsed.as_millis());

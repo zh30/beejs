@@ -64,9 +64,9 @@ mod tests {
         ];
 
         for input in test_cases {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let result = runtime.execute_code(input);
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "Failed to execute: {}", input);
 
@@ -99,9 +99,9 @@ mod tests {
         ];
 
         for (input, expected) in test_cases {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let result = runtime.execute_code(input);
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "Failed to execute: {}", input);
 
@@ -234,18 +234,18 @@ mod tests {
         let comparison_code = "10 > 5";
 
         // Measure fast path execution (simple arithmetic)
-        let fast_start = Instant::now();
+        let fast_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..100 {
             let _ = runtime.execute_code(fast_path_code);
         }
-        let fast_elapsed = fast_start.elapsed();
+        let fast_elapsed = fast_start.elapsed().unwrap();
 
         // Measure fast path execution (comparison)
-        let comparison_start = Instant::now();
+        let comparison_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..100 {
             let _ = runtime.execute_code(comparison_code);
         }
-        let comparison_elapsed = comparison_start.elapsed();
+        let comparison_elapsed = comparison_start.elapsed().unwrap();
 
         // Both should be fast (using fast path)
         assert!(

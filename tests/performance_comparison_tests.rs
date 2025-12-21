@@ -68,10 +68,10 @@ mod tests {
         let runtime = Runtime::new(67108864, 1073741824, false, false);
 
         // 测试1: 启动时间测量
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let test_code = r#"console.log("Hello, Beejs!");"#;
         let _ = runtime.execute_code(test_code);
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         // 验证启动时间在合理范围内
         assert!(
@@ -86,11 +86,11 @@ mod tests {
         let iterations = 1000;
         let test_code = "let sum = 0; for (let i = 0; i < 1000; i++) { sum += i; } sum";
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..iterations {
             let _ = runtime.execute_code(test_code);
         }
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let ops_per_sec = iterations as f64 / elapsed.as_secs_f64();
 
         // 验证执行速度 - 在测试环境中，由于深度优化分析开销，阈值设为50 ops/sec

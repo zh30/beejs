@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 76 Phase 3: CLI 集成测试
 //! 测试 Profile 子命令、交互式性能查看器、报告导出功能
 

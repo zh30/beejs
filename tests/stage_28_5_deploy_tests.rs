@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 28.5: 部署与打包测试套件
 //!
 //! 测试覆盖:
@@ -624,7 +625,7 @@ mod tests {
 
     #[test]
     fn test_stage_28_5_deploy_performance() {
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
 
         // 执行 100 次打包操作
         for i in 0..100 {
@@ -640,7 +641,7 @@ mod tests {
             let _ = bundler.bundle(vec![PathBuf::from("src/main.rs")]);
         }
 
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         // 性能要求: 100次打包 < 100ms
         assert!(duration < std::time::Duration::from_millis(100),

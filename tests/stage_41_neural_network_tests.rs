@@ -382,14 +382,14 @@ fn test_inference_performance() {
     let model = Model::from_config(&config);
     let input = Tensor::randn(&[1, 784]);
 
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let iterations = 100;
 
     for _ in 0..iterations {
         let _ = model.forward(&input);
     }
 
-    let elapsed = start.elapsed();
+    let elapsed = start.elapsed().unwrap();
     let per_inference = elapsed.as_micros() as f64 / iterations as f64;
 
     // 单次推理应该 < 10ms
@@ -408,14 +408,14 @@ fn test_batch_inference_performance() {
     let model = Model::from_config(&config);
     let input = Tensor::randn(&[64, 784]); // batch size 64
 
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let iterations = 50;
 
     for _ in 0..iterations {
         let _ = model.forward(&input);
     }
 
-    let elapsed = start.elapsed();
+    let elapsed = start.elapsed().unwrap();
     let throughput = (iterations * 64) as f64 / elapsed.as_secs_f64();
 
     // 吞吐量应该 > 1000 samples/sec
@@ -429,14 +429,14 @@ fn test_tensor_matmul_performance() {
     let a = Tensor::randn(&[64, 64]); // 减小矩阵大小
     let b = Tensor::randn(&[64, 64]);
 
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let iterations = 10;
 
     for _ in 0..iterations {
         let _ = a.matmul(&b);
     }
 
-    let elapsed = start.elapsed();
+    let elapsed = start.elapsed().unwrap();
     let per_matmul = elapsed.as_micros() as f64 / iterations as f64;
 
     // 64x64 矩阵乘法应该 < 50ms (放宽限制)

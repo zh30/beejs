@@ -199,9 +199,9 @@ mod stage_26_3_tests {
         let mut dev_server = DevServer::new();
 
         // Start server
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         dev_server.start("127.0.0.1", 3000).await;
-        let startup_time = start.elapsed();
+        let startup_time = start.elapsed().unwrap();
 
         assert!(startup_time < Duration::from_secs(2),
             "Server should start in < 2s, took {:?}", startup_time);

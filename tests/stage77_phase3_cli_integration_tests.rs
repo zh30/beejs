@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 /// Stage 77 Phase 3: CLI Integration Tests
 /// Tests WebAssembly CLI commands and runtime integration
 

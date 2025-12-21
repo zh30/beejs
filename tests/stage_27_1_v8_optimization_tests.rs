@@ -71,9 +71,9 @@ mod stage_27_1_tests {
         assert!(snapshot_data.is_ok(), "Snapshot creation should succeed");
 
         // 测试加载性能
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let isolate = snapshot_manager.load_from_snapshot_optimized(snapshot_data.unwrap());
-        let load_time = start.elapsed();
+        let load_time = start.elapsed().unwrap();
 
         assert!(isolate.is_ok(), "Isolate creation should succeed");
         assert!(load_time < Duration::from_millis(1),
@@ -88,9 +88,9 @@ mod stage_27_1_tests {
     fn test_startup_time_performance() {
         let startup_optimizer = V8StartupOptimizer::new();
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let runtime = startup_optimizer.create_optimized_runtime();
-        let startup_time = start.elapsed();
+        let startup_time = start.elapsed().unwrap();
 
         assert!(runtime.is_ok(), "Runtime creation should succeed");
         assert!(startup_time < Duration::from_millis(2),
@@ -228,11 +228,11 @@ mod stage_27_1_tests {
     }
 
     fn measure_string_concat_js(iterations: usize) -> Duration {
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..iterations {
             let _ = test_string_concat_js();
         }
-        start.elapsed()
+        start.elapsed().unwrap()
     }
 
     // ========== 模拟实现（将被真实实现替换）==========
@@ -262,11 +262,11 @@ mod stage_27_1_tests {
         }
 
         fn measure_builtin_performance(&self, name: &str, iterations: usize) -> Duration {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             for _ in 0..iterations {
                 let _ = self.execute_builtin(name, &["1", "2"]);
             }
-            start.elapsed()
+            start.elapsed().unwrap()
         }
 
         fn get_builtin_types(&self) -> Vec<String> {

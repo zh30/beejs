@@ -29,12 +29,12 @@ mod v8_snapshot_benchmark_tests {
         let mut total_time = 0u128;
 
         for i in 0..iterations {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             let snapshot = manager.create_snapshot(&format!("v0.1.0-{}", i))
                 .expect("Failed to create snapshot");
 
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
             total_time += elapsed.as_millis();
 
             // 在测试环境中，快照是模拟数据
@@ -73,7 +73,7 @@ mod v8_snapshot_benchmark_tests {
         let mut total_time = 0u128;
 
         for i in 0..iterations {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             #[cfg(test)]
             {
@@ -91,7 +91,7 @@ mod v8_snapshot_benchmark_tests {
                     .expect("Failed to load snapshot");
             }
 
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
             total_time += elapsed.as_millis();
 
             if i < 3 {
@@ -118,11 +118,11 @@ mod v8_snapshot_benchmark_tests {
         let mut fresh_total = 0u128;
 
         for _ in 0..fresh_iterations {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             let _isolate = rusty_v8::Isolate::new(rusty_v8::CreateParams::default());
 
-            fresh_total += start.elapsed().as_millis();
+            fresh_total += start.elapsed().unwrap().as_millis();
         }
 
         let fresh_avg = fresh_total / fresh_iterations;
@@ -136,12 +136,12 @@ mod v8_snapshot_benchmark_tests {
         let mut snapshot_total = 0u128;
 
         for _ in 0..snapshot_iterations {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             let _isolate = manager.load_from_snapshot(snapshot.clone())
                 .expect("Failed to load snapshot");
 
-            snapshot_total += start.elapsed().as_millis();
+            snapshot_total += start.elapsed().unwrap().as_millis();
         }
 
         let snapshot_avg = snapshot_total / snapshot_iterations;
@@ -163,16 +163,16 @@ mod v8_snapshot_benchmark_tests {
         let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
 
         // First call - should create snapshot (cache miss)
-        let start1 = Instant::now();
+        let start1 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _snapshot1 = manager.get_or_create_snapshot("v0.1.0-cache-test")
             .expect("Failed to get/create snapshot");
-        let time1 = start1.elapsed();
+        let time1 = start1.elapsed().unwrap();
 
         // Second call - should use cached snapshot (cache hit)
-        let start2 = Instant::now();
+        let start2 = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _snapshot2 = manager.get_or_create_snapshot("v0.1.0-cache-test")
             .expect("Failed to get cached snapshot");
-        let time2 = start2.elapsed();
+        let time2 = start2.elapsed().unwrap();
 
         println!("First call (cache miss): {}ms", time1.as_millis());
         println!("Second call (cache hit): {}ms", time2.as_millis());

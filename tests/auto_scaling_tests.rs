@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Tests for intelligent auto-scaling functionality in the process pool
 //!
 //! These tests verify that the process pool can automatically scale up and down

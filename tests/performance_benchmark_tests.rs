@@ -1,6 +1,6 @@
-use beejs::Runtime;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant}, SystemTime, UNIX_EPOCH;
 
+use std::time::{SystemTime, UNIX_EPOCH};
 /// Memory statistics tracking
 #[derive(Debug, Clone)]
 pub struct MemoryStats {
@@ -109,9 +109,9 @@ impl BenchmarkRunner {
         // Actual benchmark
         let mut durations = Vec::with_capacity(self.iterations);
         for _ in 0..self.iterations {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let _ = runtime.execute_code(code);
-            durations.push(start.elapsed());
+            durations.push(Duration::from_secs(start));
         }
 
         BenchmarkResult::new(
@@ -131,9 +131,9 @@ impl BenchmarkRunner {
 
         let mut durations = Vec::with_capacity(self.iterations);
         for _ in 0..self.iterations {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let _ = runtime.execute_code("1");
-            durations.push(start.elapsed());
+            durations.push(Duration::from_secs(start));
         }
 
         BenchmarkResult::new(
@@ -157,9 +157,9 @@ impl BenchmarkRunner {
 
         let mut durations = Vec::with_capacity(self.iterations);
         for _ in 0..self.iterations {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let _ = runtime.execute_file(&file_path.to_path_buf());
-            durations.push(start.elapsed());
+            durations.push(Duration::from_secs(start));
         }
 
         BenchmarkResult::new(

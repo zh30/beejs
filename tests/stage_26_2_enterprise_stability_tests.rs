@@ -203,9 +203,9 @@ mod stage_26_2_tests {
         dashboard.record_memory_usage(60 * 1024 * 1024); // 60MB
 
         // Get metrics (should be < 100ms)
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let metrics = dashboard.get_current_metrics();
-        let fetch_time = start.elapsed();
+        let fetch_time = start.elapsed().unwrap();
 
         assert!(fetch_time < Duration::from_millis(100), "Metrics fetch should be < 100ms");
         assert!(metrics.execution_count > 0, "Should have execution metrics");
@@ -289,7 +289,7 @@ impl MemoryLeakDetector {
         let record = AllocationRecord {
             context: context.to_string(),
             size,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
         self.allocations.lock().unwrap().push(record);
     }
@@ -299,7 +299,7 @@ impl MemoryLeakDetector {
         let mut leaks = Vec::new();
 
         allocations.retain(|record| {
-            if record.timestamp.elapsed() > timeout {
+            if record.timestamp.elapsed().unwrap() > timeout {
                 leaks.push(record.context.clone());
                 false
             } else {
@@ -341,7 +341,7 @@ impl MemoryMonitor {
             Some(MemoryAlert {
                 level: AlertLevel::Warning,
                 message: "Memory threshold exceeded".to_string(),
-                timestamp: Instant::now(),
+                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             })
         } else {
             None
@@ -535,7 +535,7 @@ impl CircuitBreaker {
             }
             Err(e) => {
                 *self.failure_count.lock().unwrap() += 1;
-                *self.last_failure_time.lock().unwrap() = Some(Instant::now());
+                *self.last_failure_time.lock().unwrap() = Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
 
                 if *self.failure_count.lock().unwrap() >= self.failure_threshold {
                     // Circuit will open
@@ -550,7 +550,7 @@ impl CircuitBreaker {
         let count = *self.failure_count.lock().unwrap();
         if count >= self.failure_threshold {
             if let Some(last_failure) = *self.last_failure_time.lock().unwrap() {
-                return last_failure.elapsed() < self.recovery_timeout;
+                return last_failure.elapsed().unwrap() < self.recovery_timeout;
             }
         }
         false
@@ -578,7 +578,7 @@ impl MetricsDashboard {
     }
 
     pub fn record_memory_usage(&self, bytes: usize) {
-        self.memory_usage.lock().unwrap().push((bytes, Instant::now()));
+        self.memory_usage.lock().unwrap().push((bytes, SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()));
     }
 
     pub fn record_operation(&self, op_type: &str, duration: Duration) {

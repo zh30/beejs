@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use beejs::runtime_lite::cache::MultiLevelCache;
 use tokio::time::{Duration, Instant};
 
@@ -155,14 +156,14 @@ async fn test_cache_performance_10m_iterations() {
     let test_script = "let sum = 0; for(let i = 0; i < 1000; i++) { sum += i; }";
     cache.put("benchmark.js", test_script.as_bytes()).await;
 
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
     // 执行 10M 次缓存访问
     for _ in 0..10_000_000 {
         cache.get("benchmark.js").await;
     }
 
-    let elapsed = start.elapsed();
+    let elapsed = start.elapsed().unwrap();
 
     // 验证性能目标: < 10ms for 10M iterations
     assert!(

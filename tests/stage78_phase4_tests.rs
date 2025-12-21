@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 78 Phase 4 测试套件 - 极致性能监控
 
 #[cfg(test)]
@@ -92,7 +93,7 @@ mod tests {
             execution_time_ms: 100,
             throughput: 1000.0,
             cache_hit_rate: 0.5,
-            timestamp: std::time::Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
         monitor.record_metrics(metrics);

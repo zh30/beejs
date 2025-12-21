@@ -160,7 +160,7 @@ mod tests {
         // - 负载均衡工作正常
         // - 没有任务被重复执行
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 创建 4 个线程，每个线程有不同的任务数
         let _thread_tasks = vec![100, 50, 20, 5]; // 总共 175 个任务
@@ -200,7 +200,7 @@ mod tests {
         //     }
         // }).await;
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         println!("多线程工作窃取测试:");
         println!("  耗时: {:?}", elapsed);
@@ -343,7 +343,7 @@ mod tests {
         // - 窃取开销 < 10%
         // - CPU 利用率 > 90%
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let task_count = 1000;
 
         // 生成 1000 个中等复杂度任务
@@ -359,7 +359,7 @@ mod tests {
         // TODO: 执行任务
         // let results = scheduler.execute_batch(tasks).await;
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let throughput = task_count as f64 / elapsed.as_secs_f64();
 
         println!("性能基准测试结果:");

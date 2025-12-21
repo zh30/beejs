@@ -234,7 +234,7 @@ mod tests {
             queue_depth: 75,
             response_time_ms: 500,
             error_rate: 0.03,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
         // 评估扩缩容
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_end_to_end_scaling_workflow() {
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 1. 创建扩缩容管理器
         let mut manager = ScalingManager::new(create_scaling_config());
@@ -321,7 +321,7 @@ mod tests {
         }
 
         // 9. 验证性能
-        let elapsed = start_time.elapsed();
+        let elapsed = start_time.elapsed().unwrap();
         assert!(elapsed < TEST_TIMEOUT, "测试超时: {:?}", elapsed);
 
         info!("端到端扩缩容流程测试完成，耗时: {:?}", elapsed);
@@ -456,7 +456,7 @@ mod tests {
             queue_depth: 50,
             response_time_ms: 500,
             error_rate: 0.02,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         }
     }
 
@@ -469,7 +469,7 @@ mod tests {
             queue_depth: 0,
             response_time_ms: 50,
             error_rate: 0.0,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         }
     }
 
@@ -482,7 +482,7 @@ mod tests {
             queue_depth: 5,
             response_time_ms: 100,
             error_rate: 0.01,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         }
     }
 }

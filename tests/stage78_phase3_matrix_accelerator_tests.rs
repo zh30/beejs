@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH};
 //! Stage 78 Phase 3: 矩阵运算加速器测试
 //!
 //! 测试矩阵运算加速器的所有功能，包括 BLAS 优化、批处理和布局优化
@@ -216,9 +217,9 @@ mod matrix_accelerator_tests {
         }
 
         let accelerator = MatrixAccelerator::new();
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         let _result = accelerator.gemm_optimized(&matrix_a, &matrix_b);
-        let duration = start.elapsed();
+        let duration = Duration::from_secs(start);
 
         println!("大矩阵乘法 ({}x{}) 耗时: {:?}", size, size, duration);
         assert!(duration.as_millis() < 1000); // 应该在1秒内完成

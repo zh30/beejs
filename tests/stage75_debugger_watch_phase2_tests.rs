@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 75 Phase 2: Watch Expression Evaluation Tests
 //!
 //! Tests for the watch expression evaluation functionality in the debugger.

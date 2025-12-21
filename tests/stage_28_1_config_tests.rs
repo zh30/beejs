@@ -464,21 +464,21 @@ fn test_stage_28_1_config_performance() {
     let mut config = ConfigManager::new();
 
     // 性能测试：大量配置项
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     for i in 0..1000 {
         config.set(
             &format!("key_{}", i),
             ConfigValue::String(format!("value_{}", i)),
         );
     }
-    let write_time = start.elapsed();
+    let write_time = start.elapsed().unwrap();
 
     // 读取性能
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     for i in 0..1000 {
         let _ = config.get(&format!("key_{}", i));
     }
-    let read_time = start.elapsed();
+    let read_time = start.elapsed().unwrap();
 
     println!("Config Performance:");
     println!("  Write 1000 items: {:?}", write_time);

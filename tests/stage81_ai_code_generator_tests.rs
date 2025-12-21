@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 81 AI 代码生成助手测试套件
 //! 测试 AI 驱动的代码生成、补全和重构功能
 
@@ -353,7 +354,7 @@ mod tests {
         let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let start = std::time::Instant::now();
+            let start = SystemTime::now();
 
             let generator = MockCodeGenerator::new(100, 0.95);
             let context = CodeContext {
@@ -365,7 +366,7 @@ mod tests {
 
             let result = generator.generate_code("test prompt", &context).await.unwrap();
 
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
 
             // 验证 AI 模型响应时间 < 200ms
             assert!(elapsed.as_millis() < 200, "AI 模型响应时间应 < 200ms，当前: {}ms", elapsed.as_millis());

@@ -363,12 +363,12 @@ mod tests {
 
         let mut handle = manager.create_region("perf_test".to_string(), Some(1024 * 1024)).unwrap();
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..1000 {
             manager.write(&mut handle, 0, &[42; 1024]).unwrap();
             let _ = manager.read(&handle, 0, 1024).unwrap();
         }
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         println!("Shared Memory Performance: 1000 read/write operations in {:?}", duration);
         assert!(duration < Duration::from_millis(100)); // 应该在100ms内完成
@@ -379,19 +379,19 @@ mod tests {
         let config = SharedObjectCacheConfig::default();
         let cache = SharedObjectCache::new(config);
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for i in 0..1000 {
             let key = format!("obj_{}", i);
             cache.insert(key, SharedValue::Number(i as f64));
         }
-        let insert_duration = start.elapsed();
+        let insert_duration = start.elapsed().unwrap();
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for i in 0..1000 {
             let key = format!("obj_{}", i);
             let _ = cache.get(&key);
         }
-        let get_duration = start.elapsed();
+        let get_duration = start.elapsed().unwrap();
 
         println!(
             "Shared Object Cache Performance: 1000 inserts in {:?}, 1000 gets in {:?}",
@@ -449,8 +449,8 @@ mod tests {
                 SharedValue::Object(
                     std::iter::repeat_with(|| {
                         (
-                            format!("key_{}", std::time::Instant::now().elapsed().subsec_nanos()),
-                            SharedValue::Number(std::time::Instant::now().elapsed().subsec_nanos() as f64)
+                            format!("key_{}", std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs().elapsed().subsec_nanos()),
+                            SharedValue::Number(std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs().elapsed().subsec_nanos() as f64)
                         )
                     }).take(10)
                     .collect()
@@ -460,7 +460,7 @@ mod tests {
 
         // 随机访问对象
         for _ in 0..10000 {
-            let index = std::time::Instant::now().elapsed().subsec_nanos() as usize % 1000;
+            let index = std::time::SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs().elapsed().subsec_nanos() as usize % 1000;
             let key = format!("stress_obj_{}", index);
             let _ = cache.get(&key);
         }

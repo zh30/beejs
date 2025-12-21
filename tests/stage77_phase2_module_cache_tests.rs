@@ -229,14 +229,14 @@ mod stage77_phase2_module_cache_tests {
         cache.store_module(hash.clone(), wasm_bytes).unwrap();
 
         // 测量多次加载性能
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         let iterations = 1000;
 
         for _ in 0..iterations {
             let _ = cache.load_module(&hash);
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let avg_time = Duration::from_nanos(elapsed.as_nanos() as u64 / iterations);
 
         println!("   {} 次加载总时间: {:?}", iterations, elapsed);
@@ -261,7 +261,7 @@ mod stage77_phase2_module_cache_tests {
         let mut hashes = Vec::new();
 
         // 存储大量模块
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         for i in 0..module_count {
             let wasm_bytes = create_test_wasm_bytes_with_id(i);
             let hash = cache.calculate_hash(&wasm_bytes);
@@ -269,19 +269,19 @@ mod stage77_phase2_module_cache_tests {
             // 忽略 L2 缓存错误（目录可能不存在）
             let _ = cache.store_module(hash, wasm_bytes);
         }
-        let store_time = start.elapsed();
+        let store_time = start.elapsed().unwrap();
 
         println!("   存储 {} 个模块耗时: {:?}", module_count, store_time);
 
         // 验证至少部分模块可以从 L1 加载
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         let mut loaded = 0;
         for hash in &hashes {
             if cache.load_module(hash).is_ok() {
                 loaded += 1;
             }
         }
-        let load_time = start.elapsed();
+        let load_time = start.elapsed().unwrap();
 
         println!("   成功加载 {}/{} 个模块，耗时: {:?}", loaded, module_count, load_time);
 

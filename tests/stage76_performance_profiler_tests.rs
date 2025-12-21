@@ -110,10 +110,10 @@ mod tests {
 
             let profile_id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
 
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             // 模拟精确的 50ms 执行时间
             std::thread::sleep(Duration::from_millis(50));
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
 
             let result = profiler.stop_profile(profile_id).unwrap();
 
@@ -363,7 +363,7 @@ mod tests {
             let iterations = 10000;
 
             // 基准测试：不使用 profiler
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             for _ in 0..iterations {
                 let _sum = {
                     let mut sum = 0;
@@ -373,11 +373,11 @@ mod tests {
                     sum
                 };
             }
-            let without_profiler = start.elapsed();
+            let without_profiler = start.elapsed().unwrap();
 
             // 基准测试：使用 profiler
             let mut profiler = Profiler::new(ProfilingMode::Minimal).unwrap();
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             for _ in 0..iterations {
                 let id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
                 let _sum = {
@@ -389,7 +389,7 @@ mod tests {
                 };
                 let _ = profiler.stop_profile(id);
             }
-            let with_profiler = start.elapsed();
+            let with_profiler = start.elapsed().unwrap();
 
             // 验证开销 < 100%
             let overhead_ratio = with_profiler.as_nanos() as f64 / without_profiler.as_nanos() as f64;
@@ -421,10 +421,10 @@ mod tests {
             let mut profiler = Profiler::new(ProfilingMode::Basic).unwrap();
 
             // 长时间运行测试
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let mut profile_count = 0;
 
-            while start.elapsed() < Duration::from_millis(100) {
+            while start.elapsed().unwrap() < Duration::from_millis(100) {
                 let id = profiler.start_profile(ProfileTarget::Runtime).unwrap();
                 std::thread::sleep(Duration::from_millis(1));
                 profiler.stop_profile(id).unwrap();
@@ -601,14 +601,14 @@ mod tests {
             };
 
             // 测试 minimal 模式
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             workload(&mut minimal_profiler);
-            let minimal_time = start.elapsed();
+            let minimal_time = start.elapsed().unwrap();
 
             // 测试 detailed 模式
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             workload(&mut detailed_profiler);
-            let detailed_time = start.elapsed();
+            let detailed_time = start.elapsed().unwrap();
 
             // detailed 模式开销应该合理
             let overhead_ratio = detailed_time.as_nanos() as f64 / minimal_time.as_nanos() as f64;

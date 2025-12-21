@@ -57,7 +57,7 @@ mod task_scheduler_tests {
             task_type: TaskType::JavaScriptExecution,
             payload: b"console.log('hello')".to_vec(),
             priority: 5,
-            created_at: Instant::now(),
+            created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             timeout: Duration::from_secs(30),
             metadata: HashMap::new(),
         };
@@ -92,7 +92,7 @@ mod task_scheduler_tests {
                 task_type,
                 payload: vec![],
                 priority,
-                created_at: Instant::now(),
+                created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
                 timeout: Duration::from_secs(30),
                 metadata: HashMap::new(),
             };
@@ -125,7 +125,7 @@ mod task_scheduler_tests {
             task_type: TaskType::JavaScriptExecution,
             payload: vec![],
             priority: 1,
-            created_at: Instant::now() - Duration::from_millis(200), // 已超时
+            created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs() - Duration::from_millis(200), // 已超时
             timeout: Duration::from_millis(100),
             metadata: HashMap::new(),
         };
@@ -152,7 +152,7 @@ mod task_scheduler_tests {
                 task_type: TaskType::JavaScriptExecution,
                 payload: vec![],
                 priority: 1,
-                created_at: Instant::now(),
+                created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
                 timeout: Duration::from_secs(30),
                 metadata: HashMap::new(),
             };
@@ -253,7 +253,7 @@ mod task_distributor_tests {
             task_type: TaskType::JavaScriptExecution,
             payload: vec![],
             priority: 5,
-            created_at: Instant::now(),
+            created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             timeout: Duration::from_secs(30),
             metadata: HashMap::new(),
         };
@@ -275,7 +275,7 @@ mod task_distributor_tests {
             task_type: TaskType::AIInference,
             payload: vec![],
             priority: 5,
-            created_at: Instant::now(),
+            created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             timeout: Duration::from_secs(30),
             metadata: HashMap::new(),
         };
@@ -504,7 +504,7 @@ mod integration_tests {
             task_type: TaskType::JavaScriptExecution,
             payload: b"console.log('test')".to_vec(),
             priority: 5,
-            created_at: Instant::now(),
+            created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             timeout: Duration::from_secs(30),
             metadata: HashMap::new(),
         };
@@ -555,7 +555,7 @@ mod integration_tests {
                 task_type: TaskType::JavaScriptExecution,
                 payload: vec![],
                 priority: (i % 10) as u8,
-                created_at: Instant::now(),
+                created_at: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
                 timeout: Duration::from_secs(30),
                 metadata: HashMap::new(),
             };

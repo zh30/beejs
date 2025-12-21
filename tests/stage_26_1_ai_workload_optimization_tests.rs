@@ -29,9 +29,9 @@ mod stage_26_1_tests {
         let model_config = ModelMemoryConfig::new("llm_model", 1024 * 1024, 512 * 1024);
 
         // Allocate memory for model weights using warmup (prefetch)
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         pool.warmup_model(&model_config);
-        let warmup_time = start.elapsed();
+        let warmup_time = start.elapsed().unwrap();
 
         // Memory allocation should be fast (< 10ms for prefetch)
         assert!(warmup_time < Duration::from_millis(10),
@@ -62,9 +62,9 @@ mod stage_26_1_tests {
         }
 
         // Process batch and measure throughput
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let results = processor.flush().await;
-        let processing_time = start.elapsed();
+        let processing_time = start.elapsed().unwrap();
 
         assert_eq!(results.len(), 50, "Should process all 50 tasks");
 
@@ -100,9 +100,9 @@ mod stage_26_1_tests {
             }
 
             // Process and measure
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let batch_results = processor.flush().await;
-            let time_taken = start.elapsed();
+            let time_taken = start.elapsed().unwrap();
 
             results.push((batch_size, time_taken, batch_results.len()));
         }
@@ -121,22 +121,22 @@ mod stage_26_1_tests {
     #[tokio::test]
     async fn test_llm_inference_latency_reduction() {
         // Simulate LLM inference with KV Cache
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // First inference (cold cache)
         let _cold_result = simulate_llm_inference(false);
 
         // Measure cold cache time
-        let cold_time = start.elapsed();
+        let cold_time = start.elapsed().unwrap();
 
         // Reset timer
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // Second inference (warm cache)
         let _warm_result = simulate_llm_inference(true);
 
         // Measure warm cache time
-        let warm_time = start.elapsed();
+        let warm_time = start.elapsed().unwrap();
 
         // Verify warm cache is significantly faster
         let speedup = cold_time.as_secs_f64() / warm_time.as_secs_f64();
@@ -156,9 +156,9 @@ mod stage_26_1_tests {
 
         // Allocate tensor memory using allocate (zero-copy)
         let tensor_size = 1024 * 1024; // 1MB
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let allocation = pool.allocate(tensor_size);
-        let allocation_time = start.elapsed();
+        let allocation_time = start.elapsed().unwrap();
 
         // Verify allocation succeeded
         assert!(allocation.is_some(), "Should allocate memory");
@@ -190,9 +190,9 @@ mod stage_26_1_tests {
         }
 
         // Process all tasks
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let results = processor.flush().await;
-        let processing_time = start.elapsed();
+        let processing_time = start.elapsed().unwrap();
 
         assert_eq!(results.len(), (model_shards * tasks_per_shard) as usize);
 
@@ -214,18 +214,18 @@ mod stage_26_1_tests {
         let cache_key = format!("llm_cache_{}", prompt);
 
         // First inference (cache miss)
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _result1 = get_cached_inference_result(&cache_key);
-        let miss_time = start.elapsed();
+        let miss_time = start.elapsed().unwrap();
 
         // Verify cache miss
         assert!(miss_time > Duration::from_millis(1),
             "Cache miss should take > 1ms");
 
         // Second inference (cache hit)
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _result2 = get_cached_inference_result(&cache_key);
-        let hit_time = start.elapsed();
+        let hit_time = start.elapsed().unwrap();
 
         // Cache hit should be significantly faster
         assert!(hit_time < Duration::from_millis(1),
@@ -251,13 +251,13 @@ mod stage_26_1_tests {
         let allocation_size = 1024 * 100; // 100KB per allocation
         let mut block_ids = Vec::new();
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _ in 0..iterations {
             if let Some(block) = pool.allocate(allocation_size) {
                 block_ids.push(block.id);
             }
         }
-        let total_time = start.elapsed();
+        let total_time = start.elapsed().unwrap();
 
         // Deallocate some blocks
         for id in &block_ids[..50] {
@@ -287,18 +287,18 @@ mod stage_26_1_tests {
         let pool = create_llm_memory_pool();
 
         // Simulate GPU memory allocation (using regular allocate for now)
-        let gpu_start = Instant::now();
+        let gpu_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _gpu_mem = pool.allocate(1024 * 1024);
-        let gpu_time = gpu_start.elapsed();
+        let gpu_time = gpu_start.elapsed().unwrap();
 
         // Verify GPU allocation
         assert!(gpu_time < Duration::from_millis(10),
             "GPU allocation should be < 10ms");
 
         // Simulate CPU fallback (using regular allocate)
-        let cpu_start = Instant::now();
+        let cpu_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _cpu_mem = pool.allocate(1024 * 1024);
-        let cpu_time = cpu_start.elapsed();
+        let cpu_time = cpu_start.elapsed().unwrap();
 
         // CPU allocation should be fast
         assert!(cpu_time < Duration::from_millis(5),
@@ -366,9 +366,9 @@ mod stage_26_1_tests {
         pool.warmup_model(&model_config);
 
         // Process all tasks
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let results = processor.flush().await;
-        let processing_time = start.elapsed();
+        let processing_time = start.elapsed().unwrap();
 
         assert_eq!(results.len(), 100);
 

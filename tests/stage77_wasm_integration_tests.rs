@@ -180,15 +180,15 @@ mod stage77_wasm_integration_tests {
         let wasm_bytes = create_add_module();
 
         // 首次加载
-        let start1 = std::time::Instant::now();
+        let start1 = SystemTime::now();
         executor.load_module("cache_test", wasm_bytes.clone()).unwrap();
-        let load_time1 = start1.elapsed();
+        let load_time1 = start1.elapsed().unwrap();
 
         // 清除模块后重新加载（测试缓存重建）
         executor.clear_modules();
-        let start2 = std::time::Instant::now();
+        let start2 = SystemTime::now();
         executor.load_module("cache_test", wasm_bytes.clone()).unwrap();
-        let load_time2 = start2.elapsed();
+        let load_time2 = start2.elapsed().unwrap();
 
         println!("   首次加载时间: {:?}", load_time1);
         println!("   二次加载时间: {:?}", load_time2);
@@ -305,9 +305,9 @@ mod stage77_wasm_integration_tests {
 
         for (name, wasm_bytes) in test_cases {
             let size_kb = wasm_bytes.len() / 1024;
-            let start = std::time::Instant::now();
+            let start = SystemTime::now();
             let result = executor.load_module(&format!("perf_{}", name), wasm_bytes);
-            let load_time = start.elapsed();
+            let load_time = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "加载 {} 模块失败", name);
             println!("   {} 模块 ({} KB): {:?} ({:.2} KB/ms)",
@@ -329,13 +329,13 @@ mod stage77_wasm_integration_tests {
 
         // 执行多次调用测试性能
         let iterations = 1000;
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
 
         for _ in 0..iterations {
             let _ = executor.execute_module("perf_call");
         }
 
-        let total_time = start.elapsed();
+        let total_time = start.elapsed().unwrap();
         let avg_time = Duration::from_nanos(total_time.as_nanos() as u64 / iterations as u64);
 
         println!("   {} 次调用总时间: {:?}", iterations, total_time);
@@ -499,7 +499,7 @@ mod stage77_wasm_integration_tests {
         let executor = initialize_wasm().unwrap();
 
         let module_count = 50;
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
 
         // 批量加载模块
         for i in 0..module_count {
@@ -508,7 +508,7 @@ mod stage77_wasm_integration_tests {
             assert!(result.is_ok(), "加载模块 {} 失败", i);
         }
 
-        let total_time = start.elapsed();
+        let total_time = start.elapsed().unwrap();
         let avg_time_per_module = Duration::from_nanos(total_time.as_nanos() as u64 / module_count as u64);
 
         println!("   总加载时间: {:?}", total_time);
@@ -535,9 +535,9 @@ mod stage77_wasm_integration_tests {
         let mut baseline_times = Vec::new();
 
         for _ in 0..baseline_iterations {
-            let start = std::time::Instant::now();
+            let start = SystemTime::now();
             executor.load_module("baseline_test", wasm_bytes.clone()).unwrap();
-            let load_time = start.elapsed();
+            let load_time = start.elapsed().unwrap();
             baseline_times.push(load_time);
             executor.clear_modules();
         }
@@ -549,9 +549,9 @@ mod stage77_wasm_integration_tests {
         println!("   基准平均加载时间: {:?}", avg_baseline);
 
         // 当前性能测试
-        let current_start = std::time::Instant::now();
+        let current_start = SystemTime::now();
         executor.load_module("current_test", wasm_bytes.clone()).unwrap();
-        let current_time = current_start.elapsed();
+        let current_time = current_start.elapsed().unwrap();
 
         println!("   当前加载时间: {:?}", current_time);
 

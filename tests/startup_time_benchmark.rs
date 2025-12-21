@@ -1,8 +1,9 @@
+use std::time::{SystemTime, UNIX_EPOCH};
 //! 启动时间基准测试
 //! 验证 Beejs 的真实启动时间性能
 
 use beejs::RuntimeLite;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant}, SystemTime, UNIX_EPOCH;
 
 #[cfg(test)]
 mod tests {
@@ -11,9 +12,9 @@ mod tests {
     /// 测试 1: 空 RuntimeLite 创建时间
     #[test]
     fn test_empty_runtime_lite_creation_time() {
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let runtime = RuntimeLite::new(false);
-        let elapsed = start.elapsed();
+        let elapsed = Duration::from_secs(start);
 
         assert!(runtime.is_ok(), "RuntimeLite creation should succeed");
         println!("Empty RuntimeLite 创建时间: {:.2}µs", elapsed.as_secs_f64() * 1_000_000.0);
@@ -29,9 +30,9 @@ mod tests {
     fn test_simple_script_execution_time() {
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let result = runtime.execute_code("1 + 1");
-        let elapsed = start.elapsed();
+        let elapsed = Duration::from_secs(start);
 
         assert!(result.is_ok(), "Script execution should succeed");
         println!("简单脚本执行时间: {:.2}µs", elapsed.as_secs_f64() * 1_000_000.0);
@@ -48,9 +49,9 @@ mod tests {
         let mut times = Vec::new();
 
         for i in 0..10 {
-            let start = Instant::now();
+            let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
             let runtime = RuntimeLite::new(false);
-            let elapsed = start.elapsed();
+            let elapsed = Duration::from_secs(start);
 
             assert!(runtime.is_ok(), "RuntimeLite {} creation should succeed", i);
             times.push(elapsed);
@@ -85,9 +86,9 @@ mod tests {
         sum
         "#;
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let result = runtime.execute_code(script);
-        let elapsed = start.elapsed();
+        let elapsed = Duration::from_secs(start);
 
         assert!(result.is_ok(), "Complex script execution should succeed");
         println!("复杂脚本执行时间: {:.2}µs", elapsed.as_secs_f64() * 1_000_000.0);
@@ -102,7 +103,7 @@ mod tests {
     #[test]
     fn test_cli_startup_time() {
         // 模拟 beejs -e "1+1" 的启动时间
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 创建 runtime
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
@@ -110,7 +111,7 @@ mod tests {
         // 执行简单代码
         let result = runtime.execute_code("1 + 1");
 
-        let elapsed = start.elapsed();
+        let elapsed = Duration::from_secs(start);
 
         assert!(result.is_ok(), "CLI execution should succeed");
         println!("CLI 启动时间 (包含 RuntimeLite): {:.2}µs", elapsed.as_secs_f64() * 1_000_000.0);

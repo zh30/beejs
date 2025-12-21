@@ -8,9 +8,9 @@ mod tests {
 
     #[test]
     fn test_current_startup_time() {
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _runtime = RuntimeLite::new(false).expect("Failed to create runtime");
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         println!("启动时间: {:.2}ms", elapsed.as_secs_f64() * 1000.0);
 
@@ -28,7 +28,7 @@ mod tests {
         // 这模拟了实际使用中的场景
 
         let iterations = 1000;
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for _ in 0..iterations {
             let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
@@ -36,7 +36,7 @@ mod tests {
             assert_eq!(result.trim(), "2");
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let per_op = elapsed / iterations;
 
         println!("简单执行 ({}-ms): {:.2}μs/次 (包含Isolate创建)", iterations, per_op.as_secs_f64() * 1_000_000.0);
@@ -52,14 +52,14 @@ mod tests {
     #[test]
     fn test_console_output_performance() {
         let iterations = 100;
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for _ in 0..iterations {
             let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
             let _ = runtime.execute_standard("console.log('test')").expect("执行失败");
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let per_op = elapsed / iterations;
 
         println!("Console输出 ({}-ms): {:.2}ms/次 (包含Isolate创建)", iterations, per_op.as_secs_f64() * 1000.0);
@@ -83,7 +83,7 @@ mod tests {
         "#;
 
         let iterations = 100;
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for _ in 0..iterations {
             let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
@@ -91,7 +91,7 @@ mod tests {
             assert_eq!(result.trim(), "499500");
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let per_op = elapsed / iterations;
 
         println!("复杂代码 ({}-ms): {:.2}ms/次", iterations, per_op.as_secs_f64() * 1000.0);
@@ -109,9 +109,9 @@ mod tests {
         let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
 
         // 测试快路径优化 (常量表达式)
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let result = runtime.execute_code("1 + 1").expect("执行失败");
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         println!("快路径执行时间: {:.2}μs", elapsed.as_secs_f64() * 1_000_000.0);
         assert_eq!(result.trim(), "2");
@@ -137,7 +137,7 @@ mod tests {
         ];
 
         let iterations = 100;
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for _ in 0..iterations {
             for script in &scripts {
@@ -145,7 +145,7 @@ mod tests {
             }
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let total_ops = (iterations * scripts.len()) as u32;
         let per_op = elapsed / total_ops;
 
@@ -163,7 +163,7 @@ mod tests {
     fn test_memory_efficiency() {
         // 创建多个运行时实例测试内存使用
         let instances = 10;
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         let mut runtimes = Vec::new();
         for _ in 0..instances {
@@ -171,7 +171,7 @@ mod tests {
             runtimes.push(rt);
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         println!("创建{}个运行时实例: {:.2}ms", instances, elapsed.as_secs_f64() * 1000.0);
 
@@ -197,14 +197,14 @@ mod tests {
         "#;
 
         let iterations = 100;
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         for _ in 0..iterations {
             let runtime = RuntimeLite::new(false).expect("Failed to create runtime");
             let _ = runtime.execute_standard(nodejs_code).expect("执行失败");
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let per_op = elapsed / iterations;
 
         println!("Node.js兼容性 ({}-ms): {:.2}ms/次", iterations, per_op.as_secs_f64() * 1000.0);

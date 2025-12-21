@@ -11,16 +11,16 @@ mod startup_optimization_tests {
     #[test]
     fn test_v8_pre_initialization_performance() {
         // 第一次初始化（无预初始化）
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         let _runtime1 = RuntimeLite::new(false);
-        let time1 = start.elapsed();
+        let time1 = start.elapsed().unwrap();
 
         // 第二次初始化（有预初始化）
         // 注意：V8 once() 确保只初始化一次
         // 这个测试主要验证 V8 初始化不会重复
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         let _runtime2 = RuntimeLite::new(false);
-        let time2 = start.elapsed();
+        let time2 = start.elapsed().unwrap();
 
         // 第二次应该更快（因为 V8 已初始化）
         // 注意：在测试环境中，V8 可能有生命周期问题
@@ -46,9 +46,9 @@ mod startup_optimization_tests {
         ];
 
         for (code, expected) in test_cases {
-            let start = std::time::Instant::now();
+            let start = SystemTime::now();
             let result = runtime.execute_code(code);
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "代码执行失败: {}", code);
             println!("代码: {}, 结果: {:?}, 耗时: {:?}", code, result, elapsed);
@@ -76,9 +76,9 @@ mod startup_optimization_tests {
         ];
 
         for (code, expected) in test_cases {
-            let start = std::time::Instant::now();
+            let start = SystemTime::now();
             let result = runtime.execute_code(code);
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "逻辑运算执行失败: {}", code);
             println!("逻辑运算: {}, 结果: {:?}, 耗时: {:?}", code, result, elapsed);
@@ -104,9 +104,9 @@ mod startup_optimization_tests {
         ];
 
         for (code, _expected) in test_cases {
-            let start = std::time::Instant::now();
+            let start = SystemTime::now();
             let result = runtime.execute_code(code);
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "字符串方法执行失败: {}", code);
             println!("字符串方法: {}, 结果: {:?}, 耗时: {:?}", code, result, elapsed);
@@ -126,9 +126,9 @@ mod startup_optimization_tests {
         ];
 
         for (code, _expected) in test_cases {
-            let start = std::time::Instant::now();
+            let start = SystemTime::now();
             let result = runtime.execute_code(code);
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
 
             assert!(result.is_ok(), "数组方法执行失败: {}", code);
             println!("数组方法: {}, 结果: {:?}, 耗时: {:?}", code, result, elapsed);
@@ -169,9 +169,9 @@ mod startup_optimization_tests {
         let mut total_time = Duration::from_millis(0);
 
         for i in 0..iterations {
-            let start = std::time::Instant::now();
+            let start = SystemTime::now();
             let runtime = RuntimeLite::new(false);
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
 
             assert!(runtime.is_ok(), "Runtime 创建失败 (第 {} 次)", i);
             total_time += elapsed;

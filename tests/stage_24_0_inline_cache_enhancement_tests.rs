@@ -237,7 +237,7 @@ mod tests {
         }
 
         // 执行 1000 次缓存查找并测量时间
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
 
         for _ in 0..1000 {
             for (i, (_, _, _)) in operators.iter().enumerate() {
@@ -251,7 +251,7 @@ mod tests {
             }
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         // 验证性能目标：1000 次查找 < 10ms
         assert!(elapsed < Duration::from_millis(10),

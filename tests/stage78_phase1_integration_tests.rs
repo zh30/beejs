@@ -105,9 +105,9 @@ mod stage78_phase1_integration_tests {
         println!("   总元素数: {}", batch_size * vector_size);
 
         // 执行批处理向量加法
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let results = engine.batch_vector_add(&batch_a, &batch_b);
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         println!("   批处理耗时: {:.2}ms", elapsed.as_millis());
         println!("   结果批次数量: {}", results.len());
@@ -124,9 +124,9 @@ mod stage78_phase1_integration_tests {
 
         // 测试大数据批处理
         let big_data: Vec<f32> = (0..100000).map(|i| i as f32).collect();
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let processed = engine.batch_process_f32(&big_data);
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         println!("   大数据批处理耗时: {:.2}ms", elapsed.as_millis());
         println!("   处理元素数: {}", processed.len());
@@ -297,23 +297,23 @@ mod stage78_phase1_integration_tests {
         let data: Vec<f32> = (0..data_size).map(|i| (i % 1000) as f32).collect();
 
         // 基准测试 1: 向量加法
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _result = engine.vector_add_f32(&data, &data);
-        let vector_add_time = start.elapsed();
+        let vector_add_time = start.elapsed().unwrap();
 
         println!("   向量加法 ({} elements): {:.2}ms", data_size, vector_add_time.as_millis());
 
         // 基准测试 2: 批处理
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _result = engine.batch_process_f32(&data);
-        let batch_time = start.elapsed();
+        let batch_time = start.elapsed().unwrap();
 
         println!("   批处理 ({} elements): {:.2}ms", data_size, batch_time.as_millis());
 
         // 基准测试 3: 归约
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _sum = engine.vector_sum_f32(&data);
-        let reduce_time = start.elapsed();
+        let reduce_time = start.elapsed().unwrap();
 
         println!("   归约操作 ({} elements): {:.2}ms", data_size, reduce_time.as_millis());
 
@@ -360,7 +360,7 @@ mod stage78_phase1_integration_tests {
         println!("     总元素数: {}", num_batches * batch_size);
 
         // 执行综合测试
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 1. 并行批处理
         let batch_results = simd_engine.batch_vector_add(&batches, &batches);
@@ -381,7 +381,7 @@ mod stage78_phase1_integration_tests {
             .map(|h| h.join().expect("任务执行失败"))
             .collect();
 
-        let total_time = start.elapsed();
+        let total_time = start.elapsed().unwrap();
 
         println!("   综合测试耗时: {:.2}ms", total_time.as_millis());
         println!("   批处理结果数: {}", batch_results.len());

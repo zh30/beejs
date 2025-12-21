@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 81 自动性能优化测试套件
 //! 测试 AI 驱动的性能分析、热点检测和自动优化功能
 
@@ -542,7 +543,7 @@ function processItems() {
         let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            let start = std::time::Instant::now();
+            let start = SystemTime::now();
 
             let optimizer = MockAutoOptimizer::new(100, 0.9);
             let profile = ProfileData {
@@ -566,7 +567,7 @@ function processItems() {
                 array_count: 50,
             }).await.unwrap();
 
-            let elapsed = start.elapsed();
+            let elapsed = start.elapsed().unwrap();
 
             // 验证性能
             assert!(elapsed.as_millis() < 500, "自动优化总时间应 < 500ms，当前: {}ms", elapsed.as_millis());

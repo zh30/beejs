@@ -209,7 +209,7 @@ mod tests {
 
         // 创建大量任务进行性能测试
         let task_count = 1000;
-        let start_time = std::time::Instant::now();
+        let start_time = SystemTime::now();
 
         // 并发提交任务
         let mut handles = vec![];
@@ -235,13 +235,13 @@ mod tests {
             handle.await.unwrap();
         }
 
-        let submission_time = start_time.elapsed();
+        let submission_time = start_time.elapsed().unwrap();
         println!("提交 {} 个任务耗时: {:?}", task_count, submission_time);
 
         // 等待窃取和执行完成
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let total_time = start_time.elapsed();
+        let total_time = start_time.elapsed().unwrap();
         println!("总耗时: {:?}", total_time);
 
         let stats = scheduler.get_steal_stats();
@@ -551,7 +551,7 @@ mod tests {
     async fn test_stage25_comprehensive_performance() {
         println!("\n🧪 Stage 25.0: 综合性能基准测试...");
 
-        let start_time = std::time::Instant::now();
+        let start_time = SystemTime::now();
         let scheduler = Arc::new(WorkStealingScheduler::new(12));
 
         // 创建极度不均衡的工作负载分布
@@ -625,7 +625,7 @@ mod tests {
         let final_distribution = scheduler.get_queue_distribution().await;
         println!("   最终负载分布: {:?}", final_distribution);
 
-        let total_time = start_time.elapsed();
+        let total_time = start_time.elapsed().unwrap();
         let stats = scheduler.get_steal_stats();
 
         println!("   总执行时间: {:?}", total_time);

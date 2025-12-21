@@ -3,7 +3,7 @@
 //!
 //! 本文件展示如何为 Beejs 添加新的性能监控功能
 
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// 性能指标结构
 #[derive(Debug, Clone)]
@@ -24,7 +24,7 @@ impl PerformanceMonitor {
     /// 创建新的性能监控器
     pub fn new() -> Self {
         Self {
-            start_time: Instant::now(),
+            start_time: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             metrics: PerformanceMetrics {
                 execution_time: Duration::from_millis(0),
                 memory_usage: 0,
@@ -36,7 +36,7 @@ impl PerformanceMonitor {
 
     /// 开始监控
     pub fn start(&mut self) {
-        self.start_time = Instant::now();
+        self.start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     }
 
     /// 记录脚本执行

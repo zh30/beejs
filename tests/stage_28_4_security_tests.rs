@@ -253,7 +253,7 @@ mod tests {
     fn test_audit_logging() {
         let manager = SandboxManager::new();
         let entry = SandboxAuditEntry {
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             sandbox_id: "test".to_string(),
             operation: "read_file".to_string(),
             result: "success".to_string(),
@@ -375,7 +375,7 @@ mod tests {
 
         for i in 0..10 {
             let entry = SandboxAuditEntry {
-                timestamp: Instant::now(),
+                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                 sandbox_id: format!("sandbox_{}", i),
                 operation: "test_op".to_string(),
                 result: "success".to_string(),
@@ -421,7 +421,7 @@ mod tests {
             SandboxResult::Success(_) => {
                 // 记录审计
                 let entry = SandboxAuditEntry {
-                    timestamp: Instant::now(),
+                    timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                     sandbox_id: "app".to_string(),
                     operation: "execute".to_string(),
                     result: "success".to_string(),
@@ -446,7 +446,7 @@ mod tests {
 
     #[test]
     fn test_stage_28_4_security_performance() {
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         // 创建1000个沙箱
         let mut manager = SandboxManager::new();
@@ -459,7 +459,7 @@ mod tests {
             manager.check_permission(&format!("sandbox_{}", i), "read_file");
         }
 
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         // 性能要求: 1000次操作 < 10ms
         assert!(duration < Duration::from_millis(10),

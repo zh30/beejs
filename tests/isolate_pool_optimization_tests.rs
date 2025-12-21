@@ -18,16 +18,16 @@ fn test_isolate_pool_optimization() {
     let mut durations = Vec::with_capacity(iterations);
 
     // 第一次执行（可能触发Isolate创建）
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let _ = runtime.execute_code(code);
-    let first_duration = start.elapsed();
+    let first_duration = start.elapsed().unwrap();
     println!("首次执行耗时: {:.2}ms", first_duration.as_secs_f64() * 1000.0);
 
     // 后续执行（应该复用Isolate）
     for _ in 0..iterations {
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let _ = runtime.execute_code(code);
-        durations.push(start.elapsed());
+        durations.push(start.elapsed().unwrap());
     }
 
     let avg_duration = durations
@@ -56,11 +56,11 @@ fn test_isolate_pool_concurrent_execution() {
         "Math.random() * 100;",
     ];
 
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     for code in &codes {
         let _ = runtime.execute_code(code);
     }
-    let elapsed = start.elapsed();
+    let elapsed = start.elapsed().unwrap();
 
     println!("并发执行 {} 个代码段耗时: {:.2}ms", codes.len(), elapsed.as_secs_f64() * 1000.0);
     println!("Isolate池并发优化测试通过！");

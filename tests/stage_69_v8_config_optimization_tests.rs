@@ -107,9 +107,9 @@ mod performance_benchmark_tests {
         let runtime = RuntimeLite::new_with_config(false, flags)
             .expect("Failed to create runtime with high_performance config");
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let result = run_benchmark_test(&runtime);
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         println!("High-Performance Config Results:");
         println!("  Profile: {}", runtime.v8_profile_name());
@@ -130,9 +130,9 @@ mod performance_benchmark_tests {
         let runtime = RuntimeLite::new_with_config(false, flags)
             .expect("Failed to create runtime with balanced config");
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let result = run_benchmark_test(&runtime);
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         println!("\nBalanced Config Results:");
         println!("  Profile: {}", runtime.v8_profile_name());
@@ -151,9 +151,9 @@ mod performance_benchmark_tests {
         let runtime = RuntimeLite::new_with_config(false, flags)
             .expect("Failed to create runtime with low_memory config");
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let result = run_benchmark_test(&runtime);
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         println!("\nLow-Memory Config Results:");
         println!("  Profile: {}", runtime.v8_profile_name());
@@ -188,12 +188,12 @@ mod startup_time_tests {
 
     #[test]
     fn test_startup_time_high_performance() {
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         let runtime = RuntimeLite::new_with_config(false, V8EngineFlags::high_performance())
             .expect("Failed to create runtime");
 
-        let startup_time = start.elapsed();
+        let startup_time = start.elapsed().unwrap();
 
         println!("\nStartup Time Test (High-Performance):");
         println!("  Startup Time: {:?}", startup_time);
@@ -206,12 +206,12 @@ mod startup_time_tests {
 
     #[test]
     fn test_startup_time_default() {
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
         let runtime = RuntimeLite::new(false)
             .expect("Failed to create default runtime");
 
-        let startup_time = start.elapsed();
+        let startup_time = start.elapsed().unwrap();
 
         println!("\nStartup Time Test (Default):");
         println!("  Startup Time: {:?}", startup_time);

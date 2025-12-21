@@ -27,9 +27,9 @@ mod stage_26_4_tests {
         let snapshot = preheater.generate_snapshot();
 
         // Load with snapshot
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let isolate = preheater.create_isolate_with_snapshot(&snapshot);
-        let load_time = start.elapsed();
+        let load_time = start.elapsed().unwrap();
 
         assert!(load_time < Duration::from_millis(5),
             "Startup with snapshot should be < 5ms, took {:?}", load_time);
@@ -48,9 +48,9 @@ mod stage_26_4_tests {
         // Enable lazy loading
         cli.enable_lazy_loading(true);
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         cli.initialize();
-        let init_time = start.elapsed();
+        let init_time = start.elapsed().unwrap();
 
         assert!(init_time < Duration::from_millis(3),
             "CLI initialization should be < 3ms, took {:?}", init_time);
@@ -75,9 +75,9 @@ mod stage_26_4_tests {
     fn test_delayed_initialization() {
         let initializer = DelayedInitializer::new();
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         initializer.initialize_core();
-        let core_init_time = start.elapsed();
+        let core_init_time = start.elapsed().unwrap();
 
         assert!(core_init_time < Duration::from_millis(1),
             "Core initialization should be instant");
@@ -87,9 +87,9 @@ mod stage_26_4_tests {
             "AI optimizer should not be loaded yet");
 
         // Access heavy module
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         initializer.initialize_module("ai_optimizer");
-        let heavy_init_time = start.elapsed();
+        let heavy_init_time = start.elapsed().unwrap();
 
         assert!(heavy_init_time >= Duration::from_millis(10),
             "Heavy module initialization should be noticeable");
@@ -188,9 +188,9 @@ mod stage_26_4_tests {
         assert!(handle.is_some(), "Should allocate zero-copy memory");
 
         // Read without copying
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let read_data = memory_manager.read_zero_copy(&handle.as_ref().unwrap());
-        let read_time = start.elapsed();
+        let read_time = start.elapsed().unwrap();
 
         assert_eq!(read_data, data, "Data should match");
         assert!(read_time < Duration::from_millis(1),
@@ -213,7 +213,7 @@ mod stage_26_4_tests {
         let pool = ObjectPool::new(100);
 
         // Allocate many objects
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut handles = Vec::new();
 
         for _i in 0..1000 {
@@ -221,7 +221,7 @@ mod stage_26_4_tests {
             handles.push(handle);
         }
 
-        let alloc_time = start.elapsed();
+        let alloc_time = start.elapsed().unwrap();
 
         // Should be fast with pool
         assert!(alloc_time < Duration::from_millis(10),
@@ -233,11 +233,11 @@ mod stage_26_4_tests {
         }
 
         // Reallocate - should be even faster
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         for _i in 0..1000 {
             pool.allocate();
         }
-        let realloc_time = start.elapsed();
+        let realloc_time = start.elapsed().unwrap();
 
         assert!(realloc_time < Duration::from_millis(5),
             "Reallocation from pool should be faster");
@@ -254,9 +254,9 @@ mod stage_26_4_tests {
         // Large repetitive data
         let original_data = vec![42u8; 10000];
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let compressed = compressor.compress(&original_data);
-        let compress_time = start.elapsed();
+        let compress_time = start.elapsed().unwrap();
 
         assert!(compressed.is_some(), "Should compress data");
         let compressed_len = compressed.as_ref().unwrap().len();
@@ -264,9 +264,9 @@ mod stage_26_4_tests {
             "Compressed data should be smaller");
 
         // Decompress
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let decompressed = compressor.decompress(compressed.as_ref().unwrap());
-        let decompress_time = start.elapsed();
+        let decompress_time = start.elapsed().unwrap();
 
         assert_eq!(decompressed, original_data, "Decompressed data should match");
         assert!(decompress_time < Duration::from_millis(5),

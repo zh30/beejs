@@ -328,7 +328,7 @@ impl Span {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
-            start: Instant::now(),
+            start: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
             duration: None,
             attributes: HashMap::new(),
         }
@@ -340,7 +340,7 @@ impl Span {
     }
 
     pub fn end(&mut self) {
-        self.duration = Some(self.start.elapsed());
+        self.duration = Some(self.start.elapsed().unwrap());
     }
 
     pub fn duration(&self) -> Option<Duration> {
@@ -644,21 +644,21 @@ fn test_stage_28_2_tracing_integration() {
 fn test_stage_28_2_logging_performance() {
     let mut logger = Logger::new(LogLevel::Info);
 
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     for i in 0..10000 {
         logger.log(
             LogEntry::new(LogLevel::Info, format!("Log message {}", i))
                 .with_field("iteration", i.to_string())
         );
     }
-    let log_time = start.elapsed();
+    let log_time = start.elapsed().unwrap();
 
     // JSON 格式化性能
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     for entry in logger.entries() {
         let _ = entry.to_json();
     }
-    let format_time = start.elapsed();
+    let format_time = start.elapsed().unwrap();
 
     println!("Logging Performance:");
     println!("  Log 10000 entries: {:?}", log_time);

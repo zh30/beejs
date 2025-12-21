@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 27.3: Edge Computing Optimization Tests
 //! Tests for CDN integration, edge deployment, global distribution, and caching strategies
 
@@ -69,9 +70,9 @@ mod edge_computing_tests {
     #[tokio::test]
     async fn test_cold_start_performance() {
         let runtime = EdgeRuntime::new();
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         let result = runtime.initialize().await;
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         assert!(result.is_ok());
         assert!(elapsed.as_millis() < 50, "Cold start took {}ms", elapsed.as_millis());
     }
@@ -261,7 +262,7 @@ mod edge_computing_tests {
 
     #[tokio::test]
     async fn test_performance_benchmark() {
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         let cache = EdgeCache::new("l1", 1000).unwrap();
 
         // Benchmark cache operations
@@ -270,15 +271,15 @@ mod edge_computing_tests {
             cache.set(&key, b"value").await.unwrap();
         }
 
-        let set_time = start.elapsed();
+        let set_time = start.elapsed().unwrap();
         assert!(set_time.as_millis() < 100, "Cache set took {}ms", set_time.as_millis());
 
-        let get_start = std::time::Instant::now();
+        let get_start = SystemTime::now();
         for i in 0..1000 {
             let key = format!("perf_key_{}", i);
             cache.get(&key).await.unwrap();
         }
-        let get_time = get_start.elapsed();
+        let get_time = get_start.elapsed().unwrap();
         assert!(get_time.as_millis() < 50, "Cache get took {}ms", get_time.as_millis());
     }
 
@@ -311,9 +312,9 @@ mod edge_computing_tests {
     #[tokio::test]
     async fn test_cold_start_target() {
         let runtime = EdgeRuntime::new();
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         runtime.initialize().await.unwrap();
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         assert!(
             elapsed.as_millis() < 50,
             "Cold start {}ms exceeds 50ms target",
@@ -349,10 +350,10 @@ mod edge_computing_tests {
         let routes = router.get_available_routes().await.unwrap();
 
         for region in routes {
-            let start = std::time::Instant::now();
+            let start = SystemTime::now();
             // Simulate ping to region
             let _ = router.ping_region(&region).await;
-            let latency = start.elapsed();
+            let latency = start.elapsed().unwrap();
 
             assert!(
                 latency.as_millis() < 100,

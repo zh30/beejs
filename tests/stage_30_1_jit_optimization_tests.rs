@@ -398,9 +398,9 @@ mod performance_benchmark_tests {
             let result = add(sub(mul(div(100, 2), 3), 4), 5);
         "#;
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let decision = optimizer.should_compile(code, CodeComplexity::Medium);
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         assert!(decision.should_compile, "Should compile");
         assert!(
@@ -425,9 +425,9 @@ mod performance_benchmark_tests {
             console.log(live);
         "#;
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let decision = optimizer.should_compile(code, CodeComplexity::Simple);
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         assert!(duration < Duration::from_millis(5), "Should analyze quickly (< 5ms)");
         assert!(
@@ -447,9 +447,9 @@ mod performance_benchmark_tests {
             }
         "#;
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let decision = optimizer.should_compile(code, CodeComplexity::Medium);
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         assert!(duration < Duration::from_millis(10), "Should handle loop quickly");
         assert!(
@@ -469,9 +469,9 @@ mod performance_benchmark_tests {
             console.log(obj1.value + obj2.value + obj3.value);
         "#;
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let decision = optimizer.should_compile(code, CodeComplexity::Simple);
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         assert!(duration < Duration::from_millis(5), "Should analyze objects quickly");
         assert!(
@@ -491,9 +491,9 @@ mod performance_benchmark_tests {
             optimizer.record_execution(code, Duration::from_micros(10));
         }
 
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let decision = optimizer.should_compile(code, CodeComplexity::Simple);
-        let duration = start.elapsed();
+        let duration = start.elapsed().unwrap();
 
         assert!(duration < Duration::from_millis(1), "Should detect hotspot quickly");
         assert!(

@@ -98,28 +98,28 @@ mod tests {
         manager.write(&mut handle, 4096, chunk3).unwrap();
 
         // 模拟预取：顺序读取相邻数据
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         for i in 0..10 {
             let offset = i * 200;
             let _ = manager.read(&handle, offset, chunk1.len()).unwrap();
         }
-        let sequential_time = start.elapsed();
+        let sequential_time = start.elapsed().unwrap();
 
         // 随机访问（模拟真实场景）
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         for i in 0..10 {
             let offset = (i * 731) % 8000; // 伪随机偏移
             let _ = manager.read(&handle, offset, chunk1.len()).unwrap();
         }
-        let random_time = start.elapsed();
+        let random_time = start.elapsed().unwrap();
 
         // 预取后再次顺序访问（应该更快）
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         for i in 0..10 {
             let offset = i * 200;
             let _ = manager.read(&handle, offset, chunk1.len()).unwrap();
         }
-        let optimized_time = start.elapsed();
+        let optimized_time = start.elapsed().unwrap();
 
         // 验证优化效果
         println!("顺序访问时间: {:?}", sequential_time);
@@ -162,7 +162,7 @@ mod tests {
             .collect();
 
         // 并发读取性能测试
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         let read_count = Arc::new(AtomicUsize::new(0));
         let manager_arc = Arc::new(manager);
 
@@ -183,7 +183,7 @@ mod tests {
             h.await.unwrap();
         }
 
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
         let total_reads = read_count.load(Ordering::SeqCst);
 
         println!("并发读取测试完成:");
@@ -297,12 +297,12 @@ mod tests {
 
         // 第一轮随机访问（建立基线）
         let mut rng = rand::thread_rng();
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         for _ in 0..50 {
             let offset = (rng.gen::<usize>() % 100) * 256;
             let _ = manager.read(&handle, offset, test_len).unwrap();
         }
-        let baseline_time = start.elapsed();
+        let baseline_time = start.elapsed().unwrap();
 
         // 模拟预取：顺序访问相关数据
         for i in 0..100 {
@@ -311,12 +311,12 @@ mod tests {
         }
 
         // 第二轮随机访问（应该受益于预取）
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         for _ in 0..50 {
             let offset = (rng.gen::<usize>() % 100) * 256;
             let _ = manager.read(&handle, offset, test_len).unwrap();
         }
-        let optimized_time = start.elapsed();
+        let optimized_time = start.elapsed().unwrap();
 
         println!("缓存效果测试:");
         println!("  基线随机访问: {:?}", baseline_time);

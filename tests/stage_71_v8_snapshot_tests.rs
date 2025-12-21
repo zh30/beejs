@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 // Stage 71: V8 快照预热系统测试套件
 // 测试 V8 快照生成、加载和预热功能
 
@@ -22,7 +23,7 @@ mod v8_snapshot_tests {
         // 验证快照结构
         assert!(!snapshot.snapshot_data.is_empty());
         assert!(snapshot.version.len() > 0);
-        assert!(snapshot.created_at.elapsed().unwrap().as_secs() >= 0);
+        assert!(snapshot.created_at.elapsed().unwrap().unwrap().as_secs() >= 0);
     }
 
     #[test]
@@ -95,9 +96,9 @@ mod v8_snapshot_tests {
         let snapshot = manager.generate_snapshot(&mut runtime).unwrap();
 
         // 记录加载时间
-        let start = std::time::Instant::now();
+        let start = SystemTime::now();
         let result = manager.load_snapshot(&mut runtime, "test_snapshot");
-        let load_time = start.elapsed();
+        let load_time = start.elapsed().unwrap();
 
         assert!(result.is_ok());
         // 快照加载应该在 100ms 内完成

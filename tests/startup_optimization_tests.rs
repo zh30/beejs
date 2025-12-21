@@ -8,9 +8,9 @@ use std::time::Instant;
 /// Test that basic runtime creation is fast (< 100ms target)
 #[test]
 fn test_basic_runtime_startup_time() {
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let _runtime = Runtime::new(67108864, 1073741824, false, false);
-    let startup_time = start.elapsed();
+    let startup_time = start.elapsed().unwrap();
 
     // Runtime creation always succeeds
 
@@ -29,9 +29,9 @@ fn test_basic_runtime_startup_time() {
 fn test_first_execution_time() {
     let runtime = Runtime::new(67108864, 1073741824, false, false);
 
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let result = runtime.execute_code("1 + 1");
-    let execution_time = start.elapsed();
+    let execution_time = start.elapsed().unwrap();
 
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), "2");
@@ -49,13 +49,13 @@ fn test_first_execution_time() {
 /// Test lazy loading behavior - simple code should execute fast
 #[test]
 fn test_lazy_ai_modules_startup() {
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
     // Create runtime and execute simple code (should not need AI modules)
     let runtime = Runtime::new(67108864, 1073741824, false, false);
     let _ = runtime.execute_code("console.log('Hello')");
 
-    let total_time = start.elapsed();
+    let total_time = start.elapsed().unwrap();
 
     println!("Startup + simple execution time: {:?}", total_time);
 
@@ -73,21 +73,21 @@ fn test_startup_time_breakdown() {
     println!("\n=== Startup Time Breakdown ===");
 
     // Measure V8 initialization (only first time)
-    let v8_start = Instant::now();
+    let v8_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     beejs::initialize_v8();
-    let v8_time = v8_start.elapsed();
+    let v8_time = v8_start.elapsed().unwrap();
     println!("V8 initialization: {:?}", v8_time);
 
     // Measure runtime creation (without V8 init)
-    let runtime_start = Instant::now();
+    let runtime_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let runtime = Runtime::new(67108864, 1073741824, false, false);
-    let runtime_time = runtime_start.elapsed();
+    let runtime_time = runtime_start.elapsed().unwrap();
     println!("Runtime creation (after V8 init): {:?}", runtime_time);
 
     // Measure first execution
-    let exec_start = Instant::now();
+    let exec_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let _ = runtime.execute_code("1");
-    let exec_time = exec_start.elapsed();
+    let exec_time = exec_start.elapsed().unwrap();
     println!("First code execution: {:?}", exec_time);
 
     // Total startup to first execution
@@ -109,17 +109,17 @@ fn test_precompiled_cache_startup_impact() {
     let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     // First execution with simple code
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let result = runtime.execute_code("const arr = [1,2,3]; arr.map(x => x * 2).join(',')");
-    let first_time = start.elapsed();
+    let first_time = start.elapsed().unwrap();
 
     assert!(result.is_ok(), "First execution should succeed");
     println!("First execution time: {:?}", first_time);
 
     // Subsequent execution should be fast
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let result = runtime.execute_code("const obj = {a: 1, b: 2}; Object.keys(obj).length");
-    let second_time = start.elapsed();
+    let second_time = start.elapsed().unwrap();
 
     assert!(result.is_ok(), "Second execution should succeed");
     println!("Cached execution time: {:?}", second_time);
@@ -138,7 +138,7 @@ fn test_multiple_executions_performance() {
     let runtime = Runtime::new(67108864, 1073741824, false, false);
 
     let iterations = 100;
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
     for i in 0..iterations {
         let code = format!("{} + {}", i, i);
@@ -146,7 +146,7 @@ fn test_multiple_executions_performance() {
         assert!(result.is_ok());
     }
 
-    let total_time = start.elapsed();
+    let total_time = start.elapsed().unwrap();
     let avg_time = total_time / iterations;
 
     println!("{} iterations in {:?}", iterations, total_time);

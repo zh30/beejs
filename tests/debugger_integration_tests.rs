@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Debugger Module Integration Tests
 //!
 //! Tests for the beejs debugger functionality
@@ -399,7 +400,7 @@ mod tests {
         assert_eq!(stats.breakpoints_set, 0);
         assert_eq!(stats.breakpoints_hit, 0);
         assert_eq!(stats.steps_executed, 0);
-        assert!(stats.start_time.elapsed().as_secs() >= 0);
+        assert!(stats.start_time.elapsed().unwrap().as_secs() >= 0);
     }
 
     /// Test 26: Should pause at location

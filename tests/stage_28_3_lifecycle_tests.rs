@@ -79,13 +79,13 @@ impl HealthCheck for SimpleHealthCheck {
     }
 
     fn check(&self) -> HealthCheckResult {
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let (status, message) = (self.check_fn)();
         HealthCheckResult {
             name: self.name.clone(),
             status,
             message,
-            duration: start.elapsed(),
+            duration: start.elapsed().unwrap(),
         }
     }
 }
@@ -258,7 +258,7 @@ impl GracefulShutdown {
 
     /// 执行关闭流程
     pub fn execute_shutdown(&mut self) -> ShutdownResult {
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut result = ShutdownResult::default();
 
         // Phase 1: PreShutdown hooks
@@ -270,9 +270,9 @@ impl GracefulShutdown {
 
         // Phase 2: Drain connections
         self.phase = ShutdownPhase::DrainConnections;
-        let drain_start = Instant::now();
+        let drain_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         while self.active_connections.load(Ordering::SeqCst) > 0 {
-            if drain_start.elapsed() > self.drain_timeout {
+            if drain_start.elapsed().unwrap() > self.drain_timeout {
                 result.drain_timeout_exceeded = true;
                 break;
             }
@@ -293,7 +293,7 @@ impl GracefulShutdown {
 
         // Phase 5: Terminated
         self.phase = ShutdownPhase::Terminated;
-        result.total_duration = start.elapsed();
+        result.total_duration = start.elapsed().unwrap();
 
         result
     }
@@ -717,11 +717,11 @@ fn test_stage_28_3_health_performance() {
         )));
     }
 
-    let start = Instant::now();
+    let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     for _ in 0..1000 {
         let _ = manager.health();
     }
-    let duration = start.elapsed();
+    let duration = start.elapsed().unwrap();
 
     println!("Health Check Performance:");
     println!("  1000 health checks (10 components each): {:?}", duration);

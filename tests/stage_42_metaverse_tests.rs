@@ -7,7 +7,7 @@
 //! - 分布式元宇宙网络
 
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 // ============================================================================
 // 元宇宙渲染引擎测试
@@ -195,9 +195,9 @@ mod metaverse_engine_tests {
         let engine = MetaverseEngine::new(config).unwrap();
 
         // 模拟渲染一帧
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let result = engine.render_frame();
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         assert!(result.is_ok());
         // 目标: 120 FPS = 8.33ms per frame
@@ -337,9 +337,9 @@ mod holographic_engine_tests {
         let engine = HolographicEngine::new(config).unwrap();
 
         // 模拟全息计算
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let result = engine.compute_hologram();
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         assert!(result.is_ok());
         // 目标: 实时全息计算 < 10ms (测试允许更宽松)
@@ -562,10 +562,10 @@ mod immersive_interaction_tests {
         let tracker = HandTracking::new(hand_config).unwrap();
 
         // 测试处理延迟
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mock_data = beejs::immersive_interaction::MockHandData::default();
         let _ = tracker.process_frame_sync(&mock_data);
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         // 目标: 延迟 < 20ms
         assert!(elapsed < Duration::from_millis(50));
@@ -673,9 +673,9 @@ mod distributed_metaverse_tests {
         let sync = StateSync::new(config).unwrap();
 
         // 模拟跨区域同步
-        let start = Instant::now();
+        let start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let result = sync.sync_with_region("eu-west-1");
-        let elapsed = start.elapsed();
+        let elapsed = start.elapsed().unwrap();
 
         assert!(result.is_ok());
         // 目标: < 50ms 跨洲同步 (测试允许更宽松)

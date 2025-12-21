@@ -1,3 +1,4 @@
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 73 TypeScript 转译测试
 //! 验证箭头函数和类型标注转译功能
 
