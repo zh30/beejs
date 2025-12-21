@@ -43,21 +43,21 @@ pub mod package_manager;
 pub mod watcher;
 pub mod repl;
 pub mod cli;
-pub mod edge;
+// pub mod edge;  // Temporarily disabled - incomplete implementation
 pub mod web_api;  // Stage 74: Web API 生态系统完善
 pub mod debugger;  // Stage 58: Debugger integration
 pub mod observability;  // 可观测性系统
-pub mod security;  // Stage 84: 企业级安全与合规
-pub mod aiops;  // Stage 85: AI 驱动运维 (AIOps)
+// pub mod security;  // Stage 84: 企业级安全与合规 - temporarily disabled
+// pub mod aiops;  // Stage 85: AI 驱动运维 (AIOps) - temporarily disabled
 pub mod ai_inference;
-pub mod multilang;  // Stage 88 Phase 1: 多语言支持
-pub mod platform;  // Stage 88 Phase 2: 跨平台运行时
-pub mod cloudnative;  // Stage 88 Phase 4: 云原生集成
+// pub mod multilang;  // Stage 88 Phase 1: 多语言支持 - temporarily disabled
+// pub mod platform;  // Stage 88 Phase 2: 跨平台运行时 - temporarily disabled
+// pub mod cloudnative;  // Stage 88 Phase 4: 云原生集成 - temporarily disabled
 
 // Stage 83: Enterprise modules
-pub mod enterprise;  // Stage 88 Phase 3: 企业级解决方案
-pub mod error;  // Stage 89 Phase 2: 统一错误处理系统
-pub mod fallback;  // Stage 89 Phase 2: 优雅降级机制
+// pub mod enterprise;  // Stage 88 Phase 3: 企业级解决方案 - temporarily disabled
+// pub mod error;  // Stage 89 Phase 2: 统一错误处理系统 - temporarily disabled
+// pub mod fallback;  // Stage 89 Phase 2: 优雅降级机制 - temporarily disabled
 pub mod concurrent_execution;
 pub mod shared_memory;
 pub mod shared_object_cache;
