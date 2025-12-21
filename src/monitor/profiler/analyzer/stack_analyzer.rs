@@ -152,7 +152,7 @@ impl CallStackAnalyzer {
         file: Option<String>,
         line: Option<u32>,
         column: Option<u32>,
-        timestamp: Instant,
+        timestamp: u64,
     ) {
         let depth = self.current_stack.len();
 
@@ -193,12 +193,12 @@ impl CallStackAnalyzer {
     pub fn exit_function(
         &mut self,
         function_name: &str,
-        end_timestamp: Instant,
+        end_timestamp: u64,
         memory_used: usize,
     ) -> Option<StackFrame> {
         if let Some(frame) = self.current_stack.pop_back() {
             if frame.function_name == function_name {
-                let execution_time = end_timestamp.duration_since(frame.timestamp);
+                let execution_time = Duration::from_secs(end_timestamp - frame.timestamp);
 
                 let mut completed_frame = frame;
                 completed_frame.execution_time = execution_time;

@@ -46,7 +46,7 @@ pub struct ResourceUsage {
 #[derive(Debug)]
 struct ResourceHistory {
     usage: ResourceUsage,
-    timestamp: Instant,
+    timestamp: u64,
 }
 
 /// 资源跟踪器

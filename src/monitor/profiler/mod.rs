@@ -157,7 +157,11 @@ impl AdvancedProfiler {
 
         // 同时记录到调用栈分析器
         if let Some(stack_analyzer) = &mut self.stack_analyzer {
-            stack_analyzer.enter_function(function_name, file, line, column, std::time::Instant::now());
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            stack_analyzer.enter_function(function_name, file, line, column, timestamp);
         }
 
         handle
@@ -173,9 +177,13 @@ impl AdvancedProfiler {
 
         // 同时记录到调用栈分析器
         if let Some(stack_analyzer) = &mut self.stack_analyzer {
+            let timestamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
             stack_analyzer.exit_function(
                 &handle.function_name,
-                std::time::Instant::now(),
+                timestamp,
                 end_memory,
             );
         }

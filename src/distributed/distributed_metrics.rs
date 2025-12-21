@@ -464,7 +464,11 @@ impl DistributedMetrics {
 
     /// 清理旧指标
     async fn cleanup_old_metrics(&self) -> Result<(), String> {
-        let cutoff = Instant::now() - self.config.retention_period;
+        let cutoff = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            - self.config.retention_period.as_secs();
 
         let mut points = self.metric_points.write().await;
         points.retain(|point| point.timestamp > cutoff);

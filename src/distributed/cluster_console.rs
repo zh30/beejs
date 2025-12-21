@@ -502,7 +502,11 @@ impl ClusterConsole {
 
     /// 清理旧告警
     async fn cleanup_old_alerts(&self) -> Result<(), String> {
-        let cutoff = Instant::now() - Duration::from_secs(3600); // 1 hour
+        let cutoff = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            - 3600; // 1 hour
 
         let mut alerts = self.alerts.write().await;
         alerts.retain(|alert| alert.timestamp > cutoff || !alert.acknowledged);

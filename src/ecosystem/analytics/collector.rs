@@ -335,7 +335,7 @@ impl AnalyticsCollector {
             }
         }
 
-        let mut trends = daily_counts
+        let mut trends: Vec<TrendData> = daily_counts
             .into_iter()
             .map(|(date, value)| TrendData { date, value })
             .collect();

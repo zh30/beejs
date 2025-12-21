@@ -257,7 +257,7 @@ impl ModelManager {
         };
 
         let registry = ModelRegistry::new(registry_config)?;
-        let router = ModelRouter::new(runtime, router_config)?;
+        let router = ModelRouter::new(router_config)?;
 
         Ok(ModelManager {
             runtime: runtime.clone(),

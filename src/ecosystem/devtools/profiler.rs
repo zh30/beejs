@@ -51,6 +51,15 @@ pub struct CallGraphSampler {
     start_time: Instant,
 }
 
+impl Clone for CallGraphSampler {
+    fn clone(&self) -> Self {
+        Self {
+            samples: Arc::new(Mutex::new(Vec::new())),
+            start_time: Instant::now(),
+        }
+    }
+}
+
 /// 调用样本
 #[derive(Debug, Clone)]
 struct CallSample {
@@ -435,10 +444,12 @@ impl CallGraphAnalyzer {
             children: call_tree.values().cloned().collect(),
         };
 
+        let root_call_count = root.call_count;
+        let root_total_time = root.total_time_ns;
         Ok(CallGraph {
             root,
-            total_calls: root.call_count,
-            total_time_ns: root.total_time_ns,
+            total_calls: root_call_count,
+            total_time_ns: root_total_time,
         })
     }
 
@@ -501,7 +512,7 @@ impl CallGraphSampler {
         line_number: u32,
     ) -> CallHandle {
         CallHandle {
-            sampler: Arc::clone(&self.samples),
+            sampler: Arc::new(self.clone()),
             function_name: function_name.to_string(),
             file_path: file_path.to_string(),
             line_number,

@@ -459,7 +459,10 @@ impl PerformanceProfiler {
             execution_time: 0,
             memory_usage: 0,
             function_calls: Vec::new(),
-            timestamp: std::time::Instant::now(),
+            timestamp: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
         });
     }
 

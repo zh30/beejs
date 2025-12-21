@@ -35,6 +35,18 @@ pub enum RuleCategory {
     Performance,
 }
 
+impl std::fmt::Display for RuleCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RuleCategory::Syntax => write!(f, "Syntax"),
+            RuleCategory::Style => write!(f, "Style"),
+            RuleCategory::BestPractice => write!(f, "BestPractice"),
+            RuleCategory::Security => write!(f, "Security"),
+            RuleCategory::Performance => write!(f, "Performance"),
+        }
+    }
+}
+
 /// 检查问题
 #[derive(Debug, Clone)]
 pub struct LintIssue {
@@ -165,7 +177,7 @@ impl Linter {
         let mut auto_fixable_count = 0;
 
         for rule in self.rules.as_ref() {
-            let count = category_counts.entry(&rule.category).or_insert(0);
+            let count = category_counts.entry(rule.category.to_string()).or_insert(0);
             *count += 1;
 
             if rule.auto_fixable {
@@ -674,7 +686,7 @@ impl Linter {
 #[derive(Debug, Clone)]
 pub struct RuleStats {
     pub total_rules: usize,
-    pub category_counts: HashMap<&'static RuleCategory, usize>,
+    pub category_counts: HashMap<String, usize>,
     pub auto_fixable_count: usize,
 }
 

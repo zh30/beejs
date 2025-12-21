@@ -122,11 +122,20 @@ pub struct RefactorSuggestion {
 }
 
 /// AI 代码生成器
-#[derive(Debug, Clone)]
 pub struct AICodeGenerator {
     model: Arc<dyn AiModel>,
     context_cache: Arc<RwLock<ContextCache>>,
     code_db: Arc<CodeDatabase>,
+}
+
+impl Clone for AICodeGenerator {
+    fn clone(&self) -> Self {
+        Self {
+            model: self.model.clone(),
+            context_cache: self.context_cache.clone(),
+            code_db: self.code_db.clone(),
+        }
+    }
 }
 
 /// AI 模型接口
@@ -290,7 +299,7 @@ pub struct ContextCache {
 impl ContextCache {
     pub fn new(capacity: usize) -> Self {
         Self {
-            cache: Arc::new(RwLock::new(lru::LruCache::new(capacity))),
+            cache: Arc::new(RwLock::new(lru::LruCache::new(std::num::NonZeroUsize::new(capacity).unwrap_or(std::num::NonZeroUsize::new(100).unwrap())))),
         }
     }
 
@@ -396,11 +405,12 @@ impl AICodeGenerator {
             None
         };
 
+        let code_to_explain = processed.clone();
         Ok(GeneratedCode {
             code: processed,
             confidence: 0.95,
             language,
-            explanation: Some(self.model.explain(&processed)?),
+            explanation: Some(self.model.explain(&code_to_explain)?),
             suggestions,
             tests,
         })

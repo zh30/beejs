@@ -107,7 +107,7 @@ struct PrefetchEntry {
     data: Vec<u8>,
     #[allow(dead_code)]
     offset: usize,
-    timestamp: Instant,
+    timestamp: u64,
 }
 
 /// 共享内存管理器
@@ -612,8 +612,12 @@ impl SharedMemoryManager {
 }
 
 /// 计算时间差
-fn now_elapsed(start: &Instant) -> Duration {
-    Instant::now().duration_since(*start)
+fn now_elapsed(start: &u64) -> Duration {
+    let current = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    Duration::from_secs(current - start)
 }
 
 impl Drop for SharedMemoryManager {

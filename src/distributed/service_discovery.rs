@@ -218,7 +218,7 @@ impl ServiceDiscovery {
             location: message.node_info.location.clone(),
             capabilities: message.node_info.capabilities.clone(),
             status: NodeStatus::Online,
-            registered_at: message.timestamp,
+            registered_at: Instant::now(),
             last_heartbeat: Instant::now(),
             version: 1,
         };

@@ -163,9 +163,10 @@ impl Formatter {
             current_line_len = formatted_line.len();
         }
 
+        let output_for_check = output.clone();
         Ok(FormatResult {
             formatted_code: output,
-            changed: output.trim() != source.trim(),
+            changed: output_for_check.trim() != source.trim(),
             line_count,
         })
     }

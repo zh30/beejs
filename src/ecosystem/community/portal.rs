@@ -200,10 +200,11 @@ impl CommunityPortal {
         let mut results = Vec::new();
         for module in modules {
             let rating_summary = self.get_module_rating(&module.id).await.unwrap_or_default();
+            let module_for_score = module.clone();
 
             results.push(ModuleSearchResult {
                 module,
-                score: self.calculate_relevance_score(&module, query, &rating_summary),
+                score: self.calculate_relevance_score(&module_for_score, query, &rating_summary),
                 rating_summary,
             });
         }
