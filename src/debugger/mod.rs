@@ -1,12 +1,15 @@
 //! Debugger Module
 //! Stage 58 - 实现完整的调试器系统
+//! Stage 93 Phase 3.2 - 调试器增强
 //!
 //! This module provides comprehensive debugging capabilities including:
-//! - Breakpoint management
+//! - Breakpoint management (basic + conditional + logpoints)
 //! - Single-step execution
 //! - Variable inspection
-//! - Call stack traversal
-//! - Remote debugging support
+//! - Call stack traversal (sync + async)
+//! - Remote debugging support (Chrome DevTools + DAP)
+//! - Source map integration
+//! - Performance profiling integration
 
 pub mod engine;
 pub mod breakpoint;
@@ -17,6 +20,7 @@ pub mod v8_stubs;
 pub mod session;
 pub mod cli;
 pub mod watch;
+pub mod enhanced;
 
 pub use engine::{DebuggerEngine, DebugState, SimpleEventListener};
 pub use breakpoint::{Breakpoint, BreakpointManager, BreakpointCondition};
@@ -25,6 +29,30 @@ pub use variable_scope::{VariableScope, ScopeType, VariableInspector};
 pub use session::DebugSession;
 pub use config::DebugConfig;
 pub use watch::{WatchExpression, WatchManager};
+
+// Stage 93 Phase 3.2: Enhanced debugger exports
+pub use enhanced::{
+    EnhancedDebugger,
+    ConditionalBreakpoint,
+    HitCountCondition,
+    ExceptionBreakpoint,
+    EnhancedStackFrame,
+    AsyncStackTrace,
+    ScopeInfo,
+    ScopeType as EnhancedScopeType,
+    VariableInfo as EnhancedVariableInfo,
+    DebuggerProfiler,
+    ProfileSample,
+    HotSpot,
+    SourceMap,
+    SourceMapManager,
+    MappingSegment,
+    OriginalLocation,
+    GeneratedLocation,
+    RemoteDebugConfig,
+    RemoteDebugSession,
+    DebugProtocol,
+};
 
 /// Debug event types
 #[derive(Debug, Clone, PartialEq)]

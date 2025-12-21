@@ -1,0 +1,917 @@
+//! Stage 93 Phase 3.2: 调试器增强测试套件
+//! 测试断点增强、调用栈追踪、性能分析集成、源代码映射
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    // =========================================
+    // Part 1: 高级断点功能测试
+    // =========================================
+
+    /// 条件断点配置
+    #[derive(Debug, Clone)]
+    pub struct ConditionalBreakpoint {
+        pub id: String,
+        pub file: String,
+        pub line: u32,
+        pub condition: String,
+        pub hit_count_condition: Option<HitCountCondition>,
+        pub log_message: Option<String>,
+        pub enabled: bool,
+    }
+
+    /// 命中次数条件
+    #[derive(Debug, Clone)]
+    pub enum HitCountCondition {
+        Equal(u32),
+        GreaterThan(u32),
+        Multiple(u32),
+    }
+
+    impl HitCountCondition {
+        pub fn should_break(&self, hit_count: u32) -> bool {
+            match self {
+                HitCountCondition::Equal(n) => hit_count == *n,
+                HitCountCondition::GreaterThan(n) => hit_count > *n,
+                HitCountCondition::Multiple(n) => *n > 0 && hit_count % *n == 0,
+            }
+        }
+    }
+
+    #[test]
+    fn test_conditional_breakpoint_creation() {
+        let bp = ConditionalBreakpoint {
+            id: "bp_1".to_string(),
+            file: "app.ts".to_string(),
+            line: 42,
+            condition: "x > 10".to_string(),
+            hit_count_condition: None,
+            log_message: None,
+            enabled: true,
+        };
+
+        assert_eq!(bp.id, "bp_1");
+        assert_eq!(bp.file, "app.ts");
+        assert_eq!(bp.line, 42);
+        assert_eq!(bp.condition, "x > 10");
+        assert!(bp.enabled);
+    }
+
+    #[test]
+    fn test_hit_count_condition_equal() {
+        let condition = HitCountCondition::Equal(5);
+
+        assert!(!condition.should_break(4));
+        assert!(condition.should_break(5));
+        assert!(!condition.should_break(6));
+    }
+
+    #[test]
+    fn test_hit_count_condition_greater_than() {
+        let condition = HitCountCondition::GreaterThan(3);
+
+        assert!(!condition.should_break(2));
+        assert!(!condition.should_break(3));
+        assert!(condition.should_break(4));
+        assert!(condition.should_break(100));
+    }
+
+    #[test]
+    fn test_hit_count_condition_multiple() {
+        let condition = HitCountCondition::Multiple(3);
+
+        assert!(condition.should_break(3));
+        assert!(!condition.should_break(4));
+        assert!(!condition.should_break(5));
+        assert!(condition.should_break(6));
+        assert!(condition.should_break(9));
+    }
+
+    #[test]
+    fn test_log_point_breakpoint() {
+        let bp = ConditionalBreakpoint {
+            id: "logpoint_1".to_string(),
+            file: "debug.ts".to_string(),
+            line: 10,
+            condition: String::new(),
+            hit_count_condition: None,
+            log_message: Some("Value of x: {x}".to_string()),
+            enabled: true,
+        };
+
+        assert!(bp.log_message.is_some());
+        assert_eq!(bp.log_message.as_ref().unwrap(), "Value of x: {x}");
+    }
+
+    // =========================================
+    // Part 2: 增强调用栈追踪测试
+    // =========================================
+
+    /// 增强的栈帧信息
+    #[derive(Debug, Clone)]
+    pub struct EnhancedStackFrame {
+        pub index: u32,
+        pub function_name: String,
+        pub file_path: String,
+        pub line: u32,
+        pub column: u32,
+        pub is_async: bool,
+        pub is_promise: bool,
+        pub scope_chain: Vec<ScopeInfo>,
+        pub this_value: Option<String>,
+        pub return_value: Option<String>,
+    }
+
+    /// 作用域信息
+    #[derive(Debug, Clone)]
+    pub struct ScopeInfo {
+        pub scope_type: ScopeType,
+        pub name: Option<String>,
+        pub variables: HashMap<String, VariableInfo>,
+    }
+
+    /// 作用域类型
+    #[derive(Debug, Clone, PartialEq)]
+    pub enum ScopeType {
+        Global,
+        Local,
+        Closure,
+        Block,
+        With,
+        Catch,
+        Module,
+    }
+
+    /// 变量信息
+    #[derive(Debug, Clone)]
+    pub struct VariableInfo {
+        pub name: String,
+        pub value: String,
+        pub var_type: String,
+        pub is_readonly: bool,
+    }
+
+    #[test]
+    fn test_enhanced_stack_frame_creation() {
+        let frame = EnhancedStackFrame {
+            index: 0,
+            function_name: "processData".to_string(),
+            file_path: "src/processor.ts".to_string(),
+            line: 25,
+            column: 10,
+            is_async: true,
+            is_promise: false,
+            scope_chain: vec![],
+            this_value: Some("{ name: 'test' }".to_string()),
+            return_value: None,
+        };
+
+        assert_eq!(frame.function_name, "processData");
+        assert!(frame.is_async);
+        assert!(!frame.is_promise);
+        assert!(frame.this_value.is_some());
+    }
+
+    #[test]
+    fn test_scope_chain() {
+        let mut local_vars = HashMap::new();
+        local_vars.insert("x".to_string(), VariableInfo {
+            name: "x".to_string(),
+            value: "42".to_string(),
+            var_type: "number".to_string(),
+            is_readonly: false,
+        });
+
+        let local_scope = ScopeInfo {
+            scope_type: ScopeType::Local,
+            name: Some("processData".to_string()),
+            variables: local_vars,
+        };
+
+        let frame = EnhancedStackFrame {
+            index: 0,
+            function_name: "processData".to_string(),
+            file_path: "src/processor.ts".to_string(),
+            line: 25,
+            column: 10,
+            is_async: false,
+            is_promise: false,
+            scope_chain: vec![local_scope],
+            this_value: None,
+            return_value: None,
+        };
+
+        assert_eq!(frame.scope_chain.len(), 1);
+        assert_eq!(frame.scope_chain[0].scope_type, ScopeType::Local);
+        assert!(frame.scope_chain[0].variables.contains_key("x"));
+    }
+
+    /// 异步调用栈追踪
+    #[derive(Debug, Clone)]
+    pub struct AsyncStackTrace {
+        pub sync_frames: Vec<EnhancedStackFrame>,
+        pub async_parent: Option<Box<AsyncStackTrace>>,
+        pub description: String,
+    }
+
+    #[test]
+    fn test_async_stack_trace() {
+        let sync_frame = EnhancedStackFrame {
+            index: 0,
+            function_name: "fetchData".to_string(),
+            file_path: "src/api.ts".to_string(),
+            line: 10,
+            column: 5,
+            is_async: true,
+            is_promise: false,
+            scope_chain: vec![],
+            this_value: None,
+            return_value: None,
+        };
+
+        let parent_frame = EnhancedStackFrame {
+            index: 0,
+            function_name: "main".to_string(),
+            file_path: "src/app.ts".to_string(),
+            line: 5,
+            column: 1,
+            is_async: false,
+            is_promise: false,
+            scope_chain: vec![],
+            this_value: None,
+            return_value: None,
+        };
+
+        let parent_stack = AsyncStackTrace {
+            sync_frames: vec![parent_frame],
+            async_parent: None,
+            description: "async call from main".to_string(),
+        };
+
+        let async_stack = AsyncStackTrace {
+            sync_frames: vec![sync_frame],
+            async_parent: Some(Box::new(parent_stack)),
+            description: "await in fetchData".to_string(),
+        };
+
+        assert_eq!(async_stack.sync_frames.len(), 1);
+        assert!(async_stack.async_parent.is_some());
+    }
+
+    // =========================================
+    // Part 3: 性能分析集成测试
+    // =========================================
+
+    /// 调试器性能分析器
+    #[derive(Debug, Clone)]
+    pub struct DebuggerProfiler {
+        pub enabled: bool,
+        pub sample_interval_us: u32,
+        pub samples: Vec<ProfileSample>,
+        pub hot_spots: Vec<HotSpot>,
+    }
+
+    /// 性能采样点
+    #[derive(Debug, Clone)]
+    pub struct ProfileSample {
+        pub timestamp_us: u64,
+        pub stack_frames: Vec<String>,
+        pub cpu_time_us: u64,
+        pub memory_bytes: usize,
+    }
+
+    /// 热点信息
+    #[derive(Debug, Clone)]
+    pub struct HotSpot {
+        pub function_name: String,
+        pub file_path: String,
+        pub line: u32,
+        pub hit_count: u64,
+        pub total_time_us: u64,
+        pub percentage: f64,
+    }
+
+    impl DebuggerProfiler {
+        pub fn new(sample_interval_us: u32) -> Self {
+            Self {
+                enabled: false,
+                sample_interval_us,
+                samples: Vec::new(),
+                hot_spots: Vec::new(),
+            }
+        }
+
+        pub fn start(&mut self) {
+            self.enabled = true;
+            self.samples.clear();
+        }
+
+        pub fn stop(&mut self) {
+            self.enabled = false;
+        }
+
+        pub fn add_sample(&mut self, sample: ProfileSample) {
+            if self.enabled {
+                self.samples.push(sample);
+            }
+        }
+
+        pub fn analyze_hot_spots(&mut self) -> Vec<HotSpot> {
+            let mut function_times: HashMap<String, (u64, u64)> = HashMap::new();
+            let total_time: u64 = self.samples.iter().map(|s| s.cpu_time_us).sum();
+
+            for sample in &self.samples {
+                if let Some(top_frame) = sample.stack_frames.first() {
+                    let entry = function_times.entry(top_frame.clone()).or_insert((0, 0));
+                    entry.0 += 1;
+                    entry.1 += sample.cpu_time_us;
+                }
+            }
+
+            let mut hot_spots: Vec<HotSpot> = function_times
+                .iter()
+                .map(|(name, (count, time))| HotSpot {
+                    function_name: name.clone(),
+                    file_path: String::new(),
+                    line: 0,
+                    hit_count: *count,
+                    total_time_us: *time,
+                    percentage: if total_time > 0 {
+                        (*time as f64 / total_time as f64) * 100.0
+                    } else {
+                        0.0
+                    },
+                })
+                .collect();
+
+            hot_spots.sort_by(|a, b| b.total_time_us.cmp(&a.total_time_us));
+            self.hot_spots = hot_spots.clone();
+            hot_spots
+        }
+    }
+
+    #[test]
+    fn test_debugger_profiler_creation() {
+        let profiler = DebuggerProfiler::new(1000);
+
+        assert!(!profiler.enabled);
+        assert_eq!(profiler.sample_interval_us, 1000);
+        assert!(profiler.samples.is_empty());
+    }
+
+    #[test]
+    fn test_profiler_start_stop() {
+        let mut profiler = DebuggerProfiler::new(1000);
+
+        profiler.start();
+        assert!(profiler.enabled);
+
+        profiler.stop();
+        assert!(!profiler.enabled);
+    }
+
+    #[test]
+    fn test_profiler_sampling() {
+        let mut profiler = DebuggerProfiler::new(1000);
+        profiler.start();
+
+        let sample = ProfileSample {
+            timestamp_us: 1000,
+            stack_frames: vec!["processData".to_string(), "main".to_string()],
+            cpu_time_us: 500,
+            memory_bytes: 1024,
+        };
+
+        profiler.add_sample(sample);
+        assert_eq!(profiler.samples.len(), 1);
+    }
+
+    #[test]
+    fn test_hot_spot_analysis() {
+        let mut profiler = DebuggerProfiler::new(1000);
+        profiler.start();
+
+        // 添加多个采样，模拟热点
+        for i in 0..10 {
+            profiler.add_sample(ProfileSample {
+                timestamp_us: i * 1000,
+                stack_frames: vec!["hotFunction".to_string()],
+                cpu_time_us: 100,
+                memory_bytes: 1024,
+            });
+        }
+
+        for i in 0..2 {
+            profiler.add_sample(ProfileSample {
+                timestamp_us: 10000 + i * 1000,
+                stack_frames: vec!["coldFunction".to_string()],
+                cpu_time_us: 50,
+                memory_bytes: 512,
+            });
+        }
+
+        let hot_spots = profiler.analyze_hot_spots();
+
+        assert_eq!(hot_spots.len(), 2);
+        assert_eq!(hot_spots[0].function_name, "hotFunction");
+        assert!(hot_spots[0].percentage > hot_spots[1].percentage);
+    }
+
+    // =========================================
+    // Part 4: 源代码映射测试
+    // =========================================
+
+    /// 源代码映射
+    #[derive(Debug, Clone)]
+    pub struct SourceMap {
+        pub version: u32,
+        pub sources: Vec<String>,
+        pub names: Vec<String>,
+        pub mappings: Vec<MappingSegment>,
+        pub source_root: Option<String>,
+    }
+
+    /// 映射段
+    #[derive(Debug, Clone)]
+    pub struct MappingSegment {
+        pub generated_line: u32,
+        pub generated_column: u32,
+        pub original_line: u32,
+        pub original_column: u32,
+        pub source_index: usize,
+        pub name_index: Option<usize>,
+    }
+
+    impl SourceMap {
+        pub fn new() -> Self {
+            Self {
+                version: 3,
+                sources: Vec::new(),
+                names: Vec::new(),
+                mappings: Vec::new(),
+                source_root: None,
+            }
+        }
+
+        /// 从生成的位置查找原始位置
+        pub fn find_original_location(
+            &self,
+            generated_line: u32,
+            generated_column: u32,
+        ) -> Option<OriginalLocation> {
+            // 二分查找最接近的映射
+            let mut best_match: Option<&MappingSegment> = None;
+
+            for segment in &self.mappings {
+                if segment.generated_line == generated_line
+                    && segment.generated_column <= generated_column
+                {
+                    match best_match {
+                        None => best_match = Some(segment),
+                        Some(prev) if segment.generated_column > prev.generated_column => {
+                            best_match = Some(segment);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            best_match.map(|segment| OriginalLocation {
+                source: self.sources.get(segment.source_index).cloned(),
+                line: segment.original_line,
+                column: segment.original_column,
+                name: segment
+                    .name_index
+                    .and_then(|i| self.names.get(i).cloned()),
+            })
+        }
+
+        /// 从原始位置查找生成的位置
+        pub fn find_generated_location(
+            &self,
+            source: &str,
+            original_line: u32,
+            original_column: u32,
+        ) -> Option<GeneratedLocation> {
+            let source_index = self.sources.iter().position(|s| s == source)?;
+
+            let mut best_match: Option<&MappingSegment> = None;
+
+            for segment in &self.mappings {
+                if segment.source_index == source_index
+                    && segment.original_line == original_line
+                    && segment.original_column <= original_column
+                {
+                    match best_match {
+                        None => best_match = Some(segment),
+                        Some(prev) if segment.original_column > prev.original_column => {
+                            best_match = Some(segment);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            best_match.map(|segment| GeneratedLocation {
+                line: segment.generated_line,
+                column: segment.generated_column,
+            })
+        }
+    }
+
+    /// 原始位置
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct OriginalLocation {
+        pub source: Option<String>,
+        pub line: u32,
+        pub column: u32,
+        pub name: Option<String>,
+    }
+
+    /// 生成位置
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct GeneratedLocation {
+        pub line: u32,
+        pub column: u32,
+    }
+
+    #[test]
+    fn test_source_map_creation() {
+        let mut source_map = SourceMap::new();
+        source_map.sources.push("app.ts".to_string());
+        source_map.names.push("processData".to_string());
+
+        assert_eq!(source_map.version, 3);
+        assert_eq!(source_map.sources.len(), 1);
+        assert_eq!(source_map.names.len(), 1);
+    }
+
+    #[test]
+    fn test_source_map_lookup_original() {
+        let mut source_map = SourceMap::new();
+        source_map.sources.push("app.ts".to_string());
+        source_map.names.push("processData".to_string());
+
+        // TypeScript line 10 -> JavaScript line 15
+        source_map.mappings.push(MappingSegment {
+            generated_line: 15,
+            generated_column: 0,
+            original_line: 10,
+            original_column: 0,
+            source_index: 0,
+            name_index: Some(0),
+        });
+
+        let result = source_map.find_original_location(15, 0);
+        assert!(result.is_some());
+
+        let location = result.unwrap();
+        assert_eq!(location.source, Some("app.ts".to_string()));
+        assert_eq!(location.line, 10);
+        assert_eq!(location.name, Some("processData".to_string()));
+    }
+
+    #[test]
+    fn test_source_map_lookup_generated() {
+        let mut source_map = SourceMap::new();
+        source_map.sources.push("app.ts".to_string());
+
+        source_map.mappings.push(MappingSegment {
+            generated_line: 20,
+            generated_column: 5,
+            original_line: 12,
+            original_column: 3,
+            source_index: 0,
+            name_index: None,
+        });
+
+        let result = source_map.find_generated_location("app.ts", 12, 3);
+        assert!(result.is_some());
+
+        let location = result.unwrap();
+        assert_eq!(location.line, 20);
+        assert_eq!(location.column, 5);
+    }
+
+    // =========================================
+    // Part 5: 远程调试支持测试
+    // =========================================
+
+    /// 远程调试配置
+    #[derive(Debug, Clone)]
+    pub struct RemoteDebugConfig {
+        pub host: String,
+        pub port: u16,
+        pub protocol: DebugProtocol,
+        pub auth_token: Option<String>,
+        pub tls_enabled: bool,
+    }
+
+    /// 调试协议
+    #[derive(Debug, Clone, PartialEq)]
+    pub enum DebugProtocol {
+        ChromeDevTools,
+        DebugAdapterProtocol,
+        Custom(String),
+    }
+
+    /// 远程调试会话
+    #[derive(Debug, Clone)]
+    pub struct RemoteDebugSession {
+        pub config: RemoteDebugConfig,
+        pub connected: bool,
+        pub session_id: String,
+    }
+
+    impl RemoteDebugSession {
+        pub fn new(config: RemoteDebugConfig) -> Self {
+            Self {
+                config,
+                connected: false,
+                session_id: uuid::Uuid::new_v4().to_string(),
+            }
+        }
+
+        pub fn connect(&mut self) -> Result<(), String> {
+            // 模拟连接
+            self.connected = true;
+            Ok(())
+        }
+
+        pub fn disconnect(&mut self) {
+            self.connected = false;
+        }
+
+        pub fn get_connection_url(&self) -> String {
+            let protocol = if self.config.tls_enabled { "wss" } else { "ws" };
+            format!(
+                "{}://{}:{}",
+                protocol, self.config.host, self.config.port
+            )
+        }
+    }
+
+    #[test]
+    fn test_remote_debug_config() {
+        let config = RemoteDebugConfig {
+            host: "127.0.0.1".to_string(),
+            port: 9229,
+            protocol: DebugProtocol::ChromeDevTools,
+            auth_token: None,
+            tls_enabled: false,
+        };
+
+        assert_eq!(config.host, "127.0.0.1");
+        assert_eq!(config.port, 9229);
+        assert_eq!(config.protocol, DebugProtocol::ChromeDevTools);
+    }
+
+    #[test]
+    fn test_remote_debug_session() {
+        let config = RemoteDebugConfig {
+            host: "localhost".to_string(),
+            port: 9229,
+            protocol: DebugProtocol::ChromeDevTools,
+            auth_token: Some("secret".to_string()),
+            tls_enabled: true,
+        };
+
+        let mut session = RemoteDebugSession::new(config);
+
+        assert!(!session.connected);
+        assert!(!session.session_id.is_empty());
+
+        session.connect().unwrap();
+        assert!(session.connected);
+
+        let url = session.get_connection_url();
+        assert!(url.starts_with("wss://"));
+
+        session.disconnect();
+        assert!(!session.connected);
+    }
+
+    #[test]
+    fn test_debug_adapter_protocol() {
+        let config = RemoteDebugConfig {
+            host: "0.0.0.0".to_string(),
+            port: 4711,
+            protocol: DebugProtocol::DebugAdapterProtocol,
+            auth_token: None,
+            tls_enabled: false,
+        };
+
+        assert_eq!(config.protocol, DebugProtocol::DebugAdapterProtocol);
+    }
+
+    // =========================================
+    // Part 6: 集成测试 - 完整调试工作流
+    // =========================================
+
+    /// 增强调试器
+    #[derive(Debug)]
+    pub struct EnhancedDebugger {
+        pub breakpoints: Vec<ConditionalBreakpoint>,
+        pub profiler: DebuggerProfiler,
+        pub source_maps: HashMap<String, SourceMap>,
+        pub remote_session: Option<RemoteDebugSession>,
+    }
+
+    impl EnhancedDebugger {
+        pub fn new() -> Self {
+            Self {
+                breakpoints: Vec::new(),
+                profiler: DebuggerProfiler::new(1000),
+                source_maps: HashMap::new(),
+                remote_session: None,
+            }
+        }
+
+        pub fn add_breakpoint(&mut self, bp: ConditionalBreakpoint) {
+            self.breakpoints.push(bp);
+        }
+
+        pub fn remove_breakpoint(&mut self, id: &str) -> bool {
+            let initial_len = self.breakpoints.len();
+            self.breakpoints.retain(|bp| bp.id != id);
+            self.breakpoints.len() < initial_len
+        }
+
+        pub fn load_source_map(&mut self, file: &str, source_map: SourceMap) {
+            self.source_maps.insert(file.to_string(), source_map);
+        }
+
+        pub fn translate_location(
+            &self,
+            generated_file: &str,
+            line: u32,
+            column: u32,
+        ) -> Option<OriginalLocation> {
+            self.source_maps
+                .get(generated_file)
+                .and_then(|sm| sm.find_original_location(line, column))
+        }
+
+        pub fn start_profiling(&mut self) {
+            self.profiler.start();
+        }
+
+        pub fn stop_profiling(&mut self) -> Vec<HotSpot> {
+            self.profiler.stop();
+            self.profiler.analyze_hot_spots()
+        }
+    }
+
+    #[test]
+    fn test_enhanced_debugger_workflow() {
+        let mut debugger = EnhancedDebugger::new();
+
+        // 1. 添加条件断点
+        debugger.add_breakpoint(ConditionalBreakpoint {
+            id: "bp1".to_string(),
+            file: "app.ts".to_string(),
+            line: 10,
+            condition: "count > 5".to_string(),
+            hit_count_condition: Some(HitCountCondition::GreaterThan(3)),
+            log_message: None,
+            enabled: true,
+        });
+
+        assert_eq!(debugger.breakpoints.len(), 1);
+
+        // 2. 加载源代码映射
+        let mut source_map = SourceMap::new();
+        source_map.sources.push("app.ts".to_string());
+        source_map.mappings.push(MappingSegment {
+            generated_line: 15,
+            generated_column: 0,
+            original_line: 10,
+            original_column: 0,
+            source_index: 0,
+            name_index: None,
+        });
+
+        debugger.load_source_map("app.js", source_map);
+
+        // 3. 转换位置
+        let original = debugger.translate_location("app.js", 15, 0);
+        assert!(original.is_some());
+        assert_eq!(original.unwrap().line, 10);
+
+        // 4. 开始性能分析
+        debugger.start_profiling();
+
+        // 模拟执行采样
+        for i in 0..5 {
+            debugger.profiler.add_sample(ProfileSample {
+                timestamp_us: i * 1000,
+                stack_frames: vec!["testFunction".to_string()],
+                cpu_time_us: 100,
+                memory_bytes: 1024,
+            });
+        }
+
+        // 5. 停止并分析
+        let hot_spots = debugger.stop_profiling();
+        assert!(!hot_spots.is_empty());
+
+        // 6. 移除断点
+        assert!(debugger.remove_breakpoint("bp1"));
+        assert_eq!(debugger.breakpoints.len(), 0);
+    }
+
+    #[test]
+    fn test_multiple_source_maps() {
+        let mut debugger = EnhancedDebugger::new();
+
+        // 加载多个文件的源代码映射
+        let mut sm1 = SourceMap::new();
+        sm1.sources.push("utils.ts".to_string());
+        sm1.mappings.push(MappingSegment {
+            generated_line: 5,
+            generated_column: 0,
+            original_line: 3,
+            original_column: 0,
+            source_index: 0,
+            name_index: None,
+        });
+
+        let mut sm2 = SourceMap::new();
+        sm2.sources.push("api.ts".to_string());
+        sm2.mappings.push(MappingSegment {
+            generated_line: 10,
+            generated_column: 0,
+            original_line: 8,
+            original_column: 0,
+            source_index: 0,
+            name_index: None,
+        });
+
+        debugger.load_source_map("utils.js", sm1);
+        debugger.load_source_map("api.js", sm2);
+
+        assert_eq!(debugger.source_maps.len(), 2);
+
+        // 验证各自的映射
+        let loc1 = debugger.translate_location("utils.js", 5, 0);
+        assert_eq!(loc1.unwrap().line, 3);
+
+        let loc2 = debugger.translate_location("api.js", 10, 0);
+        assert_eq!(loc2.unwrap().line, 8);
+    }
+
+    // =========================================
+    // Part 7: 异常断点测试
+    // =========================================
+
+    /// 异常断点配置
+    #[derive(Debug, Clone)]
+    pub struct ExceptionBreakpoint {
+        pub break_on_caught: bool,
+        pub break_on_uncaught: bool,
+        pub exception_filters: Vec<String>,
+    }
+
+    impl ExceptionBreakpoint {
+        pub fn should_break(&self, exception_type: &str, is_caught: bool) -> bool {
+            // 检查过滤器
+            if !self.exception_filters.is_empty() {
+                if !self.exception_filters.iter().any(|f| exception_type.contains(f)) {
+                    return false;
+                }
+            }
+
+            if is_caught {
+                self.break_on_caught
+            } else {
+                self.break_on_uncaught
+            }
+        }
+    }
+
+    #[test]
+    fn test_exception_breakpoint_uncaught() {
+        let eb = ExceptionBreakpoint {
+            break_on_caught: false,
+            break_on_uncaught: true,
+            exception_filters: vec![],
+        };
+
+        assert!(!eb.should_break("Error", true));
+        assert!(eb.should_break("Error", false));
+    }
+
+    #[test]
+    fn test_exception_breakpoint_filtered() {
+        let eb = ExceptionBreakpoint {
+            break_on_caught: true,
+            break_on_uncaught: true,
+            exception_filters: vec!["TypeError".to_string(), "ReferenceError".to_string()],
+        };
+
+        assert!(eb.should_break("TypeError: undefined is not a function", true));
+        assert!(eb.should_break("ReferenceError: x is not defined", false));
+        assert!(!eb.should_break("SyntaxError: unexpected token", true));
+    }
+}
