@@ -1,0 +1,402 @@
+//! 类型生成器测试
+//! Stage 91 Phase 3.2 - 类型定义生成测试
+
+use beejs::ecosystem::*;
+use std::collections::HashMap;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio;
+
+    #[tokio::test]
+    async fn test_type_generation_from_source() -> Result<(), Box<dyn std::error::Error>> {
+        let config = TypeGenConfig::default();
+        let generator = TypeDefinitionGenerator::new(config);
+
+        // 测试源代码
+        let source = r#"
+/**
+ * 用户接口
+ */
+interface User {
+    name: string;
+    age: number;
+    email?: string;
+}
+
+/**
+ * 创建用户
+ * @param name 用户名
+ * @param age 年龄
+ * @returns 用户对象
+ */
+function createUser(name: string, age: number): User {
+    return { name, age };
+}
+
+class UserManager {
+    private users: User[] = [];
+
+    addUser(user: User): void {
+        this.users.push(user);
+    }
+
+    getUsers(): User[] {
+        return this.users;
+    }
+}
+"#;
+
+        // 生成类型
+        let dts_content = generator.generate_types_from_source(source, "test.ts").await?;
+
+        // 验证生成的类型定义包含关键内容
+        assert!(dts_content.contains("interface User"));
+        assert!(dts_content.contains("declare function createUser"));
+        assert!(dts_content.contains("declare class UserManager"));
+        assert!(dts_content.contains("name: string"));
+        assert!(dts_content.contains("age: number"));
+
+        println!("✓ 从源代码生成类型测试通过");
+        println!("生成的类型定义:\n{}", dts_content);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_jsdoc_type_extraction() -> Result<(), Box<dyn std::error::Error>> {
+        let analyzer = TypeAnalyzer::new();
+
+        // 测试包含 JSDoc 的源代码
+        let source = r#"
+/**
+ * 计算两个数的和
+ * @param a 第一个数
+ * @param b 第二个数
+ * @returns 两数之和
+ */
+function add(a: number, b: number): number {
+    return a + b;
+}
+
+/**
+ * @typedef {Object} Person
+ * @property {string} name - 姓名
+ * @property {number} age - 年龄
+ */
+
+/**
+ * 创建人员对象
+ * @param {string} name - 姓名
+ * @param {number} age - 年龄
+ * @returns {Person} 人员对象
+ */
+function createPerson(name: string, age: number) {
+    return { name, age };
+}
+"#;
+
+        // 提取 JSDoc 类型
+        let types = analyzer.extract_jsdoc_types(source)?;
+
+        // 验证提取的类型
+        assert!(!types.is_empty());
+
+        println!("✓ JSDoc 类型提取测试通过");
+        println!("提取的类型: {:?}", types.keys());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_dts_emission() -> Result<(), Box<dyn std::error::Error>> {
+        let emitter = DtsEmitter::new();
+
+        // 创建测试类型定义
+        let mut types = HashMap::new();
+
+        types.insert(
+            "User".to_string(),
+            TypeDefinition {
+                name: "User".to_string(),
+                kind: TypeKind::Interface,
+                exported: true,
+                js_doc: Some("用户接口".to_string()),
+                members: {
+                    let mut members = HashMap::new();
+                    members.insert(
+                        "name".to_string(),
+                        TypeMember {
+                            name: "name".to_string(),
+                            member_type: MemberType::Property(Type::Primitive(PrimitiveType::String)),
+                            optional: false,
+                            readonly: false,
+                            js_doc: None,
+                        },
+                    );
+                    members.insert(
+                        "age".to_string(),
+                        TypeMember {
+                            name: "age".to_string(),
+                            member_type: MemberType::Property(Type::Primitive(PrimitiveType::Number)),
+                            optional: false,
+                            readonly: false,
+                            js_doc: None,
+                        },
+                    );
+                    members
+                },
+                type_params: Vec::new(),
+                extends: Vec::new(),
+                implements: Vec::new(),
+            },
+        );
+
+        // 发射类型定义
+        let dts_content = emitter.emit_types(&types, "test.d.ts")?;
+
+        // 验证生成的声明文件
+        assert!(dts_content.contains("interface User"));
+        assert!(dts_content.contains("name: string"));
+        assert!(dts_content.contains("age: number"));
+
+        println!("✓ .d.ts 文件发射测试通过");
+        println!("生成的声明文件:\n{}", dts_content);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_project_type_generation() -> Result<(), Box<dyn std::error::Error>> {
+        let config = TypeGenConfig::default();
+        let generator = TypeDefinitionGenerator::new(config);
+
+        // 创建测试项目结构
+        let temp_dir = std::env::temp_dir().join("beejs_typegen_test");
+        std::fs::create_dir_all(&temp_dir)?;
+
+        // 创建测试文件
+        let file1 = temp_dir.join("utils.ts");
+        let file2 = temp_dir.join("models.ts");
+
+        std::fs::write(&file1, r#"
+export function greet(name: string): string {
+    return `Hello, ${name}!`;
+}
+
+export interface Config {
+    debug: boolean;
+    port: number;
+}
+"#)?;
+
+        std::fs::write(&file2, r#"
+/**
+ * 用户数据模型
+ */
+export interface User {
+    id: number;
+    username: string;
+    email: string;
+}
+
+export class UserService {
+    async getUser(id: number): Promise<User> {
+        // 模拟获取用户
+        return { id, username: "test", email: "test@example.com" };
+    }
+}
+"#)?;
+
+        // 生成项目类型
+        let project_info = generator.generate_project_types(&temp_dir).await?;
+
+        // 验证项目信息
+        assert!(!project_info.files.is_empty());
+        assert!(!project_info.globals.is_empty());
+
+        println!("✓ 项目类型生成测试通过");
+        println!("文件数量: {}", project_info.files.len());
+        println!("全局类型数量: {}", project_info.globals.len());
+
+        // 清理测试文件
+        std::fs::remove_dir_all(&temp_dir)?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_symbol_resolver() -> Result<(), Box<dyn std::error::Error>> {
+        let resolver = SymbolResolver::new();
+
+        // 测试源代码
+        let source = r#"
+import { User } from './models';
+import * as utils from './utils';
+
+export function processUser(user: User) {
+    const greeting = utils.greet(user.username);
+    return { ...user, greeting };
+}
+"#;
+
+        // 解析符号
+        let resolved_symbols = resolver.resolve_file_symbols("test.ts", source)?;
+
+        // 验证解析结果
+        assert!(!resolved_symbols.is_empty());
+
+        println!("✓ 符号解析测试通过");
+        println!("解析的符号数量: {}", resolved_symbols.len());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_type_analysis() -> Result<(), Box<dyn std::error::Error>> {
+        let analyzer = TypeAnalyzer::new();
+
+        // 测试源代码
+        let source = r#"
+interface Shape {
+    area(): number;
+}
+
+class Rectangle implements Shape {
+    constructor(public width: number, public height: number) {}
+
+    area(): number {
+        return this.width * this.height;
+    }
+}
+
+class Circle implements Shape {
+    constructor(public radius: number) {}
+
+    area(): number {
+        return Math.PI * this.radius * this.radius;
+    }
+}
+"#;
+
+        // 解析源代码
+        let source_file = analyzer.parse_source(source, "test.ts")?;
+
+        // 分析类型
+        let types = analyzer.analyze_types(&source_file)?;
+
+        // 验证分析结果
+        assert!(types.contains_key("Shape"));
+        assert!(types.contains_key("Rectangle"));
+        assert!(types.contains_key("Circle"));
+
+        println!("✓ 类型分析测试通过");
+        println!("发现的类型: {:?}", types.keys().collect::<Vec<_>>());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_complex_type_emission() -> Result<(), Box<dyn std::error::Error>> {
+        let emitter = DtsEmitter::new();
+
+        // 创建复杂类型定义
+        let mut types = HashMap::new();
+
+        // 联合类型
+        types.insert(
+            "Response".to_string(),
+            TypeDefinition {
+                name: "Response".to_string(),
+                kind: TypeKind::TypeAlias,
+                exported: true,
+                js_doc: Some("API 响应类型".to_string()),
+                members: HashMap::new(),
+                type_params: Vec::new(),
+                extends: Vec::new(),
+                implements: Vec::new(),
+            },
+        );
+
+        // 泛型类型
+        types.insert(
+            "Container".to_string(),
+            TypeDefinition {
+                name: "Container".to_string(),
+                kind: TypeKind::Interface,
+                exported: true,
+                js_doc: Some("容器接口".to_string()),
+                members: {
+                    let mut members = HashMap::new();
+                    members.insert(
+                        "value".to_string(),
+                        TypeMember {
+                            name: "value".to_string(),
+                            member_type: MemberType::Property(Type::Generic {
+                                base: Box::new(Type::TypeRef("T".to_string())),
+                                args: Vec::new(),
+                            }),
+                            optional: false,
+                            readonly: false,
+                            js_doc: None,
+                        },
+                    );
+                    members
+                },
+                type_params: vec!["T".to_string()],
+                extends: Vec::new(),
+                implements: Vec::new(),
+            },
+        );
+
+        // 发射类型定义
+        let dts_content = emitter.emit_types(&types, "complex.d.ts")?;
+
+        // 验证生成的类型定义
+        assert!(dts_content.contains("type Response"));
+        assert!(dts_content.contains("interface Container"));
+
+        println!("✓ 复杂类型发射测试通过");
+        println!("生成的类型定义:\n{}", dts_content);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_type_inference_from_javascript() -> Result<(), Box<dyn std::error::Error>> {
+        let config = TypeGenConfig::default();
+        let generator = TypeDefinitionGenerator::new(config);
+
+        // 测试 JavaScript 代码（无类型注解）
+        let js_source = r#"
+/**
+ * 用户对象
+ * @typedef {Object} User
+ * @property {string} name - 姓名
+ * @property {number} age - 年龄
+ */
+
+/**
+ * 创建用户
+ * @param {string} name - 姓名
+ * @param {number} age - 年龄
+ * @returns {User} 用户对象
+ */
+function createUser(name, age) {
+    return { name, age };
+}
+
+const user = createUser("Alice", 30);
+"#;
+
+        // 生成类型定义
+        let dts_content = generator.generate_types_from_source(js_source, "test.js").await?;
+
+        // 验证类型推断结果
+        assert!(dts_content.contains("interface User"));
+        assert!(dts_content.contains("declare function createUser"));
+
+        println!("✓ JavaScript 类型推断测试通过");
+        println!("推断的类型定义:\n{}", dts_content);
+
+        Ok(())
+    }
+}

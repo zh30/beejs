@@ -1,0 +1,430 @@
+//! 框架支持测试
+//! Stage 91 Phase 3.3 - React/Vue/Angular 框架支持测试
+
+use beejs::ecosystem::framework::*;
+use serde_json::json;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio;
+
+    #[tokio::test]
+    async fn test_react_runtime() -> Result<(), Box<dyn std::error::Error>> {
+        let config = ReactConfig::default();
+        let runtime = ReactRuntime::new(config);
+
+        // 创建测试组件
+        let component = ReactComponent {
+            name: "TestComponent".to_string(),
+            source_code: r#"
+function TestComponent(props) {
+    return React.createElement('div', null,
+        React.createElement('h1', null, 'Hello ', props.name)
+    );
+}
+export default TestComponent;
+"#.to_string(),
+            props_type: Some("{name: string}".to_string()),
+            state_type: None,
+            dependencies: vec!["react".to_string()],
+        };
+
+        // 测试组件渲染
+        let props = json!({"name": "World"});
+        let render_result = runtime.render_component(&component, Some(&props), "root").await?;
+
+        // 验证渲染结果
+        assert!(!render_result.html.is_empty());
+        assert!(render_result.html.contains("Hello World"));
+
+        // 测试服务端渲染
+        let ssr_html = runtime.render_to_string(&component, Some(&props)).await?;
+        assert!(!ssr_html.is_empty());
+
+        // 测试水合
+        runtime.hydrate_app("root", &props).await?;
+
+        println!("✓ React 运行时测试通过");
+        println!("渲染结果: {}", render_result.html);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_vue_runtime() -> Result<(), Box<dyn std::error::Error>> {
+        let config = VueConfig::default();
+        let runtime = VueRuntime::new(config);
+
+        // 创建测试组件
+        let component = VueComponent {
+            name: "TestComponent".to_string(),
+            source_code: r#"
+<template>
+  <div>
+    <h1>{{ title }}</h1>
+    <p>{{ message }}</p>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'TestComponent',
+  data() {
+    return {
+      title: 'Hello Vue',
+      message: 'This is a test component'
+    }
+  }
+}
+</script>
+"#.to_string(),
+            props: vec!["title".to_string()],
+            emits: vec![],
+        };
+
+        // 测试 SFC 解析
+        let sfc_parser = SfcParser::new();
+        let sfc = sfc_parser.parse_sfc(&component.source_code)?;
+        assert!(!sfc.template.is_empty());
+        assert!(!sfc.script.is_empty());
+
+        // 测试模板编译
+        let template_compiler = TemplateCompiler::new();
+        let compiled_template = template_compiler.compile(&sfc.template)?;
+        assert!(!compiled_template.code.is_empty());
+
+        // 测试响应式系统
+        let reactive_system = ReactiveSystem::new();
+        let reactive_data = reactive_system.create_reactive(&json!({"count": 0}))?;
+        assert!(reactive_data.data.get("count").is_some());
+
+        println!("✓ Vue 运行时测试通过");
+        println!("模板编译结果: {}", compiled_template.code);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_angular_runtime() -> Result<(), Box<dyn std::error::Error>> {
+        let config = AngularConfig::default();
+        let runtime = AngularRuntime::new(config);
+
+        // 创建测试应用
+        let app = AngularApp {
+            name: "TestApp".to_string(),
+            title: "Angular Test App".to_string(),
+            version: "1.0.0".to_string(),
+            root_component: "AppComponent".to_string(),
+            module_factory: "AppModule".to_string(),
+            routes: vec![Route {
+                path: "/".to_string(),
+                component: "HomeComponent".to_string(),
+                params: HashMap::new(),
+            }],
+            styles: vec!["body { font-family: Arial; }".to_string()],
+            modules: vec!["CoreModule".to_string(), "SharedModule".to_string()],
+        };
+
+        // 创建测试组件
+        let component = AngularComponent {
+            name: "TestComponent".to_string(),
+            selector: "app-test".to_string(),
+            template: "<div>Test Component</div>".to_string(),
+            styles: vec![],
+            inputs: vec![InputBinding {
+                name: "title".to_string(),
+                binding_type: BindingType::Property,
+            }],
+            outputs: vec![OutputBinding {
+                name: "clicked".to_string(),
+                event_type: "click".to_string(),
+            }],
+            providers: vec![],
+        };
+
+        // 测试组件编译
+        let compiled_component = runtime.compile_component(&component)?;
+        assert_eq!(compiled_component.selector, "app-test");
+
+        // 测试渲染
+        let render_result = runtime.compile_and_render_app(&app, "app-root").await?;
+        assert!(!render_result.html.is_empty());
+
+        // 测试服务端渲染
+        let ssr_html = runtime.render_to_string(&app, "/").await?;
+        assert!(!ssr_html.is_empty());
+
+        // 测试水合
+        runtime.hydrate_app("app-root", &json!({"state": "test"})).await?;
+
+        println!("✓ Angular 运行时测试通过");
+        println!("渲染结果: {}", render_result.html);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_ssr_rendering() -> Result<(), Box<dyn std::error::Error>> {
+        let config = SsrConfig::default();
+        let renderer = SsrRenderer::new(config);
+
+        // 创建测试请求
+        let request = SsrRequest {
+            url: "/".to_string(),
+            method: "GET".to_string(),
+            headers: HashMap::new(),
+            query_params: HashMap::new(),
+            user_agent: Some("Test Agent".to_string()),
+            ip: Some("127.0.0.1".to_string()),
+        };
+
+        // 测试 React 页面渲染
+        let react_component = json!({
+            "type": "ReactComponent",
+            "props": {"name": "Test"}
+        });
+
+        let response = renderer
+            .render_page(&request, FrameworkType::React, &react_component)
+            .await?;
+
+        assert_eq!(response.status, 200);
+        assert!(!response.body.is_empty());
+        assert!(response.body.contains("React"));
+
+        // 测试流式渲染
+        if config.enable_streaming {
+            println!("✓ 流式渲染已启用");
+        }
+
+        // 测试缓存
+        let cached_response = renderer.cache_manager.get(&request.url).await?;
+        // 注意：第一次请求可能还未缓存
+
+        println!("✓ SSR 渲染测试通过");
+        println!("响应状态: {}", response.status);
+        println!("响应头: {:?}", response.headers);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_jsx_transformation() -> Result<(), Box<dyn std::error::Error>> {
+        let transformer = JsxTransformer::new();
+
+        // 测试 JSX 转换
+        let jsx_code = r#"
+function MyComponent(props) {
+    return (
+        <div className="container">
+            <h1>{props.title}</h1>
+            <p>{props.description}</p>
+        </div>
+    );
+}
+export default MyComponent;
+"#;
+
+        let transformed = transformer.transform_jsx(jsx_code)?;
+        assert!(transformed.contains("h("));
+        assert!(!transformed.contains("<div"));
+
+        println!("✓ JSX 转换测试通过");
+        println!("转换前: {}", jsx_code.lines().take(3).collect::<Vec<_>>().join("\n"));
+        println!("转换后: {}", transformed.lines().take(3).collect::<Vec<_>>().join("\n"));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_vue_template_compilation() -> Result<(), Box<dyn std::error::Error>> {
+        let compiler = TemplateCompiler::new();
+
+        // 测试模板编译
+        let template = r#"
+<div class="app">
+    <h1>{{ title }}</h1>
+    <ul v-if="items.length > 0">
+        <li v-for="item in items" :key="item.id">
+            {{ item.name }}
+        </li>
+    </ul>
+    <button @click="addItem">Add Item</button>
+</div>
+"#;
+
+        let compiled = compiler.compile(template)?;
+        assert!(!compiled.code.is_empty());
+
+        println!("✓ Vue 模板编译测试通过");
+        println!("编译结果: {}", compiled.code);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_angular_ivy_renderer() -> Result<(), Box<dyn std::error::Error>> {
+        let renderer = IvyRenderer::new();
+
+        // 创建组件树
+        let component_tree = ComponentTree {
+            root: "AppComponent".to_string(),
+            children: vec![
+                ComponentTree {
+                    root: "HeaderComponent".to_string(),
+                    children: vec![],
+                },
+                ComponentTree {
+                    root: "ContentComponent".to_string(),
+                    children: vec![],
+                },
+            ],
+        };
+
+        // 测试渲染
+        let rendered_dom = renderer.render(&component_tree, "app-root")?;
+        assert!(!rendered_dom.html.is_empty());
+
+        println!("✓ Angular Ivy 渲染器测试通过");
+        println!("渲染的 DOM: {}", rendered_dom.html);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_hydration_mechanism() -> Result<(), Box<dyn std::error::Error>> {
+        let hydration_engine = HydrationEngine::new();
+
+        // 测试事件绑定
+        let html = r#"<div id="app"><button id="test-btn">Click me</button></div>"#;
+        hydration_engine.bind_event_listeners("app", html)?;
+
+        // 测试状态恢复
+        let initial_state = json!({
+            "user": {"name": "Alice", "age": 30},
+            "items": [1, 2, 3]
+        });
+
+        hydration_engine.restore_component_state(&initial_state)?;
+
+        // 获取水合脚本
+        let hydration_script = hydration_engine.get_hydration_script()?;
+        assert!(!hydration_script.is_empty());
+
+        println!("✓ 水合机制测试通过");
+        println!("水合脚本长度: {} 字符", hydration_script.len());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_batch_rendering() -> Result<(), Box<dyn std::error::Error>> {
+        let config = SsrConfig::default();
+        let renderer = SsrRenderer::new(config);
+
+        // 创建多个请求
+        let requests = vec![
+            SsrRequest {
+                url: "/".to_string(),
+                method: "GET".to_string(),
+                headers: HashMap::new(),
+                query_params: HashMap::new(),
+                user_agent: None,
+                ip: None,
+            },
+            SsrRequest {
+                url: "/about".to_string(),
+                method: "GET".to_string(),
+                headers: HashMap::new(),
+                query_params: HashMap::new(),
+                user_agent: None,
+                ip: None,
+            },
+        ];
+
+        // 创建对应的组件
+        let components = vec![
+            json!({"type": "HomePage"}),
+            json!({"type": "AboutPage"}),
+        ];
+
+        // 批量渲染
+        let responses = renderer
+            .batch_render(&requests, FrameworkType::React, &components)
+            .await?;
+
+        assert_eq!(responses.len(), 2);
+        assert_eq!(responses[0].status, 200);
+        assert_eq!(responses[1].status, 200);
+
+        println!("✓ 批量渲染测试通过");
+        println!("渲染的页面数: {}", responses.len());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_cache_management() -> Result<(), Box<dyn std::error::Error>> {
+        let cache_manager = CacheManager::new();
+
+        // 创建测试响应
+        let response = SsrResponse {
+            status: 200,
+            headers: {
+                let mut headers = HashMap::new();
+                headers.insert("Content-Type".to_string(), "text/html".to_string());
+                headers
+            },
+            body: "<html><body>Test</body></html>".to_string(),
+            stream: None,
+        };
+
+        // 设置缓存
+        cache_manager.set("/test", &response, 3600).await?;
+
+        // 获取缓存
+        let cached = cache_manager.get("/test").await?;
+        assert!(cached.is_some());
+        assert_eq!(cached.unwrap().status, 200);
+
+        println!("✓ 缓存管理测试通过");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_edge_optimization() -> Result<(), Box<dyn std::error::Error>> {
+        let optimizer = EdgeOptimizer::new();
+
+        // 创建测试流
+        let stream = StreamResponse {
+            chunks: vec![
+                "<!DOCTYPE html>".to_string(),
+                "<html><head><title>Test</title></head>".to_string(),
+                "<body><h1>Hello World</h1></body>".to_string(),
+                "</html>".to_string(),
+            ],
+            final_chunk: true,
+        };
+
+        // 创建测试请求
+        let request = SsrRequest {
+            url: "/test".to_string(),
+            method: "GET".to_string(),
+            headers: HashMap::new(),
+            query_params: HashMap::new(),
+            user_agent: None,
+            ip: None,
+        };
+
+        // 优化流
+        let optimized = optimizer.optimize(stream, &request)?;
+        assert!(!optimized.chunks.is_empty());
+
+        println!("✓ 边缘优化测试通过");
+        println!("优化后的流块数: {}", optimized.chunks.len());
+
+        Ok(())
+    }
+}

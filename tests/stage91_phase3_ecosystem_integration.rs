@@ -1,0 +1,288 @@
+//! Stage 91 Phase 3: 生态系统集成测试
+//!
+//! 测试包管理器集成、开发工具支持、框架支持等功能
+
+#[cfg(test)]
+mod tests {
+    use super::beejs::ecosystem_lite::*;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    #[tokio::test]
+    async fn test_type_definition_generator() {
+        let config = TypeGeneratorConfig {
+            output_dir: PathBuf::from("./types"),
+            include_comments: true,
+            strict_mode: false,
+        };
+
+        let generator = TypeDefinitionGenerator::new(config);
+
+        let source_code = r#"
+            function add(a, b) {
+                return a + b;
+            }
+
+            const greeting = "Hello, World!";
+        "#;
+
+        let result = generator.generate_types(source_code).await;
+
+        assert!(result.is_ok(), "Type generation should succeed");
+        let dts = result.unwrap();
+
+        // 验证生成的类型定义包含必要的内容
+        assert!(dts.contains("declare module 'beejs-runtime'"));
+        assert!(dts.contains("export function run"));
+        assert!(dts.contains("export function evaluate"));
+    }
+
+    #[tokio::test]
+    async fn test_package_manager_integrator() {
+        let config = PackageManagerConfig {
+            manager_type: PackageManagerType::Npm,
+            registry_url: "https://registry.npmjs.org/".to_string(),
+            cache_dir: PathBuf::from(".beejs_cache"),
+        };
+
+        let integrator = PackageManagerIntegrator::new(config);
+
+        // 测试安装包
+        let spec = PackageSpec::Name("lodash".to_string());
+        let result = integrator.install_package(&spec).await;
+
+        assert!(result.is_ok(), "Package installation should succeed");
+        let package_info = result.unwrap();
+
+        assert_eq!(package_info.name, "lodash");
+        assert_eq!(package_info.version, "1.0.0");
+    }
+
+    #[tokio::test]
+    async fn test_package_json_parsing() {
+        let config = PackageManagerConfig::default();
+        let integrator = PackageManagerIntegrator::new(config);
+
+        let temp_dir = TempDir::new().unwrap();
+        let package_json_path = temp_dir.path().join("package.json");
+
+        let package_json = r#"{
+            "name": "test-package",
+            "version": "1.0.0",
+            "main": "index.js",
+            "dependencies": {
+                "lodash": "^4.17.21"
+            },
+            "peerDependencies": {
+                "react": "^18.0.0"
+            }
+        }"#;
+
+        std::fs::write(&package_json_path, package_json).unwrap();
+
+        let result = integrator.parse_package_json(&package_json_path).await;
+
+        assert!(result.is_ok(), "Package.json parsing should succeed");
+        let package_info = result.unwrap();
+
+        assert_eq!(package_info.name, "test-package");
+        assert_eq!(package_info.version, "1.0.0");
+        assert_eq!(package_info.main, Some("index.js".to_string()));
+        assert!(package_info.dependencies.contains_key("lodash"));
+        assert!(package_info.peer_dependencies.contains_key("react"));
+    }
+
+    #[tokio::test]
+    async fn test_react_runtime() {
+        let config = ReactConfig {
+            version: "18.0.0".to_string(),
+            jsx_transform: true,
+            ssr_enabled: false,
+        };
+
+        let react_runtime = ReactRuntime::new(config);
+
+        let component_code = r#"
+            function Hello() {
+                return <div>Hello, World!</div>;
+            }
+        "#;
+
+        let result = react_runtime.render_component(component_code).await;
+
+        assert!(result.is_ok(), "React rendering should succeed");
+        let html = result.unwrap();
+
+        assert!(html.contains("<div"));
+        assert!(html.contains("data-beejs-react"));
+    }
+
+    #[tokio::test]
+    async fn test_jsx_transformation() {
+        let config = ReactConfig::default();
+        let react_runtime = ReactRuntime::new(config);
+
+        let jsx_code = r#"<div className="container">
+            <h1>Hello</h1>
+        </div>"#;
+
+        let result = react_runtime.transform_jsx(jsx_code).await;
+
+        assert!(result.is_ok(), "JSX transformation should succeed");
+        let transformed = result.unwrap();
+
+        assert!(transformed.contains("data-jsx"));
+    }
+
+    #[test]
+    fn test_package_spec_variants() {
+        // 测试包规范的不同变体
+        let spec_name = PackageSpec::Name("react".to_string());
+        assert!(matches!(spec_name, PackageSpec::Name(_)));
+
+        let spec_version = PackageSpec::NameVersion("vue".to_string(), "3.0.0".to_string());
+        assert!(matches!(spec_version, PackageSpec::NameVersion(_, _)));
+
+        let spec_range = PackageSpec::NameRange("angular".to_string(), "^14.0.0".to_string());
+        assert!(matches!(spec_range, PackageSpec::NameRange(_, _)));
+
+        let spec_git = PackageSpec::Git("https://github.com/user/repo.git".to_string());
+        assert!(matches!(spec_git, PackageSpec::Git(_)));
+    }
+
+    #[test]
+    fn test_package_manager_types() {
+        assert_eq!(format!("{:?}", PackageManagerType::Npm), "Npm");
+        assert_eq!(format!("{:?}", PackageManagerType::Yarn), "Yarn");
+        assert_eq!(format!("{:?}", PackageManagerType::Pnpm), "Pnpm");
+    }
+
+    #[test]
+    fn test_build_tool_plugin() {
+        let plugin = BuildToolPlugin::new(
+            "test-plugin".to_string(),
+            "1.0.0".to_string(),
+            BuildPluginType::Webpack,
+        );
+
+        assert_eq!(plugin.name, "test-plugin");
+        assert_eq!(plugin.version, "1.0.0");
+        assert!(matches!(plugin.plugin_type, BuildPluginType::Webpack));
+    }
+
+    #[tokio::test]
+    async fn test_build_tool_plugin_application() {
+        let plugin = BuildToolPlugin::new(
+            "test-webpack-plugin".to_string(),
+            "0.1.0".to_string(),
+            BuildPluginType::Webpack,
+        );
+
+        let result = plugin.apply().await;
+        assert!(result.is_ok(), "Plugin application should succeed");
+    }
+
+    #[test]
+    fn test_vscode_extension_config_default() {
+        let config = VsCodeExtensionConfig::default();
+
+        assert_eq!(config.name, "beejs-language-support");
+        assert_eq!(config.version, "0.1.0");
+        assert_eq!(config.publisher, "beejs-team");
+        assert!(config.categories.contains(&"Languages".to_string()));
+        assert!(config.activation_events.contains(&"onLanguage:javascript".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_ecosystem_integrator_initialization() {
+        let mut integrator = EcosystemIntegrator::new();
+
+        let result = integrator.initialize().await;
+        assert!(result.is_ok(), "Ecosystem initialization should succeed");
+
+        // 验证构建插件已添加
+        assert!(!integrator.build_plugins.is_empty());
+        assert_eq!(integrator.build_plugins.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_ecosystem_project_type_generation() {
+        let integrator = EcosystemIntegrator::new();
+
+        let temp_dir = TempDir::new().unwrap();
+        let package_json_path = temp_dir.path().join("package.json");
+
+        let package_json = r#"{
+            "name": "test-project",
+            "version": "1.0.0",
+            "main": "index.js"
+        }"#;
+
+        std::fs::write(&package_json_path, package_json).unwrap();
+
+        let result = integrator.generate_project_types(&temp_dir.path().to_path_buf()).await;
+
+        assert!(result.is_ok(), "Project type generation should succeed");
+    }
+
+    #[test]
+    fn test_package_info_serialization() {
+        let package_info = PackageInfo {
+            name: "test-package".to_string(),
+            version: "1.0.0".to_string(),
+            dependencies: HashMap::from([
+                ("lodash".to_string(), "^4.17.21".to_string()),
+            ]),
+            peer_dependencies: HashMap::new(),
+            exports: None,
+            types: Some("index.d.ts".to_string()),
+            main: Some("index.js".to_string()),
+        };
+
+        let serialized = serde_json::to_string(&package_info).unwrap();
+        let deserialized: PackageInfo = serde_json::from_str(&serialized).unwrap();
+
+        assert_eq!(deserialized.name, package_info.name);
+        assert_eq!(deserialized.version, package_info.version);
+        assert_eq!(deserialized.types, package_info.types);
+    }
+
+    #[test]
+    fn test_build_plugin_types() {
+        let webpack_plugin = BuildToolPlugin::new(
+            "webpack-plugin".to_string(),
+            "1.0.0".to_string(),
+            BuildPluginType::Webpack,
+        );
+        assert!(matches!(webpack_plugin.plugin_type, BuildPluginType::Webpack));
+
+        let vite_plugin = BuildToolPlugin::new(
+            "vite-plugin".to_string(),
+            "1.0.0".to_string(),
+            BuildPluginType::Vite,
+        );
+        assert!(matches!(vite_plugin.plugin_type, BuildPluginType::Vite));
+
+        let rollup_plugin = BuildToolPlugin::new(
+            "rollup-plugin".to_string(),
+            "1.0.0".to_string(),
+            BuildPluginType::Rollup,
+        );
+        assert!(matches!(rollup_plugin.plugin_type, BuildPluginType::Rollup));
+    }
+
+    #[tokio::test]
+    async fn test_react_runtime_config() {
+        let config = ReactConfig {
+            version: "17.0.0".to_string(),
+            jsx_transform: false,
+            ssr_enabled: true,
+        };
+
+        let react_runtime = ReactRuntime::new(config);
+
+        assert_eq!(react_runtime.config.version, "17.0.0");
+        assert!(!react_runtime.config.jsx_transform);
+        assert!(react_runtime.config.ssr_enabled);
+    }
+}

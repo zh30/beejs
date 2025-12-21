@@ -48,6 +48,7 @@ pub mod web_api;  // Stage 74: Web API 生态系统完善
 pub mod debugger;  // Stage 58: Debugger integration
 pub mod observability;  // 可观测性系统
 pub mod runtime_config;  // Stage 91 Phase 2.3: 运行时配置管理
+pub mod ecosystem_lite;  // Stage 91 Phase 3: 生态系统集成 - 简化版
 // pub mod security;  // Stage 84: 企业级安全与合规 - temporarily disabled
 // pub mod aiops;  // Stage 85: AI 驱动运维 (AIOps) - temporarily disabled
 pub mod ai_inference;
@@ -75,7 +76,7 @@ pub mod ai_memory_pool;
 pub mod ai;  // Stage 78 Phase 3: AI 工作负载专用优化
 pub mod optimization;  // Stage 78 Phase 4: 极致性能监控
 // pub mod enterprise;  // Stage 79: 企业级功能增强 (disabled for compilation)
-pub mod ecosystem;  // Stage 80: 生态系统完善
+// pub mod ecosystem;  // Stage 80: 生态系统完善 (moved to Stage 91 Phase 3)
 pub mod profiler;
 pub mod code_cache;
 pub mod stage_38_smart_process_pool;  // Stage 38.0: 智能进程池系统

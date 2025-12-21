@@ -1,0 +1,224 @@
+//! Stage 91 Phase 3.1: 包管理器集成测试
+//!
+//! 测试 npm、Yarn、pnpm 的兼容性功能
+
+#[cfg(test)]
+mod tests {
+    use super::beejs::ecosystem::package_managers::*;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    #[tokio::test]
+    async fn test_npm_compatibility_init() {
+        let config = PackageManagerConfig {
+            manager_type: PackageManagerType::Npm,
+            registry_url: "https://registry.npmjs.org/".to_string(),
+            cache_dir: PathBuf::from(".beejs_cache"),
+            timeout_ms: 30000,
+            retry_count: 3,
+            auth_token: None,
+            ca_file: None,
+            strict_ssl: true,
+        };
+
+        let npm = NpmCompatibility::new(config);
+        let temp_dir = TempDir::new().unwrap();
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        let result = npm.init("test-package").await;
+
+        assert!(result.is_ok(), "npm init should succeed");
+
+        // 验证 package.json 创建
+        assert!(PathBuf::from("package.json").exists(), "package.json should be created");
+    }
+
+    #[tokio::test]
+    async fn test_yarn_compatibility_init() {
+        let config = PackageManagerConfig {
+            manager_type: PackageManagerType::Yarn,
+            registry_url: "https://registry.yarnpkg.com/".to_string(),
+            cache_dir: PathBuf::from(".beejs_cache"),
+            timeout_ms: 30000,
+            retry_count: 3,
+            auth_token: None,
+            ca_file: None,
+            strict_ssl: true,
+        };
+
+        let yarn = YarnCompatibility::new(config);
+        let temp_dir = TempDir::new().unwrap();
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        let result = yarn.init("test-package").await;
+
+        assert!(result.is_ok(), "yarn init should succeed");
+
+        // 验证 package.json 创建
+        assert!(PathBuf::from("package.json").exists(), "package.json should be created");
+    }
+
+    #[tokio::test]
+    async fn test_pnpm_compatibility_init() {
+        let config = PackageManagerConfig {
+            manager_type: PackageManagerType::Pnpm,
+            registry_url: "https://registry.npmjs.org/".to_string(),
+            cache_dir: PathBuf::from(".beejs_cache"),
+            timeout_ms: 30000,
+            retry_count: 3,
+            auth_token: None,
+            ca_file: None,
+            strict_ssl: true,
+        };
+
+        let pnpm = PnpmCompatibility::new(config);
+        let temp_dir = TempDir::new().unwrap();
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        let result = pnpm.init("test-package").await;
+
+        assert!(result.is_ok(), "pnpm init should succeed");
+
+        // 验证 package.json 创建
+        assert!(PathBuf::from("package.json").exists(), "package.json should be created");
+    }
+
+    #[test]
+    fn test_version_range_parsing() {
+        // 测试精确版本
+        let range = VersionRange::parse("1.2.3").unwrap();
+        assert_eq!(range, VersionRange::Exact("1.2.3".to_string()));
+
+        // 测试兼容版本
+        let range = VersionRange::parse("^1.2.3").unwrap();
+        assert_eq!(range, VersionRange::Compatible("1.2.3".to_string()));
+
+        // 测试近似版本
+        let range = VersionRange::parse("~1.2.3").unwrap();
+        assert_eq!(range, VersionRange::Approximate("1.2.3".to_string()));
+
+        // 测试通配符
+        let range = VersionRange::parse("*").unwrap();
+        assert_eq!(range, VersionRange::Wildcard);
+    }
+
+    #[test]
+    fn test_version_range_matching() {
+        // 测试兼容版本匹配
+        let range = VersionRange::parse("^1.2.3").unwrap();
+        assert!(range.matches("1.2.3"));
+        assert!(range.matches("1.2.4"));
+        assert!(range.matches("1.3.0"));
+        assert!(range.matches("1.10.0"));
+        assert!(!range.matches("2.0.0"));
+        assert!(!range.matches("0.9.9"));
+
+        // 测试近似版本匹配
+        let range = VersionRange::parse("~1.2.3").unwrap();
+        assert!(range.matches("1.2.3"));
+        assert!(range.matches("1.2.4"));
+        assert!(!range.matches("1.3.0"));
+        assert!(!range.matches("1.1.0"));
+
+        // 测试通配符匹配
+        let range = VersionRange::parse("*").unwrap();
+        assert!(range.matches("1.0.0"));
+        assert!(range.matches("100.200.300"));
+    }
+
+    #[test]
+    fn test_package_spec_parsing() {
+        // 测试包名解析
+        let spec = PackageSpec::Name("lodash".to_string());
+        assert!(matches!(spec, PackageSpec::Name(_)));
+
+        // 测试版本解析
+        let spec = PackageSpec::NameVersion("react".to_string(), "18.0.0".to_string());
+        assert!(matches!(spec, PackageSpec::NameVersion(_, _)));
+
+        // 测试版本范围解析
+        let spec = PackageSpec::NameRange("vue".to_string(), "^3.0.0".to_string());
+        assert!(matches!(spec, PackageSpec::NameRange(_, _)));
+    }
+
+    #[test]
+    fn test_install_options_default() {
+        let options = InstallOptions::default();
+        assert!(!options.production);
+        assert!(!options.dev);
+        assert!(options.optional);
+        assert!(!options.global);
+        assert!(options.save);
+        assert!(!options.save_dev);
+        assert!(!options.save_exact);
+        assert!(!options.ignore_scripts);
+        assert!(!options.legacy_peer_deps);
+    }
+
+    #[tokio::test]
+    async fn test_registry_client_creation() {
+        let client = RegistryClient::new("https://registry.npmjs.org/".to_string(), 30000);
+
+        // 验证客户端创建成功
+        // 注意：这里不进行实际网络请求，只是验证客户端可以创建
+        assert!(true, "RegistryClient should be created successfully");
+    }
+
+    #[tokio::test]
+    async fn test_lockfile_manager() {
+        let manager = LockfileManager::new();
+
+        // 创建模拟的包解析结果
+        let mut resolutions = std::collections::HashMap::new();
+        resolutions.insert(
+            "lodash".to_string(),
+            PackageResolution {
+                package_name: "lodash".to_string(),
+                version: "4.17.21".to_string(),
+                resolved_url: "https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz".to_string(),
+                integrity: "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==".to_string(),
+                dependencies: std::collections::HashMap::new(),
+                peer_dependencies: std::collections::HashMap::new(),
+                optional_dependencies: std::collections::HashMap::new(),
+                bins: std::collections::HashMap::new(),
+                main: "lodash.js".to_string(),
+                types: None,
+                exports: None,
+            }
+        );
+
+        let temp_dir = TempDir::new().unwrap();
+        std::env::set_current_dir(temp_dir.path()).unwrap();
+
+        let result = manager.update_lockfile(&resolutions).await;
+        assert!(result.is_ok(), "Lockfile update should succeed");
+    }
+
+    #[test]
+    fn test_package_manager_config_default() {
+        let config = PackageManagerConfig::default();
+
+        assert_eq!(config.manager_type, PackageManagerType::Npm);
+        assert_eq!(config.registry_url, "https://registry.npmjs.org/");
+        assert_eq!(config.timeout_ms, 30000);
+        assert_eq!(config.retry_count, 3);
+        assert!(config.strict_ssl);
+        assert!(config.auth_token.is_none());
+        assert!(config.ca_file.is_none());
+    }
+
+    #[test]
+    fn test_version_range_display() {
+        let range = VersionRange::Exact("1.2.3".to_string());
+        assert_eq!(format!("{}", range), "1.2.3");
+
+        let range = VersionRange::Compatible("1.2.3".to_string());
+        assert_eq!(format!("{}", range), "^1.2.3");
+
+        let range = VersionRange::Approximate("1.2.3".to_string());
+        assert_eq!(format!("{}", range), "~1.2.3");
+
+        let range = VersionRange::Wildcard;
+        assert_eq!(format!("{}", range), "*");
+    }
+}

@@ -1,6 +1,7 @@
 //! Beejs 生态系统模块
 //! Stage 80 - 生态系统完善
 //! Stage 86 - 生态完善 (插件系统增强)
+//! Stage 91 Phase 3 - 生态系统集成
 
 pub mod package;
 pub mod marketplace;
@@ -10,9 +11,23 @@ pub mod community;
 pub mod analytics;
 pub mod plugin_engine;
 
+// Stage 91 Phase 3.1 - 包管理器集成
+pub mod package_managers;
+
+// Stage 91 Phase 3.2 - 开发工具支持
+pub mod type_generator;
+pub mod ts_type_analyzer;
+pub mod dts_emitter;
+pub mod symbol_resolver;
+
 pub use package::*;
 pub use plugin_engine::*;
 pub use marketplace_core::*;
+pub use package_managers::*;
+pub use type_generator::*;
+pub use ts_type_analyzer::*;
+pub use dts_emitter::*;
+pub use symbol_resolver::*;
 
 use std::collections::{HashMap, HashSet};
 use serde::{Serialize, Deserialize};

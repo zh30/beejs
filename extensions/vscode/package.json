@@ -1,0 +1,255 @@
+{
+  "name": "beejs-runtime",
+  "displayName": "Beejs Runtime",
+  "description": "Beejs 高性能 JavaScript/TypeScript 运行时支持",
+  "version": "0.1.0",
+  "publisher": "beejs-team",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Other",
+    "Extension Packs"
+  ],
+  "keywords": [
+    "javascript",
+    "typescript",
+    "runtime",
+    "performance",
+    "beejs"
+  ],
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onCommand:beejs.runScript",
+    "onCommand:beejs.installPackages",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescriptreact"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "beejs.runScript",
+        "title": "Beejs: 运行脚本",
+        "category": "Beejs"
+      },
+      {
+        "command": "beejs.installPackages",
+        "title": "Beejs: 安装依赖",
+        "category": "Beejs"
+      },
+      {
+        "command": "beejs.generateTypes",
+        "title": "Beejs: 生成类型定义",
+        "category": "Beejs"
+      },
+      {
+        "command": "beejs.startRepl",
+        "title": "Beejs: 启动 REPL",
+        "category": "Beejs"
+      },
+      {
+        "command": "beejs.runBenchmark",
+        "title": "Beejs: 运行性能测试",
+        "category": "Beejs"
+      },
+      {
+        "command": "beejs.showPerformanceReport",
+        "title": "Beejs: 显示性能报告",
+        "category": "Beejs"
+      },
+      {
+        "command": "beejs.debugScript",
+        "title": "Beejs: 调试脚本",
+        "category": "Beejs"
+      },
+      {
+        "command": "beejs.configureRuntime",
+        "title": "Beejs: 配置运行时",
+        "category": "Beejs"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "beejs.runScript",
+        "key": "f5",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "beejs.debugScript",
+        "key": "f6",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "beejs.startRepl",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "beejs.runScript",
+          "when": "resourceExtname == .js || resourceExtname == .ts",
+          "group": "beejs"
+        },
+        {
+          "command": "beejs.debugScript",
+          "when": "resourceExtname == .js || resourceExtname == .ts",
+          "group": "beejs"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "beejs.runScript",
+          "when": "resourceExtname == .js || resourceExtname == .ts",
+          "group": "beejs"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Beejs Runtime",
+      "properties": {
+        "beejs.runtimePath": {
+          "type": "string",
+          "default": "",
+          "description": "Beejs 运行时可执行文件路径"
+        },
+        "beejs.heapSize": {
+          "type": "number",
+          "default": 512,
+          "description": "V8 堆大小 (MB)"
+        },
+        "beejs.enableOptimization": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用 JIT 优化"
+        },
+        "beejs.enableTypeGeneration": {
+          "type": "boolean",
+          "default": true,
+          "description": "自动生成 TypeScript 类型定义"
+        },
+        "beejs.enablePerformanceMonitoring": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用性能监控"
+        },
+        "beejs.logLevel": {
+          "type": "string",
+          "enum": ["error", "warn", "info", "debug"],
+          "default": "info",
+          "description": "日志级别"
+        },
+        "beejs.packageManager": {
+          "type": "string",
+          "enum": ["npm", "yarn", "pnpm"],
+          "default": "npm",
+          "description": "默认包管理器"
+        },
+        "beejs.enableAutoInstall": {
+          "type": "boolean",
+          "default": false,
+          "description": "自动安装缺失的依赖"
+        },
+        "beejs.nodeModulesPath": {
+          "type": "string",
+          "default": "node_modules",
+          "description": "Node modules 路径"
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "javascript-beejs",
+        "aliases": [
+          "JavaScript (Beejs)",
+          "javascript"
+        ],
+        "extensions": [
+          ".js",
+          ".jsx"
+        ],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "typescript-beejs",
+        "aliases": [
+          "TypeScript (Beejs)",
+          "typescript"
+        ],
+        "extensions": [
+          ".ts",
+          ".tsx"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "javascript-beejs",
+        "scopeName": "source.js",
+        "path": "./syntaxes/javascript-beejs.tmLanguage.json"
+      },
+      {
+        "language": "typescript-beejs",
+        "scopeName": "source.ts",
+        "path": "./syntaxes/typescript-beejs.tmLanguage.json"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "beejs-view",
+          "name": "Beejs Runtime"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "beejs",
+          "title": "Beejs",
+          "icon": "$(symbol-class)"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.59.0",
+    "@typescript-eslint/parser": "^5.59.0",
+    "eslint": "^8.39.0",
+    "glob": "^8.1.0",
+    "mocha": "^10.2.0",
+    "typescript": "^5.0.4",
+    "@vscode/test-electron": "^2.3.0",
+    "@vscode/vsce": "^2.19.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0",
+    "vscode-languageprotocol": "^3.17.0",
+    "await-notify": "^1.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beejs-team/beejs-vscode-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/beejs-team/beejs-vscode-extension/issues"
+  },
+  "homepage": "https://github.com/beejs-team/beejs-vscode-extension#readme",
+  "license": "MIT"
+}

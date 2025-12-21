@@ -1,0 +1,42 @@
+{
+  "npm_package_parsing": {
+    "duration": "0.51",
+    "opsPerSec": "1965601.97"
+  },
+  "yarn_lockfile_parsing": {
+    "duration": "0.06",
+    "opsPerSec": "16540134.64"
+  },
+  "pnpm_store_management": {
+    "duration": "0.78",
+    "opsPerSec": "1277888.32"
+  },
+  "typescript_type_inference": {
+    "duration": "0.16",
+    "opsPerSec": "3041066.56"
+  },
+  "dts_file_generation": {
+    "duration": "0.06",
+    "opsPerSec": "16736401.67"
+  },
+  "jsx_transformation": {
+    "duration": "0.31",
+    "opsPerSec": "3208985.16"
+  },
+  "component_rendering": {
+    "duration": "0.56",
+    "opsPerSec": "897600.00"
+  },
+  "webpack_plugin_config": {
+    "duration": "0.66",
+    "opsPerSec": "301015.78"
+  },
+  "vite_plugin_config": {
+    "duration": "0.14",
+    "opsPerSec": "2102194.69"
+  },
+  "rollup_plugin_config": {
+    "duration": "0.13",
+    "opsPerSec": "1852428.16"
+  }
+}

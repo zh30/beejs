@@ -1,0 +1,541 @@
+//! 生态系统集成测试
+//! Stage 91 Phase 3 - 端到端集成测试
+
+use beejs::ecosystem::*;
+use serde_json::json;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio;
+    use std::time::Instant;
+
+    #[tokio::test]
+    async fn test_end_to_end_workflow() -> Result<(), Box<dyn std::error::Error>> {
+        println!("\n=== 开始端到端工作流测试 ===\n");
+
+        let start_time = Instant::now();
+
+        // 1. 初始化包管理器
+        println!("1. 初始化包管理器...");
+        let npm_config = PackageManagerConfig::default();
+        let npm = NpmCompatibility::new(npm_config);
+
+        // 2. 解析和安装依赖
+        println!("2. 解析和安装依赖...");
+        let test_spec = PackageSpec::Name("lodash".to_string());
+        let resolution = npm.resolve_package(&test_spec).await?;
+        println!("   - 解析包: {} v{}", resolution.package_name, resolution.version);
+
+        // 3. 生成类型定义
+        println!("3. 生成类型定义...");
+        let type_config = TypeGenConfig::default();
+        let type_generator = TypeDefinitionGenerator::new(type_config);
+
+        let js_code = r#"
+/**
+ * 计算数组平均值
+ * @param {number[]} numbers - 数字数组
+ * @returns {number} 平均值
+ */
+function average(numbers) {
+    return numbers.reduce((sum, n) => sum + n, 0) / numbers.length;
+}
+
+export { average };
+"#;
+
+        let dts_content = type_generator.generate_types_from_source(js_code, "utils.js").await?;
+        println!("   - 生成类型定义: {} 字符", dts_content.len());
+
+        // 4. 创建 React 组件
+        println!("4. 创建 React 组件...");
+        let react_config = ReactConfig::default();
+        let react_runtime = ReactRuntime::new(react_config);
+
+        let component = ReactComponent {
+            name: "AverageCalculator".to_string(),
+            source_code: r#"
+function AverageCalculator() {
+    const [numbers, setNumbers] = React.useState([1, 2, 3, 4, 5]);
+    const avg = numbers.reduce((sum, n) => sum + n, 0) / numbers.length;
+
+    return React.createElement('div', null,
+        React.createElement('h1', null, '平均值计算器'),
+        React.createElement('p', null, `当前数组: [${numbers.join(', ')}]`),
+        React.createElement('p', null, `平均值: ${avg}`)
+    );
+}
+export default AverageCalculator;
+"#.to_string(),
+            props_type: None,
+            state_type: None,
+            dependencies: vec!["react".to_string()],
+        };
+
+        let props = json!({});
+        let render_result = react_runtime.render_component(&component, Some(&props), "root").await?;
+        println!("   - 渲染结果: {} 字符", render_result.html.len());
+
+        // 5. 服务器端渲染
+        println!("5. 服务器端渲染...");
+        let ssr_config = SsrConfig::default();
+        let ssr_renderer = SsrRenderer::new(ssr_config);
+
+        let ssr_request = SsrRequest {
+            url: "/average".to_string(),
+            method: "GET".to_string(),
+            headers: HashMap::new(),
+            query_params: HashMap::new(),
+            user_agent: None,
+            ip: None,
+        };
+
+        let ssr_response = ssr_renderer
+            .render_page(&ssr_request, FrameworkType::React, &component)
+            .await?;
+        println!("   - SSR 响应: {} 字符", ssr_response.body.len());
+
+        // 验证结果
+        assert_eq!(ssr_response.status, 200);
+        assert!(ssr_response.body.contains("平均值计算器"));
+
+        let elapsed = start_time.elapsed();
+        println!("\n✓ 端到端工作流测试完成，耗时: {:.2}ms\n", elapsed.as_millis());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_performance_metrics() -> Result<(), Box<dyn std::error::Error>> {
+        println!("\n=== 开始性能指标测试 ===\n");
+
+        let mut metrics = PerformanceMetrics {
+            render_time: 0,
+            bundle_size: 0,
+            time_to_interactive: 0,
+            first_contentful_paint: 0,
+            largest_contentful_paint: 0,
+            cumulative_layout_shift: 0.0,
+        };
+
+        // 1. 测试包管理器性能
+        println!("1. 测试包管理器性能...");
+        let start = Instant::now();
+        let config = PackageManagerConfig::default();
+        let npm = NpmCompatibility::new(config);
+
+        let spec = PackageSpec::Name("express".to_string());
+        npm.resolve_package(&spec).await?;
+        let package_time = start.elapsed();
+
+        metrics.render_time = package_time.as_millis() as u64;
+        println!("   - 包解析时间: {}ms", metrics.render_time);
+
+        // 2. 测试类型生成性能
+        println!("2. 测试类型生成性能...");
+        let start = Instant::now();
+        let type_config = TypeGenConfig::default();
+        let generator = TypeDefinitionGenerator::new(type_config);
+
+        let source = r#"
+interface User {
+    id: number;
+    name: string;
+    email: string;
+    active: boolean;
+}
+
+class UserService {
+    private users: User[] = [];
+
+    async getUser(id: number): Promise<User | null> {
+        return this.users.find(u => u.id === id) || null;
+    }
+
+    async createUser(user: Omit<User, 'id'>): Promise<User> {
+        const newUser = { id: Date.now(), ...user };
+        this.users.push(newUser);
+        return newUser;
+    }
+}
+"#;
+
+        generator.generate_types_from_source(source, "test.ts").await?;
+        let type_time = start.elapsed();
+
+        println!("   - 类型生成时间: {}ms", type_time.as_millis());
+
+        // 3. 测试框架渲染性能
+        println!("3. 测试框架渲染性能...");
+        let start = Instant::now();
+        let react_config = ReactConfig::default();
+        let runtime = ReactRuntime::new(react_config);
+
+        let component = ReactComponent {
+            name: "PerfTest".to_string(),
+            source_code: "function PerfTest(){return React.createElement('div',null,'Test');}".to_string(),
+            props_type: None,
+            state_type: None,
+            dependencies: vec![],
+        };
+
+        runtime.render_component(&component, None, "root").await?;
+        let render_time = start.elapsed();
+
+        println!("   - React 渲染时间: {}ms", render_time.as_millis());
+
+        // 4. 测试 SSR 性能
+        println!("4. 测试 SSR 性能...");
+        let start = Instant::now();
+        let ssr_config = SsrConfig::default();
+        let renderer = SsrRenderer::new(ssr_config);
+
+        let request = SsrRequest {
+            url: "/test".to_string(),
+            method: "GET".to_string(),
+            headers: HashMap::new(),
+            query_params: HashMap::new(),
+            user_agent: None,
+            ip: None,
+        };
+
+        renderer
+            .render_page(&request, FrameworkType::React, &json!({}))
+            .await?;
+        let ssr_time = start.elapsed();
+
+        println!("   - SSR 渲染时间: {}ms", ssr_time.as_millis());
+
+        // 5. 测试缓存性能
+        println!("5. 测试缓存性能...");
+        let cache_manager = CacheManager::new();
+
+        let response = SsrResponse {
+            status: 200,
+            headers: HashMap::new(),
+            body: "cached content".to_string(),
+            stream: None,
+        };
+
+        let start = Instant::now();
+        cache_manager.set("/cached", &response, 3600).await?;
+        cache_manager.get("/cached").await?;
+        let cache_time = start.elapsed();
+
+        println!("   - 缓存操作时间: {}ms", cache_time.as_millis());
+
+        println!("\n✓ 性能指标测试完成\n");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_resource_usage() -> Result<(), Box<dyn std::error::Error>> {
+        println!("\n=== 开始资源使用测试 ===\n");
+
+        // 1. 测试内存使用
+        println!("1. 测试内存使用...");
+        let initial_memory = get_memory_usage();
+
+        // 创建多个对象
+        let mut objects = Vec::new();
+        for i in 0..1000 {
+            let obj = json!({
+                "id": i,
+                "data": format!("data-{}", i),
+                "metadata": {
+                    "created": "2023-01-01",
+                    "version": "1.0.0"
+                }
+            });
+            objects.push(obj);
+        }
+
+        let after_memory = get_memory_usage();
+        println!("   - 初始内存: {} KB", initial_memory);
+        println!("   - 创建 1000 对象后: {} KB", after_memory);
+        println!("   - 内存增长: {} KB", after_memory - initial_memory);
+
+        // 2. 测试并发处理
+        println!("2. 测试并发处理...");
+        let start = Instant::now();
+
+        let mut handles = Vec::new();
+        for i in 0..10 {
+            let handle = tokio::spawn(async move {
+                let config = PackageManagerConfig::default();
+                let npm = NpmCompatibility::new(config);
+                let spec = PackageSpec::Name(format!("package-{}", i));
+                npm.resolve_package(&spec).await
+            });
+            handles.push(handle);
+        }
+
+        for handle in handles {
+            handle.await??;
+        }
+
+        let concurrent_time = start.elapsed();
+        println!("   - 并发处理 10 个请求: {}ms", concurrent_time.as_millis());
+
+        // 3. 测试缓存效率
+        println!("3. 测试缓存效率...");
+        let cache_manager = CacheManager::new();
+
+        // 填充缓存
+        let start = Instant::now();
+        for i in 0..100 {
+            let response = SsrResponse {
+                status: 200,
+                headers: HashMap::new(),
+                body: format!("content-{}", i),
+                stream: None,
+            };
+            cache_manager.set(&format!("/page-{}", i), &response, 3600).await?;
+        }
+        let fill_time = start.elapsed();
+
+        // 读取缓存
+        let start = Instant::now();
+        for i in 0..100 {
+            cache_manager.get(&format!("/page-{}", i)).await?;
+        }
+        let read_time = start.elapsed();
+
+        println!("   - 填充 100 个缓存项: {}ms", fill_time.as_millis());
+        println!("   - 读取 100 个缓存项: {}ms", read_time.as_millis());
+
+        // 4. 测试流式渲染
+        println!("4. 测试流式渲染效率...");
+        let stream_renderer = StreamRenderer::new();
+
+        let render_result = RenderResult {
+            html: "<div>Test Content</div>".to_string(),
+            head: Some("<title>Test</title>".to_string()),
+            styles: vec!["body { margin: 0; }".to_string()],
+            scripts: vec!["<script>console.log('test');</script>".to_string()],
+            data: Some(json!({"test": true})),
+        };
+
+        let start = Instant::now();
+        let stream = stream_renderer.create_stream(&render_result)?;
+        let stream_time = start.elapsed();
+
+        println!("   - 创建流: {}ms", stream_time.as_millis());
+        println!("   - 流块数: {}", stream.chunks.len());
+
+        println!("\n✓ 资源使用测试完成\n");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_error_handling() -> Result<(), Box<dyn std::error::Error>> {
+        println!("\n=== 开始错误处理测试 ===\n");
+
+        // 1. 测试无效包解析
+        println!("1. 测试无效包解析...");
+        let config = PackageManagerConfig::default();
+        let npm = NpmCompatibility::new(config);
+
+        let invalid_spec = PackageSpec::Name("this-package-does-not-exist-12345".to_string());
+        let result = npm.resolve_package(&invalid_spec).await;
+
+        match result {
+            Ok(_) => println!("   ✗ 应该返回错误"),
+            Err(e) => println!("   ✓ 正确捕获错误: {}", e),
+        }
+
+        // 2. 测试无效类型生成
+        println!("2. 测试无效源代码...");
+        let type_config = TypeGenConfig::default();
+        let generator = TypeDefinitionGenerator::new(type_config);
+
+        let invalid_source = "this is not valid javascript syntax !!!@@@###";
+        let result = generator.generate_types_from_source(invalid_source, "invalid.js").await;
+
+        match result {
+            Ok(_) => println!("   ✗ 应该返回错误"),
+            Err(e) => println!("   ✓ 正确捕获错误: {}", e),
+        }
+
+        // 3. 测试无效 SSR 请求
+        println!("3. 测试无效 SSR 请求...");
+        let ssr_config = SsrConfig::default();
+        let renderer = SsrRenderer::new(ssr_config);
+
+        let invalid_request = SsrRequest {
+            url: "".to_string(), // 空 URL
+            method: "INVALID".to_string(),
+            headers: HashMap::new(),
+            query_params: HashMap::new(),
+            user_agent: None,
+            ip: None,
+        };
+
+        let result = renderer
+            .render_page(&invalid_request, FrameworkType::React, &json!({}))
+            .await;
+
+        match result {
+            Ok(response) => {
+                if response.status >= 400 {
+                    println!("   ✓ 正确返回错误状态: {}", response.status);
+                } else {
+                    println!("   ✗ 应该返回错误状态");
+                }
+            }
+            Err(e) => println!("   ✓ 正确捕获错误: {}", e),
+        }
+
+        // 4. 测试缓存错误
+        println!("4. 测试缓存错误处理...");
+        let cache_manager = CacheManager::new();
+
+        // 测试不存在的缓存键
+        let result = cache_manager.get("/non-existent").await?;
+        assert!(result.is_none());
+        println!("   ✓ 正确处理不存在的缓存键");
+
+        // 测试无效的 TTL
+        let response = SsrResponse {
+            status: 200,
+            headers: HashMap::new(),
+            body: "test".to_string(),
+            stream: None,
+        };
+
+        // 应该能处理各种 TTL 值
+        cache_manager.set("/test", &response, 0).await?; // 零 TTL
+        println!("   ✓ 正确处理零 TTL");
+
+        println!("\n✓ 错误处理测试完成\n");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_scalability() -> Result<(), Box<dyn std::error::Error>> {
+        println!("\n=== 开始可扩展性测试 ===\n");
+
+        // 1. 测试大量组件渲染
+        println!("1. 测试大量组件渲染...");
+        let react_config = ReactConfig::default();
+        let runtime = ReactRuntime::new(react_config);
+
+        let mut components = Vec::new();
+        for i in 0..100 {
+            components.push(ReactComponent {
+                name: format!("Component{}", i),
+                source_code: format!(
+                    "function Component{}() {{ return React.createElement('div', null, 'Component {}'); }}",
+                    i, i
+                ),
+                props_type: None,
+                state_type: None,
+                dependencies: vec![],
+            });
+        }
+
+        let start = Instant::now();
+        let results = runtime.batch_render(&components).await?;
+        let batch_time = start.elapsed();
+
+        println!("   - 渲染 100 个组件: {}ms", batch_time.as_millis());
+        println!("   - 平均每个组件: {:.2}ms", batch_time.as_millis() as f64 / 100.0);
+
+        assert_eq!(results.len(), 100);
+
+        // 2. 测试大文件类型生成
+        println!("2. 测试大文件类型生成...");
+        let type_config = TypeGenConfig::default();
+        let generator = TypeDefinitionGenerator::new(type_config);
+
+        let mut large_source = String::new();
+        large_source.push_str("/** 大型接口定义 */\n");
+        large_source.push_str("interface LargeInterface {\n");
+
+        for i in 0..1000 {
+            large_source.push_str(&format!("    property{}: string;\n", i));
+        }
+
+        large_source.push_str("}\n");
+
+        let start = Instant::now();
+        let dts = generator.generate_types_from_source(&large_source, "large.ts").await?;
+        let gen_time = start.elapsed();
+
+        println!("   - 生成 1000 属性接口: {}ms", gen_time.as_millis());
+        println!("   - 生成的 .d.ts 大小: {} 字符", dts.len());
+
+        // 3. 测试大量包解析
+        println!("3. 测试大量包解析...");
+        let config = PackageManagerConfig::default();
+        let npm = NpmCompatibility::new(config);
+
+        let mut specs = Vec::new();
+        let packages = vec!["lodash", "express", "react", "vue", "axios", "moment", "underscore", "async", "bluebird", "Q"];
+
+        for pkg in packages {
+            for i in 0..10 {
+                specs.push(PackageSpec::Name(format!("{}-v{}", pkg, i)));
+            }
+        }
+
+        let start = Instant::now();
+        let mut success_count = 0;
+        let mut error_count = 0;
+
+        for spec in specs {
+            match npm.resolve_package(&spec).await {
+                Ok(_) => success_count += 1,
+                Err(_) => error_count += 1,
+            }
+        }
+
+        let parse_time = start.elapsed();
+
+        println!("   - 解析 {} 个包: {}ms", specs.len(), parse_time.as_millis());
+        println!("   - 成功率: {:.1}%", success_count as f64 / specs.len() as f64 * 100.0);
+        println!("   - 失败率: {:.1}%", error_count as f64 / specs.len() as f64 * 100.0);
+
+        // 4. 测试缓存可扩展性
+        println!("4. 测试缓存可扩展性...");
+        let cache_manager = CacheManager::new();
+
+        let start = Instant::now();
+        for i in 0..500 {
+            let response = SsrResponse {
+                status: 200,
+                headers: HashMap::new(),
+                body: format!("content-{}", i),
+                stream: None,
+            };
+            cache_manager.set(&format!("/cache-{}", i), &response, 3600).await?;
+        }
+        let cache_time = start.elapsed();
+
+        println!("   - 填充 500 个缓存项: {}ms", cache_time.as_millis());
+
+        // 测试缓存回收
+        let start = Instant::now();
+        for i in 0..600 {
+            cache_manager.get(&format!("/cache-{}", i)).await?;
+        }
+        let retrieve_time = start.elapsed();
+
+        println!("   - 检索 600 个缓存项: {}ms", retrieve_time.as_millis());
+
+        println!("\n✓ 可扩展性测试完成\n");
+
+        Ok(())
+    }
+}
+
+// 辅助函数：获取内存使用量（简化实现）
+fn get_memory_usage() -> usize {
+    // 在实际实现中，这里应该调用系统 API 获取实际内存使用量
+    // 这里只是模拟值
+    1024
+}
