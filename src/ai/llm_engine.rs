@@ -403,12 +403,12 @@ mod tests {
             parallel_inference: false,
         };
 
-        let engine = AiLlmEngine::new(&runtime, config).unwrap();
+        let mut engine = AiLlmEngine::new(&runtime, config).unwrap();
 
         // 生成大量缓存条目
         for i in 0..100 {
-            let engine = &engine.clone();
-            let _ = engine.generate(&format!("Prompt {}", i), 10);
+            let engine_ref = &mut engine.clone();
+            let _ = engine_ref.generate(&format!("Prompt {}", i), 10);
         }
 
         let initial_usage = engine.get_memory_usage();

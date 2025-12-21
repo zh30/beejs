@@ -458,6 +458,15 @@ impl RuntimeConfigManager {
         }
     }
 
+    /// 获取配置快照
+    pub async fn get_config_snapshot(&self) -> ConfigSnapshot {
+        let config = self.config.read().await;
+        ConfigSnapshot {
+            config: config.clone(),
+            timestamp: std::time::SystemTime::now(),
+        }
+    }
+
     /// 获取当前配置
     pub async fn get_config(&self) -> RuntimeConfig {
         self.config.read().await.clone()

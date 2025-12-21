@@ -1,0 +1,180 @@
+//! AI 性能引擎演示
+//! 展示如何使用 AI 性能引擎进行智能性能优化
+
+use beejs::ai::{
+    ai_performance_engine::{AiPerformanceEngine, AiPerformanceEngineConfig, PerformanceMetrics},
+    intelligent_scheduler::{IntelligentScheduler, IntelligentSchedulerConfig, Task, TaskType, ResourceRequirements},
+};
+use std::time::Instant;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("🚀 Beejs AI 性能引擎演示\n");
+
+    // 1. 创建 AI 性能引擎
+    println!("1. 初始化 AI 性能引擎...");
+    let ai_config = AiPerformanceEngineConfig {
+        prediction_window: 1000,
+        batch_size: 32,
+        learning_rate: 0.001,
+        prediction_interval_ms: 100,
+        auto_tune_interval_ms: 1000,
+        min_confidence: 0.8,
+        enable_online_learning: true,
+    };
+
+    let ai_engine = AiPerformanceEngine::new(ai_config);
+    println!("✅ AI 性能引擎已启动\n");
+
+    // 2. 模拟性能指标
+    println!("2. 模拟性能指标收集...");
+    for i in 0..50 {
+        let metrics = PerformanceMetrics {
+            cpu_usage: 50.0 + (i as f64 * 0.5), // 逐渐增加的 CPU 使用率
+            memory_usage: 500.0 + (i as f64 * 5.0), // 逐渐增加的内存使用
+            heap_size: 256.0 + (i as f64 * 2.0),
+            gc_time: 5.0 + (i as f64 * 0.1),
+            execution_time: 1000 + i * 10,
+            throughput: 10000.0 - (i as f64 * 50.0), // 逐渐降低的吞吐量
+            latency: 100.0 + (i as f64),
+            concurrent_tasks: 100,
+            timestamp: Instant::now(),
+        };
+
+        ai_engine.record_metrics(metrics).await;
+
+        // 每 10 个样本进行一次预测和调优
+        if i % 10 == 9 {
+            println!("\n--- 样本 {} ---", i + 1);
+
+            // 进行性能预测
+            match ai_engine.predict_performance().await {
+                Ok(prediction) => {
+                    println!("📊 性能预测:");
+                    println!("  预测执行时间: {:.2} μs", prediction.predicted_execution_time);
+                    println!("  预测内存使用: {:.2} MB", prediction.predicted_memory);
+                    println!("  预测吞吐量: {:.2} ops/sec", prediction.predicted_throughput);
+                    println!("  预测置信度: {:.2}%", prediction.confidence * 100.0);
+
+                    if !prediction.optimization_suggestions.is_empty() {
+                        println!("\n💡 优化建议:");
+                        for suggestion in &prediction.optimization_suggestions {
+                            println!("  - {}: {} → {} (预期提升: {:.1}%)",
+                                suggestion.parameter,
+                                suggestion.current_value,
+                                suggestion.suggested_value,
+                                suggestion.expected_improvement
+                            );
+                        }
+                    }
+                }
+                Err(e) => println!("❌ 预测失败: {}", e),
+            }
+
+            // 自动调优
+            match ai_engine.auto_tune().await {
+                Ok(suggestions) => {
+                    if !suggestions.is_empty() {
+                        println!("\n🔧 自动调优建议已生成 ({} 条)", suggestions.len());
+                    }
+                }
+                Err(e) => println!("❌ 调优失败: {}", e),
+            }
+        }
+    }
+
+    println!("\n" + "=".repeat(60));
+    println!("3. 智能调度器演示...\n");
+
+    // 4. 创建智能调度器
+    let scheduler_config = IntelligentSchedulerConfig {
+        worker_count: 4,
+        max_queue_length: 1000,
+        load_balance_threshold: 0.8,
+        prediction_window: 100,
+        auto_scaling_interval_ms: 2000,
+        min_workers: 2,
+        max_workers: 16,
+        task_timeout_ms: 10000,
+    };
+
+    let scheduler = std::sync::Arc::new(IntelligentScheduler::new(scheduler_config, ai_config));
+    scheduler.start_background_tasks();
+
+    // 5. 提交各种类型的任务
+    println!("5. 提交任务到智能调度器...");
+
+    // CPU 密集型任务
+    let cpu_task = Task {
+        id: "cpu-task-1".to_string(),
+        task_type: TaskType::CpuIntensive,
+        estimated_duration: 500,
+        resource_requirements: ResourceRequirements {
+            cpu: 80.0,
+            memory: 200.0,
+            concurrency: 2,
+        },
+        priority: 90,
+        created_at: Instant::now(),
+        deadline: Some(Instant::now() + Duration::from_secs(2)),
+        dependencies: Vec::new(),
+    };
+
+    // 内存密集型任务
+    let memory_task = Task {
+        id: "memory-task-1".to_string(),
+        task_type: TaskType::MemoryIntensive,
+        estimated_duration: 300,
+        resource_requirements: ResourceRequirements {
+            cpu: 30.0,
+            memory: 800.0,
+            concurrency: 1,
+        },
+        priority: 70,
+        created_at: Instant::now(),
+        deadline: Some(Instant::now() + Duration::from_secs(2)),
+        dependencies: Vec::new(),
+    };
+
+    // I/O 密集型任务
+    let io_task = Task {
+        id: "io-task-1".to_string(),
+        task_type: TaskType::IoIntensive,
+        estimated_duration: 200,
+        resource_requirements: ResourceRequirements {
+            cpu: 20.0,
+            memory: 100.0,
+            concurrency: 4,
+        },
+        priority: 60,
+        created_at: Instant::now(),
+        deadline: Some(Instant::now() + Duration::from_secs(1)),
+        dependencies: Vec::new(),
+    };
+
+    // 提交任务
+    scheduler.submit_task(cpu_task).await?;
+    scheduler.submit_task(memory_task).await?;
+    scheduler.submit_task(io_task).await?;
+
+    println!("✅ 已提交 3 个任务");
+
+    // 等待任务执行
+    tokio::time::sleep(Duration::from_secs(2)).await;
+
+    // 显示调度统计
+    let stats = scheduler.get_stats();
+    println!("\n📈 调度统计:");
+    println!("  总调度任务: {}", stats.total_scheduled);
+    println!("  完成任务: {}", stats.completed_tasks);
+    println!("  超时任务: {}", stats.timeout_tasks);
+    println!("  平均等待时间: {:.2} ms", stats.avg_wait_time);
+    println!("  平均执行时间: {:.2} ms", stats.avg_execution_time);
+    println!("  资源利用率: {:.2}%", stats.resource_utilization * 100.0);
+    println!("  扩缩容事件: {}", stats.auto_scaling_events);
+
+    println!("\n" + "=".repeat(60));
+    println!("✨ AI 性能引擎演示完成！");
+
+    Ok(())
+}

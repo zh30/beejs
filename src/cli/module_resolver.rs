@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn test_resolve_builtin_module() {
-        let resolver = ModuleResolver::new(PathBuf::from("/test"));
+        let mut resolver = ModuleResolver::new(PathBuf::from("/test"));
         let result = resolver.resolve("fs", Path::new("/test/script.js"));
         assert!(result.is_ok());
         let result = result.unwrap();
@@ -329,7 +329,7 @@ mod tests {
 
     #[test]
     fn test_resolve_relative_path() {
-        let resolver = ModuleResolver::new(PathBuf::from("/test"));
+        let mut resolver = ModuleResolver::new(PathBuf::from("/test"));
         let result = resolver.resolve("./utils", Path::new("/test/script.js"));
         // Will fail without actual files, but tests the logic
         assert!(result.is_err() || result.is_ok());
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_is_builtin_module() {
-        let resolver = ModuleResolver::new(PathBuf::from("/test"));
+        let mut resolver = ModuleResolver::new(PathBuf::from("/test"));
         assert!(resolver.is_builtin_module("fs"));
         assert!(resolver.is_builtin_module("http"));
         assert!(!resolver.is_builtin_module("lodash"));
@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_get_module_type() {
-        let resolver = ModuleResolver::new(PathBuf::from("/test"));
+        let mut resolver = ModuleResolver::new(PathBuf::from("/test"));
         assert_eq!(resolver.get_module_type(Path::new("test.js")), ModuleType::JavaScript);
         assert_eq!(resolver.get_module_type(Path::new("test.json")), ModuleType::Json);
         assert_eq!(resolver.get_module_type(Path::new("test.node")), ModuleType::Native);

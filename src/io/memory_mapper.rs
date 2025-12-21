@@ -390,7 +390,7 @@ mod tests {
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"Clone test").unwrap();
 
-        let _mapped1 = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
+        let mapped1 = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
         let mapped2 = mapped1.clone();
 
         assert_eq!(mapped1.size(), mapped2.size());
@@ -421,7 +421,7 @@ mod tests {
         temp_file.write_all(b"Cache test").unwrap();
 
         // Map the same file twice
-        let _mapped1 = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
+        let mapped1 = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
         let _mapped2 = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
 
         let stats = mapper.get_stats().await;

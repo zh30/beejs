@@ -623,7 +623,7 @@ mod tests {
         repl.history.push_back("let x = 1;".to_string());
         repl.history.push_back("let y = 2;".to_string());
 
-        let temp_file = tempfile::NamedTempFile::new().unwrap();
+        let mut temp_file = tempfile::NamedTempFile::new().unwrap();
         let result = repl.save_session(temp_file.path().to_str().unwrap());
 
         assert!(result.is_ok());
@@ -636,7 +636,7 @@ mod tests {
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
         // Create a temporary file with JavaScript code
-        let temp_file = tempfile::NamedTempFile::new().unwrap();
+        let mut temp_file = tempfile::NamedTempFile::new().unwrap();
         writeln!(temp_file, "let test = 42;").unwrap();
 
         let result = repl.load_file(temp_file.path().to_str().unwrap());

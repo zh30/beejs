@@ -366,7 +366,7 @@ mod tests {
 
     #[test]
     fn test_should_inline_small_hot_function() {
-        let strategy = InlineStrategy::new();
+        let mut strategy = InlineStrategy::new();
         // Small function with moderate calls - cost is size * min(calls, 10)
         // So cost = 20 * 10 = 200, benefit should be high enough
         let func = make_function("small_hot", 20, 100);
@@ -381,7 +381,7 @@ mod tests {
 
     #[test]
     fn test_reject_large_function() {
-        let strategy = InlineStrategy::new();
+        let mut strategy = InlineStrategy::new();
         let func = make_function("large", 1000, 100);
 
         let decision = strategy.should_inline(&func);
@@ -391,7 +391,7 @@ mod tests {
 
     #[test]
     fn test_reject_rarely_called() {
-        let strategy = InlineStrategy::new();
+        let mut strategy = InlineStrategy::new();
         let func = make_function("cold", 50, 1);
 
         let decision = strategy.should_inline(&func);
@@ -401,7 +401,7 @@ mod tests {
 
     #[test]
     fn test_recursive_penalty() {
-        let strategy = InlineStrategy::new();
+        let mut strategy = InlineStrategy::new();
 
         let normal = make_function("normal", 50, 50);
         let mut recursive = make_function("recursive", 50, 50);
@@ -415,7 +415,7 @@ mod tests {
 
     #[test]
     fn test_inline_rate() {
-        let strategy = InlineStrategy::new();
+        let mut strategy = InlineStrategy::new();
 
         // Mix of functions - some very small (should inline), some larger (may not)
         for i in 0..10 {
@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn test_record_and_learn() {
-        let strategy = InlineStrategy::new();
+        let mut strategy = InlineStrategy::new();
 
         // Record a successful inline
         strategy.record_inline(InlineResult {

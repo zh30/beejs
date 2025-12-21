@@ -277,8 +277,7 @@ mod tests {
     #[tokio::test]
     async fn test_allocate_small_buffer() {
         let engine = DmaEngine::new().unwrap();
-        let _buffer = engine.allocate_buffer(1024).await.unwrap();
-
+        let buffer = engine.allocate_buffer(1024).await.unwrap();
         assert!(buffer.size() >= 1024);
         assert!(buffer.as_ptr() != std::ptr::null_mut());
     }
@@ -286,7 +285,7 @@ mod tests {
     #[tokio::test]
     async fn test_allocate_large_buffer() {
         let engine = DmaEngine::new().unwrap();
-        let _buffer = engine.allocate_buffer(1024 * 1024).await.unwrap();
+        let buffer = engine.allocate_buffer(1024 * 1024).await.unwrap();
 
         assert!(buffer.size() >= 1024 * 1024);
     }
@@ -320,7 +319,7 @@ mod tests {
     #[tokio::test]
     async fn test_prefetch_data() {
         let engine = DmaEngine::new().unwrap();
-        let _buffer = engine.allocate_buffer(4096).await.unwrap();
+        let buffer = engine.allocate_buffer(4096).await.unwrap();
 
         let result = engine.prefetch_data(buffer.as_ptr() as usize, 4096);
         assert!(result.is_ok());
@@ -358,7 +357,7 @@ mod tests {
         }
 
         // Allocate same size again, should hit cache
-        let _buffer = engine.allocate_buffer(1024).await.unwrap();
+        let buffer = engine.allocate_buffer(1024).await.unwrap();
         assert!(buffer.size() >= 1024);
     }
 }
