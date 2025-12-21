@@ -126,7 +126,7 @@ fn event_target_constructor_callback(
     });
     let add_event_func_instance = add_event_func.get_function(scope).unwrap();
 
-    event_target_obj.set(scope, add_event_key.into(), add_event_func_instance.into());;
+    event_target_obj.set(scope, add_event_key.into(), add_event_func_instance.into());
 
     let remove_event_key = v8::String::new(scope, "removeEventListener").unwrap();
     let remove_event_func = v8::FunctionTemplate::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
@@ -135,7 +135,7 @@ fn event_target_constructor_callback(
     });
     let remove_event_func_instance = remove_event_func.get_function(scope).unwrap();
 
-    event_target_obj.set(scope, remove_event_key.into(), remove_event_func_instance.into());;
+    event_target_obj.set(scope, remove_event_key.into(), remove_event_func_instance.into());
 
     let dispatch_event_key = v8::String::new(scope, "dispatchEvent").unwrap();
     let dispatch_event_func = v8::FunctionTemplate::new(scope, |_scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
@@ -143,7 +143,7 @@ fn event_target_constructor_callback(
     });
     let dispatch_event_func_instance = dispatch_event_func.get_function(scope).unwrap();
 
-    event_target_obj.set(scope, dispatch_event_key.into(), dispatch_event_func_instance.into());;
+    event_target_obj.set(scope, dispatch_event_key.into(), dispatch_event_func_instance.into());
 
     retval.set(event_target_obj.into());
 }

@@ -17,7 +17,7 @@ pub fn setup_crypto_api(
     });
     let get_random_func_instance = get_random_func.get_function(scope).unwrap();
 
-    subtle_obj.set(scope, get_random_key.into(), get_random_func_instance.into());;
+    subtle_obj.set(scope, get_random_key.into(), get_random_func_instance.into());
     
     crypto_obj.set(scope, subtle_key.into(), subtle_obj.into());
     

@@ -4,8 +4,7 @@
 
 #[cfg(test)]
 mod matrix_accelerator_tests {
-    use crate::ai::matrix_accelerator::*;
-    use crate::ai::AiHardwareFeatures;
+    use beejs::ai::{Matrix, MatrixAccelerator, MatrixPair, AiHardwareFeatures};
 
     /// 测试硬件特性检测
     #[test]
@@ -16,7 +15,7 @@ mod matrix_accelerator_tests {
             has_avx2: true,
             has_avx512: false,
             threads_support: true,
-            optimal_vector_width: crate::wasm::simd_engine::VectorWidth::Avx2(256),
+            optimal_vector_width: beejs::wasm::simd_engine::VectorWidth::Avx2(256),
         };
         println!("检测到的硬件特性: {:?}", features);
         assert!(features.has_sse4_2 || features.has_avx2 || features.has_avx512);
