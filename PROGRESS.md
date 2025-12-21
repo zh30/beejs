@@ -55,6 +55,13 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
    - ✅ 完善错误处理 (无效 URL 检查)
    - ✅ 编写全面测试 (10个测试用例)
 
+8. **WebSocket 真实网络连接 (2025-12-21 新增)**
+   - ✅ 重构为全局 WebSocketManager 管理连接
+   - ✅ 使用 tokio-tungstenite 实现真实 WebSocket 连接
+   - ✅ 启用 TLS 支持 (native-tls) 支持 wss:// URL
+   - ✅ 添加 _pollEvents 和 _updateReadyState 供 JS 轮询
+   - ✅ 通过 echo.websocket.org 验证功能正常
+
 #### 当前 Web API 支持状态
 | API | 状态 | 说明 |
 |-----|------|------|
@@ -74,7 +81,7 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 | btoa | ✅ 可用 | Base64 编码 |
 | atob | ✅ 可用 | Base64 解码 |
 | performance | ✅ 可用 | 高精度计时 API |
-| WebSocket | ✅ 可用 | V8 集成完成，方法绑定正确 |
+| WebSocket | ✅ 可用 | 真实网络连接 (tokio-tungstenite + TLS) |
 | EventTarget | ⚠️ 部分 | 事件监听 |
 | crypto | ⚠️ 部分 | getRandomValues 骨架 |
 
