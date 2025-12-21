@@ -173,6 +173,25 @@ impl EncryptionEngine {
     pub fn get_key_manager(&self) -> Arc<KeyManager> {
         self.key_manager.clone()
     }
+
+    /// 测试加密性能 - 要求 > 1GB/s
+    pub async fn test_performance(&self, data_size: usize) -> Result<f64, EncryptionError> {
+        let test_data = vec![0u8; data_size];
+        let start = std::time::Instant::now();
+
+        // 执行加密操作
+        let encrypted = self.encrypt(&test_data).await?;
+
+        let elapsed = start.elapsed();
+        let bytes_per_second = data_size as f64 / elapsed.as_secs_f64();
+
+        // 验证加密成功
+        if encrypted.is_empty() {
+            return Err(EncryptionError::EncryptionFailed("加密失败".to_string()));
+        }
+
+        Ok(bytes_per_second)
+    }
 }
 
 // 默认实现
