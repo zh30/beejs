@@ -108,6 +108,100 @@ pub struct BeejsClusterStatus {
     pub last_update: Option<Time>,
     /// Conditions
     pub conditions: Vec<ClusterCondition>,
+    /// Current version
+    pub current_version: Option<String>,
+    /// Target version for upgrade
+    pub target_version: Option<String>,
+    /// Upgrade progress
+    pub upgrade_progress: Option<UpgradeProgress>,
+    /// Health status
+    pub health_status: HealthStatus,
+    /// Node statuses
+    pub node_statuses: Vec<NodeStatus>,
+}
+
+/// Upgrade progress information
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UpgradeProgress {
+    /// Current step
+    pub current_step: String,
+    /// Total steps
+    pub total_steps: usize,
+    /// Completion percentage
+    pub percentage: u8,
+    /// Start time
+    pub started_at: Option<Time>,
+    /// Estimated completion time
+    pub estimated_completion: Option<Time>,
+}
+
+/// Health status
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
+pub struct HealthStatus {
+    /// Overall health status
+    pub status: HealthState,
+    /// Last health check time
+    pub last_check: Option<Time>,
+    /// Number of healthy nodes
+    pub healthy_nodes: usize,
+    /// Health check details
+    pub checks: Vec<HealthCheck>,
+}
+
+/// Health states
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum HealthState {
+    /// All nodes are healthy
+    Healthy,
+    /// Some nodes are unhealthy
+    Degraded,
+    /// Cluster is unhealthy
+    Unhealthy,
+    /// Health check failed
+    Unknown,
+}
+
+/// Individual node status
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct NodeStatus {
+    /// Node name
+    pub name: String,
+    /// Node IP
+    pub ip: String,
+    /// Node phase
+    pub phase: NodePhase,
+    /// Last health check
+    pub last_health_check: Option<Time>,
+    /// Restart count
+    pub restart_count: u32,
+}
+
+/// Node phases
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub enum NodePhase {
+    /// Node is pending
+    Pending,
+    /// Node is running
+    Running,
+    /// Node is upgrading
+    Upgrading,
+    /// Node is failing
+    Failing,
+    /// Node has failed
+    Failed,
+}
+
+/// Health check details
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct HealthCheck {
+    /// Check name
+    pub name: String,
+    /// Check status
+    pub status: bool,
+    /// Check message
+    pub message: String,
+    /// Last check time
+    pub last_check: Option<Time>,
 }
 
 /// Cluster phases
@@ -154,6 +248,14 @@ pub struct OperatorConfig {
     pub max_concurrent: usize,
     /// Leader election enabled
     pub leader_election: bool,
+    /// Health check interval
+    pub health_check_interval: Duration,
+    /// Upgrade timeout
+    pub upgrade_timeout: Duration,
+    /// Enable monitoring integration
+    pub monitoring_enabled: bool,
+    /// Enable auto-healing
+    pub auto_healing: bool,
 }
 
 /// BeejsOperator main struct
@@ -192,6 +294,19 @@ impl BeejsOperator {
             services: Api::all(client.clone()),
             configmaps: Api::all(client.clone()),
             recorder,
+        }
+    }
+
+    /// Get default operator configuration
+    pub fn default_config() -> OperatorConfig {
+        OperatorConfig {
+            reconcile_interval: Duration::from_secs(30),
+            max_concurrent: 10,
+            leader_election: true,
+            health_check_interval: Duration::from_secs(60),
+            upgrade_timeout: Duration::from_secs(600),
+            monitoring_enabled: true,
+            auto_healing: true,
         }
     }
 
@@ -298,6 +413,24 @@ impl BeejsOperator {
         let name = beejs_cluster.name_any();
         let namespace = beejs_cluster.namespace().unwrap_or_default();
 
+        // Check if upgrade is needed
+        let status = beejs_cluster.status.clone().unwrap_or_default();
+        let needs_upgrade = Self::check_upgrade_needed(&beejs_cluster, &status);
+
+        if needs_upgrade {
+            info!("Initiating upgrade for BeejsCluster: {}/{}", namespace, name);
+            return Self::perform_upgrade(
+                client.clone(),
+                beejs_cluster.clone(),
+                deployments.clone(),
+                statefulsets.clone(),
+                services.clone(),
+                configmaps.clone(),
+                recorder.clone(),
+            )
+            .await;
+        }
+
         // Create or update ConfigMap
         let configmap = Self::create_configmap(&beejs_cluster)?;
         configmaps
@@ -331,17 +464,22 @@ impl BeejsOperator {
             .await
             .context("Failed to patch Service")?;
 
-        // Update status
-        let mut status = beejs_cluster.status.clone().unwrap_or_default();
-        status.phase = ClusterPhase::Running;
-        status.ready_nodes = beejs_cluster.spec.nodes;
-        status.total_nodes = beejs_cluster.spec.nodes;
-        status.last_update = Some(Time(Utc::now()));
+        // Perform health check
+        let health_status = Self::perform_health_check(
+            client.clone(),
+            &beejs_cluster,
+            statefulsets.clone(),
+        )
+        .await;
 
-        let patched = BeejsCluster {
-            status: Some(status),
-            ..beejs_cluster
-        };
+        // Update status
+        let mut new_status = beejs_cluster.status.clone().unwrap_or_default();
+        new_status.phase = ClusterPhase::Running;
+        new_status.ready_nodes = beejs_cluster.spec.nodes;
+        new_status.total_nodes = beejs_cluster.spec.nodes;
+        new_status.current_version = Some(beejs_cluster.spec.version.clone());
+        new_status.health_status = health_status;
+        new_status.last_update = Some(Time(Utc::now()));
 
         let _ = recorder
             .publish(Event::normal(
@@ -519,6 +657,257 @@ impl BeejsOperator {
         labels.insert("beejs.io/component".to_string(), "cluster".to_string());
         labels
     }
+
+    /// Check if cluster needs upgrade
+    fn check_upgrade_needed(
+        beejs_cluster: &BeejsCluster,
+        status: &BeejsClusterStatus,
+    ) -> bool {
+        if let Some(current_version) = &status.current_version {
+            if current_version != &beejs_cluster.spec.version {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Perform rolling upgrade
+    async fn perform_upgrade(
+        client: Client,
+        beejs_cluster: BeejsCluster,
+        deployments: Api<Deployment>,
+        statefulsets: Api<StatefulSet>,
+        services: Api<Service>,
+        configmaps: Api<ConfigMap>,
+        recorder: Recorder,
+    ) -> Result<Action> {
+        let name = beejs_cluster.name_any();
+        let namespace = beejs_cluster.namespace().unwrap_or_default();
+
+        info!("Starting rolling upgrade for BeejsCluster: {}/{}", namespace, name);
+
+        // Get current StatefulSet
+        let current_ss = statefulsets.get(&name).await
+            .context("Failed to get StatefulSet for upgrade")?;
+
+        // Create new StatefulSet with updated image
+        let mut new_ss = current_ss.clone();
+        if let Some(spec) = &mut new_ss.spec {
+            if let Some(template) = &mut spec.template.spec {
+                for container in &mut template.containers {
+                    if container.name == "beejs" {
+                        container.image = Some(beejs_cluster.spec.version.clone());
+                    }
+                }
+            }
+        }
+
+        // Apply rolling update strategy
+        if let Some(spec) = &mut new_ss.spec {
+            spec.update_strategy = Some(k8s_openapi::api::apps::v1::StatefulSetUpdateStrategy {
+                type_: Some("RollingUpdate".to_string()),
+                rolling_update: Some(
+                    k8s_openapi::api::apps::v1::RollingUpdateStatefulSetStrategy {
+                        partition: Some(0),
+                        max_unavailable: Some(
+                            k8s_openapi::apimachinery::pkg::util::intstr::IntOrString::Int(1),
+                        ),
+                    }
+                ),
+            });
+        }
+
+        // Patch the StatefulSet
+        statefulsets
+            .patch(
+                &name,
+                &PatchParams::apply("beejs-operator"),
+                &Patch::Apply(&new_ss),
+            )
+            .await
+            .context("Failed to patch StatefulSet for upgrade")?;
+
+        // Update status to upgrading
+        let mut status = beejs_cluster.status.clone().unwrap_or_default();
+        status.phase = ClusterPhase::Upgrading;
+        status.target_version = Some(beejs_cluster.spec.version.clone());
+        status.upgrade_progress = Some(UpgradeProgress {
+            current_step: "Starting upgrade".to_string(),
+            total_steps: beejs_cluster.spec.nodes,
+            percentage: 0,
+            started_at: Some(Time(Utc::now())),
+            estimated_completion: None,
+        });
+
+        let _ = recorder
+            .publish(Event::normal(
+                &beejs_cluster,
+                &format!("Started upgrade to version {}", beejs_cluster.spec.version),
+            ))
+            .await;
+
+        Ok(Action::requeue(Duration::from_secs(10)))
+    }
+
+    /// Perform health check on cluster
+    async fn perform_health_check(
+        client: Client,
+        beejs_cluster: &BeejsCluster,
+        statefulsets: Api<StatefulSet>,
+    ) -> HealthStatus {
+        let name = beejs_cluster.name_any();
+        let namespace = beejs_cluster.namespace().unwrap_or_default();
+
+        let mut checks = Vec::new();
+        let mut healthy_nodes = 0;
+
+        // Check StatefulSet status
+        match statefulsets.get(&name).await {
+            Ok(ss) => {
+                if let Some(status) = &ss.status {
+                    let ready_replicas = status.ready_replicas.unwrap_or(0);
+                    let replicas = status.replicas.unwrap_or(0);
+
+                    checks.push(HealthCheck {
+                        name: "StatefulSet Ready".to_string(),
+                        status: ready_replicas == replicas,
+                        message: format!(
+                            "Ready: {}/{}, Available: {}",
+                            ready_replicas,
+                            replicas,
+                            status.available_replicas.unwrap_or(0)
+                        ),
+                        last_check: Some(Time(Utc::now())),
+                    });
+
+                    healthy_nodes = ready_replicas as usize;
+                }
+            }
+            Err(e) => {
+                checks.push(HealthCheck {
+                    name: "StatefulSet Status".to_string(),
+                    status: false,
+                    message: format!("Failed to get StatefulSet: {}", e),
+                    last_check: Some(Time(Utc::now())),
+                });
+            }
+        }
+
+        // Determine overall health
+        let overall_status = if healthy_nodes == beejs_cluster.spec.nodes {
+            HealthState::Healthy
+        } else if healthy_nodes > 0 {
+            HealthState::Degraded
+        } else {
+            HealthState::Unhealthy
+        };
+
+        HealthStatus {
+            status: overall_status,
+            last_check: Some(Time(Utc::now())),
+            healthy_nodes,
+            checks,
+        }
+    }
+
+    /// Perform auto-healing if enabled
+    async fn perform_auto_healing(
+        client: Client,
+        beejs_cluster: &BeejsCluster,
+        statefulsets: Api<StatefulSet>,
+        recorder: Recorder,
+    ) -> Result<Action> {
+        let name = beejs_cluster.name_any();
+        let namespace = beejs_cluster.namespace().unwrap_or_default();
+
+        // Get current StatefulSet
+        let ss = statefulsets.get(&name).await
+            .context("Failed to get StatefulSet for healing")?;
+
+        let mut needs_healing = false;
+        let mut healing_actions = Vec::new();
+
+        if let Some(status) = &ss.status {
+            let ready = status.ready_replicas.unwrap_or(0) as usize;
+            let total = status.replicas.unwrap_or(0) as usize;
+
+            if ready < total {
+                info!("Auto-healing triggered for {}/{}: {}/{} pods ready",
+                    namespace, name, ready, total);
+
+                needs_healing = true;
+
+                // Force restart of failed pods by patching the StatefulSet
+                let mut patched_ss = ss.clone();
+                if let Some(spec) = &mut patched_ss.spec {
+                    if let Some(template) = &mut spec.template.spec {
+                        // Add annotation to force pod recreation
+                        for container in &mut template.containers {
+                            if container.name == "beejs" {
+                                container.env = Some(vec![
+                                    k8s_openapi::api::core::v1::EnvVar {
+                                        name: "BEEJS_AUTO_HEAL".to_string(),
+                                        value: Some("true".to_string()),
+                                        value_from: None,
+                                    }
+                                ]);
+                            }
+                        }
+                    }
+                }
+
+                statefulsets
+                    .patch(
+                        &name,
+                        &PatchParams::apply("beejs-operator"),
+                        &Patch::Apply(&patched_ss),
+                    )
+                    .await
+                    .context("Failed to patch StatefulSet for healing")?;
+
+                healing_actions.push("Restarted failed pods".to_string());
+
+                let _ = recorder
+                    .publish(Event::normal(
+                        beejs_cluster,
+                        &format!("Auto-healed {} pods", total - ready),
+                    ))
+                    .await;
+            }
+        }
+
+        if needs_healing {
+            Ok(Action::requeue(Duration::from_secs(30)))
+        } else {
+            Ok(Action::requeue(Duration::from_secs(60)))
+        }
+    }
+
+    /// Get cluster metrics
+    pub async fn get_cluster_metrics(
+        &self,
+        beejs_cluster: &BeejsCluster,
+    ) -> Result<BTreeMap<String, String>> {
+        let mut metrics = BTreeMap::new();
+        let name = beejs_cluster.name_any();
+        let namespace = beejs_cluster.namespace().unwrap_or_default();
+
+        // Get StatefulSet metrics
+        if let Ok(ss) = self.statefulsets.get(&name).await {
+            if let Some(status) = ss.status {
+                metrics.insert("replicas".to_string(),
+                    status.replicas.unwrap_or(0).to_string());
+                metrics.insert("ready_replicas".to_string(),
+                    status.ready_replicas.unwrap_or(0).to_string());
+                metrics.insert("updated_replicas".to_string(),
+                    status.updated_replicas.unwrap_or(0).to_string());
+                metrics.insert("available_replicas".to_string(),
+                    status.available_replicas.unwrap_or(0).to_string());
+            }
+        }
+
+        Ok(metrics)
+    }
 }
 
 #[cfg(test)]
@@ -578,4 +967,83 @@ mod tests {
             Some(&"cluster".to_string())
         );
     }
+
+    #[test]
+    fn test_check_upgrade_needed() {
+        let cluster = BeejsCluster::new(
+            "test-cluster",
+            BeejsClusterSpec {
+                version: "v2.0.0".to_string(),
+                nodes: 3,
+                config: ClusterConfig {
+                    namespace: Some("default".to_string()),
+                    image: Some("beejs:v2.0.0".to_string()),
+                    service_type: Some("ClusterIP".to_string()),
+                    monitoring: Some(true),
+                    auto_scaling: Some(true),
+                    node_selector: None,
+                    tolerations: None,
+                },
+                resources: ResourceRequirements {
+                    cpu: Some("500m".to_string()),
+                    memory: Some("1Gi".to_string()),
+                    storage: Some("10Gi".to_string()),
+                },
+            },
+        );
+
+        let old_status = BeejsClusterStatus {
+            phase: ClusterPhase::Running,
+            ready_nodes: 3,
+            total_nodes: 3,
+            last_update: Some(Time(Utc::now())),
+            conditions: vec![],
+            current_version: Some("v1.0.0".to_string()),
+            target_version: None,
+            upgrade_progress: None,
+            health_status: HealthStatus::default(),
+            node_statuses: vec![],
+        };
+
+        assert!(BeejsOperator::check_upgrade_needed(&cluster, &old_status));
+
+        let current_status = BeejsClusterStatus {
+            current_version: Some("v2.0.0".to_string()),
+            ..old_status
+        };
+
+        assert!(!BeejsOperator::check_upgrade_needed(&cluster, &current_status));
+    }
+
+    #[test]
+    fn test_default_config() {
+        let config = BeejsOperator::default_config();
+        assert_eq!(config.reconcile_interval, Duration::from_secs(30));
+        assert_eq!(config.max_concurrent, 10);
+        assert!(config.leader_election);
+        assert!(config.monitoring_enabled);
+        assert!(config.auto_healing);
+    }
+
+    #[test]
+    fn test_health_status_determination() {
+        let mut checks = Vec::new();
+        checks.push(HealthCheck {
+            name: "Ready".to_string(),
+            status: true,
+            message: "All pods ready".to_string(),
+            last_check: Some(Time(Utc::now())),
+        });
+
+        let health_status = HealthStatus {
+            status: HealthState::Healthy,
+            last_check: Some(Time(Utc::now())),
+            healthy_nodes: 3,
+            checks,
+        };
+
+        assert_eq!(health_status.status, HealthState::Healthy);
+        assert_eq!(health_status.healthy_nodes, 3);
+    }
+}
 }

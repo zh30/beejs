@@ -1,0 +1,135 @@
+# Beejs Production Configuration
+# Optimized for enterprise deployments
+
+[server]
+host = "0.0.0.0"
+port = 3000
+max_connections = 10000
+connection_timeout = 30
+keepalive_timeout = 65
+
+[worker]
+# Auto-detect CPU cores
+workers = "auto"
+# Use logical CPUs for better parallelization
+use_logical_cpus = true
+# Worker queue size
+queue_size = 10000
+
+[performance]
+# Enable JIT optimization
+jit_enabled = true
+jit_optimization_level = 3
+
+# Memory management
+memory_pool_size = "1GB"
+gc_enabled = true
+gc_threshold = "100MB"
+gc_aggressive = false
+
+# Caching
+cache_enabled = true
+cache_size = "500MB"
+cache_ttl = 3600
+
+[security]
+# Enable sandbox
+sandbox_enabled = true
+sandbox_max_memory = "512MB"
+sandbox_max_cpu_time = 30
+
+# Resource limits
+max_memory = "4GB"
+max_execution_time = 60
+max_file_size = "100MB"
+
+# Enable security headers
+security_headers = true
+
+[logging]
+level = "info"
+format = "json"
+output = "file"
+file_path = "/app/logs/beejs.log"
+max_file_size = "100MB"
+max_files = 10
+
+[monitoring]
+# Enable Prometheus metrics
+prometheus_enabled = true
+prometheus_port = 9090
+prometheus_path = "/metrics"
+
+# Enable health checks
+health_check_enabled = true
+health_check_path = "/health"
+
+# Distributed tracing
+tracing_enabled = true
+tracing_endpoint = "jaeger:14268"
+
+[database]
+# PostgreSQL configuration
+postgres_host = "postgres"
+postgres_port = 5432
+postgres_db = "beejs"
+postgres_user = "beejs"
+postgres_password = "beejs_password"
+postgres_pool_size = 20
+postgres_timeout = 30
+
+# Redis configuration
+redis_host = "redis"
+redis_port = 6379
+redis_password = ""
+redis_db = 0
+redis_pool_size = 10
+
+[cluster]
+# Enable clustering
+enabled = true
+# Primary node
+primary = true
+# Primary endpoint for replicas
+primary_endpoint = ""
+# Replication factor
+replication_factor = 2
+# Health check interval
+health_check_interval = 30
+# Failure threshold
+failure_threshold = 3
+
+[backup]
+# Enable automatic backups
+enabled = true
+# Backup interval (seconds)
+interval = 3600
+# Backup retention (days)
+retention = 7
+# Storage location
+storage_location = "/app/backups"
+# Compression
+compression = true
+# Encryption
+encryption = true
+
+[compliance]
+# Enable compliance checks
+enabled = true
+# Framework (SOC2, ISO27001, GDPR, etc.)
+framework = "SOC2"
+# Audit log retention (days)
+audit_retention = 2555  # 7 years
+# Enable audit logging
+audit_logging = true
+
+[features]
+# Enable experimental features (use with caution)
+experimental = false
+
+# Feature flags
+web_api = true
+file_system = true
+network = true
+crypto = true
+worker_threads = true

@@ -1,0 +1,329 @@
+# Docker Compose for Beejs Enterprise
+# This file demonstrates a production-ready Beejs deployment
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # Beejs Runtime Cluster
+  # ==========================================================================
+  beejs-primary:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: beejs:0.2.0
+    container_name: beejs-primary
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - BEEJS_ENV=production
+      - BEEJS_LOG_LEVEL=info
+      - BEEJS_MAX_WORKERS=auto
+      - BEEJS_PRIMARY=true
+    volumes:
+      - beejs_data:/app/data
+      - beejs_logs:/app/logs
+      - ./configs:/app/configs:ro
+    networks:
+      - beejs-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    healthcheck:
+      test: ["CMD", "/app/beejs", "--health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  beejs-replica-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: beejs:0.2.0
+    container_name: beejs-replica-1
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - BEEJS_ENV=production
+      - BEEJS_LOG_LEVEL=info
+      - BEEJS_MAX_WORKERS=auto
+      - BEEJS_PRIMARY=false
+      - BEEJS_PRIMARY_ENDPOINT=beejs-primary:3000
+    volumes:
+      - beejs_data:/app/data
+      - beejs_logs:/app/logs
+      - ./configs:/app/configs:ro
+    networks:
+      - beejs-network
+    depends_on:
+      - beejs-primary
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "/app/beejs", "--health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  beejs-replica-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: beejs:0.2.0
+    container_name: beejs-replica-2
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    environment:
+      - BEEJS_ENV=production
+      - BEEJS_LOG_LEVEL=info
+      - BEEJS_MAX_WORKERS=auto
+      - BEEJS_PRIMARY=false
+      - BEEJS_PRIMARY_ENDPOINT=beejs-primary:3000
+    volumes:
+      - beejs_data:/app/data
+      - beejs_logs:/app/logs
+      - ./configs:/app/configs:ro
+    networks:
+      - beejs-network
+    depends_on:
+      - beejs-primary
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "/app/beejs", "--health-check"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==========================================================================
+  # Load Balancer (HAProxy)
+  # ==========================================================================
+  haproxy:
+    image: haproxy:2.8
+    container_name: beejs-haproxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8404:8404"  # HAProxy stats
+    volumes:
+      - ./configs/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - beejs-network
+    depends_on:
+      - beejs-primary
+      - beejs-replica-1
+      - beejs-replica-2
+
+  # ==========================================================================
+  # Monitoring Stack
+  # ==========================================================================
+  prometheus:
+    image: prom/prometheus:v2.47
+    container_name: beejs-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - beejs-network
+
+  grafana:
+    image: grafana/grafana:10.1
+    container_name: beejs-grafana
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./configs/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./configs/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - beejs-network
+    depends_on:
+      - prometheus
+
+  # ==========================================================================
+  # Logging (ELK Stack)
+  # ==========================================================================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10
+    container_name: beejs-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - beejs-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.10
+    container_name: beejs-logstash
+    volumes:
+      - ./configs/logstash:/usr/share/logstash/pipeline:ro
+      - beejs_logs:/var/log/beejs:ro
+    ports:
+      - "5044:5044"
+      - "9600:9600"
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      - beejs-network
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10
+    container_name: beejs-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    networks:
+      - beejs-network
+    depends_on:
+      - elasticsearch
+
+  # ==========================================================================
+  # Distributed Tracing (Jaeger)
+  # ==========================================================================
+  jaeger:
+    image: jaegertracing/all-in-one:1.50
+    container_name: beejs-jaeger
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - beejs-network
+
+  # ==========================================================================
+  # Database (Optional)
+  # ==========================================================================
+  postgres:
+    image: postgres:15
+    container_name: beejs-postgres
+    environment:
+      - POSTGRES_DB=beejs
+      - POSTGRES_USER=beejs
+      - POSTGRES_PASSWORD=beejs_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - beejs-network
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Redis (for caching and session storage)
+  # ==========================================================================
+  redis:
+    image: redis:7.2-alpine
+    container_name: beejs-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - beejs-network
+    restart: unless-stopped
+
+# ==========================================================================
+# Volumes
+# ==========================================================================
+volumes:
+  beejs_data:
+    driver: local
+  beejs_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  redis_data:
+    driver: local
+  postgres_data:
+    driver: local
+
+# ==========================================================================
+# Networks
+# ==========================================================================
+networks:
+  beejs-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# ==========================================================================
+# Usage Instructions
+# ==========================================================================
+# 1. Start the stack:
+#    docker-compose up -d
+#
+# 2. Access the services:
+#    - Beejs: http://localhost:3000
+#    - Grafana: http://localhost:3001 (admin/admin)
+#    - Prometheus: http://localhost:9090
+#    - Kibana: http://localhost:5601
+#    - Jaeger: http://localhost:16686
+#
+# 3. Scale Beejs instances:
+#    docker-compose up -d --scale beejs-replica-1=3
+#
+# 4. View logs:
+#    docker-compose logs -f beejs-primary
+#
+# 5. Stop the stack:
+#    docker-compose down
+#
+# 6. Clean up (including volumes):
+#    docker-compose down -v
