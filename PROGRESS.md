@@ -3,12 +3,39 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-22 02:30)**: 🚀 Stage 86 生态完善 | ✅ Phase 1 插件系统核心完成
+**当前状态 (2025-12-22 02:35)**: 🚀 Stage 86 生态完善 | ✅ Phase 2 工具集成完成
 
 ## 最新更新 (2025-12-22)
 
-### 🚀 Stage 86: 生态完善 - 插件系统核心实现 (2025-12-22 02:30)
-**进度**: ✅ Phase 1 插件系统核心完成 | 🔄 Phase 2 工具集成待开始
+### 🚀 Stage 86: 生态完善 - 工具集成实现 (2025-12-22 02:35)
+**进度**: ✅ Phase 1 插件系统核心完成 | ✅ Phase 2 工具集成完成 | 🔄 Phase 3 插件市场待开始
+
+#### Stage 86 Phase 2 核心模块实现总结
+- ✅ **VS Code 扩展支持** (tools/vscode-extension/, 12个文件)
+  - BeejsLanguageService: 代码补全、悬停提示、语法高亮
+  - BeejsDebugAdapter: 完整调试功能 (启动/附加、断点、步进、变量检查)
+  - BeejsCommands: 命令系统 (运行脚本、调试、性能分析、运行时安装)
+  - BeejsConfiguration: 配置管理 (运行时路径、调试端口、内存限制)
+  - 语法定义: Beejs 专用语法高亮规则
+  - 完整测试套件和文档
+
+- ✅ **CI/CD 集成框架** (tools/ci-cd-integrations/, 4个子模块)
+  - GitHub Actions: 多版本测试矩阵 (Node.js 18/20/22)
+  - Docker 容器化: 多阶段构建镜像和完整开发环境编排
+  - Jenkins 流水线: 声明式流水线，支持并行测试和自动化部署
+  - 集成测试: 工作流验证、Docker 验证、Jenkins 验证
+
+#### 技术架构
+- **VS Code 扩展**: LSP + DAP 双协议支持，提供完整 IDE 体验
+- **工具集成**: GitHub Actions + Docker + Jenkins 全栈 CI/CD 支持
+- **开发体验**: 一键安装、配置、自动调试、性能分析
+
+#### 文件变更
+- ✅ tools/vscode-extension/ (新建目录, 11个文件)
+- ✅ tools/ci-cd-integrations/ (新建目录, 4个文件)
+- ✅ 完整测试套件和文档
+
+---
 
 #### Stage 86 Phase 1 核心模块实现总结
 - ✅ **插件引擎核心** (src/ecosystem/plugin_engine.rs, 750+ 行)
