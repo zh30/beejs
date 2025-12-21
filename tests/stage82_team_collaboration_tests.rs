@@ -1,0 +1,273 @@
+//! Stage 82 Phase 2: 团队协作优化测试
+//! 测试智能任务分配、代码所有权分析、贡献度评估等功能
+
+#[cfg(test)]
+mod tests {
+    use beejs::enterprise::team_optimizer::{
+        TeamCollaborationOptimizer, Task, TeamMember, TaskAssignment,
+        WorkloadBalanceReport, CodeOwnershipMap, KnowledgeTransferSuggestion,
+        SkillAnalyzer, WorkloadBalancer, KnowledgeTracker,
+    };
+    use beejs::enterprise::contribution_tracker::{
+        ContributionTracker, Developer, ContributionMetrics, ProductivityReport,
+    };
+
+    /// 测试智能任务分配建议
+    #[tokio::test]
+    async fn test_task_assignment_suggestion() {
+        let optimizer = TeamCollaborationOptimizer::new();
+
+        // 创建测试任务
+        let task = Task {
+            id: "TASK-001".to_string(),
+            title: "实现用户认证模块".to_string(),
+            description: "需要实现 JWT 认证功能".to_string(),
+            required_skills: vec!["Rust".to_string(), "Security".to_string()],
+            estimated_hours: 40,
+            priority: "High".to_string(),
+            complexity: "Medium".to_string(),
+        };
+
+        // 创建团队成员
+        let team_members = vec![
+            TeamMember {
+                id: "DEV-001".to_string(),
+                name: "Alice".to_string(),
+                skills: vec!["Rust".to_string(), "Security".to_string(), "Testing".to_string()],
+                current_workload: 20,
+                availability: 80,
+            },
+            TeamMember {
+                id: "DEV-002".to_string(),
+                name: "Bob".to_string(),
+                skills: vec!["JavaScript".to_string(), "React".to_string()],
+                current_workload: 60,
+                availability: 40,
+            },
+        ];
+
+        // 测试任务分配建议
+        let assignment = optimizer.suggest_task_assignment(&task, &team_members)
+            .await
+            .expect("Failed to suggest task assignment");
+
+        // 验证分配结果
+        assert_eq!(assignment.recommended_member_id, "DEV-001");
+        assert!(assignment.confidence_score > 0.8);
+        assert!(!assignment.reasoning.is_empty());
+
+        println!("✅ 测试任务分配建议通过");
+        println!("   推荐成员: {}", assignment.recommended_member_id);
+        println!("   置信度: {:.2}", assignment.confidence_score);
+    }
+
+    /// 测试工作负载平衡
+    #[tokio::test]
+    async fn test_workload_balancing() {
+        let optimizer = TeamCollaborationOptimizer::new();
+
+        // 创建不平衡的团队
+        let team = vec![
+            TeamMember {
+                id: "DEV-001".to_string(),
+                name: "Alice".to_string(),
+                skills: vec!["Rust".to_string()],
+                current_workload: 80,
+                availability: 20,
+            },
+            TeamMember {
+                id: "DEV-002".to_string(),
+                name: "Bob".to_string(),
+                skills: vec!["JavaScript".to_string()],
+                current_workload: 20,
+                availability: 80,
+            },
+            TeamMember {
+                id: "DEV-003".to_string(),
+                name: "Charlie".to_string(),
+                skills: vec!["Python".to_string()],
+                current_workload: 30,
+                availability: 70,
+            },
+        ];
+
+        // 生成工作负载平衡报告
+        let report = optimizer.balance_team_workload(&team)
+            .await
+            .expect("Failed to balance workload");
+
+        // 验证报告内容
+        assert!(report.balance_score >= 0.0);
+        assert!(report.balance_score <= 1.0);
+        assert!(!report.suggestions.is_empty());
+
+        println!("✅ 测试工作负载平衡通过");
+        println!("   平衡分数: {:.2}", report.balance_score);
+        println!("   建议数量: {}", report.suggestions.len());
+    }
+
+    /// 测试代码所有权分析
+    #[tokio::test]
+    async fn test_code_ownership_analysis() {
+        let optimizer = TeamCollaborationOptimizer::new();
+
+        // 创建模拟代码库
+        let codebase = "sample_codebase".to_string();
+
+        // 分析代码所有权
+        let ownership_map = optimizer.analyze_code_ownership(&codebase)
+            .await
+            .expect("Failed to analyze code ownership");
+
+        // 验证所有权映射
+        assert!(!ownership_map.files.is_empty());
+        assert!(!ownership_map.owners.is_empty());
+
+        // 验证每个文件都有所有者
+        for file in &ownership_map.files {
+            assert!(!file.owner_id.is_empty());
+            assert!(file.expertise_score > 0.0);
+        }
+
+        println!("✅ 测试代码所有权分析通过");
+        println!("   文件数量: {}", ownership_map.files.len());
+        println!("   所有者数量: {}", ownership_map.owners.len());
+    }
+
+    /// 测试知识转移建议
+    #[tokio::test]
+    async fn test_knowledge_transfer_suggestion() {
+        let optimizer = TeamCollaborationOptimizer::new();
+
+        // 创建所有权映射
+        let ownership_map = CodeOwnershipMap {
+            files: vec![],
+            owners: vec![],
+            knowledge_gaps: vec!["Security".to_string(), "DevOps".to_string()],
+        };
+
+        // 生成知识转移建议
+        let suggestions = optimizer.suggest_knowledge_transfer(&ownership_map)
+            .await
+            .expect("Failed to suggest knowledge transfer");
+
+        // 验证建议
+        assert!(!suggestions.is_empty());
+
+        println!("✅ 测试知识转移建议通过");
+        println!("   建议数量: {}", suggestions.len());
+    }
+
+    /// 测试贡献度计算
+    #[tokio::test]
+    async fn test_contribution_calculation() {
+        let tracker = ContributionTracker::new();
+
+        // 创建开发者
+        let developer = Developer {
+            id: "DEV-001".to_string(),
+            name: "Alice".to_string(),
+            role: "Senior Engineer".to_string(),
+            join_date: "2023-01-15".to_string(),
+        };
+
+        let timeframe = "Q4-2024".to_string();
+
+        // 计算贡献度指标
+        let metrics = tracker.calculate_contribution_metrics(&developer, timeframe.clone())
+            .await
+            .expect("Failed to calculate contribution metrics");
+
+        // 验证指标
+        assert!(metrics.commits_count >= 0);
+        assert!(metrics.lines_added >= 0);
+        assert!(metrics.lines_removed >= 0);
+        assert!(metrics.bug_fixes >= 0);
+        assert!(metrics.feature_implementations >= 0);
+        assert!(metrics.code_review_count >= 0);
+        assert!(metrics.overall_score >= 0.0);
+        assert!(metrics.overall_score <= 100.0);
+
+        println!("✅ 测试贡献度计算通过");
+        println!("   提交次数: {}", metrics.commits_count);
+        println!("   添加行数: {}", metrics.lines_added);
+        println!("   移除行数: {}", metrics.lines_removed);
+        println!("   综合分数: {:.2}", metrics.overall_score);
+    }
+
+    /// 测试生产力报告生成
+    #[tokio::test]
+    async fn test_productivity_reporting() {
+        let tracker = ContributionTracker::new();
+
+        // 创建团队
+        let team = vec![
+            Developer {
+                id: "DEV-001".to_string(),
+                name: "Alice".to_string(),
+                role: "Senior Engineer".to_string(),
+                join_date: "2023-01-15".to_string(),
+            },
+            Developer {
+                id: "DEV-002".to_string(),
+                name: "Bob".to_string(),
+                role: "Mid Engineer".to_string(),
+                join_date: "2023-06-01".to_string(),
+            },
+        ];
+
+        // 生成生产力报告
+        let report = tracker.generate_productivity_report(&team, "Q4-2024".to_string())
+            .await
+            .expect("Failed to generate productivity report");
+
+        // 验证报告内容
+        assert!(!report.team_metrics.is_empty());
+        assert!(report.team_velocity > 0.0);
+        assert!(report.average_contribution_score >= 0.0);
+        assert!(report.average_contribution_score <= 100.0);
+        assert!(!report.improvement_suggestions.is_empty());
+
+        println!("✅ 测试生产力报告生成通过");
+        println!("   团队速度: {:.2}", report.team_velocity);
+        println!("   平均贡献分数: {:.2}", report.average_contribution_score);
+        println!("   改进建议数量: {}", report.improvement_suggestions.len());
+    }
+
+    /// 测试技能分析器
+    #[tokio::test]
+    async fn test_skill_analyzer() {
+        let analyzer = SkillAnalyzer::new();
+
+        let task_skills = vec!["Rust".to_string(), "Security".to_string()];
+        let member_skills = vec!["Rust".to_string(), "JavaScript".to_string()];
+
+        let match_score = analyzer.calculate_skill_match(&task_skills, &member_skills);
+
+        assert!(match_score >= 0.0);
+        assert!(match_score <= 1.0);
+
+        println!("✅ 测试技能分析器通过");
+        println!("   技能匹配分数: {:.2}", match_score);
+    }
+
+    /// 测试知识追踪器
+    #[tokio::test]
+    async fn test_knowledge_tracker() {
+        let tracker = KnowledgeTracker::new();
+
+        // 记录学习活动
+        tracker.record_learning_activity("DEV-001", "Rust", 5).await;
+        tracker.record_learning_activity("DEV-001", "Security", 3).await;
+
+        // 获取知识图谱
+        let knowledge_graph = tracker.get_knowledge_graph("DEV-001").await;
+
+        assert!(!knowledge_graph.is_empty());
+        assert!(knowledge_graph.contains_key("Rust"));
+        assert!(knowledge_graph.contains_key("Security"));
+
+        println!("✅ 测试知识追踪器通过");
+        println!("   知识领域数量: {}", knowledge_graph.len());
+    }
+}
