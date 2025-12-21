@@ -62,6 +62,7 @@ pub mod precompiled_cache;
 pub mod ai_batch_processor;
 pub mod ai_memory_pool;
 pub mod ai;  // Stage 78 Phase 3: AI 工作负载专用优化
+pub mod optimization;  // Stage 78 Phase 4: 极致性能监控
 pub mod profiler;
 pub mod code_cache;
 pub mod stage_38_smart_process_pool;  // Stage 38.0: 智能进程池系统
