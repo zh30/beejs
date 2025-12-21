@@ -7,6 +7,7 @@ pub mod package_json;
 pub mod enhanced_cli;
 pub mod commands;
 pub mod script_executor;
+pub mod wasm_commands;
 
 pub use repl::Repl;
 pub use commands::{CliApp, SubCommand, RunCommand, TestCommand, ReplCommand, BundleCommand, ProfileCommand};

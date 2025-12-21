@@ -10,6 +10,7 @@ use std::time::Instant;
 /// WebAssembly 模块结构体
 ///
 /// 封装已加载的 WASM 模块及其元数据
+#[derive(Debug)]
 pub struct WasmModule {
     /// 模块实例
     instance: Instance,
@@ -19,6 +20,14 @@ pub struct WasmModule {
     load_time: std::time::Duration,
     /// 模块大小（字节）
     size: usize,
+}
+
+impl PartialEq for WasmModule {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.load_time == other.load_time
+            && self.size == other.size
+    }
 }
 
 impl WasmModule {

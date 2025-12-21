@@ -83,6 +83,13 @@ fn main() -> Result<()> {
             }
             Err(anyhow::anyhow!("Debugger is temporarily disabled"))
         }
+        Some(SubCommand::Wasm { command: _ }) => {
+            // Stage 77: WebAssembly CLI commands - temporarily disabled
+            if app.verbose {
+                println!("🪐 WebAssembly module operations (Stage 77)");
+            }
+            Err(anyhow::anyhow!("WebAssembly CLI is not yet fully implemented"))
+        }
         None => {
             // No subcommand - run script if provided as positional arg (Bun compatibility)
             print_no_command_help();

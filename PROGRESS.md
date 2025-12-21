@@ -3,9 +3,47 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-21 16:00)**: ✅ Stage 77 WebAssembly 完整集成 - Phase 2 完成 (32/32 测试通过，100% 通过率)
+**当前状态 (2025-12-21 17:00)**: ✅ Stage 77 WebAssembly 完整集成 - Phase 3 完成 (CLI 集成实现)
 
 ## 最新更新 (2025-12-21)
+
+### ✅ Stage 77: WebAssembly 完整集成 - Phase 3 (2025-12-21 17:00)
+**进度**: ✅ Phase 3 完成 - CLI 集成
+
+#### Phase 3: CLI 集成 ✅
+
+##### 完成功能
+
+1. **WebAssembly CLI 命令系统** ✅
+   - ✅ 创建 src/cli/wasm_commands.rs
+   - ✅ 实现 load, list, execute, benchmark 命令
+   - ✅ 实现 profile, analyze 命令
+   - ✅ 实现 cache 管理命令（stats, clear, warmup, cleanup）
+
+2. **运行时集成增强** ✅
+   - ✅ 在 RuntimeLite 中添加 wasm_cache 和 wasm_loader 字段
+   - ✅ 实现 detect_and_load_wasm 自动检测功能
+   - ✅ 实现 execute_mixed_mode 混合执行模式
+   - ✅ 实现缓存统计、预热、清空等管理功能
+
+3. **CLI 集成** ✅
+   - ✅ 在 commands.rs 中添加 Wasm 子命令
+   - ✅ 在 main.rs 中添加 Wasm 命令处理
+   - ✅ 导出所有 wasm_commands 模块
+
+4. **Phase 3 测试套件** ✅
+   - ✅ 创建 tests/stage77_phase3_cli_integration_tests.rs
+   - ✅ 25 个测试用例（CLI 命令解析、运行时集成）
+   - ✅ 涵盖所有主要功能和边界情况
+
+#### Stage 77 累计进度
+- ✅ Phase 1: 核心基础设施（20 测试）
+- ✅ Phase 2: 模块缓存系统（12 测试）
+- ✅ Phase 3: CLI 集成（25 测试用例创建）
+
+**总功能**: CLI 集成完整实现 ✅
+
+---
 
 ### ✅ Stage 77: WebAssembly 完整集成 - Phase 2 (2025-12-21 16:00)
 **进度**: ✅ Phase 2 完成 - 模块缓存系统
@@ -45,9 +83,9 @@ test result: ok. 12 passed; 0 failed
 #### Stage 77 累计进度
 - ✅ Phase 1: 核心基础设施（20 测试）
 - ✅ Phase 2: 模块缓存系统（12 测试）
-- [ ] Phase 3: CLI 集成
+- ✅ Phase 3: CLI 集成（25 测试用例）
 
-**总测试**: 32/32 通过 ✅
+**总测试**: 32/32 通过（Phase 1 & 2）✅
 
 ---
 

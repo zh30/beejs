@@ -72,6 +72,13 @@ pub enum SubCommand {
         pid: Option<u32>,
     },
 
+    /// WebAssembly module operations
+    #[command(alias = "wasm")]
+    Wasm {
+        #[command(subcommand)]
+        command: super::wasm_commands::WasmSubCommand,
+    },
+
     /// Version information
     Version,
 }

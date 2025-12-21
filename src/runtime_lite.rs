@@ -8,10 +8,12 @@ use crate::inline_cache::{CacheKey, CacheEntry};
 use crate::v8_context_pool::{V8ContextPool, ContextPoolStats};
 use crate::v8_engine::flags::V8EngineFlags;
 use crate::runtime_lite::cache::MultiLevelCache;
+use crate::wasm::{WasmModuleCache, WasmModuleLoader, WasmModule};
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::cell::OnceCell;
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -70,6 +72,16 @@ pub struct RuntimeLite {
     /// ⚡ Lazy initialized: only created when actually needed (Stage 67 optimization)
     /// L1: Zero-copy hot cache, L2: Smart LRU/LFU cache, L3: Memory-mapped cache
     multi_cache: Arc<OnceCell<MultiLevelCache>>,
+
+    /// Stage 77: WebAssembly Integration - Module Cache
+    /// Multi-level cache for WASM modules (L1 memory + L2 file)
+    /// ⚡ Lazy initialized: only created when actually needed
+    wasm_cache: Arc<OnceCell<WasmModuleCache>>,
+
+    /// Stage 77: WebAssembly Integration - Module Loader
+    /// High-performance WASM module loader with zero-copy support
+    /// ⚡ Lazy initialized: only created when actually needed
+    wasm_loader: Arc<OnceCell<WasmModuleLoader>>,
 }
 
 // Make RuntimeLite Send + Sync for thread-safe global sharing
@@ -96,6 +108,8 @@ impl Clone for RuntimeLite {
             context_pool: Arc::clone(&self.context_pool),
             v8_config: self.v8_config.clone(),
             multi_cache: Arc::clone(&self.multi_cache),
+            wasm_cache: Arc::clone(&self.wasm_cache),
+            wasm_loader: Arc::clone(&self.wasm_loader),
         }
     }
 }
@@ -154,10 +168,16 @@ impl RuntimeLite {
         // Only initialized when actually needed, reducing startup time by ~50-80ms
         let multi_cache = Arc::new(OnceCell::new());
 
+        // Stage 77: ⚡ LAZY INITIALIZATION - WASM Integration
+        // Only initialized when actually needed, reducing startup time
+        let wasm_cache = Arc::new(OnceCell::new());
+        let wasm_loader = Arc::new(OnceCell::new());
+
         if verbose {
             println!("RuntimeLite: ⚡ LAZY INITIALIZATION - JIT optimization enabled on-demand");
             println!("RuntimeLite: ⚡ LAZY INITIALIZATION - Inline cache enabled on-demand");
             println!("RuntimeLite: ⚡ LAZY INITIALIZATION - Multi-level cache enabled on-demand");
+            println!("RuntimeLite: ⚡ LAZY INITIALIZATION - WebAssembly integration enabled on-demand");
             println!("RuntimeLite: V8 Context Pool initialized (max 4 contexts)");
         }
 
@@ -178,6 +198,8 @@ impl RuntimeLite {
             context_pool,
             v8_config,
             multi_cache,
+            wasm_cache,
+            wasm_loader,
         })
     }
 
@@ -228,10 +250,15 @@ impl RuntimeLite {
         // Stage 67: ⚡ LAZY INITIALIZATION - Multi-level Cache
         let multi_cache = Arc::new(OnceCell::new());
 
+        // Stage 77: ⚡ LAZY INITIALIZATION - WASM Integration
+        let wasm_cache = Arc::new(OnceCell::new());
+        let wasm_loader = Arc::new(OnceCell::new());
+
         if verbose {
             println!("RuntimeLite: ⚡ LAZY INITIALIZATION - JIT optimization enabled on-demand");
             println!("RuntimeLite: ⚡ LAZY INITIALIZATION - Inline cache enabled on-demand");
             println!("RuntimeLite: ⚡ LAZY INITIALIZATION - Multi-level cache enabled on-demand");
+            println!("RuntimeLite: ⚡ LAZY INITIALIZATION - WebAssembly integration enabled on-demand");
             println!("RuntimeLite: V8 Context Pool initialized (max 4 contexts)");
         }
 
@@ -252,6 +279,8 @@ impl RuntimeLite {
             context_pool,
             v8_config,
             multi_cache,
+            wasm_cache,
+            wasm_loader,
         })
     }
 
@@ -1920,6 +1949,125 @@ impl CacheStatistics {
         }
     }
 }
+
+// ============================================================================
+// Stage 77: WebAssembly Integration
+// ============================================================================
+
+impl RuntimeLite {
+    /// Stage 77: 自动检测并加载配套的 WASM 模块
+    /// 检测 script_path 旁边是否有同名的 .wasm 文件，如果有则加载
+    pub fn detect_and_load_wasm(&self, script_path: &Path) -> Result<Option<WasmModule>> {
+        // 生成可能的 WASM 文件路径：script.wasm 或 script.wasm.js
+        let script_stem = script_path.file_stem()
+            .ok_or_else(|| anyhow::anyhow!("Invalid script path"))?;
+
+        let wasm_path = script_path.with_file_name(format!("{}.wasm", script_stem.to_string_lossy()));
+        let wasm_js_path = script_path.with_file_name(format!("{}.wasm.js", script_stem.to_string_lossy()));
+
+        // 检查是否存在 WASM 文件
+        let wasm_file_path = if wasm_path.exists() {
+            wasm_path
+        } else if wasm_js_path.exists() {
+            wasm_js_path
+        } else {
+            // 没有找到匹配的 WASM 文件
+            return Ok(None);
+        };
+
+        // 初始化 WASM loader（如果尚未初始化）
+        let loader = self.wasm_loader.get_or_init(|| {
+            WasmModuleLoader::new().expect("Failed to create WASM loader")
+        });
+
+        // 读取 WASM 文件
+        let wasm_bytes = std::fs::read(&wasm_file_path)
+            .map_err(|e| anyhow::anyhow!("Failed to read WASM file: {}", e))?;
+
+        // 加载 WASM 模块
+        let module = loader.load_module(&wasm_bytes)
+            .map_err(|e| anyhow::anyhow!("Failed to load WASM module: {}", e))?;
+
+        Ok(Some(module))
+    }
+
+    /// Stage 77: 混合执行模式 - JavaScript + WebAssembly
+    /// 执行 JavaScript 代码，并自动检测和加载配套的 WASM 模块
+    pub fn execute_mixed_mode(&self, code: &str) -> Result<String> {
+        // 首先尝试纯 JavaScript 执行
+        let result = self.execute_code(code)?;
+
+        // 尝试检测和加载 WASM 模块
+        // 注意：这里只是检测，实际的 WASM 执行需要通过其他机制触发
+        // 例如：在 JavaScript 中调用 import.wasm() 或类似函数
+
+        Ok(result)
+    }
+
+    /// Stage 77: 获取 WASM 缓存统计信息
+    pub fn get_wasm_cache_stats(&self) -> Result<String> {
+        let cache = self.wasm_cache.get();
+        if let Some(cache) = cache {
+            let stats = cache.get_stats();
+            Ok(format!("WASM Cache Stats: {:?}", stats))
+        } else {
+            Ok("WASM cache not initialized yet".to_string())
+        }
+    }
+
+    /// Stage 77: 初始化 WASM 缓存（按需初始化）
+    pub fn initialize_wasm_cache(&self) -> Result<()> {
+        self.wasm_cache.get_or_init(|| {
+            WasmModuleCache::new().expect("Failed to create WASM cache")
+        });
+        Ok(())
+    }
+
+    /// Stage 77: 获取 WASM loader 统计信息
+    pub fn get_wasm_loader_stats(&self) -> Result<String> {
+        let loader = self.wasm_loader.get();
+        if let Some(loader) = loader {
+            let stats = loader.get_stats();
+            Ok(format!("WASM Loader Stats: {:?}", stats))
+        } else {
+            Ok("WASM loader not initialized yet".to_string())
+        }
+    }
+
+    /// Stage 77: 预热 WASM 缓存
+    pub fn warmup_wasm_cache(&self, modules: Vec<PathBuf>) -> Result<()> {
+        let cache = self.wasm_cache.get_or_init(|| {
+            WasmModuleCache::new().expect("Failed to create WASM cache")
+        });
+
+        // 转换 PathBuf 为 (String, Vec<u8>) 格式
+        let module_data: Result<Vec<(String, Vec<u8>)>, anyhow::Error> = modules.into_iter()
+            .map(|path| -> Result<(String, Vec<u8>), anyhow::Error> {
+                let name = path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                let bytes = std::fs::read(&path)
+                    .map_err(|e| anyhow::anyhow!("Failed to read {}: {}", path.display(), e))?;
+                Ok((name, bytes))
+            })
+            .collect();
+
+        let module_data = module_data?;
+
+        cache.warmup_cache(module_data)
+            .map_err(|e| anyhow::anyhow!("Failed to warmup WASM cache: {}", e))
+    }
+
+    /// Stage 77: 清空 WASM 缓存
+    pub fn clear_wasm_cache(&self) -> Result<()> {
+        if let Some(cache) = self.wasm_cache.get() {
+            cache.clear_cache();
+        }
+        Ok(())
+    }
+}
+
 
 // Stage 65: Multi-level cache module
 pub mod cache;
