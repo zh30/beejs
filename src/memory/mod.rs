@@ -13,7 +13,7 @@ pub use zero_copy::*;
 pub use gc_optimizer::*;
 
 /// 内存使用统计
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct MemoryStats {
     pub total_allocated: AtomicUsize,
     pub total_freed: AtomicUsize,
@@ -21,6 +21,19 @@ pub struct MemoryStats {
     pub peak_usage: AtomicUsize,
     pub allocation_count: AtomicUsize,
     pub free_count: AtomicUsize,
+}
+
+impl Clone for MemoryStats {
+    fn clone(&self) -> Self {
+        Self {
+            total_allocated: AtomicUsize::new(self.total_allocated.load(Ordering::Relaxed)),
+            total_freed: AtomicUsize::new(self.total_freed.load(Ordering::Relaxed)),
+            current_usage: AtomicUsize::new(self.current_usage.load(Ordering::Relaxed)),
+            peak_usage: AtomicUsize::new(self.peak_usage.load(Ordering::Relaxed)),
+            allocation_count: AtomicUsize::new(self.allocation_count.load(Ordering::Relaxed)),
+            free_count: AtomicUsize::new(self.free_count.load(Ordering::Relaxed)),
+        }
+    }
 }
 
 impl MemoryStats {

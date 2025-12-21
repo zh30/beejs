@@ -267,25 +267,25 @@ impl ZeroCopyManager {
 
     /// 创建新的零拷贝通道
     pub fn create_channel<T>(&self, capacity: usize) -> ZeroCopyChannel<T> {
-        self.channel_stats.record_operation();
+        self.channel_stats.record_operation("create_channel");
         ZeroCopyChannel::new(capacity)
     }
 
     /// 创建零拷贝缓冲区
     pub fn create_buffer(&self, data: Vec<u8>) -> ZeroCopyBuffer {
-        self.buffer_pool.allocate();
+        self.buffer_pool.allocate(data.len());
         ZeroCopyBuffer::new(data)
     }
 
     /// 克隆缓冲区（共享内部数据，零拷贝）
     pub fn clone_buffer(&self, buffer: &ZeroCopyBuffer) -> ZeroCopyBuffer {
-        self.channel_stats.record_operation();
+        self.channel_stats.record_operation("clone_buffer");
         buffer.duplicate()
     }
 
     /// 销毁缓冲区
     pub fn destroy_buffer(&self, _buffer: &ZeroCopyBuffer) {
-        self.buffer_pool.deallocate();
+        self.buffer_pool.deallocate(Vec::new());
     }
 
     /// 获取统计信息
@@ -602,7 +602,7 @@ impl ZeroCopyFileCache {
         {
             let mut cache = self.cache.lock().unwrap();
             if let Some(mapping) = cache.get(&path_string) {
-                self.stats.record_operation();
+                self.stats.record_operation("cache_hit");
                 return Ok(Arc::clone(mapping));
             }
         }
@@ -618,7 +618,7 @@ impl ZeroCopyFileCache {
             cache.put(path_string, Arc::clone(&mapping));
         }
 
-        self.stats.record_operation();
+        self.stats.record_operation("cache_miss");
         Ok(mapping)
     }
 

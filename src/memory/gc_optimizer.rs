@@ -55,7 +55,7 @@ pub struct IncrementalGC {
 }
 
 /// GC 状态
-#[derive(Debug, Clone, Default)]
+#[derive(Debug)]
 struct GCState {
     /// 当前阶段
     phase: GCPhase,
@@ -73,6 +73,34 @@ struct GCState {
     total_pause_time: Duration,
 }
 
+impl Clone for GCState {
+    fn clone(&self) -> Self {
+        Self {
+            phase: self.phase,
+            steps_completed: self.steps_completed,
+            total_steps: self.total_steps,
+            start_time: self.start_time,
+            last_gc_time: self.last_gc_time,
+            bytes_collected: self.bytes_collected,
+            total_pause_time: self.total_pause_time,
+        }
+    }
+}
+
+impl Default for GCState {
+    fn default() -> Self {
+        Self {
+            phase: GCPhase::Idle,
+            steps_completed: 0,
+            total_steps: 0,
+            start_time: None,
+            last_gc_time: None,
+            bytes_collected: 0,
+            total_pause_time: Duration::from_millis(0),
+        }
+    }
+}
+
 /// GC 阶段
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GCPhase {
@@ -84,7 +112,7 @@ pub enum GCPhase {
 }
 
 /// GC 统计信息
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct GCStats {
     /// GC 次数
     pub gc_count: AtomicUsize,
@@ -102,6 +130,21 @@ pub struct GCStats {
     pub memory_pressure_level: f64,
     /// 成功率
     pub success_rate: f64,
+}
+
+impl Clone for GCStats {
+    fn clone(&self) -> Self {
+        Self {
+            gc_count: AtomicUsize::new(self.gc_count.load(Ordering::Relaxed)),
+            total_bytes_collected: AtomicUsize::new(self.total_bytes_collected.load(Ordering::Relaxed)),
+            total_pause_time: AtomicUsize::new(self.total_pause_time.load(Ordering::Relaxed)),
+            avg_gc_time: self.avg_gc_time,
+            incremental_gc_count: AtomicUsize::new(self.incremental_gc_count.load(Ordering::Relaxed)),
+            full_gc_count: AtomicUsize::new(self.full_gc_count.load(Ordering::Relaxed)),
+            memory_pressure_level: self.memory_pressure_level,
+            success_rate: self.success_rate,
+        }
+    }
 }
 
 impl IncrementalGC {

@@ -130,18 +130,16 @@ impl LazyWebAPI {
 
     /// 批量初始化多个 API
     pub async fn init_multiple(&self, apis: &[&str]) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let mut tasks = Vec::new();
+        let mut tasks: Vec<String> = Vec::new();
 
         for &api in apis {
             if !self.is_initialized(api).await {
                 let api = api.to_string();
-                tasks.push(tokio::spawn(self.init_on_demand(&api)));
+                let init_result = self.init_on_demand(&api).await;
+                if let Err(e) = init_result {
+                    return Err(e);
+                }
             }
-        }
-
-        // 等待所有任务完成
-        for task in tasks {
-            task.await??;
         }
 
         Ok(())
@@ -216,7 +214,10 @@ impl<T> LazyInitializer<T> {
     }
 
     /// 获取或初始化值
-    pub async fn get(&self) -> Result<T, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn get(&self) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+    where
+        T: Clone,
+    {
         // 检查是否已初始化
         {
             let initialized = self.initialized.lock().unwrap();
@@ -254,7 +255,10 @@ impl<T> LazyInitializer<T> {
     }
 
     /// 强制重新初始化
-    pub async fn reinit(&self) -> Result<T, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn reinit(&self) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+    where
+        T: Clone,
+    {
         {
             let mut initialized = self.initialized.lock().unwrap();
             *initialized = false;
@@ -341,21 +345,22 @@ impl OnDemandLoader {
     /// 按需加载模块
     pub async fn load_module(&self, name: &str) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error + Send + Sync>> {
         // 先检查缓存
-        {
+        let module_data = {
             let modules = self.loaded_modules.read().await;
-            if let Some(module) = modules.get(name) {
-                let mut stats = self.stats.lock().unwrap();
-                stats.cache_hits += 1;
+            modules.get(name).map(|module| module.data.clone())
+        };
 
-                // 更新访问计数
-                drop(modules);
-                let mut modules = self.loaded_modules.write().await;
-                if let Some(module) = modules.get_mut(name) {
-                    module.access_count += 1;
-                }
+        if let Some(data) = module_data {
+            let mut stats = self.stats.lock().unwrap();
+            stats.cache_hits += 1;
 
-                return Ok(Some(module.data.clone()));
+            // 更新访问计数
+            let mut modules = self.loaded_modules.write().await;
+            if let Some(module) = modules.get_mut(name) {
+                module.access_count += 1;
             }
+
+            return Ok(Some(data));
         }
 
         let mut stats = self.stats.lock().unwrap();

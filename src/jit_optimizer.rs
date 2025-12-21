@@ -545,7 +545,7 @@ mod tests {
 // Stage 90 Phase 5.1: AI 驱动 JIT 优化器扩展
 // ============================================================================
 
-use std::collections::{HashMap, BTreeMap};
+use std::collections::BTreeMap;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
@@ -789,12 +789,13 @@ impl AIDrivenJITExtension {
 
     /// 获取优化建议
     pub async fn get_optimization_suggestions(&self) -> Result<Vec<OptimizationSuggestion>, Box<dyn std::error::Error>> {
-        let report = self.profile_analyzer.generate_report().await;
+        let report = self.profile_analyzer.generate_report().await?;
+        let report = &report;
 
         let mut suggestions = Vec::new();
 
         // 从热点生成建议
-        for hotspot in report.hotspots {
+        for hotspot in &report.hotspots {
             let function_name = hotspot.profile.function_name.clone();
 
             if hotspot.hotspot_score > 7.0 {
@@ -823,7 +824,7 @@ impl AIDrivenJITExtension {
 
     /// 生成性能报告
     pub async fn generate_performance_report(&self) -> Result<AIPerformanceReport, Box<dyn std::error::Error>> {
-        let profile_report = self.profile_analyzer.generate_report().await;
+        let profile_report = self.profile_analyzer.generate_report().await?;
 
         Ok(AIPerformanceReport {
             timestamp: Utc::now(),
@@ -944,7 +945,7 @@ impl AdaptiveCompilationStrategy {
             call_frequency,
             memory_intensive: features.memory_allocs > 100,
             compute_intensive: features.arithmetic_operations > 100,
-            recommended_mode,
+            recommended_mode: recommended_mode.clone(),
             inlining_recommended: features.line_count < 50,
         };
 
@@ -985,7 +986,7 @@ impl AdaptiveCompilationStrategy {
         call_frequency: &CallFrequency,
         execution_count: u64,
     ) -> CompilationMode {
-        if execution_count < self.config.baseline_threshold {
+        if (execution_count as u32) < self.config.baseline_threshold {
             return CompilationMode::Interpreted;
         }
 
@@ -998,7 +999,7 @@ impl AdaptiveCompilationStrategy {
             return CompilationMode::Optimized;
         }
 
-        if execution_count >= self.config.baseline_threshold {
+        if (execution_count as u32) >= self.config.baseline_threshold {
             return CompilationMode::Baseline;
         }
 

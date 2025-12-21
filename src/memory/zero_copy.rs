@@ -86,7 +86,7 @@ pub struct OptimizedMemoryPool {
 }
 
 /// 内存池统计
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct MemoryPoolStats {
     pub small_pool_hits: AtomicUsize,
     pub small_pool_misses: AtomicUsize,
@@ -97,6 +97,22 @@ pub struct MemoryPoolStats {
     pub total_allocations: AtomicUsize,
     pub total_deallocations: AtomicUsize,
     pub active_blocks: AtomicUsize,
+}
+
+impl Clone for MemoryPoolStats {
+    fn clone(&self) -> Self {
+        Self {
+            small_pool_hits: AtomicUsize::new(self.small_pool_hits.load(Ordering::Relaxed)),
+            small_pool_misses: AtomicUsize::new(self.small_pool_misses.load(Ordering::Relaxed)),
+            medium_pool_hits: AtomicUsize::new(self.medium_pool_hits.load(Ordering::Relaxed)),
+            medium_pool_misses: AtomicUsize::new(self.medium_pool_misses.load(Ordering::Relaxed)),
+            large_pool_hits: AtomicUsize::new(self.large_pool_hits.load(Ordering::Relaxed)),
+            large_pool_misses: AtomicUsize::new(self.large_pool_misses.load(Ordering::Relaxed)),
+            total_allocations: AtomicUsize::new(self.total_allocations.load(Ordering::Relaxed)),
+            total_deallocations: AtomicUsize::new(self.total_deallocations.load(Ordering::Relaxed)),
+            active_blocks: AtomicUsize::new(self.active_blocks.load(Ordering::Relaxed)),
+        }
+    }
 }
 
 impl MemoryPoolStats {
@@ -298,7 +314,7 @@ impl OptimizedMemoryPool {
                 // 释放旧块
                 unsafe {
                     let layout = Layout::from_size_align_unchecked(old_block.size(), std::mem::align_of::<usize>());
-                    System.dealloc(old_block.ptr().as_mut(), layout);
+                    System.dealloc(old_block.ptr(), layout);
                 }
             }
 
@@ -333,7 +349,7 @@ impl OptimizedMemoryPool {
                     // 释放内存
                     unsafe {
                         let layout = Layout::from_size_align_unchecked(block.size(), std::mem::align_of::<usize>());
-                        System.dealloc(block.ptr().as_mut(), layout);
+                        System.dealloc(block.ptr(), layout);
                     }
 
                     pool_guard.remove(i);

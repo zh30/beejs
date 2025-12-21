@@ -330,7 +330,7 @@ impl AnalyticsCollector {
 
         for event in events.iter() {
             if event.timestamp >= timeframe.start && event.timestamp <= timeframe.end {
-                let date = event.timestamp.date().and_hms(0, 0, 0);
+                let date = event.timestamp.date().and_hms_opt(0, 0, 0).unwrap();
                 *daily_counts.entry(date).or_insert(0) += 1;
             }
         }

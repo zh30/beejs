@@ -177,7 +177,7 @@ impl OptimizedSnapshot {
         };
 
         let entry = CacheEntry {
-            data: data_to_cache,
+            data: data_to_cache.clone(),
             access_count: 0,
             last_accessed: Instant::now(),
             created_at: Instant::now(),
@@ -193,12 +193,13 @@ impl OptimizedSnapshot {
         cache.insert(key.to_string(), entry);
 
         // 更新统计
+        let compressed_size = data_to_cache.len();
         {
             let mut stats = self.stats.lock().unwrap();
             stats.total_cached_items = cache.len();
             if compressed {
                 stats.compressions += 1;
-                stats.total_compressed_size += entry.data.len();
+                stats.total_compressed_size += compressed_size;
                 stats.total_uncompressed_size += original_size;
             }
         }
@@ -391,6 +392,10 @@ impl OptimizedPrecompiledCache {
 
     /// 缓存数据
     pub async fn cache_data(&self, key: &str, data: Vec<u8>) -> Result<()> {
+        let data_to_cache = data.clone();
+        let original_size = data.len();
+        let compressed = false;
+
         let mut cache = self.cache.write().await;
 
         // 检查缓存大小限制
@@ -404,14 +409,6 @@ impl OptimizedPrecompiledCache {
         if cache.len() >= max_size {
             self.evict_entry(&mut cache).await;
         }
-
-        // 检查是否需要压缩
-        let (data_to_cache, compressed, original_size) = match &self.strategy {
-            CacheStrategy::Smart { compression_threshold, .. } if data.len() > *compression_threshold => {
-                (data, false, data.len())
-            }
-            _ => (data, false, 0),
-        };
 
         let entry = CacheEntry {
             data: data_to_cache,
