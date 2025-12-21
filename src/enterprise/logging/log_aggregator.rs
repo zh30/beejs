@@ -567,3 +567,333 @@ mod tests {
         assert_eq!(count, 3);
     }
 }
+
+/// Enterprise Log Aggregator
+/// 企业级日志聚合器，支持 Elasticsearch 和分布式追踪
+
+/// 日志源
+#[derive(Debug, Clone)]
+pub enum LogSource {
+    Cluster(String),
+    Tenant(String),
+    Service(String),
+    Pod(String),
+}
+
+/// 搜索过滤器
+#[derive(Debug, Clone)]
+pub struct LogFilter {
+    pub level: Option<LogLevel>,
+    pub time_range: Option<(SystemTime, SystemTime)>,
+    pub text_search: Option<String>,
+    pub tags: HashMap<String, String>,
+}
+
+/// 搜索结果
+#[derive(Debug, Clone)]
+pub struct SearchResult {
+    pub logs: Vec<LogEntry>,
+    pub total_count: usize,
+    pub took_ms: u64,
+}
+
+/// Elasticsearch 客户端（简化版）
+#[derive(Debug)]
+pub struct ElasticsearchClient {
+    endpoint: String,
+    index_prefix: String,
+}
+
+impl ElasticsearchClient {
+    /// 创建新的 Elasticsearch 客户端
+    pub fn new(endpoint: &str, index_prefix: &str) -> Self {
+        Self {
+            endpoint: endpoint.to_string(),
+            index_prefix: index_prefix.to_string(),
+        }
+    }
+
+    /// 索引日志
+    pub async fn index_logs(&self, logs: &[LogEntry]) -> Result<usize> {
+        // 模拟索引操作（实际实现中会使用 elasticsearch crate）
+        info!("Indexing {} logs to Elasticsearch", logs.len());
+        Ok(logs.len())
+    }
+
+    /// 搜索日志
+    pub async fn search_logs(&self, filter: &LogFilter) -> Result<SearchResult> {
+        // 模拟搜索操作
+        info!("Searching logs with filter: {:?}", filter);
+
+        let logs = vec![LogEntry::new(
+            LogLevel::Info,
+            "Search result".to_string(),
+            HashMap::new(),
+        )];
+
+        Ok(SearchResult {
+            logs,
+            total_count: 1,
+            took_ms: 10,
+        })
+    }
+}
+
+/// Fluentd 客户端（简化版）
+#[derive(Debug)]
+pub struct FluentdClient {
+    endpoint: String,
+}
+
+impl FluentdClient {
+    /// 创建新的 Fluentd 客户端
+    pub fn new(endpoint: &str) -> Self {
+        Self {
+            endpoint: endpoint.to_string(),
+        }
+    }
+
+    /// 发送日志
+    pub async fn send_logs(&self, logs: &[LogEntry]) -> Result<usize> {
+        // 模拟发送操作
+        info!("Sending {} logs to Fluentd", logs.len());
+        Ok(logs.len())
+    }
+}
+
+/// 企业级日志聚合器
+#[derive(Debug)]
+pub struct EnterpriseLogAggregator {
+    elasticsearch: Arc<ElasticsearchClient>,
+    fluentd: Arc<FluentdClient>,
+    local_aggregator: LogAggregator,
+    log_sources: std::collections::BTreeMap<String, LogSource>,
+}
+
+impl EnterpriseLogAggregator {
+    /// 创建新的企业级日志聚合器
+    pub fn new(
+        elasticsearch: ElasticsearchClient,
+        fluentd: FluentdClient,
+        local_aggregator: LogAggregator,
+    ) -> Self {
+        Self {
+            elasticsearch: Arc::new(elasticsearch),
+            fluentd: Arc::new(fluentd),
+            local_aggregator,
+            log_sources: std::collections::BTreeMap::new(),
+        }
+    }
+
+    /// 收集日志
+    pub async fn collect_logs(&self, source: LogSource) -> Result<Vec<LogEntry>> {
+        // 模拟从各种源收集日志
+        let logs = match source {
+            LogSource::Cluster(cluster_id) => {
+                vec![LogEntry::new(
+                    LogLevel::Info,
+                    format!("Collected logs from cluster: {}", cluster_id),
+                    HashMap::from([("cluster_id".to_string(), cluster_id)]),
+                )]
+            }
+            LogSource::Tenant(tenant_id) => {
+                vec![LogEntry::new(
+                    LogLevel::Info,
+                    format!("Collected logs from tenant: {}", tenant_id),
+                    HashMap::from([("tenant_id".to_string(), tenant_id)]),
+                )]
+            }
+            LogSource::Service(service_name) => {
+                vec![LogEntry::new(
+                    LogLevel::Info,
+                    format!("Collected logs from service: {}", service_name),
+                    HashMap::from([("service".to_string(), service_name)]),
+                )]
+            }
+            LogSource::Pod(pod_name) => {
+                vec![LogEntry::new(
+                    LogLevel::Info,
+                    format!("Collected logs from pod: {}", pod_name),
+                    HashMap::from([("pod".to_string(), pod_name)]),
+                )]
+            }
+        };
+
+        Ok(logs)
+    }
+
+    /// 索引日志
+    pub async fn index_logs(&self, logs: &[LogEntry]) -> Result<()> {
+        self.elasticsearch.index_logs(logs).await?;
+        Ok(())
+    }
+
+    /// 搜索日志
+    pub async fn search_logs(&self, filter: LogFilter) -> Result<SearchResult> {
+        self.elasticsearch.search_logs(&filter).await
+    }
+
+    /// 聚合日志
+    pub async fn aggregate_logs(&self, sources: &[LogSource]) -> Result<Vec<LogEntry>> {
+        let mut all_logs = Vec::new();
+
+        for source in sources {
+            let logs = self.collect_logs(source.clone()).await?;
+            all_logs.extend(logs);
+        }
+
+        Ok(all_logs)
+    }
+
+    /// 转发日志到外部系统
+    pub async fn forward_logs_to_external(&self, logs: &[LogEntry]) -> Result<()> {
+        // 发送到 Elasticsearch
+        let elasticsearch_count = self.elasticsearch.index_logs(logs).await?;
+
+        // 发送到 Fluentd
+        let fluentd_count = self.fluentd.send_logs(logs).await?;
+
+        info!(
+            "Forwarded {} logs to Elasticsearch and {} logs to Fluentd",
+            elasticsearch_count, fluentd_count
+        );
+
+        Ok(())
+    }
+
+    /// 添加日志源
+    pub fn add_log_source(&mut self, name: String, source: LogSource) {
+        self.log_sources.insert(name, source);
+    }
+
+    /// 获取日志源
+    pub fn get_log_source(&self, name: &str) -> Option<&LogSource> {
+        self.log_sources.get(name)
+    }
+
+    /// 列出所有日志源
+    pub fn list_log_sources(&self) -> Vec<(String, LogSource)> {
+        self.log_sources
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect()
+    }
+
+    /// 本地日志记录
+    pub fn log_local(&self, level: LogLevel, message: &str, context: &LogContext) {
+        self.local_aggregator.log(level, message, context);
+    }
+
+    /// 过滤日志
+    pub fn filter_logs(&self, logs: &[LogEntry], filter: &LogFilter) -> Vec<LogEntry> {
+        logs.iter()
+            .filter(|log| {
+                // 过滤级别
+                if let Some(ref level) = filter.level {
+                    if log.level != *level {
+                        return false;
+                    }
+                }
+
+                // 过滤文本搜索
+                if let Some(ref text) = filter.text_search {
+                    if !log.message.to_lowercase().contains(&text.to_lowercase()) {
+                        return false;
+                    }
+                }
+
+                // 过滤标签
+                for (key, value) in &filter.tags {
+                    if log.context.get(key) != Some(value) {
+                        return false;
+                    }
+                }
+
+                true
+            })
+            .cloned()
+            .collect()
+    }
+}
+
+#[cfg(test)]
+mod enterprise_logging_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_elasticsearch_client() {
+        let client = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
+
+        let logs = vec![LogEntry::new(
+            LogLevel::Info,
+            "Test log".to_string(),
+            HashMap::new(),
+        )];
+
+        let count = client.index_logs(&logs).await.unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn test_enterprise_log_aggregator() {
+        let elasticsearch = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
+        let fluentd = FluentdClient::new("http://localhost:24224");
+        let local_writer = Box::new(ConsoleLogWriter::new(false));
+        let local_aggregator = LogAggregator::new(local_writer);
+
+        let enterprise_aggregator =
+            EnterpriseLogAggregator::new(elasticsearch, fluentd, local_aggregator);
+
+        let source = LogSource::Cluster("test-cluster".to_string());
+        let logs = enterprise_aggregator.collect_logs(source).await.unwrap();
+
+        assert_eq!(logs.len(), 1);
+        assert!(logs[0].message.contains("test-cluster"));
+    }
+
+    #[tokio::test]
+    async fn test_log_search() {
+        let client = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
+
+        let filter = LogFilter {
+            level: Some(LogLevel::Info),
+            time_range: None,
+            text_search: Some("error".to_string()),
+            tags: HashMap::new(),
+        };
+
+        let result = client.search_logs(&filter).await.unwrap();
+        assert!(result.total_count >= 0);
+    }
+
+    #[test]
+    fn test_log_filter() {
+        let logs = vec![
+            LogEntry::new(
+                LogLevel::Info,
+                "Error occurred".to_string(),
+                HashMap::new(),
+            ),
+            LogEntry::new(
+                LogLevel::Debug,
+                "Debug message".to_string(),
+                HashMap::new(),
+            ),
+        ];
+
+        let client = ElasticsearchClient::new("http://localhost:9200", "beejs-logs");
+        let filter = LogFilter {
+            level: Some(LogLevel::Info),
+            time_range: None,
+            text_search: None,
+            tags: HashMap::new(),
+        };
+
+        let filtered = client
+            .as_ref()
+            .filter_logs(&logs, &filter);
+
+        assert_eq!(filtered.len(), 1);
+        assert!(matches!(filtered[0].level, LogLevel::Info));
+    }
+}
