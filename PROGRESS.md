@@ -3,9 +3,86 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-21 11:46)**: ✅ Stage 76 性能分析器增强 - Phase 2 完成 (核心功能实现，所有模块集成完毕)
+**当前状态 (2025-12-21 12:03)**: ✅ Stage 76 性能分析器增强 - Phase 3 完成 (CLI 集成和报告生成，所有功能完整实现)
 
 ## 最新更新 (2025-12-21)
+
+### ✅ Stage 76: 性能分析器增强 (2025-12-21 12:03)
+**进度**: ✅ Phase 3 完成 - CLI 集成和报告生成
+
+#### Phase 3: CLI 集成和报告生成 ✅
+
+##### 完成功能
+
+1. **CLI Profile 子命令** ✅
+   - ✅ `ProfileCommand` 结构：完整的 CLI 参数支持
+   - ✅ 详细模式（-v, --detailed）
+   - ✅ 交互模式（-i, --interactive）
+   - ✅ 输出格式（--format: text/json/html）
+   - ✅ 输出目录（-d, --dir）
+   - ✅ 持续时间（-t, --duration: 默认 10 秒）
+   - ✅ 采样率（-r, --sampling-rate: 默认 100 事件/秒）
+
+2. **性能分析器 CLI 集成** ✅
+   - ✅ `run_profile` 函数：完整的脚本执行流程
+   - ✅ 配置化性能分析器集成
+   - ✅ 脚本验证和执行
+   - ✅ 性能报告自动生成
+
+3. **报告生成增强** ✅
+   - ✅ 多种输出格式：文本、JSON、HTML
+   - ✅ 性能摘要报告：执行时间、函数统计、内存使用
+   - ✅ 实时性能快照
+   - ✅ 优化建议展示
+
+4. **测试验证** ✅
+   - ✅ 11 个测试用例全部通过（100%）
+   - ✅ 参数解析测试：8/8
+   - ✅ 组合参数测试：1/1
+   - ✅ 边界条件测试：2/2
+   - ✅ 实际运行验证：成功构建、帮助显示、脚本执行
+
+#### 测试结果 Phase 3
+```
+running 11 tests (stage76_cli_profile_tests)
+test result: ok. 11 passed; 0 failed
+```
+
+#### 使用示例
+```bash
+# 基本用法
+beejs profile script.js
+
+# 详细模式
+beejs profile --detailed script.js
+
+# JSON 格式输出
+beejs profile --format json script.js
+
+# 指定输出目录
+beejs profile --dir /tmp/profiles script.js
+
+# 自定义参数
+beejs profile --duration 30 --sampling-rate 500 script.js arg1 arg2
+```
+
+#### 关键成果
+1. **完整的 CLI 集成**: 11 个测试用例全部通过
+2. **多格式报告**: 支持文本、JSON、HTML 输出
+3. **高度可配置**: 8 个可配置参数
+4. **实际验证**: 成功运行演示脚本并生成报告
+
+#### Stage 76 总结
+- ✅ Phase 1: 测试驱动开发基础（25 个测试）
+- ✅ Phase 2: 核心功能实现（所有模块集成）
+- ✅ Phase 3: CLI 集成和报告生成（11 个测试）
+
+**Stage 76 总体测试结果**: 36 个测试全部通过 ✅
+
+#### 下一阶段
+- [ ] Stage 77: WebAssembly 集成
+
+---
 
 ### ✅ Stage 76: 性能分析器增强 (2025-12-21 11:46)
 **进度**: ✅ Phase 2 完成 - 性能分析器核心功能实现
