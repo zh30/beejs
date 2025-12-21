@@ -33,46 +33,7 @@ impl DependencyResolver {
 
         // 递归解析依赖
         let mut visited = HashSet::new();
-        let mut stack = VecDeque::new();
-
-        // 将所有依赖加入栈中
-        for (name, constraint) in &package.dependencies {
-            stack.push_back((name.clone(), constraint.clone()));
-        }
-
-        while let Some((dep_name, constraint)) = stack.pop_front() {
-            // 检查是否已访问
-            if visited.contains(&dep_name) {
-                continue;
-            }
-
-            // 从注册表获取包信息
-            match self.registry.get_package(&dep_name).await {
-                Ok(Some(registry_package)) => {
-                    // 选择兼容的版本
-                    let version = self.select_compatible_version(&registry_package, &constraint)?;
-
-                    // 添加到图中
-                    graph.add_node(dep_name.clone(), version.clone());
-                    graph.add_edge(package.name.clone(), dep_name.clone());
-
-                    // 检查该包的依赖
-                    for (sub_dep_name, sub_constraint) in &registry_package.manifest.dependencies {
-                        if !visited.contains(sub_dep_name) {
-                            stack.push_back((sub_dep_name.clone(), sub_constraint.clone()));
-                        }
-                    }
-
-                    visited.insert(dep_name);
-                }
-                Ok(None) => {
-                    return Err(format!("Package '{}' not found in registry", dep_name).into());
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-            }
-        }
+        self.resolve_dependencies_recursive(package, &mut graph, &mut visited).await?;
 
         // 检测循环依赖
         graph.has_circular = self.detect_circular_dependencies(&graph)?;
@@ -99,6 +60,39 @@ impl DependencyResolver {
             package.name, constraint
         )
         .into())
+    }
+
+    /// 递归解析依赖的辅助方法
+    async fn resolve_dependencies_recursive(
+        &self,
+        package: &PackageManifest,
+        graph: &mut DependencyGraph,
+        visited: &mut HashSet<String>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // 标记当前包为已访问
+        visited.insert(package.name.clone());
+
+        // 解析所有依赖
+        for (dep_name, constraint) in &package.dependencies {
+            // 从注册表获取包信息
+            if let Some(registry_package) = self.registry.get_package(dep_name).await? {
+                // 选择兼容的版本
+                let version = self.select_compatible_version(&registry_package, &constraint)?;
+
+                // 添加到图中
+                graph.add_node(dep_name.clone(), version.clone());
+                graph.add_edge(package.name.clone(), dep_name.clone());
+
+                // 递归解析该包的依赖（如果尚未访问）
+                if !visited.contains(dep_name) {
+                    self.resolve_dependencies_recursive(&registry_package.manifest, graph, visited).await?;
+                }
+            } else {
+                return Err(format!("Package '{}' not found in registry", dep_name).into());
+            }
+        }
+
+        Ok(())
     }
 
     /// 检测循环依赖
