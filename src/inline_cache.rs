@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::string::String;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
+use std::cmp::Reverse;
 
 /// 使用更快、抗碰撞的哈希算法（FNV-1a变种）
 /// 比标准DefaultHasher快约30%，碰撞率更低
@@ -710,5 +711,662 @@ mod tests {
         let input3 = "different_object";
         let hash3 = fast_hash(input3);
         assert_ne!(hash1, hash3); // 不同输入应产生不同哈希
+    }
+}
+
+/// 多态内联缓存 - 支持多种对象类型的动态缓存
+/// Stage 90 Phase 1.2: 增强内联缓存功能
+#[derive(Debug)]
+pub struct PolymorphicInlineCache {
+    /// 缓存集合：支持多种对象类型
+    caches: Arc<RwLock<HashMap<String, Box<dyn CacheStrategy + Send + Sync>>>>,
+    /// 最大缓存大小
+    max_cache_size: usize,
+    /// 缓存统计
+    stats: Arc<RwLock<HashMap<String, CacheStats>>>,
+    /// 热点代码跟踪
+    hot_code_tracker: Arc<RwLock<HotCodeTracker>>,
+    /// 优化策略
+    optimization_config: OptimizationConfig,
+}
+
+/// 缓存策略特征 - 支持多种缓存策略
+pub trait CacheStrategy {
+    fn lookup(&self, key: &str) -> Option<CacheEntry>;
+    fn insert(&mut self, key: String, entry: CacheEntry) -> Option<CacheEntry>;
+    fn remove(&mut self, key: &str) -> Option<CacheEntry>;
+    fn clear(&mut self);
+    fn len(&self) -> usize;
+    fn get_stats(&self) -> CacheStats;
+}
+
+/// 单态缓存实现 - 针对单一对象类型优化
+#[derive(Debug)]
+pub struct MonomorphicCache {
+    entries: HashMap<String, CacheEntry>,
+    config: CacheConfig,
+    stats: CacheStats,
+}
+
+impl MonomorphicCache {
+    pub fn new(config: CacheConfig) -> Self {
+        Self {
+            entries: HashMap::new(),
+            config,
+            stats: CacheStats::default(),
+        }
+    }
+}
+
+impl CacheStrategy for MonomorphicCache {
+    fn lookup(&self, key: &str) -> Option<CacheEntry> {
+        let entry = self.entries.get(key).cloned();
+        if entry.is_some() {
+            // Note: 简化实现，实际需要原子更新统计
+        }
+        entry
+    }
+
+    fn insert(&mut self, key: String, entry: CacheEntry) -> Option<CacheEntry> {
+        let result = self.entries.insert(key, entry.clone());
+        // Note: 简化实现，实际需要更新统计
+        result
+    }
+
+    fn remove(&mut self, key: &str) -> Option<CacheEntry> {
+        self.entries.remove(key)
+    }
+
+    fn clear(&mut self) {
+        self.entries.clear();
+        self.stats = CacheStats::default();
+    }
+
+    fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    fn get_stats(&self) -> CacheStats {
+        self.stats.clone()
+    }
+}
+
+/// 多态缓存实现 - 支持多种对象类型
+#[derive(Debug)]
+pub struct MegamorphicCache {
+    caches: HashMap<String, MonomorphicCache>,
+    config: CacheConfig,
+    stats: CacheStats,
+}
+
+impl MegamorphicCache {
+    pub fn new(config: CacheConfig) -> Self {
+        Self {
+            caches: HashMap::new(),
+            config,
+            stats: CacheStats::default(),
+        }
+    }
+}
+
+impl CacheStrategy for MegamorphicCache {
+    fn lookup(&self, key: &str) -> Option<CacheEntry> {
+        // 简化实现：假设key包含类型信息
+        let type_name = self.extract_type_from_key(key);
+        if let Some(cache) = self.caches.get(&type_name) {
+            cache.lookup(key)
+        } else {
+            None
+        }
+    }
+
+    fn insert(&mut self, key: String, entry: CacheEntry) -> Option<CacheEntry> {
+        let type_name = self.extract_type_from_key(&key);
+        let cache = self.caches.entry(type_name).or_insert_with(|| {
+            MonomorphicCache::new(self.config.clone())
+        });
+        cache.insert(key, entry)
+    }
+
+    fn remove(&mut self, key: &str) -> Option<CacheEntry> {
+        let type_name = self.extract_type_from_key(key);
+        if let Some(cache) = self.caches.get_mut(&type_name) {
+            cache.remove(key)
+        } else {
+            None
+        }
+    }
+
+    fn clear(&mut self) {
+        self.caches.clear();
+        self.stats = CacheStats::default();
+    }
+
+    fn len(&self) -> usize {
+        self.caches.values().map(|c| c.len()).sum()
+    }
+
+    fn get_stats(&self) -> CacheStats {
+        self.stats.clone()
+    }
+}
+
+impl MegamorphicCache {
+    fn extract_type_from_key(&self, key: &str) -> String {
+        // 简化实现：从key中提取类型名
+        // 实际实现中应该从AST或类型信息中获取
+        key.split(':').next().unwrap_or("unknown").to_string()
+    }
+}
+
+/// 热点代码跟踪器 - 自动识别执行热点
+#[derive(Debug, Clone)]
+pub struct HotCodeEntry {
+    pub code_location: String,
+    pub execution_count: u64,
+    pub last_executed: Instant,
+    pub avg_execution_time_ns: u64,
+    pub optimization_level: OptimizationLevel,
+}
+
+/// 热点代码跟踪器
+#[derive(Debug)]
+pub struct HotCodeTracker {
+    entries: HashMap<String, HotCodeEntry>,
+    max_entries: usize,
+    hot_threshold: u64, // 热点阈值：执行次数
+}
+
+impl HotCodeTracker {
+    pub fn new(max_entries: usize) -> Self {
+        Self {
+            entries: HashMap::new(),
+            max_entries,
+            hot_threshold: 100, // 默认100次执行视为热点
+        }
+    }
+
+    /// 记录代码执行
+    pub fn record_execution(&mut self, location: &str, execution_time_ns: u64) {
+        let now = Instant::now();
+        let entry = self.entries.entry(location.to_string()).or_insert_with(|| {
+            HotCodeEntry {
+                code_location: location.to_string(),
+                execution_count: 0,
+                last_executed: now,
+                avg_execution_time_ns: execution_time_ns,
+                optimization_level: OptimizationLevel::None,
+            }
+        });
+
+        entry.execution_count += 1;
+        entry.last_executed = now;
+
+        // 更新平均执行时间（指数移动平均）
+        entry.avg_execution_time_ns = (entry.avg_execution_time_ns * 9 + execution_time_ns) / 10;
+
+        // 根据执行次数和性能决定优化级别
+        if entry.execution_count >= self.hot_threshold * 10 {
+            entry.optimization_level = OptimizationLevel::Maximum;
+        } else if entry.execution_count >= self.hot_threshold * 5 {
+            entry.optimization_level = OptimizationLevel::Aggressive;
+        } else if entry.execution_count >= self.hot_threshold {
+            entry.optimization_level = OptimizationLevel::Basic;
+        }
+    }
+
+    /// 获取热点代码列表
+    pub fn get_hot_code(&self) -> Vec<&HotCodeEntry> {
+        let mut entries: Vec<_> = self.entries.values().collect();
+        entries.sort_by(|a, b| {
+            // 按执行次数和平均执行时间排序
+            b.execution_count.cmp(&a.execution_count)
+                .then_with(|| a.avg_execution_time_ns.cmp(&b.avg_execution_time_ns))
+        });
+        entries
+    }
+
+    /// 检查是否为热点代码
+    pub fn is_hot_code(&self, location: &str) -> bool {
+        if let Some(entry) = self.entries.get(location) {
+            entry.execution_count >= self.hot_threshold
+        } else {
+            false
+        }
+    }
+}
+
+/// 优化配置
+#[derive(Debug, Clone)]
+pub struct OptimizationConfig {
+    pub enable_polymorphic_cache: bool,
+    pub hot_code_threshold: u64,
+    pub max_cache_per_type: usize,
+    pub enable_predictive_optimization: bool,
+}
+
+impl Default for OptimizationConfig {
+    fn default() -> Self {
+        Self {
+            enable_polymorphic_cache: true,
+            hot_code_threshold: 100,
+            max_cache_per_type: 1000,
+            enable_predictive_optimization: true,
+        }
+    }
+}
+
+impl PolymorphicInlineCache {
+    /// 创建新的多态内联缓存
+    pub fn new(max_cache_size: usize) -> Self {
+        Self {
+            caches: Arc::new(RwLock::new(HashMap::new())),
+            max_cache_size,
+            stats: Arc::new(RwLock::new(HashMap::new())),
+            hot_code_tracker: Arc::new(RwLock::new(HotCodeTracker::new(1000))),
+            optimization_config: OptimizationConfig::default(),
+        }
+    }
+
+    /// 创建带配置的多态内联缓存
+    pub fn new_with_config(max_cache_size: usize, config: OptimizationConfig) -> Self {
+        Self {
+            caches: Arc::new(RwLock::new(HashMap::new())),
+            max_cache_size,
+            stats: Arc::new(RwLock::new(HashMap::new())),
+            hot_code_tracker: Arc::new(RwLock::new(HotCodeTracker::new(1000))),
+            optimization_config: config,
+        }
+    }
+
+    /// 多态缓存查找
+    pub fn polymorphic_lookup(&self, type_name: &str, key: &str) -> Option<CacheEntry> {
+        let caches = self.caches.read().unwrap();
+
+        // 尝试从多态缓存中查找
+        if let Some(cache) = caches.get(type_name) {
+            let entry = cache.lookup(key);
+            if entry.is_some() {
+                self.update_stats(type_name, true);
+                return entry;
+            }
+        }
+
+        self.update_stats(type_name, false);
+        None
+    }
+
+    /// 多态缓存插入
+    pub fn polymorphic_insert(&self, type_name: &str, key: String, entry: CacheEntry) {
+        let mut caches = self.caches.write().unwrap();
+
+        // 选择或创建合适的缓存策略
+        let cache = if self.optimization_config.enable_polymorphic_cache {
+            caches.entry(type_name.to_string()).or_insert_with(|| {
+                Box::new(MegamorphicCache::new(CacheConfig::default())) as Box<dyn CacheStrategy + Send + Sync>
+            })
+        } else {
+            caches.entry(type_name.to_string()).or_insert_with(|| {
+                Box::new(MonomorphicCache::new(CacheConfig::default())) as Box<dyn CacheStrategy + Send + Sync>
+            })
+        };
+
+        cache.insert(key, entry);
+
+        // 检查是否需要清理
+        if cache.len() > self.optimization_config.max_cache_per_type {
+            self.evict_old_entries(type_name);
+        }
+    }
+
+    /// 记录热点代码执行
+    pub fn record_hot_code(&self, location: &str, execution_time_ns: u64) {
+        let mut tracker = self.hot_code_tracker.write().unwrap();
+        tracker.record_execution(location, execution_time_ns);
+    }
+
+    /// 获取热点代码
+    pub fn get_hot_code(&self) -> Vec<HotCodeEntry> {
+        let tracker = self.hot_code_tracker.read().unwrap();
+        tracker.get_hot_code().cloned().collect()
+    }
+
+    /// 检查是否为热点代码
+    pub fn is_hot_code(&self, location: &str) -> bool {
+        let tracker = self.hot_code_tracker.read().unwrap();
+        tracker.is_hot_code(location)
+    }
+
+    /// 动态生成优化代码
+    pub fn generate_optimized_code(&self, location: &str) -> Option<OptimizedCode> {
+        let tracker = self.hot_code_tracker.read().unwrap();
+
+        if let Some(entry) = tracker.entries.get(location) {
+            if entry.execution_count >= self.optimization_config.hot_code_threshold {
+                Some(OptimizedCode {
+                    location: location.to_string(),
+                    optimization_level: entry.optimization_level,
+                    estimated_speedup: self.calculate_speedup(entry),
+                    generated_at: Instant::now(),
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// 计算优化加速比
+    fn calculate_speedup(&self, entry: &HotCodeEntry) -> f64 {
+        match entry.optimization_level {
+            OptimizationLevel::None => 1.0,
+            OptimizationLevel::Basic => 1.5,
+            OptimizationLevel::Aggressive => 2.5,
+            OptimizationLevel::Maximum => 4.0,
+        }
+    }
+
+    /// 批量优化热点代码
+    pub fn batch_optimize_hot_code(&self) -> Vec<OptimizedCode> {
+        let tracker = self.hot_code_tracker.read().unwrap();
+        let mut optimizations = Vec::new();
+
+        for entry in tracker.get_hot_code() {
+            if let Some(opt) = self.generate_optimized_code(&entry.code_location) {
+                optimizations.push(opt);
+            }
+        }
+
+        optimizations
+    }
+
+    /// 更新统计信息
+    fn update_stats(&self, type_name: &str, hit: bool) {
+        let mut stats = self.stats.write().unwrap();
+        let entry = stats.entry(type_name.to_string()).or_insert_with(CacheStats::default);
+
+        if hit {
+            entry.hits += 1;
+        } else {
+            entry.misses += 1;
+        }
+
+        entry.update_hit_rate();
+    }
+
+    /// 清理过期条目
+    fn evict_old_entries(&self, type_name: &str) {
+        let mut caches = self.caches.write().unwrap();
+        if let Some(cache) = caches.get_mut(type_name) {
+            // 简化实现：清空缓存
+            cache.clear();
+        }
+    }
+
+    /// 获取所有统计信息
+    pub fn get_all_stats(&self) -> HashMap<String, CacheStats> {
+        self.stats.read().unwrap().clone()
+    }
+
+    /// 获取缓存使用报告
+    pub fn get_cache_report(&self) -> PolymorphicCacheReport {
+        let caches = self.caches.read().unwrap();
+        let stats = self.stats.read().unwrap();
+        let tracker = self.hot_code_tracker.read().unwrap();
+
+        let total_entries: usize = caches.values().map(|c| c.len()).sum();
+        let total_hits: usize = stats.values().map(|s| s.hits).sum();
+        let total_misses: usize = stats.values().map(|s| s.misses).sum();
+        let hot_code_count = tracker.entries.len();
+
+        PolymorphicCacheReport {
+            total_cache_types: caches.len(),
+            total_entries,
+            total_hits,
+            total_misses,
+            hit_rate: if total_hits + total_misses > 0 {
+                (total_hits as f64 / (total_hits + total_misses) as f64) * 100.0
+            } else {
+                0.0
+            },
+            hot_code_count,
+            max_cache_size: self.max_cache_size,
+        }
+    }
+}
+
+/// 优化后的代码结构
+#[derive(Debug, Clone)]
+pub struct OptimizedCode {
+    pub location: String,
+    pub optimization_level: OptimizationLevel,
+    pub estimated_speedup: f64,
+    pub generated_at: Instant,
+}
+
+/// 多态缓存报告
+#[derive(Debug, Clone)]
+pub struct PolymorphicCacheReport {
+    pub total_cache_types: usize,
+    pub total_entries: usize,
+    pub total_hits: usize,
+    pub total_misses: usize,
+    pub hit_rate: f64,
+    pub hot_code_count: usize,
+    pub max_cache_size: usize,
+}
+
+#[cfg(test)]
+mod polymorphic_tests {
+    use super::*;
+
+    #[test]
+    fn test_polymorphic_cache_creation() {
+        let cache = PolymorphicInlineCache::new(1000);
+        let report = cache.get_cache_report();
+        assert_eq!(report.total_cache_types, 0);
+        assert_eq!(report.total_entries, 0);
+    }
+
+    #[test]
+    fn test_polymorphic_cache_lookup_insert() {
+        let cache = PolymorphicInlineCache::new(1000);
+
+        // 插入缓存条目
+        let entry = CacheEntry {
+            cached_value: "test_value".to_string(),
+            type_version: 1,
+            access_count: 0,
+            last_accessed: Instant::now(),
+        };
+
+        cache.polymorphic_insert("Object", "key1".to_string(), entry.clone());
+
+        // 查找缓存条目
+        let result = cache.polymorphic_lookup("Object", "key1");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().cached_value, "test_value");
+
+        let report = cache.get_cache_report();
+        assert_eq!(report.total_entries, 1);
+        assert!(report.hit_rate >= 0.0);
+    }
+
+    #[test]
+    fn test_hot_code_detection() {
+        let cache = PolymorphicInlineCache::new(1000);
+
+        // 记录代码执行
+        for i in 0..150 {
+            cache.record_hot_code("function:loop", 1000 + i);
+        }
+
+        // 检查是否为热点代码
+        assert!(cache.is_hot_code("function:loop"));
+        assert!(!cache.is_hot_code("function:rare"));
+
+        let hot_code = cache.get_hot_code();
+        assert!(!hot_code.is_empty());
+        assert_eq!(hot_code[0].code_location, "function:loop");
+        assert_eq!(hot_code[0].execution_count, 150);
+    }
+
+    #[test]
+    fn test_optimization_generation() {
+        let cache = PolymorphicInlineCache::new(1000);
+
+        // 记录足够多的执行以触发优化
+        for i in 0..120 {
+            cache.record_hot_code("function:compute", 2000 + i);
+        }
+
+        let optimized = cache.generate_optimized_code("function:compute");
+        assert!(optimized.is_some());
+
+        let opt = optimized.unwrap();
+        assert_eq!(opt.location, "function:compute");
+        assert!(opt.estimated_speedup > 1.0);
+        assert_eq!(opt.optimization_level, OptimizationLevel::Basic);
+    }
+
+    #[test]
+    fn test_batch_optimization() {
+        let cache = PolymorphicInlineCache::new(1000);
+
+        // 创建多个热点代码
+        for i in 0..10 {
+            let location = format!("function:hot{}", i);
+            for _ in 0..150 {
+                cache.record_hot_code(&location, 1000);
+            }
+        }
+
+        // 批量优化
+        let optimizations = cache.batch_optimize_hot_code();
+        assert!(optimizations.len() > 0);
+
+        // 验证优化结果
+        for opt in optimizations {
+            assert!(opt.estimated_speedup >= 1.0);
+            assert!(!opt.location.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_multiple_cache_types() {
+        let cache = PolymorphicInlineCache::new(1000);
+
+        // 为不同类型插入缓存
+        let entry1 = CacheEntry {
+            cached_value: "value1".to_string(),
+            type_version: 1,
+            access_count: 0,
+            last_accessed: Instant::now(),
+        };
+
+        let entry2 = CacheEntry {
+            cached_value: "value2".to_string(),
+            type_version: 1,
+            access_count: 0,
+            last_accessed: Instant::now(),
+        };
+
+        cache.polymorphic_insert("Array", "arr_key".to_string(), entry1);
+        cache.polymorphic_insert("Object", "obj_key".to_string(), entry2);
+
+        // 验证不同类型的缓存
+        let result1 = cache.polymorphic_lookup("Array", "arr_key");
+        let result2 = cache.polymorphic_lookup("Object", "obj_key");
+
+        assert!(result1.is_some());
+        assert!(result2.is_some());
+        assert_eq!(result1.unwrap().cached_value, "value1");
+        assert_eq!(result2.unwrap().cached_value, "value2");
+
+        let report = cache.get_cache_report();
+        assert_eq!(report.total_cache_types, 2);
+        assert_eq!(report.total_entries, 2);
+    }
+
+    #[test]
+    fn test_cache_stats() {
+        let cache = PolymorphicInlineCache::new(1000);
+
+        // 执行一些缓存操作
+        let entry = CacheEntry {
+            cached_value: "test".to_string(),
+            type_version: 1,
+            access_count: 0,
+            last_accessed: Instant::now(),
+        };
+
+        cache.polymorphic_insert("TestType", "key".to_string(), entry.clone());
+
+        // 多次查找
+        cache.polymorphic_lookup("TestType", "key");
+        cache.polymorphic_lookup("TestType", "key");
+        cache.polymorphic_lookup("TestType", "missing");
+
+        let stats = cache.get_all_stats();
+        assert!(stats.contains_key("TestType"));
+
+        let test_stats = stats.get("TestType").unwrap();
+        assert_eq!(test_stats.hits, 2);
+        assert_eq!(test_stats.misses, 1);
+        assert!(test_stats.hit_rate > 0.0);
+    }
+
+    #[test]
+    fn test_optimization_level_progression() {
+        let cache = PolymorphicInlineCache::new(1000);
+        let threshold = cache.optimization_config.hot_code_threshold;
+
+        // 测试不同优化级别的渐进
+        // Basic level
+        for _ in 0..threshold {
+            cache.record_hot_code("function:basic", 1000);
+        }
+        let optimized = cache.generate_optimized_code("function:basic");
+        assert!(optimized.is_some());
+        assert_eq!(optimized.unwrap().optimization_level, OptimizationLevel::Basic);
+
+        // Aggressive level
+        for _ in 0..threshold * 5 {
+            cache.record_hot_code("function:aggressive", 1000);
+        }
+        let optimized = cache.generate_optimized_code("function:aggressive");
+        assert!(optimized.is_some());
+        assert_eq!(optimized.unwrap().optimization_level, OptimizationLevel::Aggressive);
+
+        // Maximum level
+        for _ in 0..threshold * 10 {
+            cache.record_hot_code("function:maximum", 1000);
+        }
+        let optimized = cache.generate_optimized_code("function:maximum");
+        assert!(optimized.is_some());
+        assert_eq!(optimized.unwrap().optimization_level, OptimizationLevel::Maximum);
+    }
+
+    #[test]
+    fn test_cache_report_completeness() {
+        let cache = PolymorphicInlineCache::new(1000);
+
+        // 插入一些数据
+        for i in 0..5 {
+            let entry = CacheEntry {
+                cached_value: format!("value{}", i),
+                type_version: 1,
+                access_count: 0,
+                last_accessed: Instant::now(),
+            };
+            cache.polymorphic_insert(&format!("Type{}", i), format!("key{}", i), entry);
+        }
+
+        let report = cache.get_cache_report();
+        assert_eq!(report.total_cache_types, 5);
+        assert_eq!(report.total_entries, 5);
+        assert!(report.max_cache_size > 0);
+        assert!(report.hit_rate >= 0.0);
     }
 }
