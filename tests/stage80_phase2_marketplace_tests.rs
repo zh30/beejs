@@ -19,15 +19,26 @@ mod tests {
     async fn test_module_registration() {
         let registry = Arc::new(ModuleRegistry::new());
         let module = ModuleInfo {
+            module_id: ModuleId {
+                name: "test-module".to_string(),
+                version: Version::parse("1.0.0").unwrap(),
+            },
             name: "test-module".to_string(),
-            version: Version::parse("1.0.0").unwrap(),
+            description: "A test module".to_string(),
+            author: "Test Author".to_string(),
+            license: "MIT".to_string(),
+            homepage: None,
+            repository: None,
+            keywords: vec!["test".to_string()],
+            downloads: 0,
+            rating: None,
         };
 
         let result = registry.register_module(&module).await;
 
         assert!(result.is_ok());
         let module_id = result.unwrap();
-        assert_eq!(module_id.id, "module-test-module");
+        assert_eq!(module_id.name, "test-module");
     }
 
     /// 测试搜索引擎 - 基本搜索
@@ -42,7 +53,7 @@ mod tests {
         let results = registry.search_modules(&query).await.unwrap();
 
         assert!(!results.is_empty());
-        assert_eq!(results[0].module_id.id, "dep-a");
+        assert_eq!(results[0].module_id.name, "dep-a");
         assert!(results[0].score > 0.0);
     }
 
@@ -60,7 +71,7 @@ mod tests {
         // 应该找到所有包含 "dep" 的包
         assert!(results.len() >= 4); // dep-a, dep-b, dep-x, dep-y
         for result in &results {
-            assert!(result.module_id.id.contains("dep"));
+            assert!(result.module_id.name.contains("dep"));
             assert!(result.score > 0.0);
         }
     }
@@ -224,7 +235,8 @@ mod tests {
         let version_manager = VersionManager::new(registry);
 
         let module_id = ModuleId {
-            id: "module-dep-x".to_string(),
+            name: "dep-x".to_string(),
+            version: Version::parse("1.0.0").unwrap(),
         };
 
         let target_version = Version::parse("1.5.0").unwrap();
@@ -241,8 +253,19 @@ mod tests {
         let version_manager = VersionManager::new(registry);
 
         let module = ModuleInfo {
+            module_id: ModuleId {
+                name: "test-module".to_string(),
+                version: Version::parse("1.0.0").unwrap(),
+            },
             name: "test-module".to_string(),
-            version: Version::parse("1.0.0").unwrap(),
+            description: "A test module".to_string(),
+            author: "Test Author".to_string(),
+            license: "MIT".to_string(),
+            homepage: None,
+            repository: None,
+            keywords: vec!["test".to_string()],
+            downloads: 0,
+            rating: None,
         };
 
         let endpoints = version_manager.distribute_to_cdn(&module).await.unwrap();
@@ -291,8 +314,19 @@ mod tests {
 
         // 5. CDN 分发
         let module = ModuleInfo {
+            module_id: ModuleId {
+                name: "test-module".to_string(),
+                version: Version::parse("1.0.0").unwrap(),
+            },
             name: "test-module".to_string(),
-            version: Version::parse("1.0.0").unwrap(),
+            description: "A test module".to_string(),
+            author: "Test Author".to_string(),
+            license: "MIT".to_string(),
+            homepage: None,
+            repository: None,
+            keywords: vec!["test".to_string()],
+            downloads: 0,
+            rating: None,
         };
         let endpoints = version_manager.distribute_to_cdn(&module).await.unwrap();
         assert!(!endpoints.primary.is_empty());
@@ -355,7 +389,7 @@ mod tests {
     #[tokio::test]
     async fn test_data_consistency() {
         let registry = Arc::new(ModuleRegistry::new());
-        let version_manager = VersionManager::new(registry);
+        let version_manager = VersionManager::new(registry.clone());
 
         // 通过注册表搜索到的包应该与版本管理器中的版本信息一致
         let dep_a = registry.get_package("dep-a").await.unwrap();

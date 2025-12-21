@@ -85,7 +85,7 @@ impl DependencyResolver {
 
                 // 递归解析该包的依赖（如果尚未访问）
                 if !visited.contains(dep_name) {
-                    self.resolve_dependencies_recursive(&registry_package.manifest, graph, visited).await?;
+                    Box::pin(self.resolve_dependencies_recursive(&registry_package.manifest, graph, visited)).await?;
                 }
             } else {
                 return Err(format!("Package '{}' not found in registry", dep_name).into());

@@ -90,7 +90,7 @@ impl VersionManager {
         // 3. 更新注册表
         // 4. 通知 CDN 更新
 
-        println!("Rolling back {} to version {}", module_id.id, target_version);
+        println!("Rolling back {} to version {}", module_id.name, target_version);
 
         Ok(())
     }
@@ -111,7 +111,7 @@ impl VersionManager {
             ],
         };
 
-        println!("Distributed {}@{} to CDN", module.name, module.version);
+        println!("Distributed {}@{} to CDN", module.name, module.module_id.version);
 
         Ok(endpoints)
     }
@@ -124,7 +124,9 @@ impl VersionManager {
     /// 获取最新版本
     pub fn get_latest_version(&self, module_name: &str) -> Option<&ModuleVersion> {
         self.versions.get(module_name)
-            .and_then(|versions| versions.iter().max_by(|a, b| a.version.cmp(&b.version)))
+            .and_then(|versions| versions.iter().max_by(|a, b| {
+                a.version.to_string().cmp(&b.version.to_string())
+            }))
     }
 
     /// 获取稳定版本
@@ -137,7 +139,7 @@ impl VersionManager {
     /// 检查版本是否可以升级
     pub fn can_upgrade(&self, current: &Version, target: &Version) -> bool {
         // 简单的版本升级检查：目标版本更新且兼容
-        target > current
+        target.to_string() > current.to_string()
     }
 
     /// 计算版本距离（用于推荐）
@@ -160,6 +162,6 @@ impl VersionManager {
             v2.patch - v1.patch
         };
 
-        major_diff * 100 + minor_diff * 10 + patch_diff
+        (major_diff * 100 + minor_diff * 10 + patch_diff) as u32
     }
 }

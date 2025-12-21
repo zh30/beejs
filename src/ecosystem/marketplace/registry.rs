@@ -151,11 +151,12 @@ impl ModuleRegistry {
     /// 注册模块
     pub async fn register_module(&self, module: &crate::ecosystem::marketplace::ModuleInfo) -> Result<crate::ecosystem::marketplace::ModuleId, Box<dyn std::error::Error>> {
         let module_id = crate::ecosystem::marketplace::ModuleId {
-            id: format!("module-{}", module.name),
+            name: module.name.clone(),
+            version: module.module_id.version.clone(),
         };
 
         // 在实际实现中，这里会将模块存储到数据库或文件系统
-        println!("Registered module: {}@{}", module.name, module.version);
+        println!("Registered module: {}@{}", module.name, module.module_id.version);
 
         Ok(module_id)
     }
@@ -170,7 +171,8 @@ impl ModuleRegistry {
                 let score = self.calculate_relevance_score(name, &query.query);
                 results.push(crate::ecosystem::marketplace::ModuleSearchResult {
                     module_id: crate::ecosystem::marketplace::ModuleId {
-                        id: name.clone(),
+                        name: name.clone(),
+                        version: package.version.clone(),
                     },
                     score,
                 });
@@ -197,7 +199,8 @@ impl ModuleRegistry {
                         let confidence = self.calculate_recommendation_confidence(dep_name, &related_name);
                         recommendations.push(crate::ecosystem::marketplace::ModuleRecommendation {
                             module_id: crate::ecosystem::marketplace::ModuleId {
-                                id: related_name,
+                                name: related_name,
+                                version: Version::parse("1.0.0").unwrap(),
                             },
                             confidence,
                             reason: format!("Related to {}", dep_name),
@@ -212,7 +215,8 @@ impl ModuleRegistry {
                     let confidence = 0.8;
                     recommendations.push(crate::ecosystem::marketplace::ModuleRecommendation {
                         module_id: crate::ecosystem::marketplace::ModuleId {
-                            id: name.clone(),
+                            name: name.clone(),
+                            version: package.version.clone(),
                         },
                         confidence,
                         reason: "Based on search query".to_string(),
@@ -252,7 +256,7 @@ impl ModuleRegistry {
             for (name, package) in &self.packages {
                 if name != package_name {
                     // 检查是否有共同的依赖
-                    let common_deps = self.find_common_dependencies(&target_package.manifest.dependencies, &package.manifest.dependencies);
+                    let common_deps = self.find_common_deps(&target_package.manifest.dependencies, &package.manifest.dependencies);
                     if !common_deps.is_empty() {
                         related.push(name.clone());
                     }
@@ -278,7 +282,7 @@ impl ModuleRegistry {
     fn calculate_recommendation_confidence(&self, source: &str, target: &str) -> f64 {
         // 基于相关性的简单置信度计算
         if let (Some(source_pkg), Some(target_pkg)) = (self.packages.get(source), self.packages.get(target)) {
-            let common_deps = self.find_common_dependencies(&source_pkg.manifest.dependencies, &target_pkg.manifest.dependencies);
+            let common_deps = self.find_common_deps(&source_pkg.manifest.dependencies, &target_pkg.manifest.dependencies);
             let common_count = common_deps.len();
             let source_dep_count = source_pkg.manifest.dependencies.len();
 
