@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn test_ring_buffer_creation() {
-        let buffer = RingBuffer::with_capacity(10);
+        let buffer: RingBuffer<i32> = RingBuffer::with_capacity(10);
         assert_eq!(buffer.capacity(), 10);
         assert_eq!(buffer.len(), 0);
         assert!(buffer.is_empty());
@@ -233,7 +233,7 @@ mod tests {
 
     #[test]
     fn test_display() {
-        let buffer = RingBuffer::with_capacity(10);
+        let buffer: RingBuffer<i32> = RingBuffer::with_capacity(10);
         let display = format!("{}", buffer);
         assert!(display.contains("RingBuffer"));
         assert!(display.contains("size: 0/10"));

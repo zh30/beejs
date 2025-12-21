@@ -23,7 +23,7 @@ mod stage_21_v8_snapshot_tests {
         println!("\n🧪 Test: V8 Snapshot Creation");
 
         // In test mode, V8 snapshot creation returns mock data
-        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
 
         let start = Instant::now();
         let snapshot = manager.create_snapshot("test-v0.1.0");
@@ -51,7 +51,7 @@ mod stage_21_v8_snapshot_tests {
         init_v8();
         println!("\n🧪 Test: V8 Snapshot Caching");
 
-        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
 
         // First call - should create snapshot
         let start1 = Instant::now();
@@ -111,7 +111,7 @@ mod stage_21_v8_snapshot_tests {
         init_v8();
         println!("\n🧪 Test: Snapshot Stats Tracking");
 
-        let manager = SnapshotManager::new().expect("Failed to create snapshot manager");
+        let manager = SnapshotManager::new(beejs::v8_snapshot::SnapshotConfig::default());
 
         // Get initial stats
         let stats1 = manager.get_stats();

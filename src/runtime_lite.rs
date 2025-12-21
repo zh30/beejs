@@ -317,7 +317,7 @@ impl RuntimeLite {
     }
 
     /// Get or initialize cache statistics (lazy initialization)
-    fn get_cache_stats(&self) -> &CacheStatistics {
+    pub fn get_cache_stats(&self) -> &CacheStatistics {
         self.cache_stats.get_or_init(|| {
             eprintln!("[LAZY] Initializing cache statistics on first use...");
             CacheStatistics::new()

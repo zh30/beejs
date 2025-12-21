@@ -458,8 +458,9 @@ mod tests {
         let frame = analyzer.exit_function("test_func", Instant::now(), 1024);
 
         assert!(frame.is_some());
-        assert_eq!(frame.unwrap().function_name, "test_func");
-        assert!(frame.unwrap().execution_time >= Duration::from_millis(10));
+        let frame_data = frame.unwrap();
+        assert_eq!(frame_data.function_name, "test_func");
+        assert!(frame_data.execution_time >= Duration::from_millis(10));
     }
 
     #[test]
