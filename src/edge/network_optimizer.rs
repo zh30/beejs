@@ -6,6 +6,9 @@ use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+use crate::edge::{NodeId, RouteOptimizer};
 
 /// Network optimizer
 #[derive(Debug)]

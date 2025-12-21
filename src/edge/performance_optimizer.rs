@@ -7,6 +7,8 @@ use tokio::time::{Duration, Instant};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
+use crate::edge::Task;
+
 /// Performance optimizer
 #[derive(Debug)]
 pub struct ResourceOptimizer {

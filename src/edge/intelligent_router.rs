@@ -8,6 +8,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::edge::{NodeId, NodeStatus, TaskPriority, Task};
+
 /// Request for routing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Request {

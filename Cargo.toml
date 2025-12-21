@@ -115,6 +115,10 @@ urlencoding = "2.1"
 # Stage 54.3: PyTorch TorchScript dependencies
 tch = { version = "0.11", optional = true }  # 可选依赖，支持条件编译
 
+# Stage 88: Multi-language support
+pyo3 = { version = "0.21", features = ["auto-initialize"] }  # Python integration
+# go-vm = "0.5"  # Go VM integration (placeholder, not published yet)
+
 # Stage 83: Enterprise Kubernetes & DevOps dependencies (暂时注释，等待实现)
 # kube = { version = "0.87", features = ["runtime", "derive"] }
 # k8s-openapi = { version = "0.21", default-features = false, features = ["schemars"] }

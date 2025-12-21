@@ -1,0 +1,110 @@
+//! Multi-language integration tests
+//! Tests for Python, Go, and Rust integration
+
+use beejs::multilang::{PythonRuntime, GoRuntime, RustOptimizer, MultiLanguageRuntime, BeeAPI};
+use std::sync::Arc;
+
+#[tokio::test]
+async fn test_python_integration() {
+    let bee_api = Arc::new(BeeAPI {
+        runtime: Arc::new(MockBeeRuntime),
+    });
+
+    let runtime = PythonRuntime::new(bee_api).unwrap();
+
+    let result = runtime.execute_python("print('Hello from Python')").await;
+    assert!(result.is_ok(), "Python execution should succeed");
+
+    let result = runtime.execute_python("2 + 2").await;
+    assert!(result.is_ok(), "Python arithmetic should succeed");
+    assert_eq!(result.unwrap(), "4");
+}
+
+#[tokio::test]
+async fn test_go_integration() {
+    let bee_api = Arc::new(BeeAPI {
+        runtime: Arc::new(MockBeeRuntime),
+    });
+
+    let runtime = GoRuntime::new(bee_api).unwrap();
+
+    let code = r#"
+package main
+import "fmt"
+func main() {
+    fmt.Println("Hello from Go")
+}
+"#;
+
+    let result = runtime.execute_go(code).await;
+    assert!(result.is_ok(), "Go execution should succeed");
+}
+
+#[tokio::test]
+async fn test_rust_optimization() {
+    let optimizer = RustOptimizer::new();
+
+    let script = "function test() { return 42; }";
+    let result = optimizer.optimize_hot_path(script).await;
+
+    assert!(result.is_ok(), "Rust optimization should succeed");
+
+    let optimized = result.unwrap();
+    assert!(!optimized.original.is_empty());
+    assert!(!optimized.optimized.is_empty());
+}
+
+#[tokio::test]
+async fn test_multilang_runtime() {
+    let mut runtime = MultiLanguageRuntime::new();
+
+    // Initialize Python
+    let python_api = Arc::new(BeeAPI {
+        runtime: Arc::new(MockBeeRuntime),
+    });
+    runtime.init_python(python_api).unwrap();
+
+    // Test Python execution
+    let result = runtime.execute("python", "print('Hello')").await;
+    assert!(result.is_ok(), "Python execution should work");
+
+    // Initialize Go
+    let go_api = Arc::new(BeeAPI {
+        runtime: Arc::new(MockBeeRuntime),
+    });
+    runtime.init_go(go_api).unwrap();
+
+    // Test Go execution
+    let result = runtime.execute("go", "fmt.Println('Hello')").await;
+    assert!(result.is_ok(), "Go execution should work");
+
+    // Test Rust execution
+    let result = runtime.execute("rust", "fn main() { }").await;
+    assert!(result.is_ok(), "Rust execution should work");
+}
+
+#[tokio::test]
+async fn test_zero_copy_performance() {
+    let optimizer = RustOptimizer::new();
+
+    let data = b"Test data for zero-copy";
+    let result = optimizer.execute_zero_copy("test_target", data).await;
+
+    assert!(result.is_ok(), "Zero-copy execution should succeed");
+}
+
+struct MockBeeRuntime;
+
+impl beejs::multilang::BeeRuntimeInterface for MockBeeRuntime {
+    fn execute_script(&self, script: &str) -> Result<String, anyhow::Error> {
+        Ok(format!("Mock executed: {}", script))
+    }
+
+    fn get_variable(&self, name: &str) -> Result<String, anyhow::Error> {
+        Ok(format!("mock_value_of_{}", name))
+    }
+
+    fn set_variable(&self, name: &str, value: &str) -> Result<(), anyhow::Error> {
+        Ok(())
+    }
+}

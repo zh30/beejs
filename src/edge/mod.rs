@@ -17,7 +17,7 @@ pub mod performance_optimizer;
 pub mod network_optimizer;
 
 pub use cache_strategy::*;
-pub use node_manager::*;
+pub use node_manager::{*, NodeId, NodeStatus, EdgeNode, NodeHealth, Task, TaskPriority, LoadBalancingStrategy};
 pub use local_cache::{*, CacheStats as LocalCacheStats};
 pub use offline_engine::{*, ExecutionResult as OfflineExecutionResult};
 pub use intelligent_router::*;
