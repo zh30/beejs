@@ -148,6 +148,21 @@ impl PerformanceAnalyzer {
     pub fn get_metrics(&self) -> &Vec<ExecutionMetrics> {
         &self.metrics
     }
+
+    /// Get a reference to the metrics (alias for get_metrics)
+    pub fn metrics(&self) -> &Vec<ExecutionMetrics> {
+        &self.metrics
+    }
+
+    /// Get the start time
+    pub fn start_time(&self) -> Instant {
+        self.start_time
+    }
+
+    /// Add a metric directly (for testing purposes)
+    pub fn add_metric(&mut self, metric: ExecutionMetrics) {
+        self.metrics.push(metric);
+    }
 }
 
 impl Default for PerformanceAnalyzer {
