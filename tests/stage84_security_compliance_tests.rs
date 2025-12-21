@@ -101,16 +101,37 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_role_assignment() {
-        // TODO: 测试角色分配
-        // 验证 RBAC 角色分配功能
-        panic!("角色分配系统尚未实现");
+        use beejs::security::authorization::{AuthorizationService, Role, UserId};
+
+        let auth_service = AuthorizationService::new();
+
+        // 测试分配角色
+        let user_id = UserId("test-user".to_string());
+        let role = Role("admin".to_string());
+
+        let result = auth_service.assign_role(&user_id, &role).await;
+        assert!(result.is_ok());
+
+        // 验证角色已分配
+        let has_role = auth_service.check_role(&user_id, &role).await.unwrap();
+        assert!(has_role);
     }
 
     #[tokio::test]
     async fn test_permission_check() {
-        // TODO: 测试权限检查
-        // 验证权限验证逻辑
-        panic!("权限检查系统尚未实现");
+        use beejs::security::authorization::{AuthorizationService, Role, UserId, Action};
+
+        let auth_service = AuthorizationService::new();
+
+        // 创建用户并分配角色
+        let user_id = UserId("test-user".to_string());
+        let admin_role = Role("admin".to_string());
+        auth_service.assign_role(&user_id, &admin_role).await.unwrap();
+
+        // 测试权限检查
+        let action = Action("read".to_string(), "database".to_string());
+        let result = auth_service.check_permission(&user_id, &action).await.unwrap();
+        assert!(result);
     }
 
     #[tokio::test]

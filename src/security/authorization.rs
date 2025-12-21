@@ -1,0 +1,187 @@
+//! 权限控制系统
+//!
+//! 实现基于角色的访问控制 (RBAC) 和权限检查
+
+use std::collections::HashMap;
+use std::sync::Arc;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+/// 权限控制错误
+#[derive(Error, Debug)]
+pub enum AuthzError {
+    #[error("Permission denied")]
+    PermissionDenied,
+
+    #[error("Role not found: {0}")]
+    RoleNotFound(String),
+
+    #[error("User not found: {0}")]
+    UserNotFound(String),
+}
+
+/// 用户 ID
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub struct UserId(pub String);
+
+/// 角色
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub struct Role(pub String);
+
+/// 动作（操作和资源）
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub struct Action(pub String, pub String); // (operation, resource)
+
+/// 权限
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub struct Permission {
+    pub action: Action,
+    pub roles: Vec<Role>,
+}
+
+/// 策略引擎
+#[derive(Debug)]
+pub struct PolicyEngine {
+    permissions: Vec<Permission>,
+}
+
+impl PolicyEngine {
+    pub fn new() -> Self {
+        let mut permissions = Vec::new();
+
+        // 管理员角色拥有所有权限
+        permissions.push(Permission {
+            action: Action("*".to_string(), "*".to_string()),
+            roles: vec![Role("admin".to_string())],
+        });
+
+        // 用户角色有基本权限
+        permissions.push(Permission {
+            action: Action("read".to_string(), "database".to_string()),
+            roles: vec![Role("user".to_string()), Role("admin".to_string())],
+        });
+
+        permissions.push(Permission {
+            action: Action("write".to_string(), "database".to_string()),
+            roles: vec![Role("admin".to_string())],
+        });
+
+        Self { permissions }
+    }
+
+    pub fn check_permission(&self, action: &Action, roles: &[Role]) -> bool {
+        // 管理员拥有所有权限
+        if roles.iter().any(|r| r.0 == "admin") {
+            return true;
+        }
+
+        // 检查具体权限
+        for permission in &self.permissions {
+            // 检查角色匹配
+            if permission.roles.iter().any(|r| roles.contains(r)) {
+                // 检查动作匹配
+                if permission.action.0 == "*" || permission.action.0 == action.0 {
+                    if permission.action.1 == "*" || permission.action.1 == action.1 {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+}
+
+/// 角色管理器
+#[derive(Debug)]
+pub struct RoleManager {
+    user_roles: Arc<std::sync::Mutex<HashMap<UserId, Vec<Role>>>>,
+}
+
+impl RoleManager {
+    pub fn new() -> Self {
+        Self {
+            user_roles: Arc::new(std::sync::Mutex::new(HashMap::new())),
+        }
+    }
+
+    pub async fn assign_role(&self, user_id: &UserId, role: &Role) -> Result<(), AuthzError> {
+        let mut user_roles = self.user_roles.lock().unwrap();
+        user_roles.entry(user_id.clone()).or_insert_with(Vec::new).push(role.clone());
+        Ok(())
+    }
+
+    pub async fn remove_role(&self, user_id: &UserId, role: &Role) -> Result<(), AuthzError> {
+        let mut user_roles = self.user_roles.lock().unwrap();
+        if let Some(roles) = user_roles.get_mut(user_id) {
+            roles.retain(|r| r != role);
+        }
+        Ok(())
+    }
+
+    pub async fn get_roles(&self, user_id: &UserId) -> Result<Vec<Role>, AuthzError> {
+        let user_roles = self.user_roles.lock().unwrap();
+        Ok(user_roles.get(user_id).cloned().unwrap_or_default())
+    }
+
+    pub async fn check_role(&self, user_id: &UserId, role: &Role) -> Result<bool, AuthzError> {
+        let user_roles = self.user_roles.lock().unwrap();
+        Ok(user_roles.get(user_id).map_or(false, |roles| roles.contains(role)))
+    }
+}
+
+/// 权限控制服务
+#[derive(Debug)]
+pub struct AuthorizationService {
+    policy_engine: Arc<PolicyEngine>,
+    role_manager: Arc<RoleManager>,
+}
+
+impl AuthorizationService {
+    pub fn new() -> Self {
+        Self {
+            policy_engine: Arc::new(PolicyEngine::new()),
+            role_manager: Arc::new(RoleManager::new()),
+        }
+    }
+
+    pub async fn check_permission(&self, user_id: &UserId, action: &Action) -> Result<bool, AuthzError> {
+        let roles = self.role_manager.get_roles(user_id).await.unwrap_or_default();
+        Ok(self.policy_engine.check_permission(action, &roles))
+    }
+
+    pub async fn assign_role(&self, user_id: &UserId, role: &Role) -> Result<(), AuthzError> {
+        self.role_manager.assign_role(user_id, role).await
+    }
+
+    pub async fn remove_role(&self, user_id: &UserId, role: &Role) -> Result<(), AuthzError> {
+        self.role_manager.remove_role(user_id, role).await
+    }
+
+    pub async fn get_roles(&self, user_id: &UserId) -> Result<Vec<Role>, AuthzError> {
+        self.role_manager.get_roles(user_id).await
+    }
+
+    pub async fn check_role(&self, user_id: &UserId, role: &Role) -> Result<bool, AuthzError> {
+        self.role_manager.check_role(user_id, role).await
+    }
+}
+
+// 默认实现
+impl Default for PolicyEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for RoleManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Default for AuthorizationService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
