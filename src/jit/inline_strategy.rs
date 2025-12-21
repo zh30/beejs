@@ -1,10 +1,16 @@
-//! Stage 69 Phase 3: Enhanced Inline Strategy
+//! Stage 69 Phase 3: Enhanced Inline Strategy - Stage 93 Phase 1.1 优化
 //!
 //! Implements intelligent function inlining decisions based on:
 //! - Call frequency analysis
 //! - Code size awareness
 //! - Recursion depth limits
 //! - Benefit prediction with cost/benefit ratio
+//! - Stage 93 增强功能:
+//!   * 智能阈值调整 - 根据运行时反馈动态调整参数
+//!   * 多维度优化 - 考虑缓存局部性、分支预测等
+//!   * 自适应配置 - 根据系统特征动态调整配置
+//!   * 热路径优先 - 对热点代码采用更激进的内联策略
+//!   * 性能预测 - 预测内联对性能的影响
 
 use std::collections::HashMap;
 use std::time::Instant;
@@ -78,7 +84,7 @@ pub struct InlineResult {
     pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
 
-/// Enhanced Inline Strategy with intelligent decisions
+/// Enhanced Inline Strategy with intelligent decisions - Stage 93 增强
 pub struct InlineStrategy {
     /// Maximum inline depth
     max_inline_depth: usize,
@@ -94,9 +100,15 @@ pub struct InlineStrategy {
     stats: InlineStats,
     /// Configuration
     config: InlineConfig,
+    /// Stage 93 新增：当前系统负载（用于动态调整）
+    current_system_load: f64,
+    /// Stage 93 新增：热点函数追踪（结合 HotPathTrackerV2）
+    hot_path_functions: HashMap<String, f64>, // function_id -> hotness_score
+    /// Stage 93 新增：缓存局部性得分
+    cache_locality_scores: HashMap<String, f64>,
 }
 
-/// Inline configuration
+/// Inline configuration - Stage 93 增强
 #[derive(Debug, Clone)]
 pub struct InlineConfig {
     /// Base size threshold
@@ -109,6 +121,12 @@ pub struct InlineConfig {
     pub recursion_penalty: f64,
     /// Side effect penalty factor
     pub side_effect_penalty: f64,
+    /// Stage 93 新增：缓存局部性权重
+    pub cache_locality_weight: f64,
+    /// Stage 93 新增：分支预测权重
+    pub branch_prediction_weight: f64,
+    /// Stage 93 新增：系统负载感知阈值
+    pub system_load_threshold: f64,
 }
 
 impl Default for InlineConfig {
@@ -119,6 +137,10 @@ impl Default for InlineConfig {
             complexity_penalty: 0.2,
             recursion_penalty: 0.5,
             side_effect_penalty: 0.1,
+            // Stage 93 新增默认值
+            cache_locality_weight: 0.25,
+            branch_prediction_weight: 0.30,
+            system_load_threshold: 100.0,
         }
     }
 }
@@ -139,6 +161,10 @@ impl InlineStrategy {
             inline_history: HashMap::new(),
             stats: InlineStats::default(),
             config,
+            // Stage 93 新增字段初始化
+            current_system_load: 100.0, // 默认中等负载
+            hot_path_functions: HashMap::new(),
+            cache_locality_scores: HashMap::new(),
         }
     }
 
@@ -222,10 +248,11 @@ impl InlineStrategy {
         None
     }
 
-    /// Estimate the benefit of inlining
-    pub fn estimate_benefit(&self, callee: &FunctionInfo) -> f64 {
+    /// Estimate the benefit of inlining - Stage 93 多维度优化
+    pub fn estimate_benefit(&mut self, callee: &FunctionInfo) -> f64 {
         let mut benefit = 50.0; // Base benefit
 
+        // 原有因素保持不变
         // Call frequency bonus (more calls = more benefit)
         let call_bonus = (callee.call_count as f64).log2() * 10.0 * self.config.call_frequency_weight;
         benefit += call_bonus.min(30.0);
@@ -248,7 +275,38 @@ impl InlineStrategy {
             benefit *= 1.0 - self.config.side_effect_penalty;
         }
 
-        // Learn from history
+        // Stage 93 新增：多维度优化考虑因素
+        // 缓存局部性得分（越小越好，因为小函数更容易缓存）
+        let cache_locality = self.get_cache_locality_score(callee);
+        let cache_locality_bonus = cache_locality * self.config.cache_locality_weight * 15.0;
+        benefit += cache_locality_bonus;
+
+        // 分支预测成本（有副作用的函数更难预测）
+        let branch_prediction_cost = if callee.has_side_effects {
+            callee.complexity * 0.4 * self.config.branch_prediction_weight
+        } else {
+            0.0
+        };
+        benefit -= branch_prediction_cost;
+
+        // Stage 93 新增：热路径优先调整
+        let hotness_score = self.hot_path_functions.get(&callee.id).unwrap_or(&0.0);
+        if *hotness_score > 0.7 {
+            // 极热代码，给予额外奖励
+            benefit *= 1.5;
+        } else if *hotness_score > 0.4 {
+            // 热代码，给予中等奖励
+            benefit *= 1.2;
+        } else if *hotness_score < 0.2 {
+            // 冷代码，稍微降低优先级
+            benefit *= 0.9;
+        }
+
+        // Stage 93 新增：系统负载感知调整
+        let load_adjustment = self.calculate_load_adjustment();
+        benefit *= load_adjustment;
+
+        // Learn from history (保持原有逻辑)
         if let Some(history) = self.inline_history.get(&callee.id) {
             let avg_speedup: f64 = history
                 .iter()
@@ -260,7 +318,7 @@ impl InlineStrategy {
             }
         }
 
-        benefit.clamp(0.0, 100.0)
+        benefit.clamp(0.0, 150.0) // Stage 93: 扩展最大收益范围
     }
 
     /// Estimate the cost of inlining
@@ -339,12 +397,135 @@ impl InlineStrategy {
             self.stats.inlined_count as f64 / self.stats.total_decisions as f64
         }
     }
+
+    // ==================== Stage 93 新增方法 ====================
+
+    /// Stage 93: 获取缓存局部性得分
+    /// 得分越高表示缓存友好度越好（函数越小、调用越频繁）
+    fn get_cache_locality_score(&self, callee: &FunctionInfo) -> f64 {
+        let size_score = (1.0 / (callee.size as f64 / 10.0 + 1.0)).min(1.0);
+        let call_score = (callee.call_count as f64 / 100.0).min(1.0);
+        (size_score + call_score) / 2.0
+    }
+
+    /// Stage 93: 计算系统负载调整因子
+    /// 低负载时更激进，高负载时更保守
+    pub fn calculate_load_adjustment(&self) -> f64 {
+        match self.current_system_load {
+            x if x < 75.0 => 1.2,  // 低负载，更激进
+            x if x < 150.0 => 1.0, // 中等负载，标准
+            _ => 0.8,              // 高负载，更保守
+        }
+    }
+
+    /// Stage 93: 更新系统负载
+    pub fn update_system_load(&mut self, load: f64) {
+        self.current_system_load = load.max(0.0).min(300.0); // 限制范围
+    }
+
+    /// Stage 93: 标记热点函数（来自 HotPathTrackerV2）
+    pub fn mark_hot_path(&mut self, function_id: String, hotness_score: f64) {
+        let clamped_score = hotness_score.clamp(0.0, 1.0);
+        self.hot_path_functions.insert(function_id, clamped_score);
+    }
+
+    /// Stage 93: 获取函数热度得分
+    pub fn get_function_hotness(&self, function_id: &str) -> f64 {
+        self.hot_path_functions.get(function_id).unwrap_or(&0.0).clone()
+    }
+
+    /// Stage 93: 预测内联性能影响
+    /// 返回预测的速度提升比例
+    pub fn predict_performance_impact(&mut self, callee: &FunctionInfo) -> f64 {
+        let benefit = self.estimate_benefit(callee);
+        let cost = self.estimate_cost(callee) as f64;
+
+        // 简化的性能预测模型
+        // 收益来自消除函数调用开销，惩罚来自代码膨胀
+        let call_savings = (callee.call_count as f64 * 0.001).min(0.5);
+        let size_penalty = (callee.size as f64 * 0.0001).max(0.0);
+        let complexity_factor = (100.0 - callee.complexity) / 100.0;
+
+        let predicted_speedup = (call_savings - size_penalty) * complexity_factor * (benefit / 100.0);
+
+        predicted_speedup.clamp(-1.0, 2.0) // 限制在合理范围
+    }
+
+    /// Stage 93: 获取优化统计信息
+    pub fn get_optimization_stats(&self) -> OptimizationStats {
+        let hot_functions_count = self.hot_path_functions.len();
+        let avg_hotness: f64 = if hot_functions_count > 0 {
+            self.hot_path_functions.values().sum::<f64>() / hot_functions_count as f64
+        } else {
+            0.0
+        };
+
+        OptimizationStats {
+            total_decisions: self.stats.total_decisions,
+            inlined_count: self.stats.inlined_count,
+            hot_functions_count,
+            avg_hotness_score: avg_hotness,
+            current_system_load: self.current_system_load,
+            cache_locality_avg: self.calculate_avg_cache_locality(),
+        }
+    }
+
+    /// Stage 93: 计算平均缓存局部性得分
+    fn calculate_avg_cache_locality(&self) -> f64 {
+        if self.cache_locality_scores.is_empty() {
+            0.5 // 默认中等缓存友好度
+        } else {
+            self.cache_locality_scores.values().sum::<f64>() / self.cache_locality_scores.len() as f64
+        }
+    }
+
+    /// Stage 93: 动态调整配置
+    pub fn adjust_config_for_system(&mut self, system_type: SystemProfile) {
+        match system_type {
+            SystemProfile::HighPerformance => {
+                self.config.cache_locality_weight = 0.35;
+                self.config.branch_prediction_weight = 0.40;
+                self.config.system_load_threshold = 120.0;
+            }
+            SystemProfile::Balanced => {
+                self.config.cache_locality_weight = 0.25;
+                self.config.branch_prediction_weight = 0.30;
+                self.config.system_load_threshold = 100.0;
+            }
+            SystemProfile::MemoryConstrained => {
+                self.config.cache_locality_weight = 0.40; // 更重视缓存
+                self.config.branch_prediction_weight = 0.25;
+                self.config.system_load_threshold = 80.0;
+            }
+        }
+    }
 }
 
 impl Default for InlineStrategy {
     fn default() -> Self {
         Self::new()
     }
+}
+
+// ==================== Stage 93 新增类型定义 ====================
+
+/// Stage 93: 优化统计信息
+#[derive(Debug, Clone)]
+pub struct OptimizationStats {
+    pub total_decisions: u64,
+    pub inlined_count: u64,
+    pub hot_functions_count: usize,
+    pub avg_hotness_score: f64,
+    pub current_system_load: f64,
+    pub cache_locality_avg: f64,
+}
+
+/// Stage 93: 系统配置类型
+#[derive(Debug, Clone, PartialEq)]
+pub enum SystemProfile {
+    HighPerformance,
+    Balanced,
+    MemoryConstrained,
 }
 
 #[cfg(test)]
