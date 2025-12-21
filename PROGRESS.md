@@ -3,7 +3,53 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-22 02:45)**: 🚀 Stage 86 生态完善 | ✅ Phase 2 工具集成完成
+**当前状态 (2025-12-22 12:00)**: 🔧 Stage 86 编译修复完成 | 🚀 Stage 87 边缘计算计划就绪
+
+### 最新更新 (2025-12-22)
+
+#### 🔧 Stage 86: 编译错误修复 - Phase 2 完成 (2025-12-22 12:00)
+**进度**: ✅ 所有编译错误已修复 | ✅ 库编译成功
+
+#### 修复内容
+- ✅ **E0382: search_results 移动错误修复** (src/ecosystem/marketplace_core.rs:471)
+  - 问题: search_results 被移动到缓存后再次使用
+  - 解决: 克隆搜索结果再缓存，保留原值返回
+
+- ✅ **E0596: 可变借用错误修复** (src/ecosystem/marketplace_core.rs:932)
+  - 问题: submit_rating 方法签名使用 &self 但需要可变访问
+  - 解决: 修改方法签名为 &mut self 并使用 Arc::get_mut 获取可变引用
+
+- ✅ **E0609: 字段访问错误修复** (src/ecosystem/marketplace_core.rs:1235, 1241, 1249)
+  - 问题: MarketplaceCache 方法尝试访问不存在的 `cache` 字段
+  - 解决: 移除 Arc::get_mut 调用，直接访问结构体字段
+
+#### 技术改进
+1. **内存安全**: 正确处理所有权和借用检查
+2. **代码质量**: 简化缓存方法实现，去除不必要的 Arc 包装
+3. **并发安全**: 正确使用 Arc 和可变引用的模式
+4. **类型安全**: 确保所有类型访问符合 Rust 安全规则
+
+#### 编译结果
+- ✅ 库编译成功: `Finished 'dev' profile [unoptimized + debuginfo] target(s) in 1.27s`
+- ⚠️  450 个警告 (主要为未使用导入，不影响功能)
+- ✅ 无编译错误
+- 📝 预存在测试错误 (SystemTime/UNIX_EPOCH 导入问题，与本次修复无关)
+
+#### 文件变更
+- ✅ src/ecosystem/marketplace_core.rs (修复 6 个编译错误)
+- ✅ IMPLEMENTATION_PLAN_STAGE_87.md (新建, 边缘计算实施计划)
+
+#### Stage 87 预告: 边缘计算
+- 🎯 目标: 实现边缘节点支持、离线模式、分布式智能、边缘优化
+- 📋 计划文档: IMPLEMENTATION_PLAN_STAGE_87.md (已完成)
+- 🚀 Phase 1: 边缘节点管理器 (src/edge/node_manager.rs)
+- 🚀 Phase 2: 离线模式引擎 (src/edge/offline_engine.rs)
+- 🚀 Phase 3: 分布式智能 (src/edge/intelligent_router.rs)
+- 🚀 Phase 4: 边缘优化 (src/edge/performance_optimizer.rs)
+
+---
+
+**之前状态 (2025-12-22 02:45)**: 🚀 Stage 86 生态完善 | ✅ Phase 2 工具集成完成
 
 #### Stage 86 Phase 3 核心模块实现总结
 - ✅ **插件市场核心架构** (src/ecosystem/marketplace_core.rs, 1100+ 行)

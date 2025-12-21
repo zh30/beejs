@@ -466,9 +466,9 @@ impl PluginMarketplace {
             facets,
         };
 
-        // 缓存结果
+        // 缓存结果（克隆以避免移动）
         if let Some(cache) = Arc::get_mut(&mut self.cache) {
-            cache.search_cache.insert(cache_key, search_results);
+            cache.search_cache.insert(cache_key, search_results.clone());
         }
 
         Ok(search_results)
@@ -506,7 +506,11 @@ impl PluginMarketplace {
         rating: u8,
         review: Option<String>,
     ) -> Result<()> {
-        self.rating_system.submit_rating(plugin_id, user_id, rating, review).await
+        if let Some(rating_system) = Arc::get_mut(&mut self.rating_system) {
+            rating_system.submit_rating(plugin_id, user_id, rating, review).await
+        } else {
+            Err(anyhow::anyhow!("Failed to get mutable reference to rating system"))
+        }
     }
 
     /// 获取热门插件
@@ -929,7 +933,7 @@ impl RatingSystem {
     }
 
     pub async fn submit_rating(
-        &self,
+        &mut self,
         plugin_id: &PluginId,
         user_id: &str,
         rating: u8,
@@ -1232,22 +1236,14 @@ impl MarketplaceCache {
     }
 
     pub async fn store_plugin(&mut self, plugin_id: &PluginId, plugin: PluginMetadata) {
-        if let Some(cache) = Arc::get_mut(&mut self.cache) {
-            cache.plugin_cache.insert(plugin_id.clone(), plugin);
-        }
+        self.plugin_cache.insert(plugin_id.clone(), plugin);
     }
 
     pub async fn get_search_results(&self, cache_key: &str) -> Option<SearchResults> {
-        if let Some(cache) = Arc::get_mut(&mut Arc::clone(&self.cache)) {
-            cache.search_cache.get(cache_key).cloned()
-        } else {
-            None
-        }
+        self.search_cache.get(cache_key).cloned()
     }
 
     pub async fn store_search_results(&mut self, cache_key: String, results: SearchResults) {
-        if let Some(cache) = Arc::get_mut(&mut self.cache) {
-            cache.search_cache.insert(cache_key, results);
-        }
+        self.search_cache.insert(cache_key, results);
     }
 }
