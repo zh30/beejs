@@ -487,7 +487,7 @@ mod tests {
 
         let service_discovery = ServiceDiscovery::new(config);
         let node_manager = Arc::new(NodeManager::new(service_discovery.clone()));
-        let health_monitor = Arc::new(HealthMonitor::new(node_manager.clone()));
+        let _health_monitor = Arc::new(HealthMonitor::new(node_manager.clone()));
 
         let _fault_config = FaultDetectionConfig {
             detection_interval: Duration::from_millis(100),

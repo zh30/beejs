@@ -407,7 +407,7 @@ mod tests {
 
         // 生成大量缓存条目
         for i in 0..100 {
-            let mut engine = &mut engine.clone();
+            let engine = &engine.clone();
             let _ = engine.generate(&format!("Prompt {}", i), 10);
         }
 

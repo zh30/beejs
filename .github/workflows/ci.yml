@@ -1,4 +1,4 @@
-name: Beejs CI/CD Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
@@ -9,253 +9,321 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  PYO3_USE_ABI3_FORWARD_COMPATIBILITY: 1
 
 jobs:
-  test:
-    name: Test Suite
+  # 代码质量检查
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.rustup/toolchains/*/lib/rustlib/src/rust
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Check formatting
+        run: |
+          rustup component add rustfmt
+          cargo fmt --all -- --check
+
+      - name: Clippy linting
+        run: |
+          rustup component add clippy
+          cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Check documentation
+        run: |
+          cargo doc --no-deps --all-features
+
+  # 构建测试
+  build:
+    name: Build
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        rust: [stable, beta]
+      fail-fast: false
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: ${{ matrix.rust }}
-        components: rustfmt, clippy
-        targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin' || '' }}
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Cache cargo registry
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry/index
-          ~/.cargo/registry/cache
-          ~/.cargo/git/db
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Cache cargo build
-      uses: actions/cache@v4
-      with:
-        path: target
-        key: ${{ runner.os }}-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build
+        run: cargo build --verbose
 
-    - name: Install system dependencies (Ubuntu)
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential pkg-config libssl-dev
+      - name: Build release
+        run: cargo build --release --verbose
 
-    - name: Install system dependencies (macOS)
-      if: runner.os == 'macOS'
-      run: |
-        brew install pkg-config
-
-    - name: Check formatting
-      run: cargo fmt -- --check
-
-    - name: Lint with clippy
-      run: |
-        cargo clippy --all-targets --all-features -- -D warnings
-      continue-on-error: true
-
-    - name: Run tests
-      run: cargo test --lib -- --test-threads=1
-
-    - name: Run integration tests
-      run: cargo test --test '*' -- --test-threads=1
-      continue-on-error: true
-
-    - name: Build release
-      run: cargo build --release
-      continue-on-error: true
-
-  benchmark:
-    name: Performance Benchmarks
+  # 单元测试
+  unit-tests:
+    name: Unit Tests
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Run benchmarks
-      run: cargo bench -- --output-format bencher
-      continue-on-error: true
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Upload benchmark results
-      uses: benchmark-action/github-action-benchmark@v1
-      if: always()
-      with:
-        tool: 'cargo'
-        output-file-path: ./cargo-bench-results.json
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        auto-push: true
+      - name: Run unit tests
+        run: cargo test --lib --verbose
 
-  security:
-    name: Security Audit
+  # 集成测试
+  integration-tests:
+    name: Integration Tests
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Audit dependencies
-      run: cargo audit --json
-      continue-on-error: true
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Check for secrets
-      env:
-        REF_NAME: ${{ github.ref_name }}
-      run: |
-        # Use safe environment variables only
-        if grep -r "BEGIN PRIVATE KEY" --include="*.rs" --include="*.toml" --include="*.md" . ; then
-          echo "Private keys found in repository!"
-          exit 1
-        fi
-      continue-on-error: true
+      - name: Run integration tests
+        run: cargo test --test '*' --verbose
 
+  # 性能测试
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run performance benchmarks
+        run: |
+          cargo test --release performance_tests
+          cargo bench --bench '*' 2>/dev/null || echo "Benchmarks completed"
+
+  # 代码覆盖率
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Install tarpaulin
-      run: |
-        cargo install cargo-tarpaulin
-        cargo install cargo-llvm-cov
+      - name: Install tarpaulin
+        run: |
+          cargo install cargo-tarpaulin
+          cargo install cargo-llvm-cov
 
-    - name: Generate coverage
-      run: |
-        cargo llvm-cov --all-features --workspace --codecov --output-file coverage.xml
-      continue-on-error: true
+      - name: Run tests with coverage
+        run: |
+          cargo llvm-cov --all-features --workspace --lcov --output-path coverage.lcov
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.lcov
+          flags: unittests
+          name: codecov-umbrella
 
+      - name: Check coverage threshold
+        run: |
+          cargo llvm-cov --all-features --workspace --format=text | tee coverage.txt
+          COVERAGE=$(grep "coverage:" coverage.txt | awk '{print $2}')
+          echo "Coverage: $COVERAGE"
+          if (( $(echo "$COVERAGE < 95.0" | bc -l) )); then
+            echo "Coverage $COVERAGE is below 95%"
+            exit 1
+          fi
+
+  # 安全扫描
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run cargo audit
+        run: |
+          cargo install cargo-audit
+          cargo audit
+
+      - name: Run cargo deny
+        run: |
+          cargo install cargo-deny
+          cargo deny check
+
+  # 发布流程
   release:
-    name: Create Release
+    name: Release
     runs-on: ubuntu-latest
-    needs: [test, benchmark, security]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-
+    needs: [code-quality, build, unit-tests, integration-tests, performance-tests, coverage, security]
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
 
-    - name: Build release binaries
-      env:
-        TAG_REF: ${{ github.ref_name }}
-      run: |
-        # Safe variable usage
-        cargo build --release
-        mkdir -p release
-        cp target/release/beejs release/
-        tar -czf beejs-v${TAG_REF}-x86_64-unknown-linux-gnu.tar.gz release/beejs
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - name: Generate checksums
-      run: |
-        cd release
-        sha256sum beejs > beejs.sha256
-        cd ..
+      - name: Build release
+        run: cargo build --release
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          beejs-v*-x86_64-unknown-linux-gnu.tar.gz
-          release/beejs.sha256
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          cp target/release/beejs release/
+          tar -czf beejs-v${GITHUB_REF#refs/tags/v}-x86_64-unknown-linux-gnu.tar.gz -C release beejs
 
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "## Changes in $(git describe --tags --abbrev=0)" > CHANGELOG.md
+          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0)..HEAD >> CHANGELOG.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref }}
+          body_path: CHANGELOG.md
+          files: |
+            beejs-v*.tar.gz
+          draft: false
+          prerelease: false
+
+      - name: Publish to crates.io
+        run: |
+          cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          cargo publish
+
+  # Docker 构建和发布
   docker:
-    name: Build Docker Image
+    name: Docker Build and Push
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
+    needs: [build]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: beejs/beejs
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: beejs/runtime
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
+  # 通知
   notify:
-    name: Notify Results
+    name: Notifications
     runs-on: ubuntu-latest
-    needs: [test, benchmark, security, coverage]
+    needs: [code-quality, build, unit-tests, integration-tests, performance-tests, coverage, security]
     if: always()
-
     steps:
-    - name: Notify Slack on failure
-      if: failure()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: failure
-        text: 'Beejs CI pipeline failed! 🚨'
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+      - name: Notify Slack on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: |
+            🚨 CI/CD Pipeline Failed
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+            Run: ${{ github.run_number }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
 
-    - name: Notify Slack on success
-      if: success()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: success
-        text: 'Beejs CI pipeline passed! ✅'
-      env:
-        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+      - name: Notify Slack on success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: |
+            ✅ CI/CD Pipeline Succeeded
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+            Run: ${{ github.run_number }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

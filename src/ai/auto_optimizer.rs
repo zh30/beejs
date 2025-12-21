@@ -530,13 +530,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_auto_optimizer_creation() {
-        let optimizer = AutoOptimizer::new();
+        let _optimizer = AutoOptimizer::new();
         // 验证优化器创建成功
     }
 
     #[tokio::test]
     async fn test_performance_analysis() {
-        let optimizer = AutoOptimizer::new();
+        let _optimizer = AutoOptimizer::new();
         let profile = ProfileData {
             execution_time: 1000,
             memory_usage: 1024,
@@ -570,7 +570,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hotspot_detection() {
-        let optimizer = AutoOptimizer::new();
+        let _optimizer = AutoOptimizer::new();
         let profile = ProfileData {
             execution_time: 1000,
             memory_usage: 1024,
@@ -596,7 +596,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_optimization_suggestions() {
-        let optimizer = AutoOptimizer::new();
+        let _optimizer = AutoOptimizer::new();
         let hotspots = vec![
             Hotspot {
                 location: "app.js:10".to_string(),
@@ -617,7 +617,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_optimization() {
-        let optimizer = AutoOptimizer::new();
+        let _optimizer = AutoOptimizer::new();
         let mut heap_snapshot = HashMap::new();
         heap_snapshot.insert("User".to_string(), 1024 * 1024 * 2); // 2MB
         heap_snapshot.insert("Post".to_string(), 1024 * 1024); // 1MB
@@ -631,7 +631,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_parallelization_suggestion() {
-        let optimizer = AutoOptimizer::new();
+        let _optimizer = AutoOptimizer::new();
         let source = r#"
 function processArray() {
   for (let i = 0; i < 1000; i++) {
@@ -648,7 +648,7 @@ function processArray() {
 
     #[tokio::test]
     async fn test_optimization_application() {
-        let optimizer = AutoOptimizer::new();
+        let _optimizer = AutoOptimizer::new();
         let original_code = "function test() { console.log('test'); }";
         let optimization = Optimization {
             title: "测试优化".to_string(),
@@ -667,7 +667,7 @@ function processArray() {
 
     #[tokio::test]
     async fn test_performance_gain_calculation() {
-        let optimizer = AutoOptimizer::new();
+        let _optimizer = AutoOptimizer::new();
         let suggestions = vec![
             Optimization {
                 title: "优化1".to_string(),
@@ -698,7 +698,7 @@ function processArray() {
 
     #[tokio::test]
     async fn test_empty_profile_handling() {
-        let optimizer = AutoOptimizer::new();
+        let _optimizer = AutoOptimizer::new();
         let profile = ProfileData {
             execution_time: 0,
             memory_usage: 0,

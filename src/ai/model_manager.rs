@@ -468,7 +468,7 @@ mod tests {
 
     #[test]
     fn test_intelligent_routing() {
-        let mut router = ModelRouter::new(RouterConfig {
+        let router = ModelRouter::new(RouterConfig {
             load_balancing: LoadBalancingStrategy::LatencyBased,
             fallback_enabled: true,
             route_cache_ttl: Duration::from_secs(60),
@@ -550,9 +550,7 @@ mod tests {
         let mut manager = ModelManager::new(&runtime, config).unwrap();
 
         // 加载模型
-        let handle = {
-            manager.load_model("test-model".to_string()).unwrap()
-        };
+        manager.load_model("test-model".to_string()).unwrap();
 
         // 等待超时
         std::thread::sleep(Duration::from_millis(200));

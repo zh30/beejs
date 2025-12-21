@@ -615,12 +615,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_predictive_scaler_creation() {
-        let scaler = PredictiveScaler::new();
+        let _scaler = PredictiveScaler::new();
     }
 
     #[tokio::test]
     async fn test_resource_prediction() {
-        let scaler = PredictiveScaler::new();
+        let _scaler = PredictiveScaler::new();
         let timeframe = TimeFrame {
             start_time: Utc::now(),
             end_time: Utc::now() + Duration::hours(1),
@@ -651,7 +651,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_trend_analysis() {
-        let scaler = PredictiveScaler::new();
+        let _scaler = PredictiveScaler::new();
 
         let mut historical_data = Vec::new();
         for i in 0..10 {
@@ -675,7 +675,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_schedule_optimization() {
-        let scaler = PredictiveScaler::new();
+        let _scaler = PredictiveScaler::new();
 
         let tasks = vec![
             Task {
