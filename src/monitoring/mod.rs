@@ -4,6 +4,7 @@
 pub mod ai_monitor;
 pub mod intelligent_analyzer;
 pub mod auto_tuner;
+pub mod prometheus_exporter;
 
 pub use ai_monitor::{
     RealtimePerformanceMonitor, PerformanceMetrics, MetricType,
@@ -15,4 +16,7 @@ pub use intelligent_analyzer::{
 };
 pub use auto_tuner::{
     AutoTuner, TuningAction, TuningParameter, TuningResult,
+};
+pub use prometheus_exporter::{
+    PrometheusExporter, PrometheusMetricType,
 };
