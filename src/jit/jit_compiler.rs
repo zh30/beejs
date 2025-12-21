@@ -172,13 +172,27 @@ impl JitCompiler {
         Ok(result)
     }
 
-    /// 选择编译层级
+    /// 选择编译层级 - Stage 93 Phase 1: 动态阈值调整
+    /// 集成 HotPathTrackerV2 的自适应阈值，实现智能编译层级选择
     fn select_compilation_tier(&self, request: &CompilationRequest) -> CompilationTier {
         let hotness = request.hotness_score;
 
-        if hotness >= self.config.tier_selection_thresholds.optimizing_threshold {
+        // 获取动态阈值（来自 HotPathTrackerV2）
+        let adaptive_threshold = self.hot_path_tracker.get_threshold() as f64;
+
+        // 动态调整因子：
+        // - 当 adaptive_threshold 高时（系统整体很热），降低编译阈值，更激进地优化
+        // - 当 adaptive_threshold 低时（系统不忙），提高编译阈值，避免过早优化
+        let adjustment_factor = (100.0_f64 / adaptive_threshold.max(1.0)).min(10.0).max(0.1);
+
+        // 计算动态阈值
+        let dynamic_baseline_threshold = self.config.tier_selection_thresholds.baseline_threshold * adjustment_factor;
+        let dynamic_optimizing_threshold = self.config.tier_selection_thresholds.optimizing_threshold * adjustment_factor;
+
+        // 使用动态阈值进行层级选择
+        if hotness >= dynamic_optimizing_threshold {
             CompilationTier::Optimizing
-        } else if hotness >= self.config.tier_selection_thresholds.baseline_threshold {
+        } else if hotness >= dynamic_baseline_threshold {
             CompilationTier::Baseline
         } else {
             CompilationTier::Interpreter
