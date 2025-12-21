@@ -62,13 +62,13 @@ pub mod concurrent_execution;
 pub mod shared_memory;
 pub mod shared_object_cache;
 pub mod memory_mapped_file;
-pub mod lock_free;
+pub mod lock_free_temp;  // Temporary replacement for lock_free
 pub mod network;
 pub mod zero_copy;
 pub mod string_interner;
 pub mod distributed;
 pub mod isolate_prewarmer;
-pub mod precompiled_cache;
+// pub mod precompiled_cache;  // Moved to startup module
 pub mod ai_batch_processor;
 pub mod ai_memory_pool;
 pub mod ai;  // Stage 78 Phase 3: AI 工作负载专用优化
@@ -90,6 +90,7 @@ pub mod metaverse;  // Stage 42.0: 元宇宙渲染模块
 pub mod holographic;  // Stage 42.0: 全息计算模块
 pub mod immersive_interaction;  // Stage 42.0: 沉浸式交互模块
 pub mod distributed_metaverse;  // Stage 42.0: 分布式元宇宙网络
+pub mod startup;  // Stage 90 Phase 4: 启动时间优化
 
 // Stage 43.0: 完整生态系统与极致性能优化
 // pub mod nodejs_core;  // Temporarily disabled for Stage 60
@@ -228,7 +229,7 @@ pub use isolate_prewarmer::{
 };
 
 // 重新导出预编译缓存类型
-pub use precompiled_cache::PrecompiledModuleCache;
+// pub use precompiled_cache::PrecompiledModuleCache;  // Moved to startup module
 
 // 重新导出运行时精简版
 pub use runtime_lite::RuntimeLite;

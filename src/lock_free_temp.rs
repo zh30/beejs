@@ -1,0 +1,93 @@
+//! 临时 lock_free 模块
+//! 为兼容性提供临时定义，避免编译错误
+
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+
+/// 临时 LockFreeCounter 定义
+#[derive(Debug, Default)]
+#[allow(dead_code)]
+pub struct LockFreeCounter {
+    count: AtomicUsize,
+}
+
+#[allow(dead_code)]
+impl LockFreeCounter {
+    pub fn new(initial_value: usize) -> Self {
+        Self {
+            count: AtomicUsize::new(initial_value),
+        }
+    }
+
+    pub fn increment(&self) -> usize {
+        self.count.fetch_add(1, Ordering::Relaxed) + 1
+    }
+
+    pub fn decrement(&self) -> usize {
+        self.count.fetch_sub(1, Ordering::Relaxed)
+    }
+
+    pub fn load(&self) -> usize {
+        self.count.load(Ordering::Relaxed)
+    }
+
+    pub fn add(&self, value: usize) -> usize {
+        self.count.fetch_add(value, Ordering::Relaxed) + value
+    }
+}
+
+/// 临时 LockFreeBufferPool 定义
+#[derive(Debug, Default)]
+#[allow(dead_code)]
+pub struct LockFreeBufferPool {
+    // 临时空实现
+}
+
+#[allow(dead_code)]
+impl LockFreeBufferPool {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn allocate(&self, _size: usize) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+        Ok(vec![0u8; _size])
+    }
+
+    pub fn deallocate(&self, _buffer: Vec<u8>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        Ok(())
+    }
+
+    pub fn active_count(&self) -> usize {
+        0
+    }
+
+    pub fn total_allocations(&self) -> usize {
+        0
+    }
+
+    pub fn available_count(&self) -> usize {
+        0
+    }
+}
+
+/// 临时 AtomicStats 定义
+#[derive(Debug, Default)]
+#[allow(dead_code)]
+pub struct AtomicStats {
+    // 临时空实现
+}
+
+#[allow(dead_code)]
+impl AtomicStats {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn record_operation(&self, _operation: &str) {
+        // 临时空实现
+    }
+
+    pub fn get_report(&self) -> String {
+        "Temporary stats report".to_string()
+    }
+}

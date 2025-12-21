@@ -15,7 +15,7 @@ use tokio::sync::Mutex;
 use tokio::time::timeout;
 
 use crate::Runtime;
-use crate::lock_free::LockFreeCounter;
+use crate::lock_free_temp::LockFreeCounter;
 
 // 内存共享模块
 use crate::shared_memory::{SharedMemoryManager, SharedMemoryConfig};
