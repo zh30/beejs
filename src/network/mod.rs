@@ -25,6 +25,10 @@ pub mod async_zero_copy;
 pub mod network_buffer;
 pub mod io_uring;
 
+// Stage 93 Phase 1.3: 网络极致优化
+pub mod stage93_intelligent_prefetch;
+pub mod stage93_network_topology;
+
 // 重新导出主要类型
 pub use batch_processor::BatchProcessor;
 pub use buffer_pool::NetworkBufferPool;
@@ -56,6 +60,16 @@ pub use network_buffer::{
 pub use io_uring::{
     IoUringEngine, UringSubmission, UringCompletion,
     UringConfig, UringStats
+};
+
+// Stage 93 Phase 1.3: 导出优化组件
+pub use stage93_intelligent_prefetch::{
+    Stage93IntelligentPrefetcher, PrefetchConfig, PrefetchStats,
+    AccessPattern, AIPrefetchPredictor
+};
+pub use stage93_network_topology::{
+    Stage93TopologyDiscoverer, TopologyConfig, NetworkTopology,
+    NetworkNode, NetworkPath, NodeType
 };
 
 use std::time::Duration;
