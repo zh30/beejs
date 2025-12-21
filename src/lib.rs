@@ -13,6 +13,7 @@
 //! - 自动化 CI/CD 集成
 
 use rusty_v8 as v8;
+use std::sync::Arc;
 
 // 模块声明
 pub mod benchmarks;
@@ -48,6 +49,9 @@ pub mod web_api;  // Stage 74: Web API 生态系统完善
 pub mod debugger;  // Stage 58: Debugger integration
 pub mod observability;  // 可观测性系统
 pub mod ai_inference;
+
+// Stage 83: Enterprise modules (temporarily disabled for compilation)
+// pub mod enterprise;
 pub mod concurrent_execution;
 pub mod shared_memory;
 pub mod shared_object_cache;
@@ -63,7 +67,7 @@ pub mod ai_batch_processor;
 pub mod ai_memory_pool;
 pub mod ai;  // Stage 78 Phase 3: AI 工作负载专用优化
 pub mod optimization;  // Stage 78 Phase 4: 极致性能监控
-pub mod enterprise;  // Stage 79: 企业级功能增强
+// pub mod enterprise;  // Stage 79: 企业级功能增强 (disabled for compilation)
 pub mod ecosystem;  // Stage 80: 生态系统完善
 pub mod profiler;
 pub mod code_cache;

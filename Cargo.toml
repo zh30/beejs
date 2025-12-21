@@ -116,13 +116,12 @@ urlencoding = "2.1"
 # Stage 54.3: PyTorch TorchScript dependencies
 tch = { version = "0.11", optional = true }  # 可选依赖，支持条件编译
 
-# Stage 83: Enterprise Kubernetes & DevOps dependencies
-kube = { version = "0.87", features = ["runtime", "derive"] }
-k8s-openapi = { version = "0.21", default-features = false, features = ["schemars"] }
-kube-runtime = "0.87"
-elasticsearch = "9.0"
-git2 = "0.18"
-kubectl = "0.5"
+# Stage 83: Enterprise Kubernetes & DevOps dependencies (暂时注释，等待实现)
+# kube = { version = "0.87", features = ["runtime", "derive"] }
+# k8s-openapi = { version = "0.21", default-features = false, features = ["schemars"] }
+# kube-runtime = "0.87"
+# elasticsearch = { version = "9.1.0-alpha.1", default-features = false }
+# git2 = "0.18"
 
 # Testing
 [dev-dependencies]

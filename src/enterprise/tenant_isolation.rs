@@ -12,7 +12,7 @@ use uuid::Uuid;
 use tracing::{info, warn, error, debug};
 
 /// Tenant identifier
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct TenantId(String);
 
 impl TenantId {

@@ -5,6 +5,7 @@ use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::SystemTime;
 use tracing::{info, warn, error, debug};
 use uuid::Uuid;
@@ -34,7 +35,7 @@ pub struct ConfigChange {
 }
 
 /// Change type
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ChangeType {
     Create,
     Update,
@@ -43,7 +44,7 @@ pub enum ChangeType {
 }
 
 /// Target environment
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Environment {
     Development,
     Staging,
