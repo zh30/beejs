@@ -13,7 +13,6 @@
 //! - 自动化 CI/CD 集成
 
 use rusty_v8 as v8;
-use std::sync::Arc;
 
 // 模块声明
 pub mod benchmarks;

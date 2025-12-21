@@ -4,6 +4,7 @@
 
 pub mod package;
 pub mod marketplace;
+pub mod marketplace_core;
 pub mod devtools;
 pub mod community;
 pub mod analytics;
@@ -11,6 +12,7 @@ pub mod plugin_engine;
 
 pub use package::*;
 pub use plugin_engine::*;
+pub use marketplace_core::*;
 
 use std::collections::{HashMap, HashSet};
 use serde::{Serialize, Deserialize};
