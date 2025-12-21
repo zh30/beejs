@@ -20,7 +20,7 @@ pub fn setup_blob_api(
     global.set(scope, blob_key.into(), blob_constructor.into());
     eprintln!("✅ [STAGE74] Blob constructor registered");
 
-    // Setup File constructor (extends Blob)
+    // Setup File constructor
     let file_template = v8::FunctionTemplate::new(scope, file_constructor);
     let file_constructor = file_template.get_function(scope).unwrap();
     let file_key = v8::String::new(scope, "File").unwrap();
@@ -80,52 +80,50 @@ fn blob_constructor(
         }
     }
 
-    // Create Blob object
-    let blob_obj = v8::Object::new(scope);
+    // Get the default instance created by V8
+    let this: v8::Local<v8::Object> = args.this();
 
     // Set size property
     let size_key = v8::String::new(scope, "size").unwrap();
     let size_val = v8::Number::new(scope, data.len() as f64);
-    blob_obj.set(scope, size_key.into(), size_val.into());
+    this.set(scope, size_key.into(), size_val.into());
 
     // Set type property
     let type_key = v8::String::new(scope, "type").unwrap();
     let type_val = v8::String::new(scope, &mime_type).unwrap();
-    blob_obj.set(scope, type_key.into(), type_val.into());
+    this.set(scope, type_key.into(), type_val.into());
 
-    // Store data internally as a string for now (simplified approach)
-    // In a full implementation, would use ArrayBuffer properly
-    if !data.is_empty() {
-        let data_key = v8::String::new(scope, "_data").unwrap();
-        let data_str = v8::String::new(scope, &String::from_utf8_lossy(&data)).unwrap();
-        blob_obj.set(scope, data_key.into(), data_str.into());
-    }
-
-    // Add arrayBuffer method
-    let array_buffer_key = v8::String::new(scope, "arrayBuffer").unwrap();
-    let array_buffer_template = v8::FunctionTemplate::new(scope, blob_array_buffer);
-    let array_buffer_func = array_buffer_template.get_function(scope).unwrap();
-    blob_obj.set(scope, array_buffer_key.into(), array_buffer_func.into());
-
-    // Add text method
+    // Add methods to Blob FIRST
     let text_key = v8::String::new(scope, "text").unwrap();
     let text_template = v8::FunctionTemplate::new(scope, blob_text);
     let text_func = text_template.get_function(scope).unwrap();
-    blob_obj.set(scope, text_key.into(), text_func.into());
+    this.set(scope, text_key.into(), text_func.into());
 
-    // Add slice method
     let slice_key = v8::String::new(scope, "slice").unwrap();
     let slice_template = v8::FunctionTemplate::new(scope, blob_slice);
     let slice_func = slice_template.get_function(scope).unwrap();
-    blob_obj.set(scope, slice_key.into(), slice_func.into());
+    this.set(scope, slice_key.into(), slice_func.into());
 
-    // Add stream method
+    let array_buffer_key = v8::String::new(scope, "arrayBuffer").unwrap();
+    let array_buffer_template = v8::FunctionTemplate::new(scope, blob_array_buffer);
+    let array_buffer_func = array_buffer_template.get_function(scope).unwrap();
+    this.set(scope, array_buffer_key.into(), array_buffer_func.into());
+
     let stream_key = v8::String::new(scope, "stream").unwrap();
     let stream_template = v8::FunctionTemplate::new(scope, blob_stream);
     let stream_func = stream_template.get_function(scope).unwrap();
-    blob_obj.set(scope, stream_key.into(), stream_func.into());
+    this.set(scope, stream_key.into(), stream_func.into());
 
-    retval.set(blob_obj.into());
+    // Store data internally AFTER adding methods
+    if !data.is_empty() {
+        let data_str = String::from_utf8_lossy(&data);
+        // Use a less common property name
+        let data_key = v8::String::new(scope, "blobData").unwrap();
+        let data_v8 = v8::String::new(scope, &data_str).unwrap();
+        this.set(scope, data_key.into(), data_v8.into());
+    }
+
+    // Don't return anything - use the default instance
 }
 
 /// File constructor callback (extends Blob)
@@ -179,22 +177,22 @@ fn file_constructor(
         }
     }
 
-    // Create File object (same as Blob)
-    let file_obj = v8::Object::new(scope);
+    // Get the default instance created by V8
+    let this: v8::Local<v8::Object> = args.this();
 
     // Set Blob properties
     let size_key = v8::String::new(scope, "size").unwrap();
     let size_val = v8::Number::new(scope, data.len() as f64);
-    file_obj.set(scope, size_key.into(), size_val.into());
+    this.set(scope, size_key.into(), size_val.into());
 
     let type_key = v8::String::new(scope, "type").unwrap();
     let type_val = v8::String::new(scope, &mime_type).unwrap();
-    file_obj.set(scope, type_key.into(), type_val.into());
+    this.set(scope, type_key.into(), type_val.into());
 
     // Set File-specific properties
     let name_key = v8::String::new(scope, "name").unwrap();
     let name_val = v8::String::new(scope, &file_name).unwrap();
-    file_obj.set(scope, name_key.into(), name_val.into());
+    this.set(scope, name_key.into(), name_val.into());
 
     // Add lastModified property (current timestamp)
     let last_modified_key = v8::String::new(scope, "lastModified").unwrap();
@@ -202,37 +200,37 @@ fn file_constructor(
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as f64);
-    file_obj.set(scope, last_modified_key.into(), last_modified_val.into());
+    this.set(scope, last_modified_key.into(), last_modified_val.into());
 
-    // Store data internally as a string for now (simplified approach)
+    // Store data internally
     if !data.is_empty() {
-        let data_key = v8::String::new(scope, "_data").unwrap();
+        let data_key = v8::String::new(scope, "blobData").unwrap();
         let data_str = v8::String::new(scope, &String::from_utf8_lossy(&data)).unwrap();
-        file_obj.set(scope, data_key.into(), data_str.into());
+        this.set(scope, data_key.into(), data_str.into());
     }
 
-    // Add Blob methods
-    let array_buffer_key = v8::String::new(scope, "arrayBuffer").unwrap();
-    let array_buffer_template = v8::FunctionTemplate::new(scope, blob_array_buffer);
-    let array_buffer_func = array_buffer_template.get_function(scope).unwrap();
-    file_obj.set(scope, array_buffer_key.into(), array_buffer_func.into());
-
+    // Add methods to File (inherits from Blob)
     let text_key = v8::String::new(scope, "text").unwrap();
     let text_template = v8::FunctionTemplate::new(scope, blob_text);
     let text_func = text_template.get_function(scope).unwrap();
-    file_obj.set(scope, text_key.into(), text_func.into());
+    this.set(scope, text_key.into(), text_func.into());
 
     let slice_key = v8::String::new(scope, "slice").unwrap();
     let slice_template = v8::FunctionTemplate::new(scope, blob_slice);
     let slice_func = slice_template.get_function(scope).unwrap();
-    file_obj.set(scope, slice_key.into(), slice_func.into());
+    this.set(scope, slice_key.into(), slice_func.into());
+
+    let array_buffer_key = v8::String::new(scope, "arrayBuffer").unwrap();
+    let array_buffer_template = v8::FunctionTemplate::new(scope, blob_array_buffer);
+    let array_buffer_func = array_buffer_template.get_function(scope).unwrap();
+    this.set(scope, array_buffer_key.into(), array_buffer_func.into());
 
     let stream_key = v8::String::new(scope, "stream").unwrap();
     let stream_template = v8::FunctionTemplate::new(scope, blob_stream);
     let stream_func = stream_template.get_function(scope).unwrap();
-    file_obj.set(scope, stream_key.into(), stream_func.into());
+    this.set(scope, stream_key.into(), stream_func.into());
 
-    retval.set(file_obj.into());
+    // Don't return anything - use the default instance
 }
 
 /// Blob.arrayBuffer() method
@@ -270,7 +268,7 @@ fn blob_text(
     let this: v8::Local<v8::Object> = args.this();
 
     // Get the internal data stored in the Blob
-    let data_key = v8::String::new(scope, "_data").unwrap();
+    let data_key = v8::String::new(scope, "blobData").unwrap();
     let data_val = this.get(scope, data_key.into());
 
     if let Some(data) = data_val {
@@ -331,7 +329,7 @@ fn blob_slice(
     };
 
     // Get the source data
-    let data_key = v8::String::new(scope, "_data").unwrap();
+    let data_key = v8::String::new(scope, "blobData").unwrap();
     let data_val = this.get(scope, data_key.into());
 
     let sliced_string = if let Some(data) = data_val {
@@ -379,18 +377,13 @@ fn blob_slice(
     // Store the sliced string data
     if let Some(data) = sliced_string {
         if !data.is_empty() {
-            let data_key = v8::String::new(scope, "_data").unwrap();
+            let data_key = v8::String::new(scope, "blobData").unwrap();
             let data_str = v8::String::new(scope, &data).unwrap();
             blob_obj.set(scope, data_key.into(), data_str.into());
         }
     }
 
-    // Add methods to the sliced Blob
-    let array_buffer_key = v8::String::new(scope, "arrayBuffer").unwrap();
-    let array_buffer_template = v8::FunctionTemplate::new(scope, blob_array_buffer);
-    let array_buffer_func = array_buffer_template.get_function(scope).unwrap();
-    blob_obj.set(scope, array_buffer_key.into(), array_buffer_func.into());
-
+    // Add methods to sliced Blob
     let text_key = v8::String::new(scope, "text").unwrap();
     let text_template = v8::FunctionTemplate::new(scope, blob_text);
     let text_func = text_template.get_function(scope).unwrap();
@@ -400,6 +393,11 @@ fn blob_slice(
     let slice_template = v8::FunctionTemplate::new(scope, blob_slice);
     let slice_func = slice_template.get_function(scope).unwrap();
     blob_obj.set(scope, slice_key.into(), slice_func.into());
+
+    let array_buffer_key = v8::String::new(scope, "arrayBuffer").unwrap();
+    let array_buffer_template = v8::FunctionTemplate::new(scope, blob_array_buffer);
+    let array_buffer_func = array_buffer_template.get_function(scope).unwrap();
+    blob_obj.set(scope, array_buffer_key.into(), array_buffer_func.into());
 
     let stream_key = v8::String::new(scope, "stream").unwrap();
     let stream_template = v8::FunctionTemplate::new(scope, blob_stream);
