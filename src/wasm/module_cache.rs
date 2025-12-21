@@ -396,25 +396,28 @@ impl WasmModuleCache {
     /// 淘汰 L1 缓存
     fn evict_l1_cache(&self) -> Result<()> {
         // 按使用率排序，淘汰使用率最低的条目
-        let hashes_to_evict = {
+        let hashes_to_evict: Vec<String> = {
             let l1 = self.l1_cache.lock().unwrap();
-            let mut entries: Vec<_> = l1.iter().collect();
+            let mut entries: Vec<(String, f64)> = l1.iter()
+                .map(|(hash, entry)| {
+                    let score = entry.read().unwrap().usage_score();
+                    (hash.clone(), score)
+                })
+                .collect();
             entries.sort_by(|a, b| {
-                let entry_a = a.1.read().unwrap();
-                let entry_b = b.1.read().unwrap();
-                entry_a.usage_score().partial_cmp(&entry_b.usage_score()).unwrap_or(std::cmp::Ordering::Equal)
+                a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal)
             });
 
             // 提取要淘汰的哈希
             let to_evict = entries.len() / 2;
-            entries.iter().take(to_evict).map(|(hash, _)| hash.clone()).collect::<Vec<_>>()
+            entries.into_iter().take(to_evict).map(|(hash, _)| hash).collect()
         };
 
         // 移除条目
         {
             let mut l1 = self.l1_cache.lock().unwrap();
             for hash in hashes_to_evict {
-                l1.remove(&hash);
+                l1.remove(hash.as_str());
             }
         }
 
@@ -524,12 +527,15 @@ impl WasmModuleCache {
         // 清理 L2 缓存文件
         if self.config.enable_l2 {
             let mut l2 = self.l2_cache.lock().unwrap();
+            let sys_now = std::time::SystemTime::now();
             let expired_keys: Vec<String> = l2.iter()
                 .filter_map(|(hash, path)| {
                     if let Ok(metadata) = std::fs::metadata(path) {
                         if let Ok(modified) = metadata.modified() {
-                            if now.duration_since(modified) > self.config.expiration_time {
-                                return Some(hash.clone());
+                            if let Ok(elapsed) = sys_now.duration_since(modified) {
+                                if elapsed > self.config.expiration_time {
+                                    return Some(hash.clone());
+                                }
                             }
                         }
                     }
