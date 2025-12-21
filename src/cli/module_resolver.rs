@@ -76,11 +76,11 @@ impl ModuleResolver {
                 self.resolve_builtin(request)
             }
             // Relative paths
-            _ if request.starts_with('./') || request.starts_with('../') => {
+            _ if request.starts_with("./") || request.starts_with("../") => {
                 self.resolve_relative(request, parent)
             }
             // Absolute paths
-            _ if request.starts_with('/') => {
+            _ if request.starts_with("/") => {
                 self.resolve_absolute(request)
             }
             // Module name - search in node_modules

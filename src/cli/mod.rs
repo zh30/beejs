@@ -1,5 +1,6 @@
 //! Beejs CLI Enhanced Module
 //! Stage 56.0 - CLI 功能完善与 Bun 兼容性
+//! Stage 91 Phase 4.1 - 开发者体验提升
 
 pub mod file_watcher;
 pub mod repl;
@@ -8,10 +9,23 @@ pub mod enhanced_cli;
 pub mod commands;
 pub mod script_executor;
 pub mod wasm_commands;
+pub mod module_resolver;
+
+// Stage 91 Phase 4.1: 新增 CLI 增强模块
+pub mod output_formatter;
+pub mod init_command;
+pub mod info_command;
+pub mod doctor_command;
 
 pub use repl::Repl;
-pub use commands::{CliApp, SubCommand, RunCommand, TestCommand, ReplCommand, BundleCommand, ProfileCommand};
+pub use commands::{CliApp, SubCommand, RunCommand, TestCommand, ReplCommand, BundleCommand, ProfileCommand, InitCommand as InitCommandArgs, InfoCommandArgs, DoctorCommandArgs, UpgradeCommand, ProjectTemplateArg};
 pub use script_executor::{
     FileType, ModuleSystem, ExecutionContext, ExecutorConfig, ScriptExecutor,
     detect_file_type, shebang, args,
 };
+
+// Stage 91 Phase 4.1: 导出新命令
+pub use output_formatter::OutputFormatter;
+pub use init_command::{InitCommand, InitConfig, ProjectTemplate};
+pub use info_command::{InfoCommand, SystemInfo};
+pub use doctor_command::{DoctorCommand, CheckStatus, DiagnosticCheck};

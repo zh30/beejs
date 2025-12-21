@@ -1,5 +1,6 @@
 //! CLI Commands Module
 //! Stage 56.1 - CLI Core Architecture
+//! Stage 91 Phase 4.1 - 开发者体验提升
 //!
 //! Implements a proper subcommand-based CLI structure similar to Bun
 
@@ -78,6 +79,18 @@ pub enum SubCommand {
         #[command(subcommand)]
         command: super::wasm_commands::WasmSubCommand,
     },
+
+    /// Initialize a new project
+    Init(InitCommand),
+
+    /// Display system and runtime information
+    Info(InfoCommandArgs),
+
+    /// Diagnose environment problems
+    Doctor(DoctorCommandArgs),
+
+    /// Upgrade Beejs to latest version
+    Upgrade(UpgradeCommand),
 
     /// Version information
     Version,
@@ -259,4 +272,85 @@ pub struct ProfileCommand {
     /// Sampling rate (events per second)
     #[arg(short = 'r', long, default_value = "100")]
     pub sampling_rate: u32,
+}
+
+// ========== Stage 91 Phase 4.1: 新增命令 ==========
+
+/// Init command - initialize new project
+#[derive(Parser, Debug)]
+pub struct InitCommand {
+    /// Project directory (default: current directory)
+    #[arg(default_value = ".")]
+    pub dir: PathBuf,
+
+    /// Project template to use
+    #[arg(short, long, value_enum, default_value = "basic")]
+    pub template: ProjectTemplateArg,
+
+    /// Skip git initialization
+    #[arg(long)]
+    pub no_git: bool,
+
+    /// Run in interactive mode
+    #[arg(short, long)]
+    pub interactive: bool,
+
+    /// Project name (default: directory name)
+    #[arg(short, long)]
+    pub name: Option<String>,
+}
+
+/// Project template types
+#[derive(clap::ValueEnum, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectTemplateArg {
+    /// Basic JavaScript project
+    Basic,
+    /// TypeScript project
+    Typescript,
+    /// Web API server
+    WebApi,
+    /// CLI tool
+    CliTool,
+}
+
+impl Default for ProjectTemplateArg {
+    fn default() -> Self {
+        ProjectTemplateArg::Basic
+    }
+}
+
+/// Info command arguments
+#[derive(Parser, Debug)]
+pub struct InfoCommandArgs {
+    /// Output format (text or json)
+    #[arg(long, default_value = "text")]
+    pub format: String,
+}
+
+/// Doctor command arguments
+#[derive(Parser, Debug)]
+pub struct DoctorCommandArgs {
+    /// Run all checks including optional ones
+    #[arg(short, long)]
+    pub full: bool,
+
+    /// Fix issues automatically when possible
+    #[arg(long)]
+    pub fix: bool,
+}
+
+/// Upgrade command - upgrade Beejs
+#[derive(Parser, Debug)]
+pub struct UpgradeCommand {
+    /// Target version (default: latest)
+    #[arg(short, long)]
+    pub version: Option<String>,
+
+    /// Force upgrade even if already up to date
+    #[arg(short, long)]
+    pub force: bool,
+
+    /// Check for updates without installing
+    #[arg(long)]
+    pub check: bool,
 }
