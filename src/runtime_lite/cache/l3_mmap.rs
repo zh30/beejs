@@ -258,7 +258,6 @@ impl Default for L3MmapCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     #[tokio::test]
     async fn test_l3_basic_operations() {

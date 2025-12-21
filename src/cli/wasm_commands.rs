@@ -3,8 +3,8 @@
 //!
 //! 提供完整的 WebAssembly 模块管理、性能分析和执行功能
 
-use clap::{Parser, Subcommand, ValueEnum, Args};
-use std::path::{PathBuf, Path};
+use clap::{Parser, Subcommand, ValueEnum};
+use std::path::PathBuf;
 use std::time::Duration;
 use serde::{Serialize, Deserialize};
 

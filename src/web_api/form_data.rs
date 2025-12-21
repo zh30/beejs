@@ -4,7 +4,6 @@
 //! representing form fields and their values, which can be sent using fetch().
 
 use anyhow::Result;
-use std::collections::HashMap;
 use rusty_v8 as v8;
 
 pub fn setup_form_data_api(

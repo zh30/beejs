@@ -4,7 +4,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, Duration};
 use std::fs;
-use std::io::{Write, Read};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use crate::v8_snapshot::{V8Snapshot, SnapshotConfig};
 use crate::runtime_lite::RuntimeLite;

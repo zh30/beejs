@@ -173,8 +173,6 @@ impl SamplingStrategy {
 
     /// 判断随机采样是否通过
     fn is_sample_accepted(&self, event: &PerformanceEvent) -> bool {
-        use std::f64::consts::E;
-
         // 基于重要性和当前采样率计算最终概率
         let adjusted_rate = self.current_sample_rate * (0.5 + 0.5 * event.importance);
 

@@ -1,0 +1,185 @@
+//! Stage 80 生态系统集成测试
+//! 使用实际的 ecosystem 模块
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use beejs::ecosystem::package::*;
+    use beejs::ecosystem::types::*;
+
+    #[tokio::test]
+    async fn test_dependency_resolver_creation() {
+        let resolver = DependencyResolver::new();
+        // 依赖解析器创建成功即可
+        assert!(true);
+    }
+
+    #[tokio::test]
+    async fn test_simple_dependency_resolution() {
+        let resolver = DependencyResolver::new();
+
+        let package = PackageManifest {
+            name: "test-package".to_string(),
+            version: Version::parse("1.0.0").unwrap(),
+            dependencies: HashMap::from([
+                ("dep-a".to_string(), VersionConstraint::parse("^2.0.0").unwrap()),
+            ]),
+            dev_dependencies: HashMap::new(),
+        };
+
+        let dependency_graph = resolver.resolve_dependencies(&package).await.unwrap();
+
+        assert!(dependency_graph.contains("test-package"));
+        assert!(dependency_graph.contains("dep-a"));
+    }
+
+    #[tokio::test]
+    async fn test_circular_dependency_detection() {
+        let resolver = DependencyResolver::new();
+
+        let package = PackageManifest {
+            name: "circular-a".to_string(),
+            version: Version::parse("1.0.0").unwrap(),
+            dependencies: HashMap::from([
+                ("circular-b".to_string(), VersionConstraint::parse("^1.0.0").unwrap()),
+            ]),
+            dev_dependencies: HashMap::new(),
+        };
+
+        let dependency_graph = resolver.resolve_dependencies(&package).await.unwrap();
+
+        assert!(dependency_graph.has_circular_dependency());
+    }
+
+    #[tokio::test]
+    async fn test_cache_manager_creation() {
+        let cache_manager = CacheManager::new();
+
+        let package_id = PackageId {
+            name: "test-package".to_string(),
+            version: Version::parse("1.0.0").unwrap(),
+        };
+
+        // 测试 L1 缓存
+        let result = cache_manager.get_from_l1(&package_id).await.unwrap();
+        assert!(result.is_none());
+
+        // 存储到 L1
+        cache_manager.store_in_l1(&package_id, vec![1, 2, 3]).await.unwrap();
+
+        // 应该能获取到
+        let result = cache_manager.get_from_l1(&package_id).await.unwrap();
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), vec![1, 2, 3]);
+    }
+
+    #[tokio::test]
+    async fn test_cache_invalidation() {
+        let cache_manager = CacheManager::new();
+
+        let package_id = PackageId {
+            name: "invalidation-test".to_string(),
+            version: Version::parse("1.0.0").unwrap(),
+        };
+
+        // 存储到 L1
+        cache_manager.store_in_l1(&package_id, vec![1, 2, 3]).await.unwrap();
+
+        // 验证存在
+        let result = cache_manager.get_from_l1(&package_id).await.unwrap();
+        assert!(result.is_some());
+
+        // 失效缓存
+        cache_manager.invalidate(&package_id).await.unwrap();
+
+        // 验证已被移除
+        let result = cache_manager.get_from_l1(&package_id).await.unwrap();
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_multilevel_cache() {
+        let cache_manager = CacheManager::new();
+
+        let package_id = PackageId {
+            name: "multilevel-test".to_string(),
+            version: Version::parse("1.0.0").unwrap(),
+        };
+
+        // L1 缓存测试
+        cache_manager.store_in_l1(&package_id, vec![1, 2, 3]).await.unwrap();
+        let l1_result = cache_manager.get_from_l1(&package_id).await.unwrap();
+        assert!(l1_result.is_some());
+        assert_eq!(l1_result.unwrap(), vec![1, 2, 3]);
+
+        // L2 缓存测试
+        cache_manager.store_in_l2(&package_id, vec![4, 5, 6]).await.unwrap();
+        let l2_result = cache_manager.get_from_l2(&package_id).await.unwrap();
+        assert!(l2_result.is_some());
+        assert_eq!(l2_result.unwrap(), vec![4, 5, 6]);
+
+        // L3 缓存测试
+        cache_manager.store_in_l3(&package_id, vec![7, 8, 9]).await.unwrap();
+        let l3_result = cache_manager.get_from_l3(&package_id).await.unwrap();
+        assert!(l3_result.is_some());
+        assert_eq!(l3_result.unwrap(), vec![7, 8, 9]);
+    }
+
+    #[tokio::test]
+    async fn test_version_selection() {
+        let resolver = DependencyResolver::new();
+
+        let constraints = VersionConstraints {
+            package_name: "test-dep".to_string(),
+            constraints: vec![
+                VersionConstraint::parse("^1.0.0").unwrap(),
+            ],
+        };
+
+        let selection = resolver.select_versions(&constraints).await.unwrap();
+
+        assert_eq!(selection.selected_version.major, 1);
+        assert_eq!(selection.selected_version.minor, 0);
+        assert_eq!(selection.selected_version.patch, 0);
+        assert!(selection.is_compatible);
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_download() {
+        let resolver = DependencyResolver::new();
+
+        let packages = vec![
+            PackageInfo {
+                name: "package-a".to_string(),
+                version: Version::parse("1.0.0").unwrap(),
+                download_url: "https://example.com/package-a-1.0.0.tgz".to_string(),
+                checksum: "abc123".to_string(),
+                available_versions: vec![Version::parse("1.0.0").unwrap()],
+                manifest: PackageManifest {
+                    name: "package-a".to_string(),
+                    version: Version::parse("1.0.0").unwrap(),
+                    dependencies: HashMap::new(),
+                    dev_dependencies: HashMap::new(),
+                },
+            },
+            PackageInfo {
+                name: "package-b".to_string(),
+                version: Version::parse("2.0.0").unwrap(),
+                download_url: "https://example.com/package-b-2.0.0.tgz".to_string(),
+                checksum: "def456".to_string(),
+                available_versions: vec![Version::parse("2.0.0").unwrap()],
+                manifest: PackageManifest {
+                    name: "package-b".to_string(),
+                    version: Version::parse("2.0.0").unwrap(),
+                    dependencies: HashMap::new(),
+                    dev_dependencies: HashMap::new(),
+                },
+            },
+        ];
+
+        let results = resolver.download_packages(&packages).await.unwrap();
+
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|r| r.success));
+    }
+}

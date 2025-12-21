@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn test_record_request() {
-        let collector = MetricsCollector::new();
+        let mut collector = MetricsCollector::new();
 
         collector.record_request(
             Duration::from_millis(150),
@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn test_get_average_latency() {
-        let collector = MetricsCollector::new();
+        let mut collector = MetricsCollector::new();
 
         collector.record_request(
             Duration::from_millis(100),
@@ -216,7 +216,7 @@ mod tests {
 
     #[test]
     fn test_export_prometheus() {
-        let collector = MetricsCollector::new();
+        let mut collector = MetricsCollector::new();
 
         collector.record_request(
             Duration::from_millis(150),
@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_memory_usage() {
-        let collector = MetricsCollector::new();
+        let mut collector = MetricsCollector::new();
 
         collector.record_memory_usage(2048);
         assert_eq!(collector.memory_usage_bytes.load(Ordering::SeqCst), 2048);
@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_active_connections() {
-        let collector = MetricsCollector::new();
+        let mut collector = MetricsCollector::new();
 
         collector.update_active_connections(10);
         assert_eq!(collector.active_connections.load(Ordering::SeqCst), 10);

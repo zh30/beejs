@@ -4,7 +4,7 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 
 use crate::monitor::profiler::{
-    FunctionStats, Hotspot, analyzer::stack_analyzer::{Bottleneck, CallStackAnalysis},
+    Hotspot, analyzer::stack_analyzer::{Bottleneck, CallStackAnalysis},
 };
 
 /// 性能摘要报告

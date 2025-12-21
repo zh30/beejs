@@ -187,8 +187,6 @@ impl FunctionTracker {
         execution_time: Duration,
         memory_used: usize,
     ) -> Option<FunctionStats> {
-        use std::collections::VecDeque;
-
         // 创建或获取现有统计
         let stats = self.function_stats.entry(function_name.to_string()).or_insert_with(|| {
             FunctionStats {
