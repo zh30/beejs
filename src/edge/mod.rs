@@ -8,5 +8,7 @@ pub mod deployment_optimizer;
 pub mod edge_runtime;
 pub mod global_router;
 pub mod cache_strategy;
+pub mod node_manager;
 
 pub use cache_strategy::*;
+pub use node_manager::*;
