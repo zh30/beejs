@@ -4,9 +4,9 @@
 
 pub mod prediction_engine;
 pub mod anomaly_detection;
+pub mod root_cause_analysis;
 
 // 其他模块将在后续阶段实现
-// pub mod root_cause_analysis;
 // pub mod knowledge_graph;
 // pub mod alert_aggregation;
 // pub mod alert_routing;
@@ -36,19 +36,18 @@ pub use anomaly_detection::{
     Baseline,
 };
 
-// 其他模块将在后续阶段实现
-/*
 pub use root_cause_analysis::{
     RootCauseAnalyzer,
     Incident,
     IncidentType,
     RootCauseAnalysis,
-    CausalGraph,
     Change,
     ChangeType,
     ChangeImpactAnalysis,
 };
 
+// 其他模块将在后续阶段实现
+/*
 pub use knowledge_graph::{
     KnowledgeGraph,
     Entity,
