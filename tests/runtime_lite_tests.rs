@@ -27,9 +27,9 @@ mod tests {
         let runtime = runtime.unwrap();
         // 验证基础状态
         assert_eq!(runtime.execution_count(), 0);
-        let (hits, misses, _) = runtime.get_cache_stats();
-        assert_eq!(hits, 0);
-        assert_eq!(misses, 0);
+        let stats = runtime.get_cache_stats();
+        assert_eq!(stats.hits.load(std::sync::atomic::Ordering::Relaxed), 0);
+        assert_eq!(stats.misses.load(std::sync::atomic::Ordering::Relaxed), 0);
     }
 
     /// 测试 2: 简单 JavaScript 代码执行
@@ -131,10 +131,10 @@ mod tests {
 
         // 测试缓存存在且可以获取统计信息
         // 注意：由于 V8 isolate 生命周期问题，我们只验证缓存系统存在且可用
-        let (hits, size, misses) = runtime.get_cache_stats();
-        assert!(hits >= 0);
-        assert!(misses >= 0);
-        assert!(size >= 0);
+        let stats = runtime.get_cache_stats();
+        assert!(stats.hits.load(std::sync::atomic::Ordering::Relaxed) >= 0);
+        assert!(stats.misses.load(std::sync::atomic::Ordering::Relaxed) >= 0);
+        assert!(stats.evictions.load(std::sync::atomic::Ordering::Relaxed) >= 0);
 
         // 验证 clear_cache 方法存在且不会 panic
         runtime.clear_cache();

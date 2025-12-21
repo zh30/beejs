@@ -10,11 +10,11 @@ mod v8_snapshot_tests {
 
     #[test]
     fn test_v8_snapshot_creation() {
-        let mut runtime = RuntimeLite::new();
+        let mut runtime = RuntimeLite::new(false).unwrap();
         let snapshot_manager = SnapshotManager::new(SnapshotConfig::default());
 
         // 测试快照创建
-        let snapshot = snapshot_manager.generate_snapshot(&mut runtime.isolate);
+        let snapshot = snapshot_manager.generate_snapshot(&mut runtime);
 
         assert!(snapshot.is_ok());
         let snapshot = snapshot.unwrap();
@@ -42,13 +42,13 @@ mod v8_snapshot_tests {
 
     #[test]
     fn test_snapshot_cache_management() {
-        let mut runtime = RuntimeLite::new();
+        let mut runtime = RuntimeLite::new(false).unwrap();
         let mut manager = SnapshotManager::new(SnapshotConfig::default());
 
         // 生成多个快照
         for i in 0..5 {
             let snapshot_id = format!("snapshot_{}", i);
-            let result = manager.generate_and_cache_snapshot(&mut runtime.isolate, &snapshot_id);
+            let result = manager.generate_and_cache_snapshot(&mut runtime, &snapshot_id);
             assert!(result.is_ok());
         }
 
@@ -58,17 +58,17 @@ mod v8_snapshot_tests {
 
     #[test]
     fn test_builtin_warmup() {
-        let mut runtime = RuntimeLite::new();
+        let mut runtime = RuntimeLite::new(false).unwrap();
         let manager = SnapshotManager::new(SnapshotConfig::default());
 
         // 测试内置对象预热
-        let result = manager.warmup_builtins(&mut runtime.isolate);
+        let result = manager.warmup_builtins(&mut runtime);
 
         assert!(result.is_ok());
 
         // 验证预热后的对象可用
         let context = runtime.context();
-        let isolate = runtime.isolate();
+        let isolate = runtime();
 
         let scope = &mut v8::HandleScope::new(isolate);
         let context_scope = &mut v8::ContextScope::new(scope, context);
@@ -88,15 +88,15 @@ mod v8_snapshot_tests {
 
     #[test]
     fn test_snapshot_load_performance() {
-        let mut runtime = RuntimeLite::new();
+        let mut runtime = RuntimeLite::new(false).unwrap();
         let manager = SnapshotManager::new(SnapshotConfig::default());
 
         // 生成快照
-        let snapshot = manager.generate_snapshot(&mut runtime.isolate).unwrap();
+        let snapshot = manager.generate_snapshot(&mut runtime).unwrap();
 
         // 记录加载时间
         let start = std::time::Instant::now();
-        let result = manager.load_snapshot(&mut runtime.isolate, &snapshot);
+        let result = manager.load_snapshot(&mut runtime, "test_snapshot");
         let load_time = start.elapsed();
 
         assert!(result.is_ok());
@@ -106,18 +106,18 @@ mod v8_snapshot_tests {
 
     #[test]
     fn test_snapshot_versioning() {
-        let mut runtime = RuntimeLite::new();
+        let mut runtime = RuntimeLite::new(false).unwrap();
         let manager = SnapshotManager::new(SnapshotConfig::default());
 
         // 生成快照
-        let snapshot1 = manager.generate_snapshot(&mut runtime.isolate).unwrap();
+        let snapshot1 = manager.generate_snapshot(&mut runtime).unwrap();
         let version1 = snapshot1.version.clone();
 
         // 等待一小段时间
         std::thread::sleep(std::time::Duration::from_millis(10));
 
         // 生成另一个快照
-        let snapshot2 = manager.generate_snapshot(&mut runtime.isolate).unwrap();
+        let snapshot2 = manager.generate_snapshot(&mut runtime).unwrap();
         let version2 = snapshot2.version.clone();
 
         // 版本应该不同（基于时间戳）
@@ -126,34 +126,34 @@ mod v8_snapshot_tests {
 
     #[test]
     fn test_lazy_builtin_loading() {
-        let mut runtime = RuntimeLite::new();
+        let mut runtime = RuntimeLite::new(false).unwrap();
 
         // 测试懒加载的内置对象
         let context = runtime.context();
-        let isolate = runtime.isolate();
 
-        let scope = &mut v8::HandleScope::new(isolate);
+        let scope = &mut v8::HandleScope::new(runtime.isolate());
         let context_scope = &mut v8::ContextScope::new(scope, context);
 
         // 懒加载测试：首次访问时应该触发加载
-        let console_obj = v8::Object::new(isolate);
+        let console_obj = v8::Object::new(runtime.isolate());
         let console_str = v8::String::new(scope, "console").unwrap();
         assert!(!console_obj.get(context_scope, console_str.into()).is_none());
     }
 
     #[test]
     fn test_snapshot_compression() {
-        let mut runtime = RuntimeLite::new();
+        let mut runtime = RuntimeLite::new(false).unwrap();
         let config = SnapshotConfig {
             max_snapshots: 5,
             enable_compression: true,
             builtin_warmup: true,
+            ..Default::default()
         };
 
         let manager = SnapshotManager::new(config);
 
         // 生成压缩快照
-        let snapshot = manager.generate_snapshot(&mut runtime.isolate).unwrap();
+        let snapshot = manager.generate_snapshot(&mut runtime).unwrap();
 
         // 验证快照数据
         assert!(!snapshot.snapshot_data.is_empty());
@@ -164,11 +164,11 @@ mod v8_snapshot_tests {
 
     #[test]
     fn test_snapshot_error_handling() {
-        let mut runtime = RuntimeLite::new();
+        let mut runtime = RuntimeLite::new(false).unwrap();
         let manager = SnapshotManager::new(SnapshotConfig::default());
 
         // 测试加载不存在的快照
-        let result = manager.load_snapshot(&mut runtime.isolate, "nonexistent_snapshot");
+        let result = manager.load_snapshot(&mut runtime, "nonexistent_snapshot");
         assert!(result.is_err());
 
         // 验证错误类型
@@ -181,8 +181,8 @@ mod v8_snapshot_tests {
 
     #[test]
     fn test_concurrent_snapshot_operations() {
-        let mut runtime1 = RuntimeLite::new();
-        let mut runtime2 = RuntimeLite::new();
+        let mut runtime1 = RuntimeLite::new(false).unwrap();
+        let mut runtime2 = RuntimeLite::new(false).unwrap();
         let manager = Arc::new(SnapshotManager::new(SnapshotConfig::default()));
 
         let manager_clone = manager.clone();
@@ -207,11 +207,11 @@ mod v8_snapshot_tests {
 
     #[test]
     fn test_snapshot_migration_compatibility() {
-        let mut runtime = RuntimeLite::new();
+        let mut runtime = RuntimeLite::new(false).unwrap();
         let manager = SnapshotManager::new(SnapshotConfig::default());
 
         // 生成快照
-        let snapshot = manager.generate_snapshot(&mut runtime.isolate).unwrap();
+        let snapshot = manager.generate_snapshot(&mut runtime).unwrap();
         let version = snapshot.version.clone();
 
         // 模拟版本升级：修改版本号
@@ -222,18 +222,18 @@ mod v8_snapshot_tests {
         assert!(modified_snapshot.version.contains("upgraded"));
 
         // 尝试加载修改后的快照应该失败或给出警告
-        let result = manager.load_snapshot(&mut runtime.isolate, "modified");
+        let result = manager.load_snapshot(&mut runtime, "modified");
         // 这里我们只验证函数可以调用
         assert!(result.is_err() || result.is_ok());
     }
 
     #[test]
     fn test_memory_preallocation() {
-        let mut runtime = RuntimeLite::new();
+        let mut runtime = RuntimeLite::new(false).unwrap();
         let preallocator = MemoryPreallocator::new(1024 * 1024); // 1MB
 
         // 测试内存预分配
-        let result = preallocator.preallocate(&mut runtime.isolate);
+        let result = preallocator.preallocate(&mut runtime);
         assert!(result.is_ok());
 
         // 验证预分配后的状态
@@ -243,7 +243,7 @@ mod v8_snapshot_tests {
 
     #[test]
     fn test_jit_precompilation() {
-        let mut runtime = RuntimeLite::new();
+        let mut runtime = RuntimeLite::new(false).unwrap();
         let precompiler = JITPrecompiler::new();
 
         // 创建测试代码
@@ -257,7 +257,7 @@ mod v8_snapshot_tests {
         "#;
 
         // 预编译热点代码
-        let result = precompiler.precompile_code(&mut runtime.isolate, test_code);
+        let result = precompiler.precompile_code(&mut runtime, test_code);
         assert!(result.is_ok());
 
         // 验证预编译统计

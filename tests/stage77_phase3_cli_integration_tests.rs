@@ -3,6 +3,7 @@
 
 #[cfg(test)]
 mod stage77_phase3_cli_integration_tests {
+    use clap::Parser;
     use beejs::cli::wasm_commands::{
         WasmSubCommand, WasmLoadCommand, WasmListCommand, WasmExecuteCommand,
         WasmBenchmarkCommand, WasmProfileCommand, WasmAnalyzeCommand,
@@ -20,13 +21,13 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_load_command_parsing() {
         println!("🚀 测试 1: WasmLoadCommand 解析");
 
-        let cmd = WasmLoadCommand::try_parse_from(&[
+        let cmd = WasmLoadCommand::parse_from(&[
             "beejs", "wasm", "load",
             "module.wasm",
             "--name", "test_module",
             "--verify",
             "--precompile"
-        ]).unwrap();
+        ]);
 
         assert_eq!(cmd.module, PathBuf::from("module.wasm"));
         assert_eq!(cmd.name, Some("test_module".to_string()));
@@ -41,11 +42,11 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_list_command_parsing() {
         println!("🚀 测试 2: WasmListCommand 解析");
 
-        let cmd = WasmListCommand::try_parse_from(&[
+        let cmd = WasmListCommand::parse_from(&[
             "beejs", "wasm", "list",
             "--format", "json",
             "--detailed"
-        ]).unwrap();
+        ]);
 
         assert_eq!(cmd.format, WasmListFormat::Json);
         assert!(cmd.detailed);
@@ -58,7 +59,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_execute_command_parsing() {
         println!("🚀 测试 3: WasmExecuteCommand 解析");
 
-        let cmd = WasmExecuteCommand::try_parse_from(&[
+        let cmd = WasmExecuteCommand::parse_from(&[
             "beejs", "wasm", "execute",
             "module.wasm",
             "add",
@@ -66,7 +67,7 @@ mod stage77_phase3_cli_integration_tests {
             "--timeout", "30",
             "--repeat", "10",
             "--output", "json"
-        ]).unwrap();
+        ]);
 
         assert_eq!(cmd.module, PathBuf::from("module.wasm"));
         assert_eq!(cmd.function, "add");
@@ -83,7 +84,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_benchmark_command_parsing() {
         println!("🚀 测试 4: WasmBenchmarkCommand 解析");
 
-        let cmd = WasmBenchmarkCommand::try_parse_from(&[
+        let cmd = WasmBenchmarkCommand::parse_from(&[
             "beejs", "wasm", "benchmark",
             "module.wasm",
             "--function", "compute",
@@ -92,7 +93,7 @@ mod stage77_phase3_cli_integration_tests {
             "--threads", "4",
             "--format", "json",
             "--output", "report.json"
-        ]).unwrap();
+        ]);
 
         assert_eq!(cmd.module, PathBuf::from("module.wasm"));
         assert_eq!(cmd.function, Some("compute".to_string()));
@@ -110,7 +111,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_profile_command_parsing() {
         println!("🚀 测试 5: WasmProfileCommand 解析");
 
-        let cmd = WasmProfileCommand::try_parse_from(&[
+        let cmd = WasmProfileCommand::parse_from(&[
             "beejs", "wasm", "profile",
             "module.wasm",
             "--function", "compute",
@@ -118,7 +119,7 @@ mod stage77_phase3_cli_integration_tests {
             "--sampling-rate", "1000",
             "--format", "html",
             "--output", "profile.html"
-        ]).unwrap();
+        ]);
 
         assert_eq!(cmd.module, PathBuf::from("module.wasm"));
         assert_eq!(cmd.function, Some("compute".to_string()));
@@ -133,13 +134,13 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_analyze_command_parsing() {
         println!("🚀 测试 6: WasmAnalyzeCommand 解析");
 
-        let cmd = WasmAnalyzeCommand::try_parse_from(&[
+        let cmd = WasmAnalyzeCommand::parse_from(&[
             "beejs", "wasm", "analyze",
             "module.wasm",
             "--level", "full",
             "--format", "json",
             "--output", "analysis.json"
-        ]).unwrap();
+        ]);
 
         assert_eq!(cmd.module, PathBuf::from("module.wasm"));
 
@@ -151,11 +152,11 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_cache_stats_command_parsing() {
         println!("🚀 测试 7: WasmCacheCommand Stats 解析");
 
-        let cmd = WasmCacheCommand::try_parse_from(&[
+        let cmd = WasmCacheCommand::parse_from(&[
             "beejs", "wasm", "cache", "stats",
             "--detailed",
             "--format", "json"
-        ]).unwrap();
+        ]);
 
         if let WasmCacheAction::Stats(stats_cmd) = cmd.action {
             assert!(stats_cmd.detailed);
@@ -170,11 +171,11 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_cache_clear_command_parsing() {
         println!("🚀 测试 8: WasmCacheCommand Clear 解析");
 
-        let cmd = WasmCacheCommand::try_parse_from(&[
+        let cmd = WasmCacheCommand::parse_from(&[
             "beejs", "wasm", "cache", "clear",
             "--level", "l1",
             "--force"
-        ]).unwrap();
+        ]);
 
         if let WasmCacheAction::Clear(clear_cmd) = cmd.action {
             println!("✅ 测试 8 通过: WasmCacheCommand Clear 解析正确");
@@ -188,11 +189,11 @@ mod stage77_phase3_cli_integration_tests {
     fn test_wasm_cache_warmup_command_parsing() {
         println!("🚀 测试 9: WasmCacheCommand Warmup 解析");
 
-        let cmd = WasmCacheCommand::try_parse_from(&[
+        let cmd = WasmCacheCommand::parse_from(&[
             "beejs", "wasm", "cache", "warmup",
             "module1.wasm", "module2.wasm",
             "--concurrency", "4"
-        ]).unwrap();
+        ]);
 
         if let WasmCacheAction::Warmup(warmup_cmd) = cmd.action {
             assert_eq!(warmup_cmd.modules.len(), 2);
@@ -209,7 +210,7 @@ mod stage77_phase3_cli_integration_tests {
         println!("🚀 测试 10: WasmSubCommand 枚举完整性");
 
         // 确保所有子命令都可以被解析
-        let subcommands = vec![
+        let _subcommands = vec![
             "beejs", "wasm", "load", "module.wasm",
             "beejs", "wasm", "list",
             "beejs", "wasm", "execute", "module.wasm", "func",
@@ -232,7 +233,7 @@ mod stage77_phase3_cli_integration_tests {
     fn test_runtime_lite_wasm_initialization() {
         println!("🚀 测试 11: RuntimeLite WASM 字段初始化");
 
-        let runtime = RuntimeLite::new(false).unwrap();
+        let _runtime = RuntimeLite::new(false).unwrap();
 
         // 检查 WASM 相关字段是否存在（懒加载）
         // 这些字段应该在首次使用时初始化
@@ -272,7 +273,7 @@ mod stage77_phase3_cli_integration_tests {
         println!("🚀 测试 14: RuntimeLite WASM 缓存初始化");
 
         let runtime = RuntimeLite::new(false).unwrap();
-        let result = runtime.initialize_wasm_cache();
+        let _result = runtime.initialize_wasm_cache();
 
         // 由于 WasmModuleCache::new() 可能失败，我们只检查不会 panic
         println!("✅ 测试 14 通过: WASM 缓存初始化调用成功");
@@ -302,7 +303,7 @@ mod stage77_phase3_cli_integration_tests {
             PathBuf::from("module2.wasm"),
         ];
 
-        let result = runtime.warmup_wasm_cache(modules);
+        let _result = runtime.warmup_wasm_cache(modules);
 
         // 由于模块可能不存在，我们只检查不会 panic
         println!("✅ 测试 16 通过: 预热 WASM 缓存调用成功");
