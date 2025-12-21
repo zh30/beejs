@@ -1,0 +1,112 @@
+//! Stage 79 Phase 2.1: 实时指标系统测试
+//! 测试 MetricsCollector 指标收集和 Prometheus 导出功能
+
+use beejs::enterprise::{MetricsCollector, RequestStatus};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, SystemTime};
+
+    // 内存使用指标
+    #[allow(dead_code)]
+    struct MemoryMetrics {
+        pub bytes: u64,
+        pub timestamp: SystemTime,
+    }
+
+    // ============ 测试用例 ============
+
+    #[test]
+    fn test_metrics_collection() {
+        // 测试指标收集功能
+        let mut collector = MetricsCollector::new();
+
+        // 验证初始状态
+        assert_eq!(collector.requests_total.load(std::sync::atomic::Ordering::SeqCst), 0);
+
+        // 记录请求指标
+        let latency = Duration::from_millis(150);
+        collector.record_request(latency, RequestStatus::Success);
+
+        // 验证指标更新
+        assert_eq!(collector.requests_total.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert_eq!(collector.total_latency_ms.load(std::sync::atomic::Ordering::SeqCst), 150);
+
+        // 验证内存指标
+        collector.record_memory_usage(1024 * 1024); // 1MB
+        assert_eq!(collector.memory_usage_bytes.load(std::sync::atomic::Ordering::SeqCst), 1048576);
+    }
+
+    #[test]
+    fn test_prometheus_export() {
+        // 测试 Prometheus 格式导出
+        let mut collector = MetricsCollector::new();
+
+        // 添加一些指标数据
+        for i in 0..100 {
+            collector.record_request(
+                Duration::from_millis(500),
+                RequestStatus::Success,
+            );
+        }
+
+        collector.update_active_connections(25);
+        collector.record_memory_usage(2048 * 1024 * 1024); // 2GB
+        collector.update_cpu_usage(75.5);
+
+        // 导出 Prometheus 格式
+        let prometheus_output = collector.export_prometheus().unwrap();
+
+        // 验证 Prometheus 格式
+        assert!(prometheus_output.contains("beejs_requests_total 100"));
+        assert!(prometheus_output.contains("beejs_request_duration_ms_total 50000"));
+        assert!(prometheus_output.contains("beejs_active_connections 25"));
+        assert!(prometheus_output.contains("beejs_memory_usage_bytes 2147483648"));
+        assert!(prometheus_output.contains("beejs_cpu_usage_percent 76")); // 75.5 舍入
+
+        // 验证 HELP 和 TYPE 注释
+        assert!(prometheus_output.contains("# HELP"));
+        assert!(prometheus_output.contains("# TYPE"));
+    }
+
+    #[test]
+    fn test_multiple_metrics() {
+        // 测试多个指标记录
+        let mut collector = MetricsCollector::new();
+
+        // 模拟多个请求
+        let latencies = vec![
+            Duration::from_millis(100),
+            Duration::from_millis(200),
+            Duration::from_millis(150),
+        ];
+
+        for latency in latencies {
+            collector.record_request(latency, RequestStatus::Success);
+        }
+
+        // 验证聚合指标
+        assert_eq!(collector.requests_total.load(std::sync::atomic::Ordering::SeqCst), 3);
+        assert_eq!(collector.total_latency_ms.load(std::sync::atomic::Ordering::SeqCst), 450);
+
+        // 验证平均延迟
+        let average = collector.get_average_latency_ms();
+        assert_eq!(average, 150.0); // (100 + 200 + 150) / 3
+    }
+
+    #[test]
+    fn test_memory_metrics() {
+        // 测试内存使用指标记录
+        let memory_metrics = MemoryMetrics {
+            bytes: 2048 * 1024 * 1024, // 2GB
+            timestamp: SystemTime::now(),
+        };
+
+        // 验证内存大小
+        assert_eq!(memory_metrics.bytes, 2147483648);
+
+        // 验证时间戳
+        assert!(memory_metrics.timestamp <= SystemTime::now());
+    }
+}

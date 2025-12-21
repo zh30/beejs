@@ -3,6 +3,8 @@
 
 pub mod k8s_manager;
 pub mod container_manager;
+pub mod metrics;
 
 pub use k8s_manager::*;
 pub use container_manager::*;
+pub use metrics::*;
