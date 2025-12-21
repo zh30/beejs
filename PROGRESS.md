@@ -3,11 +3,93 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-21)**: ✅ Stage 75 调试器增强 - Watch 变量监控
+**当前状态 (2025-12-21)**: ✅ Stage 75 调试器增强 - Watch 变量监控系统 (Phase 1 & 2 完成)
 
 ## 最新更新 (2025-12-21)
 
-### ✅ Stage 75: 调试器增强 - Watch 变量监控 (2025-12-21 21:30)
+### ✅ Stage 75: 调试器增强 - Watch 变量监控系统 (2025-12-21 21:45)
+**进度**: ✅ Phase 1 & Phase 2 完成
+
+#### Phase 2: 表达式求值与 V8 集成 ✅
+
+##### 完成功能
+
+1. **V8 表达式求值** ✅
+   - ✅ `evaluate_watch_expression()` - 在 V8 上下文中求值单个表达式
+   - ✅ 自动类型检测 (number, string, boolean, object, primitive)
+   - ✅ 错误处理和异常捕获
+   - ✅ 支持复杂表达式 (算术、对象、数组等)
+
+2. **批量求值功能** ✅
+   - ✅ `evaluate_all_watches()` - 批量求值所有 watch 表达式
+   - ✅ 自动更新 WatchExpression 的值和类型
+   - ✅ 错误状态设置和传播
+   - ✅ 向量结果返回 (watch_id, value, value_type)
+
+3. **类型系统增强** ✅
+   - ✅ 智能类型推断算法
+   - ✅ 支持原始类型、数字、布尔、对象、字符串
+   - ✅ 特殊值处理 (undefined, null)
+
+4. **测试覆盖** ✅
+   - ✅ 18 个新测试用例全部通过 (Phase 2)
+   - ✅ 总计 76 个调试器测试 (58 Phase 1 + 18 Phase 2)
+   - ✅ 100% 通过率
+
+#### Phase 1 回顾 (之前完成)
+- ✅ WatchExpression 数据结构
+- ✅ WatchManager 完整 CRUD
+- ✅ DebuggerEngine 集成
+- ✅ 统计信息追踪
+
+#### 测试结果 Phase 2
+```
+running 18 tests (stage75_debugger_watch_phase2_tests)
+test tests::test_evaluate_simple_number_expression ... ok
+test tests::test_evaluate_string_expression ... ok
+test tests::test_evaluate_boolean_expression ... ok
+test tests::test_evaluate_arithmetic_expression ... ok
+test tests::test_evaluate_undefined_expression ... ok
+test tests::test_evaluate_null_expression ... ok
+test tests::test_evaluate_invalid_expression ... ok
+test tests::test_evaluate_array_expression ... ok
+test tests::test_evaluate_object_expression ... ok
+test tests::test_evaluate_complex_expression ... ok
+test tests::test_evaluate_all_watches ... ok
+test tests::test_evaluate_watches_with_errors ... ok
+test tests::test_evaluate_float_number ... ok
+test tests::test_evaluate_negative_number ... ok
+test tests::test_evaluate_string_with_quotes ... ok
+test tests::test_evaluate_empty_array ... ok
+test tests::test_evaluate_empty_object ... ok
+test tests::test_multiple_evaluations_update_watch_values ... ok
+
+test result: ok. 18 passed; 0 failed
+```
+
+#### 技术实现
+```rust
+// 核心求值函数
+pub fn evaluate_watch_expression(
+    &self,
+    expression: &str,
+    runtime: &RuntimeLite,
+) -> DebugResult<(String, String)>
+
+// 批量求值函数
+pub fn evaluate_all_watches(
+    &mut self,
+    runtime: &RuntimeLite,
+) -> DebugResult<Vec<(String, String, String)>>
+```
+
+#### 下一阶段
+- [ ] Stage 76: 性能分析器增强
+- [ ] Stage 77: WebAssembly 集成
+
+---
+
+### ✅ Stage 75 Phase 1: 调试器增强 - Watch 变量监控 (2025-12-21 21:30)
 **进度**: ✅ Phase 1 完成 (Watch 变量管理器实现)
 
 #### 完成功能

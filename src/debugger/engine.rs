@@ -17,6 +17,7 @@ use crate::debugger::{
     config::DebugConfig,
     v8_stubs::{DebugEvent as V8DebugEvent, DebugExecutionState},
 };
+use crate::runtime_lite::RuntimeLite;
 
 /// Debug execution state
 #[derive(Debug, Clone, PartialEq)]
@@ -507,5 +508,80 @@ impl DebuggerEngine {
             Ok(()) => DebugResult::ok(()),
             Err(e) => DebugResult::err(e),
         }
+    }
+
+    /// Evaluate a watch expression in V8 context
+    /// This is Phase 2: Expression Evaluation & V8 Integration
+    /// Returns (value_string, value_type) or error message
+    pub fn evaluate_watch_expression(
+        &self,
+        expression: &str,
+        runtime: &RuntimeLite,
+    ) -> DebugResult<(String, String)> {
+        // Execute the expression in V8 context
+        match runtime.execute_code(expression) {
+            Ok(value) => {
+                // Determine the type of the value
+                let value_type = match value.as_str() {
+                    "null" | "undefined" => "primitive".to_string(),
+                    _ if value.parse::<i64>().is_ok() => "number".to_string(),
+                    _ if value.parse::<f64>().is_ok() => "number".to_string(),
+                    _ if value == "true" || value == "false" => "boolean".to_string(),
+                    _ if value.starts_with('[') || value.starts_with('{') => "object".to_string(),
+                    _ if value.starts_with('"') || value.starts_with('\'') => "string".to_string(),
+                    _ => "unknown".to_string(),
+                };
+
+                DebugResult::ok((value, value_type))
+            }
+            Err(e) => {
+                let error_msg = format!("Evaluation error: {}", e);
+                DebugResult::err(error_msg)
+            }
+        }
+    }
+
+    /// Evaluate all watch expressions in V8 context
+    /// This is Phase 2: Expression Evaluation & V8 Integration
+    /// Automatically updates all watch expressions with their current values
+    pub fn evaluate_all_watches(
+        &mut self,
+        runtime: &RuntimeLite,
+    ) -> DebugResult<Vec<(String, String, String)>> {
+        let mut results = Vec::new();
+
+        // Get all watch expressions and collect their data first
+        let watches = self.watch_manager.list();
+        let watch_data: Vec<(String, String)> = watches
+            .into_iter()
+            .map(|watch| (watch.id.clone(), watch.expression.clone()))
+            .collect();
+
+        // Evaluate each expression
+        for (watch_id, expression) in watch_data {
+            let eval_result = self.evaluate_watch_expression(&expression, runtime);
+            if eval_result.success {
+                // Unwrap the successful result
+                if let Some((value, value_type)) = eval_result.data {
+                    // Update the watch with the new value
+                    if let Err(e) = self.watch_manager.update_value(&watch_id, &value, &value_type) {
+                        eprintln!("Warning: Failed to update watch {}: {:?}", watch_id, e);
+                    }
+
+                    results.push((watch_id, value, value_type));
+                }
+            } else {
+                // Handle error case
+                let error_msg = eval_result.error.unwrap_or_else(|| "Unknown error".to_string());
+                // Set error on the watch
+                if let Err(e) = self.watch_manager.set_error(&watch_id, &error_msg) {
+                    eprintln!("Warning: Failed to set error on watch {}: {:?}", watch_id, e);
+                }
+
+                results.push((watch_id, format!("<error: {}>", error_msg), "error".to_string()));
+            }
+        }
+
+        DebugResult::ok(results)
     }
 }
