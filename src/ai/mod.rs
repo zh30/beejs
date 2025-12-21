@@ -1,9 +1,16 @@
 //! AI 模型集成模块 - Stage 78 Phase 3: AI 工作负载专用优化
-//! 提供矩阵运算加速和张量操作优化能力
+//! 提供矩阵运算加速、张量操作优化和 AI 增强平台功能
 
 pub mod matrix_accelerator;
 pub mod tensor_optimizer;
 pub mod code_generator;
+pub mod smart_debugger;
+pub mod auto_optimizer;
+pub mod predictive_scaler;
+pub mod llm_engine;
+pub mod acceleration_engine;
+pub mod model_cache;
+pub mod model_manager;
 
 // Re-export 公共 API
 pub use matrix_accelerator::{Matrix, MatrixAccelerator, MatrixPair, OptimizedMatrix, MatrixAcceleratorStats};
@@ -12,6 +19,18 @@ pub use code_generator::{
     AICodeGenerator, CodeContext, CodeCompletion, CompletionItem, GeneratedCode,
     Language, TestType, TestFramework, ProjectInfo, CodeSuggestion, TestFile,
     RefactorSuggestion, MockAiModel, AiModel, CompletionKind
+};
+pub use smart_debugger::{
+    SmartDebugger, ErrorInfo, StackFrame, Diagnosis, RootCause, FixSuggestion,
+    BreakpointSuggestion, DebugPath
+};
+pub use auto_optimizer::{
+    AutoOptimizer, ProfileData, FunctionCall, Hotspot, Bottleneck,
+    Optimization, OptimizationReport, MemoryOptimization, ParallelizationSuggestion
+};
+pub use predictive_scaler::{
+    PredictiveScaler, Metrics, TimeFrame, ResourcePrediction, TrendAnalysis,
+    ScalingStrategy, ScalingAction, ScalingResult, Task, Schedule
 };
 
 // Re-export HardwareFeatures from wasm::simd_engine for AI operations

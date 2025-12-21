@@ -68,7 +68,7 @@ pub struct ModuleInfo {
 }
 
 /// 模块类别
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ModuleCategory {
     WebFramework,
     Utility,
@@ -299,12 +299,12 @@ impl CommunityPortal {
 }
 
 /// 模块评分摘要
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ModuleRatingSummary {
     pub module_id: String,
     pub total_ratings: usize,
     pub average_rating: f64,
-    pub rating_distribution: HashMap<usize, usize>,
+    pub rating_distribution: HashMap<u8, usize>,
 }
 
 /// 模块搜索结果

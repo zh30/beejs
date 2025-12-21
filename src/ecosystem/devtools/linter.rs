@@ -26,7 +26,7 @@ pub enum Severity {
 }
 
 /// 规则类别
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum RuleCategory {
     Syntax,
     Style,
@@ -123,8 +123,9 @@ impl Linter {
         loop {
             let lint_result = self.lint_code(&current_code).await?;
             let fixable_issues: Vec<_> = lint_result.issues
-                .into_iter()
+                .iter()
                 .filter(|i| i.fix_suggestion.is_some())
+                .cloned()
                 .collect();
 
             if fixable_issues.is_empty() {
@@ -237,7 +238,7 @@ impl Linter {
             let trimmed = line.trim();
 
             // 检查尾随空格
-            if line != trimmed && !trimmed.is_empty() {
+            if *line != trimmed && !trimmed.is_empty() {
                 issues.push(LintIssue {
                     rule_id: "style-001".to_string(),
                     severity: Severity::Info,
@@ -489,9 +490,9 @@ impl Linter {
 
     /// 检查未闭合括号
     fn has_unclosed_brackets(&self, line: &str) -> bool {
-        let mut brackets = 0;
-        let mut parens = 0;
-        let mut braces = 0;
+        let mut brackets: i32 = 0;
+        let mut parens: i32 = 0;
+        let mut braces: i32 = 0;
 
         for c in line.chars() {
             match c {

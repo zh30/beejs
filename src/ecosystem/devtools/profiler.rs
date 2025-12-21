@@ -20,7 +20,7 @@ pub struct CallNode {
 }
 
 /// 调用图
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CallGraph {
     pub root: CallNode,
     pub total_calls: u64,

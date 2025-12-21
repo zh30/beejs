@@ -19,7 +19,7 @@ pub struct UsageEvent {
 }
 
 /// 事件类型
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum EventType {
     ModuleInstalled,
     ModuleDownloaded,
@@ -220,11 +220,11 @@ impl AnalyticsCollector {
         let start = std::time::Instant::now();
 
         // 模拟执行时间
-        tokio::time::sleep(std::time::Duration::from_millis(10 + fastrand::u32(0..100))).await;
+        tokio::time::sleep(std::time::Duration::from_millis(10 + fastrand::u32(0..100) as u64)).await;
 
         let execution_time = start.elapsed();
         let memory_usage = 1024 + fastrand::u32(0..4096);
-        let cpu_usage = 10.0 + fastrand::f32() * 50.0;
+        let cpu_usage: f64 = (10.0 + fastrand::f32() * 50.0) as f64;
 
         // 计算分数（越低越好）
         let score = (execution_time.as_millis() as f64 * 0.5) + (memory_usage as f64 * 0.001) - (cpu_usage * 2.0);

@@ -38,7 +38,7 @@ struct KvCache {
 #[derive(Clone)]
 pub struct AiLlmEngine {
     config: LlmConfig,
-    runtime: Arc<Runtime>,
+    runtime: Arc<tokio::runtime::Runtime>,
     token_cache: Arc<RwLock<HashMap<String, TokenCacheEntry>>>,
     memory_pool: Arc<Mutex<Vec<Vec<f32>>>>,
     active_sessions: Arc<Mutex<HashMap<String, SessionInfo>>>,
@@ -64,7 +64,7 @@ pub struct InferenceResult {
 
 impl AiLlmEngine {
     /// 创建新的 LLM 引擎实例
-    pub fn new(runtime: &Arc<Runtime>, config: LlmConfig) -> Result<Self, String> {
+    pub fn new(runtime: &Arc<tokio::runtime::Runtime>, config: LlmConfig) -> Result<Self, String> {
         let engine = AiLlmEngine {
             config: config.clone(),
             runtime: runtime.clone(),

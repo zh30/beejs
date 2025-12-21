@@ -72,7 +72,7 @@ pub struct ModelMetrics {
 
 /// 模型管理器
 pub struct ModelManager {
-    runtime: Arc<Runtime>,
+    runtime: Arc<tokio::runtime::Runtime>,
     config: ManagerConfig,
     registry: ModelRegistry,
     router: ModelRouter,
@@ -244,7 +244,7 @@ impl ModelRouter {
 
 impl ModelManager {
     /// 创建新的模型管理器
-    pub fn new(runtime: &Arc<Runtime>, config: ManagerConfig) -> Result<Self, String> {
+    pub fn new(runtime: &Arc<tokio::runtime::Runtime>, config: ManagerConfig) -> Result<Self, String> {
         let registry_config = ModelRegistryConfig {
             auto_discovery: true,
             health_check_interval: Duration::from_secs(30),

@@ -103,7 +103,7 @@ impl Formatter {
         let mut output = String::new();
         let mut line_count = 0;
         let mut current_line_len = 0;
-        let indent = if self.config.use_tabs { "\t" } else { " ".repeat(self.config.indent_size) };
+        let indent = if self.config.use_tabs { "\t" } else { &" ".repeat(self.config.indent_size) };
 
         // 简单解析和格式化
         let lines: Vec<&str> = source.split('\n').collect();
