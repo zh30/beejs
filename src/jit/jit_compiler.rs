@@ -136,9 +136,7 @@ impl JitCompiler {
     pub fn new(config: JitCompilerConfig) -> Self {
         Self {
             config: config.clone(),
-            hot_path_tracker: Arc::new(HotPathTrackerV2::new(
-                crate::jit::hot_path_tracker_v2::TrackerConfig::default(),
-            )),
+            hot_path_tracker: Arc::new(HotPathTrackerV2::new()),
             inline_strategy: Arc::new(InlineStrategy::new()),
             code_cache: Arc::new(RwLock::new(HashMap::new())),
             perf_stats: Arc::new(RwLock::new(JitPerfStats::default())),

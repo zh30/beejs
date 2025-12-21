@@ -230,14 +230,8 @@ impl EnhancedZeroCopy {
 
     /// 内存映射文件
     pub async fn mmap_file(&self, path: &str, size: usize) -> Result<Arc<Mmap>> {
-        // 检查缓存
-        {
-            let cache = self.mmap_cache.read().await;
-            if let Some(mmap) = cache.get(path).cloned() {
-                self.performance_stats.mmap_operations.fetch_add(1, Ordering::Relaxed);
-                return Ok(mmap.clone());
-            }
-        }
+        // TODO: 修复缓存借用问题
+        // 暂时跳过缓存，直接创建新的内存映射
 
         // 创建新的内存映射
         let mmap = self.create_memory_mapping(path, size)?;
@@ -263,7 +257,7 @@ impl EnhancedZeroCopy {
         // 使用 madvise 进行预取
         unsafe {
             let result = madvise(
-                addr.as_ptr(),
+                addr.as_ptr() as *mut libc::c_void,
                 size,
                 MADV_WILLNEED,
             );

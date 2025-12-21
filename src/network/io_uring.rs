@@ -256,7 +256,7 @@ impl IoUringEngine {
 }
 
 impl Drop for IoUringEngine {
-    fn drop(&self) {
+    fn drop(&mut self) {
         // 清理资源
         let temp_file = std::env::temp_dir()
             .join(format!("beejs_io_uring_{}", std::process::id()));

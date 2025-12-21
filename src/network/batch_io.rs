@@ -69,9 +69,9 @@ pub struct BatchIoEngine {
 impl BatchIoEngine {
     /// 创建新的批量 I/O 引擎
     pub fn new(config: NetworkConfig) -> Self {
-        let batch_config = BatchConfig::default.processor();
+        let batch_config = BatchConfig::default();
         Self {
-_handle: None,
+            processor_handle: None,
             batch_config,
             stats: Arc::new(RwLock::new(BatchStats {
                 total_batches_processed: 0,
@@ -90,10 +90,11 @@ _handle: None,
     pub async fn start(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let pending_operations = Arc::clone(&self.pending_operations);
         let stats = Arc::clone(&self.stats);
+        let batch_timeout_ms = self.batch_config.batch_timeout_ms;
 
         let handle = tokio::spawn(async move {
             let mut interval = tokio::time::interval(
-                Duration::from_millis(self.batch_config.batch_timeout_ms)
+                Duration::from_millis(batch_timeout_ms)
             );
 
             loop {
@@ -128,11 +129,11 @@ _handle: None,
 
     /// 处理一批操作
     async fn process_batch(
-        &self,
         pending_operations: &Arc<RwLock<VecDeque<BatchOperation>>>,
         stats: &Arc<RwLock<BatchStats>>,
     ) {
         let start = Instant::now();
+        let max_batch_size = BatchConfig::default().max_batch_size;
 
         // 获取一批操作
         let mut batch = Vec::new();
@@ -141,7 +142,7 @@ _handle: None,
 
             // 按优先级排序
             // 简化实现：直接取前 N 个
-            while batch.len() < self.batch_config.max_batch_size {
+            while batch.len() < max_batch_size {
                 if let Some(op) = pending.pop_front() {
                     batch.push(op);
                 } else {

@@ -4,7 +4,9 @@
 use super::{NetworkConfig, NetworkStats};
 use std::sync::Arc;
 use tokio::sync::{RwLock, Mutex};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use tokio::net::{TcpListener, TcpStream};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use std::net::SocketAddr;
 use std::io::{Result, Error, ErrorKind};
 use memmap2::{Mmap, MmapOptions};
 
@@ -70,8 +72,8 @@ impl ZeroCopySocket {
     }
 
     /// 创建零拷贝监听器
-    pub fn bind(addr: &SocketAddr) -> Result<ZeroCopyListener> {
-        let listener = TcpListener::bind(addr)?;
+    pub async fn bind(addr: &SocketAddr) -> Result<ZeroCopyListener> {
+        let listener = TcpListener::bind(addr).await?;
         Ok(ZeroCopyListener {
             listener,
             config: NetworkConfig::default(),
@@ -174,7 +176,7 @@ pub struct ZeroCopyListener {
 impl ZeroCopyListener {
     /// 接受新连接
     pub async fn accept(&self) -> Result<(ZeroCopyStream, SocketAddr)> {
-        let (stream, addr) = self.listener.accept()?;
+        let (stream, addr) = self.listener.accept().await?;
         Ok((ZeroCopyStream { stream }, addr))
     }
 
@@ -186,7 +188,7 @@ impl ZeroCopyListener {
 
 /// 零拷贝流
 pub struct ZeroCopyStream {
-    stream: TcpStream,
+    stream: tokio::net::TcpStream,
 }
 
 impl ZeroCopyStream {
