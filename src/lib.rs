@@ -47,6 +47,7 @@ pub mod cli;
 pub mod web_api;  // Stage 74: Web API 生态系统完善
 pub mod debugger;  // Stage 58: Debugger integration
 pub mod observability;  // 可观测性系统
+pub mod runtime_config;  // Stage 91 Phase 2.3: 运行时配置管理
 // pub mod security;  // Stage 84: 企业级安全与合规 - temporarily disabled
 // pub mod aiops;  // Stage 85: AI 驱动运维 (AIOps) - temporarily disabled
 pub mod ai_inference;
