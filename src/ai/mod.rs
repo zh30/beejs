@@ -7,6 +7,7 @@ pub mod code_generator;
 pub mod smart_debugger;
 pub mod auto_optimizer;
 pub mod predictive_scaler;
+pub mod code_optimizer;
 pub mod llm_engine;
 pub mod acceleration_engine;
 pub mod model_cache;
@@ -40,6 +41,12 @@ pub use auto_optimizer::{
 pub use predictive_scaler::{
     PredictiveScaler, Metrics, TimeFrame, ResourcePrediction, TrendAnalysis,
     ScalingStrategy, ScalingAction, ScalingResult, Task, Schedule
+};
+pub use code_optimizer::{
+    CodeOptimizer, CodeOptimizationRequest, OptimizationSuggestion, CodeAnalyzer,
+    RefactorEngine, BottleneckDetector, OptimizationApplier, OptimizationResult,
+    CodePattern, PerformanceMetric, CodeAnalysis, DetectedBottleneck, RefactorSuggestion,
+    RefactorStep, MonitoringSuggestion, OptimizationLevel, PatternSeverity
 };
 pub use ai_performance_engine::{
     AiPerformanceEngine, AiPerformanceEngineConfig, PerformanceMetrics,
