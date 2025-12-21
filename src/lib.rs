@@ -56,6 +56,8 @@ pub mod cloudnative;  // Stage 88 Phase 4: 云原生集成
 
 // Stage 83: Enterprise modules
 pub mod enterprise;  // Stage 88 Phase 3: 企业级解决方案
+pub mod error;  // Stage 89 Phase 2: 统一错误处理系统
+pub mod fallback;  // Stage 89 Phase 2: 优雅降级机制
 pub mod concurrent_execution;
 pub mod shared_memory;
 pub mod shared_object_cache;
