@@ -47,6 +47,9 @@ pub enum SubCommand {
     /// Bundle code for production
     Bundle(BundleCommand),
 
+    /// Profile script performance
+    Profile(ProfileCommand),
+
     /// Debug a script with interactive debugger
     Debug {
         /// Script file to debug
@@ -215,4 +218,38 @@ impl Default for BundleTarget {
     fn default() -> Self {
         BundleTarget::Browser
     }
+}
+
+/// Profile command - performance profiling
+#[derive(Parser, Debug)]
+pub struct ProfileCommand {
+    /// Script file to profile
+    pub script: PathBuf,
+
+    /// Arguments to pass to the script
+    pub args: Vec<String>,
+
+    /// Enable detailed profiling
+    #[arg(short = 'v', long)]
+    pub detailed: bool,
+
+    /// Run in interactive mode
+    #[arg(short, long)]
+    pub interactive: bool,
+
+    /// Output format (text, json, html)
+    #[arg(long = "format", default_value = "text")]
+    pub output_format: String,
+
+    /// Output directory for reports
+    #[arg(short = 'd', long = "dir")]
+    pub output_dir: Option<PathBuf>,
+
+    /// Profiling duration in seconds
+    #[arg(short = 't', long, default_value = "10")]
+    pub duration: u64,
+
+    /// Sampling rate (events per second)
+    #[arg(short = 'r', long, default_value = "100")]
+    pub sampling_rate: u32,
 }

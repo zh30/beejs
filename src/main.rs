@@ -70,6 +70,12 @@ fn main() -> Result<()> {
             }
             run_bundle(cmd, app.verbose)
         }
+        Some(SubCommand::Profile(cmd)) => {
+            if app.verbose {
+                println!("📊 Profiling: {:?}", cmd.script);
+            }
+            run_profile(cmd, app.verbose)
+        }
         Some(SubCommand::Debug { file: _, break_at: _, port: _, web: _, pid: _ }) => {
             // Temporarily disabled for Stage 60 - Debugger module disabled
             if app.verbose {
@@ -476,6 +482,172 @@ fn print_no_command_help() {
 }
 
 /// Run debug session
+fn run_profile(
+    cmd: beejs::cli::commands::ProfileCommand,
+    verbose: bool,
+) -> Result<()> {
+    if verbose {
+        println!("📊 Profile configuration:");
+        println!("   Script: {:?}", cmd.script);
+        println!("   Detailed: {}", cmd.detailed);
+        println!("   Interactive: {}", cmd.interactive);
+        println!("   Output format: {}", cmd.output_format);
+        if let Some(ref dir) = cmd.output_dir {
+            println!("   Output directory: {:?}", dir);
+        }
+        println!("   Duration: {}s", cmd.duration);
+        println!("   Sampling rate: {} events/sec", cmd.sampling_rate);
+    }
+
+    // Check if script file exists
+    if !cmd.script.exists() {
+        return Err(anyhow::anyhow!("Script file not found: {:?}", cmd.script));
+    }
+
+    // Create profiling configuration
+    let mut config = beejs::monitor::profiler::AdvancedProfilerConfig::default();
+
+    // Update configuration based on command options
+    if cmd.detailed {
+        config.event_buffer_capacity = 100000;
+        config.sampling_config = beejs::monitor::profiler::SamplingConfig {
+            base_sample_rate: cmd.sampling_rate as f64 / 1000.0,
+            enable_dynamic_sampling: true,
+            min_sample_interval: std::time::Duration::from_millis(1),
+            max_sample_rate: cmd.sampling_rate as f64 * 2.0,
+            system_load_threshold: 0.8,
+            importance_threshold: 0.1,
+        };
+    }
+
+    if let Some(ref output_dir) = cmd.output_dir {
+        config.report_config.output_dir = Some(output_dir.to_string_lossy().to_string());
+    }
+
+    config.report_config.generate_json = cmd.output_format == "json" || cmd.output_format == "all";
+    config.report_config.generate_text = cmd.output_format == "text" || cmd.output_format == "all";
+    config.report_config.generate_html = cmd.output_format == "html" || cmd.output_format == "all";
+
+    if verbose {
+        println!("🔧 Starting performance profiler...");
+    }
+
+    // Create and start profiler
+    let mut profiler = beejs::monitor::profiler::AdvancedProfiler::new(config);
+    profiler.start();
+
+    if verbose {
+        println!("▶️  Running script with profiling enabled...");
+    }
+
+    // Run the script with profiling
+    let runtime = RuntimeLite::new(verbose)
+        .with_context(|| "Failed to create runtime for profiling")?;
+
+    // Validate the script file
+    let executor = ScriptExecutor::new(ExecutorConfig {
+        transpile_ts: true,
+        hot_reload: false,
+        source_maps: true,
+        verbose,
+    });
+
+    let file_type = executor.validate_script(&cmd.script)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+    // Build execution context
+    let ctx = ExecutionContext::new(cmd.script.clone())
+        .with_args(cmd.args);
+
+    // Read script content
+    let mut code = std::fs::read_to_string(&cmd.script)
+        .context("Failed to read script file")?;
+
+    // Check for and handle shebang
+    if let Some(shebang_line) = shebang::detect(&code) {
+        if verbose {
+            println!("🔖 Shebang detected: {}", shebang_line);
+        }
+        code = shebang::strip(&code).to_string();
+    }
+
+    // Prepend context setup code
+    let setup_code = ctx.to_setup_code();
+
+    // Transpile TypeScript if needed
+    let js_code = if file_type == FileType::TypeScript {
+        if verbose {
+            println!("🔄 Transpiling TypeScript to JavaScript...");
+        }
+        match beejs::typescript::compile_typescript(&code, &cmd.script.to_string_lossy()) {
+            Ok(output) => {
+                if verbose {
+                    println!("✅ TypeScript transpilation complete");
+                }
+                output.js_code
+            }
+            Err(e) => {
+                println!("❌ TypeScript transpilation failed: {}", e);
+                return Err(anyhow::anyhow!("TypeScript transpilation error: {}", e));
+            }
+        }
+    } else {
+        code.clone()
+    };
+
+    let full_code = format!("{}\n{}", setup_code, js_code);
+
+    // Execute based on type
+    let result = match file_type {
+        FileType::JavaScript | FileType::EsModule | FileType::CommonJs | FileType::TypeScript => {
+            match runtime.execute_code(&full_code) {
+                Ok(_) => {
+                    if verbose {
+                        println!("✅ Script executed successfully");
+                    }
+                    Ok(())
+                }
+                Err(e) => {
+                    println!("❌ Script execution failed: {}", e);
+                    Err(e).context("Script execution error")
+                }
+            }
+        }
+        FileType::Json => {
+            println!("{}", code);
+            Ok(())
+        }
+        _ => Err(anyhow::anyhow!("Unsupported file type: {:?}", file_type)),
+    };
+
+    // Stop profiling and generate report
+    profiler.stop();
+    let report = match profiler.generate_report() {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("Warning: Failed to generate performance report: {}", e);
+            "Performance report generation failed".to_string()
+        }
+    };
+
+    if verbose {
+        println!("✅ Profiling completed");
+    }
+
+    // Print report
+    println!("\n{}", report);
+
+    if verbose {
+        println!("📈 Performance snapshot:");
+        let snapshot = profiler.get_realtime_snapshot();
+        println!("   Uptime: {:.2}s", snapshot.get_uptime_seconds());
+        println!("   Traces per second: {:.2}", snapshot.get_traces_per_second());
+        println!("   Total traces: {}", snapshot.total_traces);
+    }
+
+    result
+}
+
 fn run_debug(
     _runtime: RuntimeLite,
     _cmd: beejs::cli::commands::SubCommand,
