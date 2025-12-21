@@ -2,7 +2,7 @@
 //! 分析函数调用栈，识别热点路径和性能瓶颈
 
 use std::collections::{HashMap, VecDeque};
-use std::time::{Duration, Instant};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// 调用栈帧
 #[derive(Debug, Clone)]
@@ -198,7 +198,7 @@ impl CallStackAnalyzer {
     ) -> Option<StackFrame> {
         if let Some(frame) = self.current_stack.pop_back() {
             if frame.function_name == function_name {
-                let execution_time = Duration::from_secs(end_timestamp - frame.timestamp);
+                let execution_time = Duration::from_nanos(end_timestamp - frame.timestamp);
 
                 let mut completed_frame = frame;
                 completed_frame.execution_time = execution_time;
@@ -451,11 +451,12 @@ mod tests {
     #[test]
     fn test_enter_and_exit_function() {
         let mut analyzer = CallStackAnalyzer::new(10);
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
 
         analyzer.enter_function("test_func", None, None, None, start_time);
         std::thread::sleep(Duration::from_millis(10));
-        let frame = analyzer.exit_function("test_func", Instant::now(), 1024);
+        let end_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        let frame = analyzer.exit_function("test_func", end_time, 1024);
 
         assert!(frame.is_some());
         let frame_data = frame.unwrap();
@@ -466,7 +467,7 @@ mod tests {
     #[test]
     fn test_recursion_detection() {
         let mut analyzer = CallStackAnalyzer::new(10);
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
 
         analyzer.enter_function("recursive_func", None, None, None, start_time);
         assert!(!analyzer.is_recursive_call("recursive_func"));
@@ -474,20 +475,22 @@ mod tests {
         analyzer.enter_function("recursive_func", None, None, None, start_time);
         assert!(analyzer.is_recursive_call("recursive_func"));
 
-        analyzer.exit_function("recursive_func", Instant::now(), 0);
+        let end_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        analyzer.exit_function("recursive_func", end_time, 0);
         assert!(!analyzer.is_recursive_call("recursive_func"));
     }
 
     #[test]
     fn test_analyze_stack() {
         let mut analyzer = CallStackAnalyzer::new(10);
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
 
         // 模拟函数调用
         analyzer.enter_function("func_a", None, None, None, start_time);
         analyzer.enter_function("func_b", None, None, None, start_time);
-        analyzer.exit_function("func_b", Instant::now(), 0);
-        analyzer.exit_function("func_a", Instant::now(), 0);
+        let end_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        analyzer.exit_function("func_b", end_time, 0);
+        analyzer.exit_function("func_a", end_time, 0);
 
         let analysis = analyzer.analyze_stack();
 
@@ -501,9 +504,10 @@ mod tests {
 
         // 模拟频繁调用的函数
         for _ in 0..1100 {
-            let start_time = Instant::now();
+            let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
             analyzer.enter_function("frequent_func", None, None, None, start_time);
-            analyzer.exit_function("frequent_func", Instant::now(), 0);
+            let end_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+            analyzer.exit_function("frequent_func", end_time, 0);
         }
 
         let analysis = analyzer.analyze_stack();
@@ -518,7 +522,7 @@ mod tests {
     #[test]
     fn test_max_depth_limit() {
         let mut analyzer = CallStackAnalyzer::new(3);
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
 
         // 尝试超过最大深度
         for i in 0..5 {
@@ -538,10 +542,11 @@ mod tests {
     #[test]
     fn test_clear() {
         let mut analyzer = CallStackAnalyzer::new(10);
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
 
         analyzer.enter_function("test_func", None, None, None, start_time);
-        analyzer.exit_function("test_func", Instant::now(), 0);
+        let end_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        analyzer.exit_function("test_func", end_time, 0);
 
         analyzer.clear();
 
@@ -552,13 +557,14 @@ mod tests {
     #[test]
     fn test_depth_statistics() {
         let mut analyzer = CallStackAnalyzer::new(10);
-        let start_time = Instant::now();
+        let start_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
 
         // 不同深度的调用
         analyzer.enter_function("depth_0", None, None, None, start_time);
         analyzer.enter_function("depth_1", None, None, None, start_time);
-        analyzer.exit_function("depth_1", Instant::now(), 0);
-        analyzer.exit_function("depth_0", Instant::now(), 0);
+        let end_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
+        analyzer.exit_function("depth_1", end_time, 0);
+        analyzer.exit_function("depth_0", end_time, 0);
 
         let analysis = analyzer.analyze_stack();
         assert!(analysis.depth_stats.avg_depth >= 0.0);

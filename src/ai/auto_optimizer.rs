@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 
@@ -557,7 +558,7 @@ mod tests {
                     line: Some(5),
                 },
             ],
-            timestamp: std::time::Instant::now(),
+            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64,
         };
 
         let report = optimizer.analyze_performance(&profile).await.unwrap();
@@ -583,7 +584,7 @@ mod tests {
                     line: None,
                 },
             ],
-            timestamp: std::time::Instant::now(),
+            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64,
         };
 
         let hotspots = optimizer.detect_hotspots(&profile).await.unwrap();
@@ -702,7 +703,7 @@ function processArray() {
             execution_time: 0,
             memory_usage: 0,
             function_calls: vec![],
-            timestamp: std::time::Instant::now(),
+            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64,
         };
 
         let report = optimizer.analyze_performance(&profile).await.unwrap();

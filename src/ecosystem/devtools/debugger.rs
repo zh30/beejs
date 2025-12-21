@@ -55,7 +55,7 @@ pub enum ThreadStatus {
 }
 
 /// 变量值
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum VariableValue {
     Undefined,
     Null,
@@ -335,7 +335,7 @@ mod tests {
         );
 
         debugger
-            .update_thread_state(thread_id, Some(location), variables)
+            .update_thread_state(thread_id, Some(location.clone()), variables)
             .await
             .unwrap();
 
