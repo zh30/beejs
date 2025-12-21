@@ -74,7 +74,7 @@ Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8
 | btoa | ✅ 可用 | Base64 编码 |
 | atob | ✅ 可用 | Base64 解码 |
 | performance | ✅ 可用 | 高精度计时 API |
-| WebSocket | ✅ 可用 | 基础完整（构造函数、属性、方法） |
+| WebSocket | ✅ 可用 | V8 集成完成，方法绑定正确 |
 | EventTarget | ⚠️ 部分 | 事件监听 |
 | crypto | ⚠️ 部分 | getRandomValues 骨架 |
 

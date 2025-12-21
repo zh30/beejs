@@ -32,27 +32,56 @@ pub fn init_web_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
+    eprintln!("🔧 [STAGE74] init_web_api called");
+
     // 按照依赖顺序初始化各个 API
 
     // 1. 基础 API（无依赖）
+    eprintln!("🔧 [STAGE74] Setting up crypto API...");
     setup_crypto_api(scope, context)?;
+    eprintln!("✅ [STAGE74] crypto API done");
+
+    eprintln!("🔧 [STAGE74] Setting up events API...");
     setup_events_api(scope, context)?;
+    eprintln!("✅ [STAGE74] events API done");
+
+    eprintln!("🔧 [STAGE74] Setting up abort API...");
     setup_abort_api(scope, context)?;
+    eprintln!("✅ [STAGE74] abort API done");
+
+    eprintln!("🔧 [STAGE74] Setting up timer API...");
     setup_timer_api(scope, context)?;
+    eprintln!("✅ [STAGE74] timer API done");
+
+    eprintln!("🔧 [STAGE74] Setting up encoding API...");
     setup_encoding_api(scope, context)?;     // Stage 74: Encoding APIs
+    eprintln!("✅ [STAGE74] encoding API done");
+
+    eprintln!("🔧 [STAGE74] Setting up performance API...");
     setup_performance_api(scope, context)?;  // Stage 74: Performance API
+    eprintln!("✅ [STAGE74] performance API done");
 
     // 2. URL API（依赖 events）
+    eprintln!("🔧 [STAGE74] Setting up URL API...");
     setup_url_api(scope, context)?;
+    eprintln!("✅ [STAGE74] URL API done");
 
     // 3. FormData API（依赖 URL）
+    eprintln!("🔧 [STAGE74] Setting up FormData API...");
     setup_form_data_api(scope, context)?;
+    eprintln!("✅ [STAGE74] FormData API done");
 
     // 4. Fetch API（依赖 URL, Headers, Request, Response, Abort）
+    eprintln!("🔧 [STAGE74] Setting up fetch API...");
     setup_fetch_api(scope, context)?;
+    eprintln!("✅ [STAGE74] fetch API done");
 
     // 5. WebSocket API（依赖 Events）
+    eprintln!("🔧 [STAGE74] Setting up WebSocket API...");
     setup_websocket_api(scope, context)?;
+    eprintln!("✅ [STAGE74] WebSocket API done");
+
+    eprintln!("🎉 [STAGE74] All Web APIs initialized!");
 
     Ok(())
 }

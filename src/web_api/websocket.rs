@@ -209,33 +209,43 @@ pub fn setup_websocket_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
+    eprintln!("🔧 [STAGE74] Setting up WebSocket API...");
+
     // Create WebSocket constructor
     let websocket_template = v8::FunctionTemplate::new(scope, websocket_constructor_callback);
 
     // Get constructor function
     let constructor = websocket_template.get_function(scope).unwrap();
+    eprintln!("✅ [STAGE74] Created WebSocket constructor");
 
     // Set WebSocket to global
     let global = context.global(scope);
     let websocket_key = v8::String::new(scope, "WebSocket").unwrap();
     global.set(scope, websocket_key.into(), constructor.into());
+    eprintln!("✅ [STAGE74] Set WebSocket to global");
 
     // Add ReadyState constants to constructor
     let connecting_key = v8::String::new(scope, "CONNECTING").unwrap();
     let connecting_val = v8::Integer::new(scope, 0).into();
     constructor.set(scope, connecting_key.into(), connecting_val);
+    eprintln!("✅ [STAGE74] Added CONNECTING constant");
 
     let open_key = v8::String::new(scope, "OPEN").unwrap();
     let open_val = v8::Integer::new(scope, 1).into();
     constructor.set(scope, open_key.into(), open_val);
+    eprintln!("✅ [STAGE74] Added OPEN constant");
 
     let closing_key = v8::String::new(scope, "CLOSING").unwrap();
     let closing_val = v8::Integer::new(scope, 2).into();
     constructor.set(scope, closing_key.into(), closing_val);
+    eprintln!("✅ [STAGE74] Added CLOSING constant");
 
     let closed_key = v8::String::new(scope, "CLOSED").unwrap();
     let closed_val = v8::Integer::new(scope, 3).into();
     constructor.set(scope, closed_key.into(), closed_val);
+    eprintln!("✅ [STAGE74] Added CLOSED constant");
+
+    eprintln!("🎉 [STAGE74] WebSocket API setup complete!");
 
     Ok(())
 }
@@ -246,17 +256,23 @@ fn websocket_constructor_callback(
     args: v8::FunctionCallbackArguments,
     mut retval: v8::ReturnValue,
 ) {
+    eprintln!("🔧 [STAGE74] WebSocket constructor called");
+
     let url = if args.length() > 0 {
         args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope)
     } else {
+        eprintln!("❌ [STAGE74] No URL provided");
         let error = v8::String::new(scope, "WebSocket URL required").unwrap();
         let error_obj = v8::Exception::error(scope, error);
         scope.throw_exception(error_obj.into());
         return;
     };
 
+    eprintln!("📡 [STAGE74] URL: {}", url);
+
     // Validate URL
     if url.is_empty() || (!url.starts_with("ws://") && !url.starts_with("wss://")) {
+        eprintln!("❌ [STAGE74] Invalid URL: {}", url);
         let error = v8::String::new(scope, "Invalid WebSocket URL").unwrap();
         let error_obj = v8::Exception::error(scope, error);
         scope.throw_exception(error_obj.into());
@@ -275,11 +291,14 @@ fn websocket_constructor_callback(
         Vec::new()
     };
 
+    eprintln!("📋 [STAGE74] Protocols: {:?}", protocols);
+
     // Create WebSocket instance
     let _websocket = WebSocket::new(url.clone(), protocols);
 
     // Create JavaScript object with WebSocket properties
     let ws_obj = v8::Object::new(scope);
+    eprintln!("✅ [STAGE74] Created ws_obj");
 
     // Set properties directly
     let ready_state_key = v8::String::new(scope, "readyState").unwrap();
@@ -323,22 +342,32 @@ fn websocket_constructor_callback(
     let onerror_val = v8::null(scope).into();
     ws_obj.set(scope, onerror_key.into(), onerror_val);
 
+    eprintln!("✅ [STAGE74] Set basic properties");
+
     // Add methods to instance
+    eprintln!("🔧 [STAGE74] Adding methods...");
+
     let send_key = v8::String::new(scope, "send").unwrap();
     let send_func = v8::Function::new(scope, websocket_send_callback).unwrap();
     ws_obj.set(scope, send_key.into(), send_func.into());
+    eprintln!("✅ [STAGE74] Added send method");
 
     let close_key = v8::String::new(scope, "close").unwrap();
     let close_func = v8::Function::new(scope, websocket_close_callback).unwrap();
     ws_obj.set(scope, close_key.into(), close_func.into());
+    eprintln!("✅ [STAGE74] Added close method");
 
     let add_event_key = v8::String::new(scope, "addEventListener").unwrap();
     let add_event_func = v8::Function::new(scope, websocket_add_event_listener_callback).unwrap();
     ws_obj.set(scope, add_event_key.into(), add_event_func.into());
+    eprintln!("✅ [STAGE74] Added addEventListener method");
 
     let remove_event_key = v8::String::new(scope, "removeEventListener").unwrap();
     let remove_event_func = v8::Function::new(scope, websocket_remove_event_listener_callback).unwrap();
     ws_obj.set(scope, remove_event_key.into(), remove_event_func.into());
+    eprintln!("✅ [STAGE74] Added removeEventListener method");
+
+    eprintln!("🎉 [STAGE74] WebSocket instance created successfully!");
 
     retval.set(ws_obj.into());
 }
