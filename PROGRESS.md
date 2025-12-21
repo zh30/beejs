@@ -3,9 +3,38 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-22 01:45)**: 🚀 Stage 85 AI 驱动运维 (AIOps) | ✅ Phase 1&2 完成
+**当前状态 (2025-12-22 02:30)**: 🚀 Stage 86 生态完善 | ✅ Phase 1 插件系统核心完成
 
 ## 最新更新 (2025-12-22)
+
+### 🚀 Stage 86: 生态完善 - 插件系统核心实现 (2025-12-22 02:30)
+**进度**: ✅ Phase 1 插件系统核心完成 | 🔄 Phase 2 工具集成待开始
+
+#### Stage 86 Phase 1 核心模块实现总结
+- ✅ **插件引擎核心** (src/ecosystem/plugin_engine.rs, 750+ 行)
+  - PluginEngine: 插件生命周期管理 (加载/卸载/激活/停用/执行)
+  - PluginSandbox: 安全执行沙箱，支持权限控制和资源限制
+  - PluginRegistry: 插件注册表，支持注册/注销/发现/搜索
+  - PluginLoader: 多语言插件加载器 (JavaScript/TypeScript/WebAssembly)
+  - PluginAPI: 标准化 API 接口，支持 v1/v2 版本
+  - PermissionSet: 细粒度权限管理 (fs.read, fs.write, net.fetch 等)
+  - ResourceLimits: 资源限制 (内存/CPU/文件句柄/网络连接)
+
+#### 测试覆盖
+- ✅ 22 个测试全部通过
+- 插件引擎测试: 初始化、加载、卸载、执行、列表
+- 沙箱测试: 隔离、权限授予、资源限制、超时
+- API 测试: 调用、注册、兼容性、发现
+- 加载器测试: JS/TS/WASM 加载、依赖解析
+- 集成测试: 完整生命周期、多插件协作、错误恢复
+- 性能基准: 插件加载 (<1s/100个)、执行 (<500ms/1000次)
+
+#### 文件变更
+- ✅ src/ecosystem/plugin_engine.rs (新建, 750+ 行)
+- ✅ src/ecosystem/mod.rs (更新, 添加 plugin_engine 模块)
+- ✅ tests/stage86_plugin_system_tests.rs (新建, 22 个测试)
+
+---
 
 ### 🚀 Stage 85: AI 驱动运维 (AIOps) 实施计划与核心模块实现 (2025-12-22 01:45)
 **进度**: ✅ Phase 1 智能故障预测完成 | ✅ Phase 2 自动根因分析完成 | 🔄 进行中
