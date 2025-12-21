@@ -18,6 +18,13 @@ pub mod http3_server;  // HTTP/3 服务器
 pub mod zero_copy;  // Stage 39.0: 零拷贝 I/O 优化
 pub mod memory_mapper;  // Stage 39.0: 内存映射管理器
 
+// Stage 92 Phase 3: 网络 I/O 极致优化
+pub mod zero_copy_network;
+pub mod batch_io;
+pub mod async_zero_copy;
+pub mod network_buffer;
+pub mod io_uring;
+
 // 重新导出主要类型
 pub use batch_processor::BatchProcessor;
 pub use buffer_pool::NetworkBufferPool;
@@ -28,6 +35,28 @@ pub use http3_server::Http3Server;
 
 // 网络缓冲区和统计类型
 pub use statistics::NetworkIoStatistics;
+
+// Stage 92 Phase 3: 导出优化模块
+pub use zero_copy_network::{
+    ZeroCopySocket, ZeroCopyListener, ZeroCopyStream,
+    ZeroCopyConfig, NetworkZeroCopyStats
+};
+pub use batch_io::{
+    BatchIoEngine, BatchOperation, BatchConfig,
+    BatchStats, BatchPriority
+};
+pub use async_zero_copy::{
+    AsyncZeroCopy, ZeroCopyError, TransferRequest,
+    TransferStats, ZeroCopyFuture
+};
+pub use network_buffer::{
+    NetworkBuffer, BufferPool, BufferConfig,
+    BufferStats, BufferType
+};
+pub use io_uring::{
+    IoUringEngine, UringSubmission, UringCompletion,
+    UringConfig, UringStats
+};
 
 use std::time::Duration;
 

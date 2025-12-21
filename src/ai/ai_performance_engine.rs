@@ -30,7 +30,7 @@ pub struct PerformanceMetrics {
     /// 并发任务数
     pub concurrent_tasks: u32,
     /// 时间戳
-    pub timestamp: Instant,
+    pub timestamp: u64,
 }
 
 /// 性能预测结果
@@ -136,7 +136,7 @@ impl AiPerformanceEngine {
             config: config.clone(),
             metrics_history: Arc::new(RwLock::new(VecDeque::with_capacity(config.prediction_window))),
             predictor: Arc::new(Mutex::new(PerformancePredictor::new(config.clone()))),
-            tensor_optimizer: Arc::new(Mutex::new(TensorOptimizer::new(config.clone()))),
+            tensor_optimizer: Arc::new(Mutex::new(TensorOptimizer::new())),
             prediction_cache: Arc::new(Mutex::new(HashMap::new())),
             is_training: Arc::new(Mutex::new(false)),
             training_progress: Arc::new(Mutex::new(0.0)),
@@ -177,7 +177,7 @@ impl AiPerformanceEngine {
 
         // 使用预测器进行预测
         let predictor = self.predictor.lock().unwrap();
-        let prediction = predictor.predict(&history)?;
+        let prediction = predictor.predict(history.as_slice())?;
 
         // 缓存预测结果
         let mut cache = self.prediction_cache.lock().unwrap();
@@ -215,7 +215,7 @@ impl AiPerformanceEngine {
     /// 获取性能趋势
     pub async fn get_performance_trend(&self, duration: Duration) -> Vec<PerformanceMetrics> {
         let history = self.metrics_history.read().await;
-        let cutoff = Instant::now() - duration;
+        let cutoff = chrono::Utc::now().timestamp() as u64 - duration.as_secs();
 
         history
             .iter()
@@ -268,7 +268,14 @@ impl AiPerformanceEngine {
             // 训练张量优化器
             {
                 let mut optimizer = tensor_optimizer.lock().unwrap();
-                optimizer.optimize(&history_data).await;
+                {
+                {
+            let optimizer_clone = Arc::clone(&optimizer);
+            let mut optimizer_guard = optimizer_clone.lock().unwrap();
+            optimizer_guard.optimize(&history_data).await;
+        }
+                optimizer_guard.optimize(&history_data).await;
+            };
             }
 
             *progress.lock().unwrap() = 1.0;
@@ -393,7 +400,7 @@ mod tests {
                 throughput: 10000.0 - i as f64 * 100.0,
                 latency: 100.0 + i as f64,
                 concurrent_tasks: 100,
-                timestamp: Instant::now(),
+                timestamp: chrono::Utc::now().timestamp() as u64,
             };
             engine.record_metrics(metrics).await;
         }
@@ -421,7 +428,7 @@ mod tests {
                 throughput: 8000.0,
                 latency: 150.0,
                 concurrent_tasks: 100,
-                timestamp: Instant::now(),
+                timestamp: chrono::Utc::now().timestamp() as u64,
             };
             engine.record_metrics(metrics).await;
         }

@@ -233,7 +233,7 @@ impl EnhancedZeroCopy {
         // 检查缓存
         {
             let cache = self.mmap_cache.read().await;
-            if let Some(mmap) = cache.get(path) {
+            if let Some(mmap) = cache.get(path).cloned() {
                 self.performance_stats.mmap_operations.fetch_add(1, Ordering::Relaxed);
                 return Ok(mmap.clone());
             }
@@ -263,7 +263,7 @@ impl EnhancedZeroCopy {
         // 使用 madvise 进行预取
         unsafe {
             let result = madvise(
-                addr.as_ptr() as *const c_void,
+                addr.as_ptr(),
                 size,
                 MADV_WILLNEED,
             );
@@ -393,7 +393,8 @@ impl EnhancedZeroCopy {
 
         // 创建内存映射
         let mmap = unsafe {
-            MmapOptions::new(size)
+            let mut opts = MmapOptions::new();
+            opts.len(size)
                 .map(&file)?
         };
 

@@ -4,7 +4,7 @@
 //! 支持批处理操作和缓存友好的内存布局优化
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use crate::ai::AiHardwareFeatures;
+// AiHardwareFeatures 在 mod.rs 中定义
 
 /// 矩阵结构体
 #[derive(Debug, Clone)]

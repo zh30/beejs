@@ -22,9 +22,9 @@ pub struct Task {
     /// 优先级 (0-100, 越高越优先)
     pub priority: u32,
     /// 创建时间
-    pub created_at: Instant,
+    pub created_at: u64,
     /// 截止时间
-    pub deadline: Option<Instant>,
+    pub deadline: Option<u64>,
     /// 依赖任务
     pub dependencies: Vec<String>,
 }
@@ -63,9 +63,9 @@ pub struct SchedulingDecision {
     /// 分配的工作线程
     pub assigned_worker: usize,
     /// 预计开始时间
-    pub estimated_start_time: Instant,
+    pub estimated_start_time: u64,
     /// 预计完成时间
-    pub estimated_completion_time: Instant,
+    pub estimated_completion_time: u64,
     /// 分配的资源
     pub allocated_resources: ResourceAllocation,
 }
@@ -207,7 +207,7 @@ impl IntelligentScheduler {
                 cpu_usage: 0.0,
                 memory_usage: 0.0,
                 avg_task_duration: 0,
-                last_active: Instant::now(),
+                last_active: std::time::Instant::now(),
             });
         }
 
@@ -231,7 +231,7 @@ impl IntelligentScheduler {
             return Err("任务队列已满".into());
         }
 
-        queue.push_back(task);
+        queue.push_back(task.clone());
         println!("任务已提交: {}, 队列长度: {}", task.id, queue.len());
 
         // 尝试立即调度
@@ -274,7 +274,7 @@ impl IntelligentScheduler {
                 // 更新工作线程状态
                 workers[worker_idx].current_load += self.calculate_task_load(&task);
                 workers[worker_idx].active_tasks += 1;
-                workers[worker_idx].last_active = Instant::now();
+                workers[worker_idx].last_active = std::time::Instant::now();
 
                 // 记录调度决策
                 {
@@ -303,7 +303,7 @@ impl IntelligentScheduler {
                 });
             } else {
                 // 没有合适的工作线程，重新放回队列
-                queue.push_back(task);
+                queue.push_back(task.clone());
             }
         }
     }
@@ -362,9 +362,9 @@ impl IntelligentScheduler {
         worker_idx: usize,
         worker: &WorkerState,
     ) -> SchedulingDecision {
-        let now = Instant::now();
+        let now = chrono::Utc::now().timestamp() as u64;
         let estimated_start_time = now;
-        let estimated_completion_time = now + Duration::from_millis(task.estimated_duration);
+        let estimated_completion_time = now + std::time::Duration::from_millis(task.estimated_duration);
 
         SchedulingDecision {
             task_id: task.id.clone(),
@@ -398,7 +398,7 @@ impl IntelligentScheduler {
             // 更新工作线程状态
             {
                 let mut workers = self.workers.write().await;
-                for worker in &mut workers {
+                for worker in &mut *workers {
                     if worker.active_tasks > 0 {
                         worker.active_tasks -= 1;
                     }
@@ -463,7 +463,7 @@ impl IntelligentScheduler {
             cpu_usage: 0.0,
             memory_usage: 0.0,
             avg_task_duration: 0,
-            last_active: Instant::now(),
+            last_active: std::time::Instant::now(),
         });
 
         {
@@ -514,7 +514,7 @@ impl IntelligentScheduler {
     }
 
     /// 启动调度器后台任务
-    pub fn start_background_tasks(self: Arc<Self>) {
+    pub fn start_background_tasks(self: &Arc<Self>) {
         // 任务完成处理
         tokio::spawn(async move {
             let scheduler = Arc::clone(&self);
@@ -556,7 +556,7 @@ mod tests {
                 concurrency: 1,
             },
             priority: 80,
-            created_at: Instant::now(),
+            created_at: chrono::Utc::now().timestamp() as u64,
             deadline: None,
             dependencies: Vec::new(),
         };

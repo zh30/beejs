@@ -90,9 +90,7 @@ pub mod string_interner;
 pub mod distributed;
 pub mod isolate_prewarmer;
 // pub mod precompiled_cache;  // Moved to startup module
-pub mod ai_batch_processor;
-pub mod ai_memory_pool;
-pub mod ai;  // Stage 78 Phase 3: AI 工作负载专用优化
+// pub mod ai;  // Stage 78 Phase 3: AI 工作负载专用优化 (moved to inline mod at line 21-35)
 pub mod optimization;  // Stage 78 Phase 4: 极致性能监控
 // pub mod enterprise;  // Stage 79: 企业级功能增强 (disabled for compilation)
 // pub mod ecosystem;  // Stage 80: 生态系统完善 (moved to Stage 91 Phase 3)
@@ -259,13 +257,13 @@ pub use runtime_lite::RuntimeLite;
 // pub use lib_minimal::Runtime;
 
 // 重新导出 AI 批处理相关类型
-pub use ai_batch_processor::{
+pub use ai::ai_batch_processor::{
     AiBatchProcessor, BatchConfig,
     AiTaskType, AiTaskResult,
 };
 
 // 重新导出 AI 内存池相关类型
-pub use ai_memory_pool::{
+pub use ai::ai_memory_pool::{
     AiMemoryPool, ModelMemoryConfig, create_llm_memory_pool,
 };
 

@@ -11,6 +11,10 @@ pub mod llm_engine;
 pub mod acceleration_engine;
 pub mod model_cache;
 pub mod model_manager;
+pub mod ai_memory_pool;
+pub mod ai_batch_processor;
+pub mod ai_async_queue;
+pub mod model_interface;
 
 // Re-export 公共 API
 pub use matrix_accelerator::{Matrix, MatrixAccelerator, MatrixPair, OptimizedMatrix, MatrixAcceleratorStats};
