@@ -1,0 +1,138 @@
+//! Enterprise tests
+//! Tests for security and compliance features
+
+use beejs::enterprise::{EnterpriseManager, SecurityManager, ComplianceManager, SecurityPolicy, SecurityRule, SecuritySeverity, ComplianceFramework};
+use std::sync::Arc;
+
+#[tokio::test]
+async fn test_security_manager() {
+    let manager = SecurityManager::new();
+
+    // Create and set a test policy
+    let mut policy = SecurityPolicy::new(
+        "Test Policy".to_string(),
+        "Test security policy".to_string(),
+    );
+
+    let rule = SecurityRule::new(
+        "TEST001".to_string(),
+        "Test Rule".to_string(),
+        SecuritySeverity::High,
+        "eval".to_string(),
+        "Test description".to_string(),
+        "Test remediation".to_string(),
+    );
+
+    policy.add_rule(rule);
+    manager.add_policy(policy.clone()).await.unwrap();
+    manager.set_active_policy("Test Policy").await.unwrap();
+
+    // Test with unsafe code
+    let unsafe_code = "eval('alert(1)');";
+    let result = manager.enforce_policy(unsafe_code, "test_user").await.unwrap();
+    assert!(!result.allowed);
+    assert!(!result.violations.is_empty());
+
+    // Test with safe code
+    let safe_code = "const x = 42;";
+    let result = manager.enforce_policy(safe_code, "test_user").await.unwrap();
+    assert!(result.allowed);
+}
+
+#[tokio::test]
+async fn test_compliance_manager() {
+    let manager = ComplianceManager::new();
+
+    let script = "localStorage.setItem('data', 'value');";
+    let framework = ComplianceFramework::GDPR;
+
+    let report = manager.check_compliance(script, framework).await.unwrap();
+    assert!(report.score >= 0.0 && report.score <= 1.0);
+    assert!(!report.violations.is_empty());
+}
+
+#[tokio::test]
+async fn test_enterprise_manager() {
+    let manager = EnterpriseManager::new();
+
+    let script = "console.log('Hello');";
+    let user_id = "test_user";
+
+    let result = manager.run_full_audit(script, user_id).await.unwrap();
+    assert!(result.overall_score >= 0.0 && result.overall_score <= 1.0);
+    assert!(!result.compliance.is_empty());
+}
+
+#[tokio::test]
+async fn test_gdpr_compliance() {
+    let manager = ComplianceManager::new();
+
+    let script = r#"
+localStorage.setItem('user_data', 'sensitive');
+fetch('/api/data');
+"#;
+
+    let report = manager.check_compliance(script, ComplianceFramework::GDPR).await.unwrap();
+    assert!(!report.violations.is_empty());
+    assert!(report.violations.iter().any(|v| v.requirement_id == "GDPR-001"));
+}
+
+#[tokio::test]
+async fn test_hipaa_compliance() {
+    let manager = ComplianceManager::new();
+
+    let script = "const data = 'patient_info';";
+    let report = manager.check_compliance(script, ComplianceFramework::HIPAA).await.unwrap();
+    assert!(!report.violations.is_empty());
+    assert!(report.violations.iter().any(|v| v.requirement_id == "HIPAA-001"));
+}
+
+#[tokio::test]
+async fn test_soc2_compliance() {
+    let manager = ComplianceManager::new();
+
+    let script = "const x = 42;";
+    let report = manager.check_compliance(script, ComplianceFramework::SOC2).await.unwrap();
+    assert!(!report.violations.is_empty());
+    assert!(report.violations.iter().any(|v| v.requirement_id == "SOC2-001"));
+}
+
+#[tokio::test]
+async fn test_multiple_frameworks() {
+    let manager = ComplianceManager::new();
+
+    let script = "eval('test');";
+
+    let frameworks = vec![
+        ComplianceFramework::GDPR,
+        ComplianceFramework::HIPAA,
+        ComplianceFramework::SOC2,
+        ComplianceFramework::ISO27001,
+    ];
+
+    for framework in frameworks {
+        let report = manager.check_compliance(script, framework).await.unwrap();
+        assert!(report.score >= 0.0 && report.score <= 1.0);
+    }
+}
+
+#[tokio::test]
+async fn test_audit_logging() {
+    let manager = SecurityManager::new();
+
+    // Set up a policy
+    let mut policy = SecurityPolicy::new(
+        "Audit Policy".to_string(),
+        "Policy with logging".to_string(),
+    );
+    manager.add_policy(policy.clone()).await.unwrap();
+    manager.set_active_policy("Audit Policy").await.unwrap();
+
+    // Execute some code to generate audit logs
+    manager.enforce_policy("console.log('test')", "user1").await.unwrap();
+    manager.enforce_policy("console.log('test2')", "user2").await.unwrap();
+
+    // Check audit logs
+    let logs = manager.get_audit_logs().await.unwrap();
+    assert!(logs.len() >= 2);
+}
