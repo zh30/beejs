@@ -68,7 +68,7 @@ pub struct EnhancedRepl {
     /// Syntax highlighter
     highlighter: ReplHighlighter,
     /// rustyline editor for enhanced input
-    editor: Editor<()>,
+    editor: Editor<(), rustyline::history::DefaultHistory>,
     /// Command history (for .save command)
     history: VecDeque<String>,
     /// Current multiline input buffer
@@ -94,7 +94,7 @@ impl EnhancedRepl {
 
     /// Create with custom configuration
     pub fn with_config(runtime: Arc<RuntimeLite>, config: EnhancedReplConfig) -> anyhow::Result<Self> {
-        let mut editor = Editor::<()>::new()
+        let mut editor = Editor::<(), rustyline::history::DefaultHistory>::new()
             .map_err(|e| anyhow::anyhow!("Failed to create editor: {}", e))?;
 
         // Load history if configured
@@ -128,9 +128,9 @@ impl EnhancedRepl {
 
     /// Set V8 runtime context for inspection
     pub fn set_v8_runtime(&mut self, isolate: Arc<v8::Isolate>, context: v8::Global<v8::Context>) {
-        self.isolate = Some(isolate);
-        self.context = Some(context);
-        self.completer.set_runtime(isolate, context.clone());
+        self.isolate = Some(Arc::clone(&isolate));
+        self.context = Some(context.clone());
+        self.completer.set_runtime(isolate, context);
     }
 
     /// Run the enhanced REPL
@@ -185,7 +185,8 @@ impl EnhancedRepl {
 
         // Handle special REPL commands
         if trimmed.starts_with('.') {
-            return self.handle_special_command(trimmed);
+            let _ = self.handle_special_command(trimmed)?;
+            return Ok(());
         }
 
         // Skip empty lines

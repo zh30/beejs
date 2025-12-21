@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::script_executor::ModuleSystem;
+use crate::cli::script_executor::ModuleSystem;
 
 /// Module resolution result
 #[derive(Debug, Clone)]
@@ -132,11 +132,16 @@ impl ModuleResolver {
                     return self.resolve_package(candidate);
                 }
             } else {
-                candidate.set_extension(ext.trim_start_matches('.'));
-                if candidate.exists() {
+                let candidate_with_ext = {
+                    let mut temp = candidate.clone();
+                    temp.set_extension(ext.trim_start_matches('.'));
+                    temp
+                };
+                if candidate_with_ext.exists() {
+                    let module_type = self.get_module_type(&candidate_with_ext);
                     return Ok(ResolutionResult {
-                        path: candidate,
-                        module_type: self.get_module_type(&candidate),
+                        path: candidate_with_ext,
+                        module_type,
                         is_package: false,
                     });
                 }
@@ -185,14 +190,18 @@ impl ModuleResolver {
             // Try as file with extensions
             let extensions = ["", ".js", ".json", ".node"];
             for ext in &extensions {
-                let mut candidate = node_modules.clone();
-                if !ext.is_empty() {
-                    candidate.set_extension(ext.trim_start_matches('.'));
-                }
+                let candidate = {
+                    let mut temp = node_modules.clone();
+                    if !ext.is_empty() {
+                        temp.set_extension(ext.trim_start_matches('.'));
+                    }
+                    temp
+                };
                 if candidate.exists() {
+                    let module_type = self.get_module_type(&candidate);
                     return Ok(ResolutionResult {
                         path: candidate,
-                        module_type: self.get_module_type(&candidate),
+                        module_type,
                         is_package: false,
                     });
                 }
@@ -227,15 +236,17 @@ impl ModuleResolver {
                             for ext in &extensions {
                                 let candidate = package_path.join(format!("{}{}", main, ext));
                                 if candidate.exists() {
-                                    main_path = candidate;
+                                    main_path = candidate.clone();
                                     break;
                                 }
                             }
                         }
-                        
+
+                        let final_path = main_path.clone();
+                        let module_type = self.get_module_type(&final_path);
                         Ok(ResolutionResult {
-                            path: main_path,
-                            module_type: self.get_module_type(&main_path),
+                            path: final_path,
+                            module_type,
                             is_package: true,
                         })
                     }

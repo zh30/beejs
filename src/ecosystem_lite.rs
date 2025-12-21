@@ -264,7 +264,7 @@ impl PackageManagerIntegrator {
             version,
             dependencies,
             peer_dependencies,
-            exports: package_json["exports"].clone(),
+            exports: Some(package_json["exports"].clone()),
             types: package_json["types"].as_str().map(|s| s.to_string()),
             main: package_json["main"].as_str().map(|s| s.to_string()),
         })

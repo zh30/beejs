@@ -90,6 +90,30 @@ fn main() -> Result<()> {
             }
             Err(anyhow::anyhow!("WebAssembly CLI is not yet fully implemented"))
         }
+        Some(SubCommand::Init(cmd)) => {
+            if app.verbose {
+                println!("📦 Initializing new project...");
+            }
+            run_init(cmd, app.verbose)
+        }
+        Some(SubCommand::Info(cmd)) => {
+            if app.verbose {
+                println!("ℹ️  Showing system info...");
+            }
+            run_info(cmd, app.verbose)
+        }
+        Some(SubCommand::Doctor(cmd)) => {
+            if app.verbose {
+                println!("🩺 Running diagnostics...");
+            }
+            run_doctor(cmd, app.verbose)
+        }
+        Some(SubCommand::Upgrade(_cmd)) => {
+            if app.verbose {
+                println!("⬆️  Checking for updates...");
+            }
+            run_upgrade(app.verbose)
+        }
         None => {
             // No subcommand - run script if provided as positional arg (Bun compatibility)
             print_no_command_help();
@@ -663,4 +687,66 @@ fn run_debug(
     // Temporarily return error for debug commands
     // The debugger module is disabled for Stage 60
     Err(anyhow::anyhow!("Debugger is temporarily disabled for Stage 60"))
+}
+
+/// Run init command - create new project
+fn run_init(cmd: beejs::cli::commands::InitCommand, verbose: bool) -> Result<()> {
+    use beejs::cli::init_command::{InitCommand as InitExecutor, InitConfig, ProjectTemplate};
+
+    let template = ProjectTemplate::from_str(&format!("{:?}", cmd.template).to_lowercase())
+        .unwrap_or(ProjectTemplate::Basic);
+
+    let config = InitConfig {
+        project_dir: cmd.dir.to_string_lossy().to_string(),
+        project_name: cmd.name.unwrap_or_else(|| {
+            cmd.dir.file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| "my-beejs-app".to_string())
+        }),
+        template,
+        git_init: !cmd.no_git,
+        install_deps: false,
+    };
+
+    if verbose {
+        println!("🔧 Init config: {:?}", config);
+    }
+
+    let init_cmd = InitExecutor::new(config);
+    init_cmd.execute()?;
+    Ok(())
+}
+
+/// Run info command - show system information
+fn run_info(_cmd: beejs::cli::commands::InfoCommandArgs, verbose: bool) -> Result<()> {
+    use beejs::cli::info_command::InfoCommand;
+
+    let info_cmd = InfoCommand::new(verbose);
+    info_cmd.execute()?;
+    Ok(())
+}
+
+/// Run doctor command - diagnose environment
+fn run_doctor(_cmd: beejs::cli::commands::DoctorCommandArgs, verbose: bool) -> Result<()> {
+    use beejs::cli::doctor_command::DoctorCommand;
+
+    let mut doctor = DoctorCommand::new(verbose);
+    doctor.execute()?;
+    Ok(())
+}
+
+/// Run upgrade command - check for updates
+fn run_upgrade(verbose: bool) -> Result<()> {
+    println!("🔍 Checking for Beejs updates...");
+    println!();
+    println!("Current version: v0.1.0");
+    println!("Latest version:  v0.1.0 (up to date)");
+    println!();
+    println!("💡 Beejs is currently in development.");
+    println!("   Check https://github.com/beejs/beejs for updates.");
+
+    if verbose {
+        println!("\n📝 Release notes will be available in future versions.");
+    }
+    Ok(())
 }

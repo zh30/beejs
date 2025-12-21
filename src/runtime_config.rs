@@ -10,7 +10,6 @@ use tokio::sync::RwLock;
 use tracing::{info, warn, error};
 
 /// 运行时配置管理器
-#[derive(Debug, Clone)]
 pub struct RuntimeConfigManager {
     /// 当前配置
     config: Arc<RwLock<RuntimeConfig>>,
@@ -109,6 +108,7 @@ pub struct GCTuningConfig {
 
 /// 性能配置节
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct PerformanceConfigSection {
     /// 是否启用性能监控
     pub enable_profiling: bool,
@@ -126,6 +126,7 @@ pub struct PerformanceConfigSection {
 
 /// 监控配置节
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct MonitoringConfigSection {
     /// 是否启用 Prometheus 导出
     pub enable_prometheus: bool,
@@ -141,6 +142,7 @@ pub struct MonitoringConfigSection {
 
 /// 日志配置节
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct LoggingConfigSection {
     /// 日志级别
     pub log_level: String,
@@ -156,6 +158,7 @@ pub struct LoggingConfigSection {
 
 /// 安全配置节
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct SecurityConfigSection {
     /// 是否启用安全沙箱
     pub enable_sandbox: bool,
@@ -470,8 +473,9 @@ impl RuntimeConfigManager {
 
         // 触发变更回调
         let callbacks = self.change_callbacks.read().await;
+        let config_value = serde_json::to_value(&*config)?;
         for callback in callbacks.iter() {
-            callback("runtime_config", &serde_json::to_value(&config)?);
+            callback("runtime_config", &config_value);
         }
 
         Ok(())
@@ -487,42 +491,59 @@ impl RuntimeConfigManager {
         T: Serialize + for<'de> Deserialize<'de> + Clone,
     {
         let mut config = self.config.write().await;
+        let value_json = serde_json::to_value(value)?;
 
         // 路径更新（例如 "v8.max_heap_size_mb"）
         let parts: Vec<&str> = path.split('.').collect();
         if parts.len() >= 2 {
             match parts[0] {
                 "runtime" => {
-                    let value: T = serde_json::from_value(serde_json::to_value(value)?)?;
-                    config.runtime = self.update_section_field(config.runtime.clone(), &parts[1..], value)?;
+                    let section_json = serde_json::to_value(&config.runtime)?;
+                    if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
+                        config.runtime = serde_json::from_value(updated)?;
+                    }
                 }
                 "v8" => {
-                    let value: T = serde_json::from_value(serde_json::to_value(value)?)?;
-                    config.v8 = self.update_section_field(config.v8.clone(), &parts[1..], value)?;
+                    let section_json = serde_json::to_value(&config.v8)?;
+                    if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
+                        config.v8 = serde_json::from_value(updated)?;
+                    }
                 }
                 "memory" => {
-                    let value: T = serde_json::from_value(serde_json::to_value(value)?)?;
-                    config.memory = self.update_section_field(config.memory.clone(), &parts[1..], value)?;
+                    let section_json = serde_json::to_value(&config.memory)?;
+                    if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
+                        config.memory = serde_json::from_value(updated)?;
+                    }
                 }
                 "performance" => {
-                    let value: T = serde_json::from_value(serde_json::to_value(value)?)?;
-                    config.performance = self.update_section_field(config.performance.clone(), &parts[1..], value)?;
+                    let section_json = serde_json::to_value(&config.performance)?;
+                    if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
+                        config.performance = serde_json::from_value(updated)?;
+                    }
                 }
                 "monitoring" => {
-                    let value: T = serde_json::from_value(serde_json::to_value(value)?)?;
-                    config.monitoring = self.update_section_field(config.monitoring.clone(), &parts[1..], value)?;
+                    let section_json = serde_json::to_value(&config.monitoring)?;
+                    if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
+                        config.monitoring = serde_json::from_value(updated)?;
+                    }
                 }
                 "logging" => {
-                    let value: T = serde_json::from_value(serde_json::to_value(value)?)?;
-                    config.logging = self.update_section_field(config.logging.clone(), &parts[1..], value)?;
+                    let section_json = serde_json::to_value(&config.logging)?;
+                    if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
+                        config.logging = serde_json::from_value(updated)?;
+                    }
                 }
                 "security" => {
-                    let value: T = serde_json::from_value(serde_json::to_value(value)?)?;
-                    config.security = self.update_section_field(config.security.clone(), &parts[1..], value)?;
+                    let section_json = serde_json::to_value(&config.security)?;
+                    if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
+                        config.security = serde_json::from_value(updated)?;
+                    }
                 }
                 "network" => {
-                    let value: T = serde_json::from_value(serde_json::to_value(value)?)?;
-                    config.network = self.update_section_field(config.network.clone(), &parts[1..], value)?;
+                    let section_json = serde_json::to_value(&config.network)?;
+                    if let Ok(updated) = self.update_json_field(section_json, &parts[1..], value_json) {
+                        config.network = serde_json::from_value(updated)?;
+                    }
                 }
                 _ => return Err(format!("未知的配置节: {}", parts[0]).into()),
             }
@@ -531,32 +552,24 @@ impl RuntimeConfigManager {
         Ok(())
     }
 
-    /// 更新配置节的特定字段
-    fn update_section_field<T: Serialize + for<'de> Deserialize<'de> + Clone>(
+    /// 更新 JSON 字段
+    fn update_json_field(
         &self,
-        section: T,
+        mut section_json: serde_json::Value,
         field_parts: &[&str],
-        value: T,
-    ) -> Result<T, Box<dyn std::error::Error>> {
-        if field_parts.is_empty() {
-            return Ok(value);
-        }
-
-        // 使用 JSON 进行字段更新
-        let mut section_json = serde_json::to_value(&section)?;
-        let value_json = serde_json::to_value(&value)?;
-
+        value_json: serde_json::Value,
+    ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
         // 简单字段更新（不支持嵌套路径）
         if field_parts.len() == 1 {
             if let serde_json::Value::Object(ref mut map) = section_json {
                 map.insert(field_parts[0].to_string(), value_json);
-                Ok(serde_json::from_value(section_json)?)
+                Ok(section_json)
             } else {
                 Err("配置节必须是对象类型".into())
             }
         } else {
             // 对于嵌套路径，简单替换整个值
-            Ok(value)
+            Ok(value_json)
         }
     }
 
