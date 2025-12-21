@@ -47,8 +47,8 @@ libc = "0.2"
 # Temporary file support
 tempfile = "3.0"
 
-# WebSocket support
-tokio-tungstenite = "0.21"
+# WebSocket support (with TLS)
+tokio-tungstenite = { version = "0.21", features = ["native-tls"] }
 tungstenite = "0.21"
 
 # Logging
