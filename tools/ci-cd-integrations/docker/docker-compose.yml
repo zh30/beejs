@@ -1,0 +1,192 @@
+# Beejs Docker Compose Configuration
+# This compose file provides a complete Beejs development environment
+
+version: '3.8'
+
+services:
+  # Beejs Runtime Service
+  beejs-runtime:
+    build:
+      context: .
+      target: development
+      dockerfile: tools/ci-cd-integrations/docker/Dockerfile
+    image: beejs/runtime:dev
+    container_name: beejs-dev
+    volumes:
+      - .:/app
+      - beejs-cache:/app/node_modules
+    ports:
+      - "3000:3000"  # Application port
+      - "9229:9229"  # Debug port
+    environment:
+      - BEEJS_ENV=development
+      - BEEJS_DEBUG=true
+      - NODE_ENV=development
+    command: >
+      sh -c "
+        echo '🐝 Starting Beejs development server...' &&
+        beejs run --watch src/index.js
+      "
+    networks:
+      - beejs-network
+    restart: unless-stopped
+
+  # Test Runner Service
+  beejs-test:
+    build:
+      context: .
+      target: test
+      dockerfile: tools/ci-cd-integrations/docker/Dockerfile
+    image: beejs/runtime:test
+    container_name: beejs-test
+    volumes:
+      - .:/app
+      - beejs-cache:/app/node_modules
+      - test-results:/tmp
+    environment:
+      - BEEJS_ENV=test
+      - NODE_ENV=test
+    command: >
+      sh -c "
+        echo '🧪 Running Beejs tests...' &&
+        beejs test --reporter=json --output=/tmp/test-results.json &&
+        cat /tmp/test-results.json
+      "
+    networks:
+      - beejs-network
+    depends_on:
+      - redis
+      - postgres
+
+  # Build Service
+  beejs-build:
+    build:
+      context: .
+      target: build
+      dockerfile: tools/ci-cd-integrations/docker/Dockerfile
+    image: beejs/runtime:build
+    container_name: beejs-build
+    volumes:
+      - .:/app
+      - beejs-cache:/app/node_modules
+      - build-artifacts:/app/dist
+    environment:
+      - BEEJS_ENV=production
+      - NODE_ENV=production
+    command: >
+      sh -c "
+        echo '🔨 Building application...' &&
+        beejs bundle src/index.js --outfile=dist/bundle.js --minify &&
+        echo '✅ Build complete' &&
+        ls -lah dist/
+      "
+    networks:
+      - beejs-network
+
+  # Production Service
+  beejs-prod:
+    build:
+      context: .
+      target: production
+      dockerfile: tools/ci-cd-integrations/docker/Dockerfile
+    image: beejs/runtime:latest
+    container_name: beejs-prod
+    ports:
+      - "3000:3000"
+    environment:
+      - BEEJS_ENV=production
+      - NODE_ENV=production
+      - PORT=3000
+    command: ["beejs", "start"]
+    networks:
+      - beejs-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "beejs", "--version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Supporting Services
+  redis:
+    image: redis:7-alpine
+    container_name: beejs-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - beejs-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: beejs-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=beejs
+      - POSTGRES_USER=beejs
+      - POSTGRES_PASSWORD=beejs123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - beejs-network
+    restart: unless-stopped
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: beejs-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./tools/ci-cd-integrations/docker/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - beejs-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: beejs-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=beejs123
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - beejs-network
+    restart: unless-stopped
+
+# Volumes
+volumes:
+  beejs-cache:
+    driver: local
+  test-results:
+    driver: local
+  build-artifacts:
+    driver: local
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+# Networks
+networks:
+  beejs-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
