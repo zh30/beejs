@@ -5,8 +5,6 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
-use crate::Runtime;
-
 /// 模型管理器配置
 #[derive(Debug, Clone)]
 pub struct ManagerConfig {
@@ -20,7 +18,7 @@ pub struct ManagerConfig {
 pub struct ModelInfo {
     pub name: String,
     pub version: String,
-    pub model_type: crate::ai_model_interface::ModelType,
+    pub model_type: String,  // 简化为字符串类型
     pub endpoint: String,
     pub capabilities: Vec<String>,
 }
@@ -41,7 +39,6 @@ pub struct ModelRegistryConfig {
 
 /// 模型路由器
 pub struct ModelRouter {
-    runtime: Arc<Runtime>,
     config: RouterConfig,
     model_metrics: Arc<RwLock<HashMap<String, ModelMetrics>>>,
     route_cache: Arc<RwLock<HashMap<String, (String, Instant)>>>,
@@ -147,9 +144,8 @@ impl ModelRegistry {
 
 impl ModelRouter {
     /// 创建新的模型路由器
-    pub fn new(runtime: &Arc<Runtime>, config: RouterConfig) -> Result<Self, String> {
+    pub fn new(config: RouterConfig) -> Result<Self, String> {
         Ok(ModelRouter {
-            runtime: runtime.clone(),
             config: config.clone(),
             model_metrics: Arc::new(RwLock::new(HashMap::new())),
             route_cache: Arc::new(RwLock::new(HashMap::new())),
@@ -448,11 +444,7 @@ mod tests {
         let model_info = ModelInfo {
             name: "test-model".to_string(),
             version: "1.0".to_string(),
-            model_type: crate::ai_model_interface::ModelType::LanguageModel {
-                model_name: "test-model".to_string(),
-                max_tokens: 4096,
-                temperature: 0.7,
-            },
+            model_type: "LanguageModel".to_string(),  // 简化为字符串
             endpoint: "http://localhost:8080".to_string(),
             capabilities: vec!["text-generation".to_string()],
         };
@@ -463,21 +455,19 @@ mod tests {
 
     #[test]
     fn test_model_router_creation() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
         let config = RouterConfig {
             load_balancing: LoadBalancingStrategy::RoundRobin,
             fallback_enabled: true,
             route_cache_ttl: Duration::from_secs(60),
         };
 
-        let router = ModelRouter::new(&runtime, config);
+        let router = ModelRouter::new(config);
         assert!(router.is_ok());
     }
 
     #[test]
     fn test_intelligent_routing() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
-        let mut router = ModelRouter::new(&runtime, RouterConfig {
+        let mut router = ModelRouter::new(RouterConfig {
             load_balancing: LoadBalancingStrategy::LatencyBased,
             fallback_enabled: true,
             route_cache_ttl: Duration::from_secs(60),

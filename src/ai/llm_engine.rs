@@ -5,8 +5,6 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
-use crate::Runtime;
-
 /// LLM 配置
 #[derive(Debug, Clone)]
 pub struct LlmConfig {
