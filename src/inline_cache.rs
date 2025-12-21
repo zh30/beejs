@@ -17,6 +17,26 @@ pub fn fast_hash(input: &str) -> u64 {
     hash
 }
 
+/// 优化级别枚举 - Stage 90 Phase 1.2 增强版
+/// 支持 4 级优化策略：None、Basic、Aggressive、Maximum
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Hash)]
+pub enum OptimizationLevel {
+    /// 无优化
+    None = 0,
+    /// 基础优化 (1.5x 加速)
+    Basic = 1,
+    /// 激进优化 (2.5x 加速)
+    Aggressive = 2,
+    /// 最大优化 (4.0x 加速)
+    Maximum = 3,
+}
+
+impl Default for OptimizationLevel {
+    fn default() -> Self {
+        OptimizationLevel::None
+    }
+}
+
 /// Represents the type of cache entry (property access, function call, or operator)
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CacheType {
@@ -716,7 +736,6 @@ mod tests {
 
 /// 多态内联缓存 - 支持多种对象类型的动态缓存
 /// Stage 90 Phase 1.2: 增强内联缓存功能
-#[derive(Debug)]
 pub struct PolymorphicInlineCache {
     /// 缓存集合：支持多种对象类型
     caches: Arc<RwLock<HashMap<String, Box<dyn CacheStrategy + Send + Sync>>>>,
@@ -1028,7 +1047,7 @@ impl PolymorphicInlineCache {
     /// 获取热点代码
     pub fn get_hot_code(&self) -> Vec<HotCodeEntry> {
         let tracker = self.hot_code_tracker.read().unwrap();
-        tracker.get_hot_code().cloned().collect()
+        tracker.get_hot_code().into_iter().cloned().collect()
     }
 
     /// 检查是否为热点代码

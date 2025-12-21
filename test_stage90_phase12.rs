@@ -1,10 +1,13 @@
 // Stage 90 Phase 1.2 测试 - 多态内联缓存
+// 测试驱动开发：先写测试，再实现功能
+
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
+// 由于 OptimizationLevel 在多个模块中定义不一致，我们在这里定义一个统一的版本
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
-enum OptimizationLevel {
+pub enum OptimizationLevel {
     None = 0,
     Basic = 1,
     Aggressive = 2,
@@ -12,20 +15,20 @@ enum OptimizationLevel {
 }
 
 #[derive(Debug, Clone)]
-struct CacheEntry {
-    cached_value: String,
-    type_version: u64,
-    access_count: usize,
-    last_accessed: Instant,
+pub struct CacheEntry {
+    pub cached_value: String,
+    pub type_version: u64,
+    pub access_count: usize,
+    pub last_accessed: Instant,
 }
 
 #[derive(Debug, Clone)]
-struct HotCodeEntry {
-    code_location: String,
-    execution_count: u64,
-    last_executed: Instant,
-    avg_execution_time_ns: u64,
-    optimization_level: OptimizationLevel,
+pub struct HotCodeEntry {
+    pub code_location: String,
+    pub execution_count: u64,
+    pub last_executed: Instant,
+    pub avg_execution_time_ns: u64,
+    pub optimization_level: OptimizationLevel,
 }
 
 struct HotCodeTracker {
