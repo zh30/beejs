@@ -1,0 +1,150 @@
+//! Cloud-native tests
+//! Tests for Kubernetes and service mesh integration
+
+use beejs::cloudnative::{CloudNativeRuntime, K8sRuntime, K8sConfig, ServiceMesh, ServiceMeshConfig, ServiceMeshType};
+use beejs::enterprise::ComplianceFramework;
+
+#[tokio::test]
+async fn test_k8s_runtime() {
+    let config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+    let runtime = K8sRuntime::new(config).unwrap();
+
+    let script = "console.log('Hello from K8s');";
+    let result = runtime.execute_in_pod(script, "node:18-alpine").await;
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_k8s_autoscale() {
+    let config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+    let runtime = K8sRuntime::new(config).unwrap();
+
+    let script = "console.log('Auto-scaling test');";
+    let results = runtime.execute_with_autoscale(script, 3).await.unwrap();
+    assert_eq!(results.len(), 3);
+}
+
+#[tokio::test]
+async fn test_service_mesh() {
+    let config = ServiceMeshConfig::new(
+        ServiceMeshType::Istio,
+        "http://istio:15010".to_string(),
+        "default".to_string(),
+    );
+
+    let mesh = ServiceMesh::new(config).unwrap();
+
+    // Register a service
+    let service = beejs::cloudnative::ServiceInfo {
+        name: "test-service".to_string(),
+        namespace: "default".to_string(),
+        endpoints: vec![
+            beejs::cloudnative::ServiceEndpoint {
+                address: "10.0.0.1".to_string(),
+                port: 8080,
+                weight: 100,
+                health: beejs::cloudnative::HealthStatus::Healthy,
+            },
+        ],
+        labels: std::collections::HashMap::new(),
+        mtls_enabled: true,
+    };
+
+    mesh.discovery.register_service(service).await.unwrap();
+
+    let request = beejs::cloudnative::MeshRequest {
+        service: "test-service".to_string(),
+        method: "GET".to_string(),
+        path: "/api/test".to_string(),
+        headers: std::collections::HashMap::new(),
+        body: None,
+    };
+
+    let response = mesh.route_request("test-service", &request).await.unwrap();
+    assert_eq!(response.status_code, 200);
+}
+
+#[tokio::test]
+async fn test_cloud_native_runtime() {
+    let mut runtime = CloudNativeRuntime::new();
+
+    // Initialize Kubernetes
+    let k8s_config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+    runtime.init_k8s(k8s_config).unwrap();
+
+    // Test Kubernetes execution
+    let result = runtime.execute_in_k8s("console.log('Hello')", "node:18-alpine").await;
+    assert!(result.is_ok());
+
+    // Test auto-scaling
+    let results = runtime.execute_with_autoscale("console.log('test')", 2).await.unwrap();
+    assert_eq!(results.len(), 2);
+
+    // Initialize service mesh
+    let mesh_config = ServiceMeshConfig::new(
+        ServiceMeshType::Istio,
+        "http://istio:15010".to_string(),
+        "default".to_string(),
+    );
+    runtime.init_service_mesh(mesh_config).unwrap();
+
+    // Check supported features
+    let features = runtime.supported_features();
+    assert!(features.contains(&"kubernetes".to_string()));
+    assert!(features.contains(&"service_mesh".to_string()));
+}
+
+#[tokio::test]
+async fn test_k8s_pod_management() {
+    let config = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
+    let runtime = K8sRuntime::new(config).unwrap();
+
+    let info = runtime.get_runtime_info().await.unwrap();
+    assert_eq!(info.namespace, "default");
+    assert!(info.active_pods >= 0);
+}
+
+#[tokio::test]
+async fn test_service_discovery() {
+    let config = ServiceMeshConfig::new(
+        ServiceMeshType::Linkerd,
+        "http://linkerd:8085".to_string(),
+        "default".to_string(),
+    );
+
+    let mesh = ServiceMesh::new(config).unwrap();
+
+    let service = beejs::cloudnative::ServiceInfo {
+        name: "backend".to_string(),
+        namespace: "default".to_string(),
+        endpoints: vec![
+            beejs::cloudnative::ServiceEndpoint {
+                address: "backend.default.svc".to_string(),
+                port: 8080,
+                weight: 100,
+                health: beejs::cloudnative::HealthStatus::Healthy,
+            },
+        ],
+        labels: std::collections::HashMap::new(),
+        mtls_enabled: false,
+    };
+
+    mesh.discovery.register_service(service).await.unwrap();
+
+    let services = mesh.discovery.list_services().await.unwrap();
+    assert!(services.contains(&"backend".to_string()));
+}
+
+#[tokio::test]
+async fn test_mesh_statistics() {
+    let config = ServiceMeshConfig::new(
+        ServiceMeshType::Istio,
+        "http://istio:15010".to_string(),
+        "default".to_string(),
+    );
+
+    let mesh = ServiceMesh::new(config).unwrap();
+
+    let stats = mesh.get_statistics().await.unwrap();
+    assert!(matches!(stats.mesh_type, ServiceMeshType::Istio));
+}

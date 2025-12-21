@@ -52,6 +52,7 @@ pub mod aiops;  // Stage 85: AI 驱动运维 (AIOps)
 pub mod ai_inference;
 pub mod multilang;  // Stage 88 Phase 1: 多语言支持
 pub mod platform;  // Stage 88 Phase 2: 跨平台运行时
+pub mod cloudnative;  // Stage 88 Phase 4: 云原生集成
 
 // Stage 83: Enterprise modules
 pub mod enterprise;  // Stage 88 Phase 3: 企业级解决方案
