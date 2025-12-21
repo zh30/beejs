@@ -41,7 +41,7 @@ async fn test_metric_point_creation() {
     let metric_point = MetricPoint {
         metric_type: MetricType::Cluster,
         value: MetricValue::Gauge(100.0),
-        timestamp: std::time::Instant::now(),
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         labels: HashMap::new(),
         node_id: "test-node".to_string(),
     };
@@ -97,7 +97,7 @@ async fn test_real_time_metrics_structure() {
         cluster_summary: summary,
         node_metrics,
         system_metrics,
-        timestamp: std::time::Instant::now(),
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
     };
 
     assert_eq!(real_time.cluster_summary.total_nodes, 5);
@@ -144,7 +144,7 @@ async fn test_trace_event_creation() {
         span_id: "span-456".to_string(),
         parent_span_id: Some("span-789".to_string()),
         event_type: TraceEventType::RequestStart,
-        timestamp: std::time::Instant::now(),
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         duration: None,
         node_id: "node-1".to_string(),
         service_name: "test-service".to_string(),
@@ -215,7 +215,7 @@ async fn test_cluster_overview_structure() {
         failed_tasks: 50,
         availability: 99.0,
         performance_score: 85.0,
-        last_updated: std::time::Instant::now(),
+        last_updated: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
     };
 
     assert_eq!(overview.cluster_name, "test-cluster");
@@ -235,7 +235,7 @@ async fn test_node_status_detail() {
         active_tasks: 5,
         task_queue_size: 1,
         uptime: Duration::from_secs(3600),
-        last_heartbeat: std::time::Instant::now(),
+        last_heartbeat: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         location: "us-west-1".to_string(),
         capabilities: vec![
             "js-execution".to_string(),
@@ -305,7 +305,7 @@ async fn test_trace_analysis_structure() {
                 error_message: "Connection timeout".to_string(),
                 operation_name: "error-operation".to_string(),
                 service_name: "test-service".to_string(),
-                timestamp: std::time::Instant::now(),
+                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             },
         ],
         operation_performance,
@@ -324,7 +324,7 @@ async fn test_alert_system() {
         level: AlertLevel::Critical,
         title: "High CPU Usage".to_string(),
         description: "CPU usage exceeded 90%".to_string(),
-        timestamp: std::time::Instant::now(),
+        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         source: "node-1".to_string(),
         acknowledged: false,
     };
