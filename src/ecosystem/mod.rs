@@ -1,13 +1,16 @@
 //! Beejs 生态系统模块
 //! Stage 80 - 生态系统完善
+//! Stage 86 - 生态完善 (插件系统增强)
 
 pub mod package;
 pub mod marketplace;
 pub mod devtools;
 pub mod community;
 pub mod analytics;
+pub mod plugin_engine;
 
 pub use package::*;
+pub use plugin_engine::*;
 
 use std::collections::{HashMap, HashSet};
 use serde::{Serialize, Deserialize};

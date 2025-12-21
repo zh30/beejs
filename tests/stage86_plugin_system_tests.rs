@@ -1,0 +1,512 @@
+//! Stage 86: 插件系统核心测试
+//! 测试驱动开发 - 先写测试再实现
+
+use std::collections::HashMap;
+
+// 导入插件系统模块
+use beejs::ecosystem::plugin_engine::{
+    PluginEngine, PluginMetadata, PluginHandle,
+    PluginAPI, PluginSandbox, PluginRegistry,
+    PluginLoader, PluginResult, PermissionSet, ResourceLimits,
+    PluginId, PluginStatus, PluginError,
+};
+
+// ============================================================================
+// Phase 1.1: 插件引擎架构测试
+// ============================================================================
+
+#[cfg(test)]
+mod plugin_engine_tests {
+    use super::*;
+
+    /// 测试插件引擎初始化
+    #[tokio::test]
+    async fn test_plugin_engine_initialization() {
+        let engine = PluginEngine::new();
+        let result = engine.initialize().await;
+
+        assert!(result.is_ok(), "插件引擎应成功初始化");
+        assert!(engine.is_initialized(), "初始化后状态应为已初始化");
+    }
+
+    /// 测试插件加载
+    #[tokio::test]
+    async fn test_plugin_loading() {
+        let engine = PluginEngine::new();
+        engine.initialize().await.unwrap();
+
+        // 创建测试插件元数据
+        let metadata = PluginMetadata {
+            id: "test-plugin".to_string(),
+            name: "Test Plugin".to_string(),
+            version: "1.0.0".to_string(),
+            author: "Beejs Team".to_string(),
+            description: "A test plugin for unit testing".to_string(),
+            entry_point: "index.js".to_string(),
+            permissions: vec!["fs.read".to_string()],
+            dependencies: HashMap::new(),
+        };
+
+        let result = engine.load_plugin(&metadata).await;
+        assert!(result.is_ok(), "插件应成功加载");
+
+        let handle = result.unwrap();
+        assert_eq!(handle.plugin_id(), "test-plugin");
+        assert_eq!(handle.status(), PluginStatus::Loaded);
+    }
+
+    /// 测试插件卸载
+    #[tokio::test]
+    async fn test_plugin_unloading() {
+        let engine = PluginEngine::new();
+        engine.initialize().await.unwrap();
+
+        let metadata = PluginMetadata::simple("unload-test", "1.0.0");
+        let handle = engine.load_plugin(&metadata).await.unwrap();
+
+        let result = engine.unload_plugin(&handle).await;
+        assert!(result.is_ok(), "插件应成功卸载");
+
+        // 验证插件已被移除
+        assert!(!engine.has_plugin("unload-test"));
+    }
+
+    /// 测试插件执行
+    #[tokio::test]
+    async fn test_plugin_execution() {
+        let engine = PluginEngine::new();
+        engine.initialize().await.unwrap();
+
+        let metadata = PluginMetadata::simple("exec-test", "1.0.0");
+        let handle = engine.load_plugin(&metadata).await.unwrap();
+
+        let input = serde_json::json!({
+            "action": "greet",
+            "name": "Beejs"
+        });
+
+        let result = engine.execute_plugin(&handle, &input).await;
+        assert!(result.is_ok(), "插件应成功执行");
+
+        let output = result.unwrap();
+        assert!(output.success, "执行结果应为成功");
+    }
+
+    /// 测试插件列表
+    #[tokio::test]
+    async fn test_list_plugins() {
+        let engine = PluginEngine::new();
+        engine.initialize().await.unwrap();
+
+        // 加载多个插件
+        for i in 1..=3 {
+            let metadata = PluginMetadata::simple(&format!("plugin-{}", i), "1.0.0");
+            engine.load_plugin(&metadata).await.unwrap();
+        }
+
+        let plugins = engine.list_plugins().await;
+        assert_eq!(plugins.len(), 3, "应有3个已加载的插件");
+    }
+}
+
+// ============================================================================
+// Phase 1.2: 插件沙箱测试
+// ============================================================================
+
+#[cfg(test)]
+mod plugin_sandbox_tests {
+    use super::*;
+
+    /// 测试沙箱隔离
+    #[tokio::test]
+    async fn test_sandbox_isolation() {
+        let sandbox = PluginSandbox::new(PermissionSet::minimal());
+
+        // 尝试访问受限资源
+        let result = sandbox.execute_in_sandbox(|ctx| {
+            // 模拟访问文件系统
+            ctx.access_fs("/etc/passwd")
+        }).await;
+
+        assert!(result.is_err(), "沙箱应阻止未授权的文件系统访问");
+
+        match result.unwrap_err() {
+            PluginError::PermissionDenied(msg) => {
+                assert!(msg.contains("fs"), "错误信息应指明是文件系统权限问题");
+            }
+            _ => panic!("应返回 PermissionDenied 错误"),
+        }
+    }
+
+    /// 测试权限授予
+    #[tokio::test]
+    async fn test_permission_grant() {
+        let mut permissions = PermissionSet::minimal();
+        permissions.grant("fs.read");
+
+        let sandbox = PluginSandbox::new(permissions);
+
+        let result = sandbox.check_permission("fs.read");
+        assert!(result.is_ok(), "已授予的权限应该通过检查");
+
+        let result = sandbox.check_permission("fs.write");
+        assert!(result.is_err(), "未授予的权限应该被拒绝");
+    }
+
+    /// 测试资源限制
+    #[tokio::test]
+    async fn test_resource_limits() {
+        let limits = ResourceLimits {
+            max_memory_mb: 100,
+            max_cpu_time_ms: 5000,
+            max_file_handles: 10,
+            max_network_connections: 5,
+        };
+
+        let sandbox = PluginSandbox::with_limits(PermissionSet::minimal(), limits);
+
+        assert_eq!(sandbox.memory_limit(), 100);
+        assert_eq!(sandbox.cpu_time_limit(), 5000);
+    }
+
+    /// 测试沙箱超时
+    #[tokio::test]
+    async fn test_sandbox_timeout() {
+        let limits = ResourceLimits {
+            max_memory_mb: 100,
+            max_cpu_time_ms: 100, // 100ms 超时
+            max_file_handles: 10,
+            max_network_connections: 5,
+        };
+
+        let sandbox = PluginSandbox::with_limits(PermissionSet::minimal(), limits);
+
+        // 模拟长时间运行的任务
+        let result = sandbox.execute_with_timeout(async {
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            Ok(())
+        }).await;
+
+        assert!(result.is_err(), "超时任务应返回错误");
+    }
+}
+
+// ============================================================================
+// Phase 1.3: 插件 API 测试
+// ============================================================================
+
+#[cfg(test)]
+mod plugin_api_tests {
+    use super::*;
+
+    /// 测试 API 调用
+    #[tokio::test]
+    async fn test_plugin_api_calls() {
+        let api = PluginAPI::new();
+
+        // 测试 log API
+        let result = api.call("log", &serde_json::json!({
+            "level": "info",
+            "message": "Hello from plugin"
+        })).await;
+
+        assert!(result.is_ok(), "log API 调用应成功");
+    }
+
+    /// 测试插件注册
+    #[tokio::test]
+    async fn test_plugin_registration() {
+        let registry = PluginRegistry::new();
+
+        let metadata = PluginMetadata::simple("my-plugin", "1.0.0");
+        let result = registry.register(&metadata).await;
+
+        assert!(result.is_ok(), "插件注册应成功");
+
+        let plugin_id = result.unwrap();
+        assert!(registry.is_registered(&plugin_id), "插件应已注册");
+    }
+
+    /// 测试 API 兼容性
+    #[tokio::test]
+    async fn test_api_compatibility() {
+        let api = PluginAPI::new();
+
+        // 测试 v1 API
+        let v1_result = api.call_versioned("v1", "echo", &serde_json::json!({
+            "message": "test"
+        })).await;
+        assert!(v1_result.is_ok(), "v1 API 应可用");
+
+        // 测试 v2 API
+        let v2_result = api.call_versioned("v2", "echo", &serde_json::json!({
+            "message": "test"
+        })).await;
+        assert!(v2_result.is_ok(), "v2 API 应可用");
+    }
+
+    /// 测试插件发现
+    #[tokio::test]
+    async fn test_plugin_discovery() {
+        let registry = PluginRegistry::new();
+
+        // 注册多个插件
+        for i in 1..=5 {
+            let metadata = PluginMetadata {
+                id: format!("discover-plugin-{}", i),
+                name: format!("Discovery Plugin {}", i),
+                version: "1.0.0".to_string(),
+                author: "Test".to_string(),
+                description: format!("Plugin {} for discovery test", i),
+                entry_point: "index.js".to_string(),
+                permissions: vec![],
+                dependencies: HashMap::new(),
+            };
+            registry.register(&metadata).await.unwrap();
+        }
+
+        // 测试发现功能
+        let all_plugins = registry.discover_all().await;
+        assert_eq!(all_plugins.len(), 5, "应发现5个插件");
+
+        // 测试按名称搜索
+        let search_result = registry.search("discover").await;
+        assert_eq!(search_result.len(), 5, "搜索应返回5个结果");
+    }
+}
+
+// ============================================================================
+// Phase 1.4: 插件加载器测试
+// ============================================================================
+
+#[cfg(test)]
+mod plugin_loader_tests {
+    use super::*;
+
+    /// 测试 JavaScript 插件加载
+    #[tokio::test]
+    async fn test_js_plugin_loading() {
+        let loader = PluginLoader::new();
+
+        let plugin_code = r#"
+            export default {
+                name: "test-js-plugin",
+                version: "1.0.0",
+                execute(input) {
+                    return { success: true, data: input };
+                }
+            }
+        "#;
+
+        let result = loader.load_from_source(plugin_code, "javascript").await;
+        assert!(result.is_ok(), "JavaScript 插件应成功加载");
+    }
+
+    /// 测试 TypeScript 插件加载
+    #[tokio::test]
+    async fn test_ts_plugin_loading() {
+        let loader = PluginLoader::new();
+
+        let plugin_code = r#"
+            interface PluginInput {
+                action: string;
+                data: any;
+            }
+
+            export default {
+                name: "test-ts-plugin",
+                version: "1.0.0",
+                execute(input: PluginInput): { success: boolean } {
+                    return { success: true };
+                }
+            }
+        "#;
+
+        let result = loader.load_from_source(plugin_code, "typescript").await;
+        assert!(result.is_ok(), "TypeScript 插件应成功加载");
+    }
+
+    /// 测试 WASM 插件加载
+    #[tokio::test]
+    async fn test_wasm_plugin_loading() {
+        let loader = PluginLoader::new();
+
+        // 使用简单的 WASM 字节码（空模块）
+        let wasm_bytes = wat::parse_str("(module)").unwrap();
+
+        let result = loader.load_from_wasm(&wasm_bytes).await;
+        assert!(result.is_ok(), "WASM 插件应成功加载");
+    }
+
+    /// 测试插件依赖解析
+    #[tokio::test]
+    async fn test_dependency_resolution() {
+        let loader = PluginLoader::new();
+
+        let mut deps = HashMap::new();
+        deps.insert("lodash".to_string(), "^4.17.0".to_string());
+        deps.insert("axios".to_string(), "^1.0.0".to_string());
+
+        let result = loader.resolve_dependencies(&deps).await;
+        assert!(result.is_ok(), "依赖解析应成功");
+
+        let resolved = result.unwrap();
+        assert!(resolved.contains_key("lodash"));
+        assert!(resolved.contains_key("axios"));
+    }
+}
+
+// ============================================================================
+// 集成测试
+// ============================================================================
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+
+    /// 测试完整的插件生命周期
+    #[tokio::test]
+    async fn test_full_plugin_lifecycle() {
+        // 1. 初始化引擎
+        let engine = PluginEngine::new();
+        engine.initialize().await.unwrap();
+
+        // 2. 创建插件元数据
+        let metadata = PluginMetadata {
+            id: "lifecycle-test".to_string(),
+            name: "Lifecycle Test Plugin".to_string(),
+            version: "1.0.0".to_string(),
+            author: "Test".to_string(),
+            description: "Tests plugin lifecycle".to_string(),
+            entry_point: "index.js".to_string(),
+            permissions: vec!["runtime.execute".to_string()],
+            dependencies: HashMap::new(),
+        };
+
+        // 3. 加载插件
+        let handle = engine.load_plugin(&metadata).await.unwrap();
+        assert_eq!(handle.status(), PluginStatus::Loaded);
+
+        // 4. 激活插件
+        engine.activate_plugin(&handle).await.unwrap();
+        assert_eq!(engine.get_plugin_status(&handle), PluginStatus::Active);
+
+        // 5. 执行插件
+        let result = engine.execute_plugin(&handle, &serde_json::json!({
+            "test": "data"
+        })).await.unwrap();
+        assert!(result.success);
+
+        // 6. 停用插件
+        engine.deactivate_plugin(&handle).await.unwrap();
+        assert_eq!(engine.get_plugin_status(&handle), PluginStatus::Inactive);
+
+        // 7. 卸载插件
+        engine.unload_plugin(&handle).await.unwrap();
+        assert!(!engine.has_plugin("lifecycle-test"));
+    }
+
+    /// 测试多插件协作
+    #[tokio::test]
+    async fn test_multi_plugin_cooperation() {
+        let engine = PluginEngine::new();
+        engine.initialize().await.unwrap();
+
+        // 加载生产者插件
+        let producer_meta = PluginMetadata::simple("producer", "1.0.0");
+        let producer = engine.load_plugin(&producer_meta).await.unwrap();
+
+        // 加载消费者插件
+        let consumer_meta = PluginMetadata::simple("consumer", "1.0.0");
+        let consumer = engine.load_plugin(&consumer_meta).await.unwrap();
+
+        // 设置插件间通信
+        engine.connect_plugins(&producer, &consumer, "data-channel").await.unwrap();
+
+        // 验证连接
+        let connections = engine.get_plugin_connections(&producer).await;
+        assert!(connections.contains(&"data-channel".to_string()));
+    }
+
+    /// 测试错误恢复
+    #[tokio::test]
+    async fn test_error_recovery() {
+        let engine = PluginEngine::new();
+        engine.initialize().await.unwrap();
+
+        let metadata = PluginMetadata::simple("error-test", "1.0.0");
+        let handle = engine.load_plugin(&metadata).await.unwrap();
+
+        // 模拟执行错误
+        let result = engine.execute_plugin(&handle, &serde_json::json!({
+            "action": "throw_error"
+        })).await;
+
+        // 引擎应该能够处理错误并恢复
+        assert!(result.is_err() || !result.unwrap().success);
+
+        // 插件仍应处于可用状态
+        assert!(engine.has_plugin("error-test"));
+        assert_ne!(engine.get_plugin_status(&handle), PluginStatus::Crashed);
+    }
+}
+
+// ============================================================================
+// 性能基准测试
+// ============================================================================
+
+#[cfg(test)]
+mod benchmark_tests {
+    use super::*;
+    use std::time::Instant;
+
+    /// 测试插件加载性能
+    #[tokio::test]
+    async fn test_plugin_load_performance() {
+        let engine = PluginEngine::new();
+        engine.initialize().await.unwrap();
+
+        let start = Instant::now();
+
+        for i in 0..100 {
+            let metadata = PluginMetadata::simple(&format!("perf-plugin-{}", i), "1.0.0");
+            engine.load_plugin(&metadata).await.unwrap();
+        }
+
+        let duration = start.elapsed();
+
+        // 加载 100 个插件应该在 1 秒内完成
+        assert!(
+            duration.as_millis() < 1000,
+            "加载 100 个插件耗时 {:?}ms，超过预期",
+            duration.as_millis()
+        );
+    }
+
+    /// 测试插件执行性能
+    #[tokio::test]
+    async fn test_plugin_execution_performance() {
+        let engine = PluginEngine::new();
+        engine.initialize().await.unwrap();
+
+        let metadata = PluginMetadata::simple("exec-perf-test", "1.0.0");
+        let handle = engine.load_plugin(&metadata).await.unwrap();
+
+        let input = serde_json::json!({"data": "test"});
+
+        let start = Instant::now();
+
+        for _ in 0..1000 {
+            engine.execute_plugin(&handle, &input).await.unwrap();
+        }
+
+        let duration = start.elapsed();
+
+        // 1000 次执行应该在 500ms 内完成
+        assert!(
+            duration.as_millis() < 500,
+            "1000 次执行耗时 {:?}ms，超过预期",
+            duration.as_millis()
+        );
+    }
+}
