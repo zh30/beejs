@@ -73,6 +73,13 @@ pub mod types {
         pub version: Version,
     }
 
+    impl std::hash::Hash for VersionConstraint {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            self.comparator.hash(state);
+            self.version.hash(state);
+        }
+    }
+
     impl VersionConstraint {
         pub fn parse(s: &str) -> Result<Self, ParseError> {
             let (comp, ver) = s.split_at(1);
@@ -118,6 +125,17 @@ pub mod types {
         Compatible,
         Approximate,
         GreaterEqual,
+    }
+
+    impl std::hash::Hash for VersionComparator {
+        fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+            match self {
+                VersionComparator::Exact => "Exact".hash(state),
+                VersionComparator::Compatible => "Compatible".hash(state),
+                VersionComparator::Approximate => "Approximate".hash(state),
+                VersionComparator::GreaterEqual => "GreaterEqual".hash(state),
+            }
+        }
     }
 
     /// 包清单

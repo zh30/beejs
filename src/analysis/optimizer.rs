@@ -4,7 +4,7 @@
 //! performance analysis and bottleneck detection results.
 
 use crate::analysis::bottleneck_detector::{
-    Bottleneck, BottleneckType, BottleneckDetector
+    Bottleneck, BottleneckType, BottleneckDetector, BottleneckSeverity
 };
 use crate::performance_analyzer::PerformanceReport;
 use serde::{Deserialize, Serialize};

@@ -1,7 +1,7 @@
 //! 告警系统模块
 //! 负责管理告警规则、触发告警、通知渠道和告警历史
 
-use crate::monitor::performance_monitor::{MetricType, ThresholdViolation};
+use crate::monitor::performance_monitor::{MetricType, ThresholdViolation, ThresholdSeverity};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

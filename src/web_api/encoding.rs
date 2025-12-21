@@ -344,8 +344,6 @@ fn btoa_callback(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_base64_encode_decode() {
         use base64::{Engine, engine::general_purpose::STANDARD};

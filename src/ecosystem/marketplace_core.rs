@@ -184,6 +184,25 @@ pub struct SearchFilters {
     pub date_range: Option<(DateTime<Utc>, DateTime<Utc>)>,
 }
 
+impl std::hash::Hash for SearchFilters {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.categories.hash(state);
+        self.tags.hash(state);
+        self.authors.hash(state);
+        if let Some(rating) = self.rating_min {
+            // 将 f64 转换为可哈希的值
+            rating.to_bits().hash(state);
+        }
+        self.verified_only.hash(state);
+        self.free_only.hash(state);
+        self.version_constraint.hash(state);
+        if let Some((start, end)) = &self.date_range {
+            start.timestamp().hash(state);
+            end.timestamp().hash(state);
+        }
+    }
+}
+
 /// 排序选项
 #[derive(Debug, Clone)]
 pub enum SortOption {
@@ -195,11 +214,32 @@ pub enum SortOption {
     Name,
 }
 
+impl std::hash::Hash for SortOption {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        // 使用变体的名称进行哈希
+        match self {
+            SortOption::Relevance => "Relevance".hash(state),
+            SortOption::Downloads => "Downloads".hash(state),
+            SortOption::Rating => "Rating".hash(state),
+            SortOption::RecentlyUpdated => "RecentlyUpdated".hash(state),
+            SortOption::NewlyPublished => "NewlyPublished".hash(state),
+            SortOption::Name => "Name".hash(state),
+        }
+    }
+}
+
 /// 分页信息
 #[derive(Debug, Clone)]
 pub struct Pagination {
     pub page: usize,
     pub per_page: usize,
+}
+
+impl std::hash::Hash for Pagination {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.page.hash(state);
+        self.per_page.hash(state);
+    }
 }
 
 /// 搜索结果
@@ -238,7 +278,7 @@ pub struct FacetCount {
 #[derive(Debug, Clone)]
 pub struct RatingSystem {
     /// 评分存储
-    ratings: Arc<RatingStorage>,
+    pub ratings: Arc<RatingStorage>,
     /// 统计计算器
     stats_calculator: Arc<RatingStatsCalculator>,
 }
@@ -247,9 +287,9 @@ pub struct RatingSystem {
 #[derive(Debug, Clone)]
 pub struct RatingStorage {
     /// 用户评分
-    user_ratings: HashMap<(PluginId, String), UserRating>,
+    pub user_ratings: HashMap<(PluginId, String), UserRating>,
     /// 评分聚合
-    rating_aggregates: HashMap<PluginId, RatingAggregate>,
+    pub rating_aggregates: HashMap<PluginId, RatingAggregate>,
 }
 
 /// 用户评分
@@ -362,11 +402,11 @@ pub struct QualityAnalyzer;
 #[derive(Debug, Clone)]
 pub struct MarketplaceCache {
     /// 插件详情缓存
-    plugin_cache: HashMap<PluginId, PluginMetadata>,
+    pub plugin_cache: HashMap<PluginId, PluginMetadata>,
     /// 搜索结果缓存
-    search_cache: HashMap<String, SearchResults>,
+    pub search_cache: HashMap<String, SearchResults>,
     /// 缓存统计
-    stats: CacheStats,
+    pub stats: CacheStats,
 }
 
 /// 缓存统计
@@ -404,7 +444,7 @@ impl PluginMarketplace {
     }
 
     /// 搜索插件
-    pub async fn search_plugins(&self, query: &SearchQuery) -> Result<SearchResults> {
+    pub async fn search_plugins(&mut self, query: &SearchQuery) -> Result<SearchResults> {
         // 检查缓存
         let cache_key = self.generate_cache_key(query);
         if let Some(cached_results) = self.cache.get_search_results(&cache_key).await {
@@ -417,23 +457,25 @@ impl PluginMarketplace {
         let took_ms = start_time.elapsed().as_millis() as u64;
 
         // 计算分面
-        let facets = self.calculate_facets(&results.plugins).await?;
+        let facets = self.calculate_facets(&results).await?;
 
         let search_results = SearchResults {
-            plugins: results,
+            plugins: results.clone(),
             total: results.len(),
             took_ms,
             facets,
         };
 
         // 缓存结果
-        self.cache.store_search_results(cache_key, search_results.clone()).await?;
+        if let Some(cache) = Arc::get_mut(&mut self.cache) {
+            cache.search_cache.insert(cache_key, search_results);
+        }
 
         Ok(search_results)
     }
 
     /// 获取插件详情
-    pub async fn get_plugin_details(&self, plugin_id: &PluginId) -> Result<Option<PluginMetadata>> {
+    pub async fn get_plugin_details(&mut self, plugin_id: &PluginId) -> Result<Option<PluginMetadata>> {
         // 检查缓存
         if let Some(cached) = self.cache.get_plugin(plugin_id).await {
             return Ok(Some(cached));
@@ -444,7 +486,9 @@ impl PluginMarketplace {
 
         if let Some(ref plugin_data) = plugin {
             // 缓存插件数据
-            self.cache.store_plugin(plugin_id, plugin_data.clone()).await?;
+            if let Some(cache) = Arc::get_mut(&mut self.cache) {
+                cache.plugin_cache.insert(plugin_id.clone(), plugin_data.clone());
+            }
         }
 
         Ok(plugin)
@@ -456,8 +500,7 @@ impl PluginMarketplace {
     }
 
     /// 提交插件评分
-    pub async fn rate_plugin(
-        &self,
+    pub async fn rate_plugin(&mut self,
         plugin_id: &PluginId,
         user_id: &str,
         rating: u8,
@@ -908,7 +951,9 @@ impl RatingSystem {
 
         // 存储用户评分
         let rating_key = (plugin_id.clone(), user_id.to_string());
-        self.ratings.user_ratings.insert(rating_key, user_rating);
+        if let Some(ratings) = Arc::get_mut(&mut self.ratings) {
+            ratings.user_ratings.insert(rating_key, user_rating);
+        }
 
         // 重新计算聚合评分
         self.recalculate_aggregate(plugin_id).await?;
@@ -934,7 +979,7 @@ impl RatingSystem {
     }
 
     /// 重新计算插件的聚合评分
-    async fn recalculate_aggregate(&self, plugin_id: &PluginId) -> Result<()> {
+    async fn recalculate_aggregate(&mut self, plugin_id: &PluginId) -> Result<()> {
         let plugin_ratings: Vec<_> = self.ratings
             .user_ratings
             .iter()
@@ -978,7 +1023,9 @@ impl RatingSystem {
             last_updated: Utc::now(),
         };
 
-        self.ratings.rating_aggregates.insert(plugin_id.clone(), aggregate);
+        if let Some(ratings) = Arc::get_mut(&mut self.ratings) {
+            ratings.rating_aggregates.insert(plugin_id.clone(), aggregate);
+        }
 
         Ok(())
     }
@@ -994,18 +1041,19 @@ impl RatingSystem {
     }
 
     /// 投票帮助性
-    pub async fn vote_helpful(
-        &self,
+    pub async fn vote_helpful(&mut self,
         plugin_id: &PluginId,
         user_id: &str,
         helpful: bool,
     ) -> Result<()> {
         let rating_key = (plugin_id.clone(), user_id.to_string());
-        if let Some(rating) = self.ratings.user_ratings.get_mut(&rating_key) {
-            if helpful {
-                rating.helpful_votes += 1;
-            } else {
-                rating.helpful_votes = rating.helpful_votes.saturating_sub(1);
+        if let Some(ratings) = Arc::get_mut(&mut self.ratings) {
+            if let Some(rating) = ratings.user_ratings.get_mut(&rating_key) {
+                if helpful {
+                    rating.helpful_votes += 1;
+                } else {
+                    rating.helpful_votes = rating.helpful_votes.saturating_sub(1);
+                }
             }
         }
         Ok(())
@@ -1183,15 +1231,23 @@ impl MarketplaceCache {
         self.plugin_cache.get(plugin_id).cloned()
     }
 
-    pub async fn store_plugin(&self, plugin_id: &PluginId, plugin: PluginMetadata) {
-        self.plugin_cache.insert(plugin_id.clone(), plugin);
+    pub async fn store_plugin(&mut self, plugin_id: &PluginId, plugin: PluginMetadata) {
+        if let Some(cache) = Arc::get_mut(&mut self.cache) {
+            cache.plugin_cache.insert(plugin_id.clone(), plugin);
+        }
     }
 
     pub async fn get_search_results(&self, cache_key: &str) -> Option<SearchResults> {
-        self.search_cache.get(cache_key).cloned()
+        if let Some(cache) = Arc::get_mut(&mut Arc::clone(&self.cache)) {
+            cache.search_cache.get(cache_key).cloned()
+        } else {
+            None
+        }
     }
 
-    pub async fn store_search_results(&self, cache_key: String, results: SearchResults) {
-        self.search_cache.insert(cache_key, results);
+    pub async fn store_search_results(&mut self, cache_key: String, results: SearchResults) {
+        if let Some(cache) = Arc::get_mut(&mut self.cache) {
+            cache.search_cache.insert(cache_key, results);
+        }
     }
 }
