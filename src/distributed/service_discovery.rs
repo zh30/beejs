@@ -37,7 +37,7 @@ pub struct GossipMessage {
     pub cluster_name: String,
     pub node_id: String,
     pub node_info: NodeInfo,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
 
 /// 服务发现实现
@@ -192,7 +192,7 @@ impl ServiceDiscovery {
             cluster_name: self.config.cluster_name.clone(),
             node_id: node_info.id.clone(),
             node_info: node_info.clone(),
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
         let mut history = self.gossip_history.write().await;

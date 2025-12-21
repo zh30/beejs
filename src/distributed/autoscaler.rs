@@ -16,7 +16,7 @@ pub struct ClusterMetrics {
     pub queue_depth: usize,        // 队列深度
     pub response_time_ms: u64,     // 平均响应时间 (毫秒)
     pub error_rate: f64,           // 错误率 (0.0-1.0)
-    pub timestamp: Instant,        // 指标采集时间
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化        // 指标采集时间
 }
 
 /// 扩缩容策略
@@ -103,7 +103,7 @@ impl MetricsHistory {
             queue_depth: (sum.4 as f64 / count) as usize,
             response_time_ms: (sum.5 / count) as u64,
             error_rate: sum.6 / count,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         })
     }
 
@@ -427,7 +427,7 @@ mod tests {
             queue_depth: 50,
             response_time_ms: 500,
             error_rate: 0.02,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
         let action = autoscaler.evaluate_scaling(&high_load_metrics);
@@ -452,7 +452,7 @@ mod tests {
             queue_depth: 0,
             response_time_ms: 50,
             error_rate: 0.0,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
         let action = autoscaler.evaluate_scaling(&low_load_metrics);
@@ -477,7 +477,7 @@ mod tests {
             queue_depth: 5,
             response_time_ms: 100,
             error_rate: 0.01,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
         let action = autoscaler.evaluate_scaling(&normal_load_metrics);
@@ -502,7 +502,7 @@ mod tests {
             queue_depth: 50,
             response_time_ms: 500,
             error_rate: 0.02,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
         // 第一次扩容

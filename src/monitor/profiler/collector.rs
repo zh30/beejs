@@ -119,14 +119,14 @@ impl FunctionTracker {
         let decision = self.sampler.should_sample_event(&PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.8,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             metadata: Some(format!("function_start:{}", function_name)),
         });
         if decision.should_sample {
             self.event_buffer.push(PerformanceEvent {
                 event_type: PerformanceEventType::FunctionCall,
                 importance: 0.8,
-                timestamp: Instant::now(),
+                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                 metadata: Some(format!("function_start:{}", function_name)),
             });
         }
@@ -165,7 +165,7 @@ impl FunctionTracker {
         let event = PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.8,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             metadata: Some(format!(
                 "function_end:{}:{:?}:{}",
                 handle.function_name, execution_time, memory_used

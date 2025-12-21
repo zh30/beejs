@@ -54,7 +54,7 @@ pub struct FaultEvent {
     pub fault_type: FaultType,
     pub severity: FaultSeverity,
     pub target_id: String, // 节点ID或任务ID
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub description: String,
     pub metadata: HashMap<String, String>,
 }
@@ -153,7 +153,7 @@ impl FaultDetector {
                 fault_type: FaultType::NodeFailure,
                 severity: FaultSeverity::High,
                 target_id: node_id.clone(),
-                timestamp: Instant::now(),
+                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                 description: format!("Node {} is unhealthy", node_id),
                 metadata: HashMap::new(),
             };
@@ -173,7 +173,7 @@ impl FaultDetector {
                 fault_type: FaultType::TaskExecutionFailure,
                 severity: FaultSeverity::Medium,
                 target_id: task.id.clone(),
-                timestamp: Instant::now(),
+                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                 description: format!("Task {} failed execution", task.id),
                 metadata: HashMap::new(),
             };
@@ -193,7 +193,7 @@ impl FaultDetector {
                     fault_type: FaultType::NetworkPartition,
                     severity: FaultSeverity::Critical,
                     target_id: "cluster".to_string(),
-                    timestamp: Instant::now(),
+                    timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                     description: "Cluster health is unhealthy - possible network partition".to_string(),
                     metadata: HashMap::new(),
                 };

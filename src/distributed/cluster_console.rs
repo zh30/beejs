@@ -31,7 +31,7 @@ pub struct AlertMessage {
     pub level: AlertLevel,
     pub title: String,
     pub description: String,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub source: String,
     pub acknowledged: bool,
 }
@@ -112,7 +112,7 @@ pub struct ErrorTrace {
     pub error_message: String,
     pub operation_name: String,
     pub service_name: String,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
 
 /// 操作性能
@@ -486,7 +486,7 @@ impl ClusterConsole {
             level,
             title,
             description,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             source,
             acknowledged: false,
         };

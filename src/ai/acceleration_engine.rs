@@ -421,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_acceleration_engine_creation() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config = AccelerationConfig {
             use_gpu: true,
             use_npu: false,
@@ -435,7 +435,7 @@ mod tests {
 
     #[test]
     fn test_cpu_inference() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
@@ -453,7 +453,7 @@ mod tests {
 
     #[test]
     fn test_gpu_inference() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config = AccelerationConfig {
             use_gpu: true,
             use_npu: false,
@@ -470,7 +470,7 @@ mod tests {
 
     #[test]
     fn test_batch_inference() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
@@ -492,7 +492,7 @@ mod tests {
 
     #[test]
     fn test_pipeline_inference() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config = AccelerationConfig {
             use_gpu: false,
             use_npu: false,
@@ -515,7 +515,7 @@ mod tests {
 
     #[test]
     fn test_dynamic_batching() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config = AccelerationConfig {
             use_gpu: false,
             use_npu: false,

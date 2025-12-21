@@ -22,7 +22,7 @@ pub struct StackFrame {
     /// 调用深度
     pub depth: usize,
     /// 时间戳
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
 
 /// 调用栈分析结果

@@ -24,7 +24,7 @@ pub struct ScalingConfig {
 #[derive(Debug, Clone)]
 pub struct ScalingEvent {
     pub action: ScalingAction,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub reason: String,
     pub metrics: Option<ClusterMetrics>,
 }
@@ -181,7 +181,7 @@ impl ScalingManager {
             stats.average_scale_up_time = Duration::from_nanos(avg_nanos as u64);
             stats.last_scaling_event = Some(ScalingEvent {
                 action: ScalingAction::ScaleUp(actual_count),
-                timestamp: Instant::now(),
+                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                 reason: "自动扩缩容触发".to_string(),
                 metrics: None,
             });
@@ -190,7 +190,7 @@ impl ScalingManager {
         // 记录历史
         self.scaling_history.push(ScalingEvent {
             action: ScalingAction::ScaleUp(actual_count),
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             reason: "自动扩缩容触发".to_string(),
             metrics: None,
         });
@@ -260,7 +260,7 @@ impl ScalingManager {
             stats.average_scale_down_time = Duration::from_nanos(avg_nanos as u64);
             stats.last_scaling_event = Some(ScalingEvent {
                 action: ScalingAction::ScaleDown(actual_count),
-                timestamp: Instant::now(),
+                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                 reason: "自动缩容触发".to_string(),
                 metrics: None,
             });
@@ -269,7 +269,7 @@ impl ScalingManager {
         // 记录历史
         self.scaling_history.push(ScalingEvent {
             action: ScalingAction::ScaleDown(actual_count),
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             reason: "自动缩容触发".to_string(),
             metrics: None,
         });
@@ -349,7 +349,7 @@ impl ScalingManager {
             queue_depth: active_tasks / 2, // 简化：假设队列深度是活跃任务的一半
             response_time_ms,
             error_rate,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         }
     }
 
@@ -422,7 +422,7 @@ impl ScalingManager {
         // 记录关闭事件
         self.scaling_history.push(ScalingEvent {
             action: ScalingAction::NoOp,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             reason: "管理器关闭".to_string(),
             metrics: None,
         });

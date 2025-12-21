@@ -28,7 +28,7 @@ pub struct PerformanceEvent {
     /// 事件大小或重要性评分 (0.0 - 1.0)
     pub importance: f64,
     /// 时间戳
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     /// 关联数据
     pub metadata: Option<String>,
 }
@@ -177,7 +177,7 @@ impl SamplingStrategy {
         let adjusted_rate = self.current_sample_rate * (0.5 + 0.5 * event.importance);
 
         // 简化的随机采样（实际应用中使用更复杂的算法）
-        let random_value = (event.timestamp.elapsed().subsec_nanos() as f64) / 1_000_000_000.0;
+        let random_value = ((std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() - event.timestamp).max(1) as f64) / 1_000_000_000.0;
         random_value <= adjusted_rate
     }
 
@@ -279,7 +279,7 @@ mod tests {
         let event = PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.8,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             metadata: None,
         };
 
@@ -298,7 +298,7 @@ mod tests {
         let low_importance_event = PerformanceEvent {
             event_type: PerformanceEventType::FunctionCall,
             importance: 0.5,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             metadata: None,
         };
 
@@ -323,7 +323,7 @@ mod tests {
             let event = PerformanceEvent {
                 event_type: PerformanceEventType::FunctionCall,
                 importance: 0.5,
-                timestamp: Instant::now(),
+                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                 metadata: None,
             };
             strategy.should_sample_event(&event);

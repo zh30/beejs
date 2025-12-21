@@ -25,7 +25,7 @@ pub struct NodeLoad {
     pub cpu_usage: f64,
     pub memory_usage: f64,
     pub active_tasks: usize,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
 
 /// 集群拓扑信息
@@ -250,7 +250,7 @@ impl NodeManager {
             cpu_usage,
             memory_usage,
             active_tasks,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
         loads.insert(node_id.to_string(), load);

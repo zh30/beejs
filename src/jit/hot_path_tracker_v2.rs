@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 #[derive(Debug, Clone)]
 pub struct ExecutionEvent {
     pub path_id: String,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub execution_time: Duration,
 }
 
@@ -138,7 +138,7 @@ impl HotPathTrackerV2 {
             }
             history.push_back(ExecutionEvent {
                 path_id: path_id.to_string(),
-                timestamp: Instant::now(),
+                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                 execution_time,
             });
         }

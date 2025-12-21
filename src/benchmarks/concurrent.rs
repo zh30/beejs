@@ -75,7 +75,7 @@ impl ConcurrentBenchmark {
             MetricType::Throughput,
             || {
                 // 模拟异步任务
-                let rt = tokio::runtime::Runtime::new().unwrap();
+                let rt = tokio::runtime::Runtime::new();
                 rt.block_on(async {
                     let mut handles: Vec<JoinHandle<i32>> = Vec::new();
 
@@ -191,7 +191,7 @@ impl ConcurrentBenchmark {
             MetricType::Throughput,
             || {
                 // 模拟工作窃取
-                let rt = tokio::runtime::Runtime::new().unwrap();
+                let rt = tokio::runtime::Runtime::new();
                 rt.block_on(async {
                     let mut tasks = Vec::new();
 

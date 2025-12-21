@@ -75,7 +75,7 @@ pub struct InlineResult {
     pub was_inlined: bool,
     pub actual_size_increase: usize,
     pub measured_speedup: Option<f64>,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
 
 /// Enhanced Inline Strategy with intelligent decisions
@@ -442,7 +442,7 @@ mod tests {
             was_inlined: true,
             actual_size_increase: 100,
             measured_speedup: Some(0.5), // 50% speedup
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         });
 
         // Should boost benefit for this function

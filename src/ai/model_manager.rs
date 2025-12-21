@@ -422,6 +422,7 @@ impl ModelManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Runtime;
 
     #[test]
     fn test_model_registry_creation() {
@@ -494,7 +495,7 @@ mod tests {
 
     #[test]
     fn test_model_manager_creation() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_secs(300),
@@ -507,7 +508,7 @@ mod tests {
 
     #[test]
     fn test_model_loading() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_secs(300),
@@ -522,7 +523,7 @@ mod tests {
 
     #[test]
     fn test_inference() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_secs(300),
@@ -539,7 +540,7 @@ mod tests {
 
     #[test]
     fn test_model_cleanup() {
-        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false).unwrap());
+        let runtime = Arc::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false));
         let config = ManagerConfig {
             max_concurrent_models: 10,
             model_timeout: Duration::from_millis(100), // 短超时

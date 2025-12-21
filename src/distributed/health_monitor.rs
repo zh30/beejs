@@ -27,7 +27,7 @@ pub struct HealthCheckResult {
     pub cpu_usage: f64,
     pub memory_usage: f64,
     pub response_time: Duration,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub message: String,
 }
 
@@ -115,7 +115,7 @@ impl HealthMonitor {
             cpu_usage,
             memory_usage,
             response_time,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             message: format!("Health check completed for node {}", node_id),
         };
 

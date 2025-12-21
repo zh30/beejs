@@ -32,7 +32,7 @@ pub struct PerformanceHistory {
 
 #[derive(Debug, Clone)]
 pub struct PerformanceRecord {
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub execution_time_ms: u64,
     pub memory_usage_mb: f64,
     pub optimization_applied: String,

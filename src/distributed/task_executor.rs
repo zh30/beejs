@@ -642,7 +642,7 @@ pub enum AlertType {
 pub struct Alert {
     pub alert_type: AlertType,
     pub message: String,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
 
 /// 执行监控器
@@ -679,7 +679,7 @@ impl ExecutionMonitor {
             self.alerts.push(Alert {
                 alert_type: AlertType::HighLatency,
                 message: format!("Task {} took {:?}", task_id, execution_time),
-                timestamp: Instant::now(),
+                timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             });
         }
     }

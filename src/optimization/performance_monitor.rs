@@ -13,7 +13,7 @@ pub struct PerformanceMetrics {
     pub execution_time_ms: u64,
     pub throughput: f64,
     pub cache_hit_rate: f64,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
 
 impl PerformanceMetrics {
@@ -24,7 +24,7 @@ impl PerformanceMetrics {
             execution_time_ms: 0,
             throughput: 0.0,
             cache_hit_rate: 0.0,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         }
     }
 }

@@ -94,7 +94,7 @@ impl Default for MLLoadBalancerConfig {
 #[derive(Debug, Clone)]
 pub struct LoadHistory {
     /// 时间戳
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     /// 负载值
     pub load: f64,
     /// 响应时间
@@ -384,7 +384,7 @@ impl MLLoadBalancer {
                 history.load,
                 history.response_time / 1000.0,
                 history.request_count as f64 / 1000.0,
-                history.timestamp.elapsed().as_secs() as f64 / 3600.0, // 小时
+                (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() - history.timestamp) as f64 / 3600.0, // 小时
                 0.5, // 随机噪声
             ];
 
@@ -402,7 +402,7 @@ impl MLLoadBalancer {
     /// 记录负载历史
     pub fn record_load(&mut self, load: f64, response_time: f64, request_count: u64) {
         self.load_history.push(LoadHistory {
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             load,
             response_time,
             request_count,

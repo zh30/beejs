@@ -12,7 +12,7 @@ pub struct ProfileData {
     pub execution_time: u64,
     pub memory_usage: u64,
     pub function_calls: Vec<FunctionCall>,
-    pub timestamp: std::time::Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
 
 /// 函数调用信息
@@ -252,6 +252,69 @@ impl AutoOptimizer {
         }
 
         Ok(bottlenecks)
+    }
+
+    /// 生成优化建议（内部方法）
+    async fn generate_optimization_suggestions(
+        &self,
+        hotspots: &[Hotspot],
+        bottlenecks: &[Bottleneck],
+    ) -> Result<Vec<Optimization>, Box<dyn std::error::Error>> {
+        let mut suggestions = Vec::new();
+
+        // 从热点生成建议
+        for hotspot in hotspots {
+            if hotspot.function_name.contains("loop") {
+                suggestions.push(Optimization {
+                    title: "循环优化".to_string(),
+                    description: format!("优化函数 {} 中的循环", hotspot.function_name),
+                    original_code: format!("function {}() {{\n  for (let i = 0; i < 1000; i++) {{\n    // 循环体\n  }}\n}}", hotspot.function_name),
+                    optimized_code: format!("function {}() {{\n  // 使用更高效的循环\n  const arr = new Array(1000);\n  for (let i = 0; i < arr.length; i++) {{\n    // 优化后的循环体\n  }}\n}}", hotspot.function_name),
+                    expected_improvement: 30.0,
+                    confidence: 0.85,
+                    optimization_type: OptimizationType::LoopOptimization,
+                });
+            }
+
+            if hotspot.call_count > 1000 {
+                suggestions.push(Optimization {
+                    title: "缓存优化".to_string(),
+                    description: format!("缓存频繁调用的函数 {}", hotspot.function_name),
+                    original_code: format!("function {}() {{\n  // 每次都重新计算\n  return expensiveCalculation();\n}}", hotspot.function_name),
+                    optimized_code: format!("const cachedResult = expensiveCalculation();\nfunction {}() {{\n  return cachedResult;\n}}", hotspot.function_name),
+                    expected_improvement: 50.0,
+                    confidence: 0.90,
+                    optimization_type: OptimizationType::Caching,
+                });
+            }
+
+            if hotspot.time_consumed > 500 {
+                suggestions.push(Optimization {
+                    title: "算法优化".to_string(),
+                    description: format!("优化函数 {} 的算法复杂度", hotspot.function_name),
+                    original_code: format!("function {}() {{\n  // O(n^2) 算法\n  for (let i = 0; i < n; i++) {{\n    for (let j = 0; j < n; j++) {{\n      // 处理逻辑\n    }}\n  }}\n}}", hotspot.function_name),
+                    optimized_code: format!("function {}() {{\n  // 优化为 O(n) 算法\n  const map = new Map();\n  for (let item of items) {{\n    // 高效处理逻辑\n  }}\n}}", hotspot.function_name),
+                    expected_improvement: 60.0,
+                    confidence: 0.75,
+                    optimization_type: OptimizationType::Algorithmic,
+                });
+            }
+        }
+
+        // 从瓶颈生成建议
+        for bottleneck in bottlenecks {
+            suggestions.push(Optimization {
+                title: "瓶颈优化".to_string(),
+                description: bottleneck.description.clone(),
+                original_code: "// 原始代码".to_string(),
+                optimized_code: "// 优化后代码".to_string(),
+                expected_improvement: 25.0,
+                confidence: 0.80,
+                optimization_type: OptimizationType::Algorithmic,
+            });
+        }
+
+        Ok(suggestions)
     }
 
     /// 生成优化建议

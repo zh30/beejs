@@ -547,7 +547,7 @@ impl SharedMemoryManager {
                     cache.insert(cache_key, PrefetchEntry {
                         data: data.clone(),
                         offset,
-                        timestamp: Instant::now(),
+                        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                     });
 
                     // 限制缓存大小

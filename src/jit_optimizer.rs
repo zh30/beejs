@@ -105,7 +105,7 @@ pub struct CompileEvent {
     #[allow(dead_code)]
     pub code_hash: String,
     #[allow(dead_code)]
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     #[allow(dead_code)]
     pub optimization_level: OptimizationLevel,
     pub compile_time: Duration,
@@ -388,7 +388,7 @@ impl JITOptimizer {
         let mut history = self.compile_history.lock().unwrap();
         history.push(CompileEvent {
             code_hash: code_hash.to_string(),
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             optimization_level,
             compile_time,
             success,

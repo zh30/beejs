@@ -185,7 +185,7 @@ impl ResourceTracker {
         let usage = self.get_usage();
         let history = ResourceHistory {
             usage,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
         self.usage_history.push(history);

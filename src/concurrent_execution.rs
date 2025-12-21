@@ -282,7 +282,7 @@ pub struct StealPredictor {
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct StealEvent {
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub source_queue: usize,
     pub target_queue: usize,
     pub tasks_stolen: usize,
@@ -338,7 +338,7 @@ impl StealPredictor {
     #[allow(dead_code)]
     pub fn record_steal_event(&mut self, source_queue: usize, target_queue: usize, tasks_stolen: usize, success: bool) {
         let event = StealEvent {
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             source_queue,
             target_queue,
             tasks_stolen,

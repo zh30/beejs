@@ -84,7 +84,7 @@ pub struct HotFunction {
 /// 堆快照
 #[derive(Debug, Clone)]
 pub struct HeapSnapshot {
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub total_size_bytes: usize,
     pub objects: Vec<HeapObject>,
 }
@@ -575,7 +575,7 @@ mod tests {
         }
 
         let heap_snapshot = HeapSnapshot {
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             total_size_bytes: objects.len() * 1024,
             objects,
         };

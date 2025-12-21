@@ -69,7 +69,7 @@ pub struct Percentiles {
 pub struct MetricPoint {
     pub metric_type: MetricType,
     pub value: MetricValue,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub labels: HashMap<String, String>,
     pub node_id: String,
 }
@@ -80,7 +80,7 @@ pub struct RealTimeMetrics {
     pub cluster_summary: ClusterMetricsSummary,
     pub node_metrics: HashMap<String, NodeMetrics>,
     pub system_metrics: SystemMetrics,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
 
 /// 集群指标摘要
@@ -229,7 +229,7 @@ impl DistributedMetrics {
         let node_count_metric = MetricPoint {
             metric_type: MetricType::Cluster,
             value: MetricValue::Gauge(cluster_topology.total_nodes as f64),
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             labels: HashMap::new(),
             node_id: "cluster".to_string(),
         };
@@ -240,7 +240,7 @@ impl DistributedMetrics {
         let throughput_metric = MetricPoint {
             metric_type: MetricType::ClusterThroughput,
             value: MetricValue::Gauge(throughput),
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             labels: HashMap::new(),
             node_id: "cluster".to_string(),
         };
@@ -251,7 +251,7 @@ impl DistributedMetrics {
         let availability_metric = MetricPoint {
             metric_type: MetricType::ClusterAvailability,
             value: MetricValue::Gauge(availability * 100.0),
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             labels: HashMap::new(),
             node_id: "cluster".to_string(),
         };
@@ -274,7 +274,7 @@ impl DistributedMetrics {
                 let cpu_metric = MetricPoint {
                     metric_type: MetricType::NodeCpuUsage,
                     value: MetricValue::Gauge(cpu_usage),
-                    timestamp: Instant::now(),
+                    timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                     labels: HashMap::new(),
                     node_id: node_id.clone(),
                 };
@@ -285,7 +285,7 @@ impl DistributedMetrics {
                 let memory_metric = MetricPoint {
                     metric_type: MetricType::NodeMemoryUsage,
                     value: MetricValue::Gauge(memory_usage),
-                    timestamp: Instant::now(),
+                    timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                     labels: HashMap::new(),
                     node_id: node_id.clone(),
                 };
@@ -296,7 +296,7 @@ impl DistributedMetrics {
                 let task_metric = MetricPoint {
                     metric_type: MetricType::NodeActiveTasks,
                     value: MetricValue::Gauge(active_tasks as f64),
-                    timestamp: Instant::now(),
+                    timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
                     labels: HashMap::new(),
                     node_id: node_id.clone(),
                 };
@@ -314,7 +314,7 @@ impl DistributedMetrics {
         let execution_metric = MetricPoint {
             metric_type: MetricType::TaskExecutionTime,
             value: MetricValue::Histogram(execution_times),
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             labels: HashMap::new(),
             node_id: "cluster".to_string(),
         };
@@ -325,7 +325,7 @@ impl DistributedMetrics {
         let success_metric = MetricPoint {
             metric_type: MetricType::TaskSuccessRate,
             value: MetricValue::Gauge(success_rate * 100.0),
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             labels: HashMap::new(),
             node_id: "cluster".to_string(),
         };
@@ -341,7 +341,7 @@ impl DistributedMetrics {
         let load_metric = MetricPoint {
             metric_type: MetricType::SystemLoadAverage,
             value: MetricValue::Gauge(load_average),
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             labels: HashMap::new(),
             node_id: "system".to_string(),
         };
@@ -352,7 +352,7 @@ impl DistributedMetrics {
         let pressure_metric = MetricPoint {
             metric_type: MetricType::SystemMemoryPressure,
             value: MetricValue::Gauge(memory_pressure),
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             labels: HashMap::new(),
             node_id: "system".to_string(),
         };
@@ -424,7 +424,7 @@ impl DistributedMetrics {
             cluster_summary,
             node_metrics,
             system_metrics,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
 
         let mut rt_metrics = self.real_time_metrics.write().await;

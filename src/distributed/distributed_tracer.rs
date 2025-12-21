@@ -41,7 +41,7 @@ pub struct TraceEvent {
     pub span_id: SpanId,
     pub parent_span_id: Option<SpanId>,
     pub event_type: TraceEventType,
-    pub timestamp: Instant,
+    pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
     pub duration: Option<Duration>,
     pub node_id: String,
     pub service_name: String,
@@ -353,7 +353,7 @@ impl DistributedTracer {
             span_id: span_id.clone(),
             parent_span_id: self.get_parent_span_id(trace_id, span_id).await,
             event_type,
-            timestamp: Instant::now(),
+            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
             duration: None,
             node_id,
             service_name: "unknown".to_string(),

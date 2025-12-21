@@ -298,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_simple_code_execution() {
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
         let result = runtime.execute_code("1 + 1");
         assert!(result.is_ok());
         assert_eq!(result.unwrap().trim(), "2");
@@ -306,7 +306,7 @@ mod tests {
 
     #[test]
     fn test_file_execution() {
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
 
         // Create a temporary file with JavaScript code
         let mut file = NamedTempFile::new().unwrap();
@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn test_execution_count() {
-        let runtime = Runtime::new(67108864, 1073741824, false).unwrap();
+        let runtime = Runtime::new(67108864, 1073741824, false);
         assert_eq!(runtime.execution_count(), 0);
 
         runtime.execute_code("1").unwrap();
