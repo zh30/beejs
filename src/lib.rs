@@ -50,7 +50,8 @@ pub mod observability;  // 可观测性系统
 pub mod security;  // Stage 84: 企业级安全与合规
 pub mod aiops;  // Stage 85: AI 驱动运维 (AIOps)
 pub mod ai_inference;
-pub mod multilang;  // Stage 88: 多语言支持
+pub mod multilang;  // Stage 88 Phase 1: 多语言支持
+pub mod platform;  // Stage 88 Phase 2: 跨平台运行时
 
 // Stage 83: Enterprise modules (temporarily disabled for compilation)
 // pub mod enterprise;
