@@ -102,7 +102,6 @@ reqwest = { version = "0.11", features = ["json", "blocking"] }
 serde_yaml = "0.9"
 
 # Stage 43.0: Node.js API dependencies
-ring = "0.17"
 hex = "0.4"
 base64 = "0.22"
 percent-encoding = "2.1"
@@ -122,6 +121,14 @@ tch = { version = "0.11", optional = true }  # 可选依赖，支持条件编译
 # kube-runtime = "0.87"
 # elasticsearch = { version = "9.1.0-alpha.1", default-features = false }
 # git2 = "0.18"
+
+# Stage 84: Security & Compliance dependencies
+rust-crypto = "0.2"
+ring = "0.17"
+jsonwebtoken = "9.0"
+oauth2 = "1.0"
+openssl = "0.10"
+sled = "0.34"
 
 # Testing
 [dev-dependencies]

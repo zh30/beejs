@@ -48,6 +48,7 @@ pub mod edge;
 pub mod web_api;  // Stage 74: Web API 生态系统完善
 pub mod debugger;  // Stage 58: Debugger integration
 pub mod observability;  // 可观测性系统
+pub mod security;  // Stage 84: 企业级安全与合规
 pub mod ai_inference;
 
 // Stage 83: Enterprise modules (temporarily disabled for compilation)
