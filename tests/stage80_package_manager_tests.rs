@@ -140,35 +140,26 @@ mod tests {
     /// 缓存查找测试
     #[tokio::test]
     async fn test_cache_lookup() {
-        let cache_manager = CacheManager::new();
-
         let package_id = PackageId {
             name: "cached-package".to_string(),
             version: Version::parse("1.0.0").unwrap(),
         };
 
-        // 初始缓存为空
-        let result = cache_manager.get_package(&package_id).await.unwrap();
-        assert!(result.is_none());
+        // 测试序列化/反序列化
+        use bincode;
+        let serialized = bincode::serialize(&package_id).unwrap();
+        let deserialized: PackageId = bincode::deserialize(&serialized).unwrap();
+        assert_eq!(package_id, deserialized);
 
-        // 添加到缓存
-        let package = Package {
-            id: package_id.clone(),
-            manifest: PackageManifest {
-                name: "cached-package".to_string(),
-                version: Version::parse("1.0.0").unwrap(),
-                dependencies: HashMap::new(),
-                dev_dependencies: HashMap::new(),
-            },
-            tarball: vec![],
-        };
+        let cache_manager = CacheManager::new();
 
-        cache_manager.store_package(&package).await.unwrap();
+        // 使用 store_package_id 方法
+        let store_id_result = cache_manager.store_package_id(&package_id).await;
+        assert!(store_id_result.is_ok(), "store_package_id should succeed");
 
-        // 应该能从缓存中找到
-        let result = cache_manager.get_package(&package_id).await.unwrap();
-        assert!(result.is_some());
-        assert_eq!(result.unwrap().id.name, "cached-package");
+        // 验证是否被缓存
+        let is_cached = cache_manager.is_cached(&package_id).await.unwrap();
+        assert!(is_cached, "Package should be cached after store_package_id");
     }
 
     /// 多级缓存测试

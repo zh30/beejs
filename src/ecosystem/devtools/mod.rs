@@ -11,7 +11,28 @@ pub use profiler::*;
 pub use formatter::*;
 pub use linter::*;
 
-// 临时占位符
-pub struct DebugSession;
-pub struct ProfileReport;
-pub struct FormatAndLintResult;
+/// 调试会话
+#[derive(Debug, Clone)]
+pub struct DebugSession {
+    pub session_id: String,
+    pub script_path: String,
+    pub breakpoints: Vec<Breakpoint>,
+}
+
+/// 性能分析报告
+#[derive(Debug, Clone)]
+pub struct ProfileReport {
+    pub flamegraph: Option<profiler::FlameGraph>,
+    pub hotspots: Vec<profiler::HotFunction>,
+    pub memory_usage: profiler::MemoryReport,
+    pub optimization_suggestions: Vec<String>,
+}
+
+/// 格式化和检查结果
+#[derive(Debug, Clone)]
+pub struct FormatAndLintResult {
+    pub formatted_code: String,
+    pub lint_issues: Vec<linter::LintIssue>,
+    pub changed: bool,
+    pub fixes_applied: usize,
+}

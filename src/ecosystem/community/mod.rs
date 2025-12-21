@@ -5,7 +5,5 @@ pub mod portal;
 
 pub use portal::*;
 
-// 临时占位符
-pub struct UserId;
-pub struct ModuleRating;
-pub struct TrendingModule;
+use chrono::{DateTime, Utc};
+use std::collections::HashMap;
