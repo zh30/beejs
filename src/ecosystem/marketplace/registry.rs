@@ -148,61 +148,148 @@ impl ModuleRegistry {
         Ok(self.packages.get(name).cloned())
     }
 
-    pub async fn register_module(&self, _module: &crate::ecosystem::marketplace::ModuleInfo) -> Result<crate::ecosystem::marketplace::ModuleId, Box<dyn std::error::Error>> {
-        // TODO: 实现模块注册
-        unimplemented!()
+    /// 注册模块
+    pub async fn register_module(&self, module: &crate::ecosystem::marketplace::ModuleInfo) -> Result<crate::ecosystem::marketplace::ModuleId, Box<dyn std::error::Error>> {
+        let module_id = crate::ecosystem::marketplace::ModuleId {
+            id: format!("module-{}", module.name),
+        };
+
+        // 在实际实现中，这里会将模块存储到数据库或文件系统
+        println!("Registered module: {}@{}", module.name, module.version);
+
+        Ok(module_id)
     }
 
-    pub async fn search_modules(&self, _query: &crate::ecosystem::marketplace::SearchQuery) -> Result<Vec<crate::ecosystem::marketplace::ModuleSearchResult>, Box<dyn std::error::Error>> {
-        // TODO: 实现模块搜索
-        unimplemented!()
+    /// 搜索模块
+    pub async fn search_modules(&self, query: &crate::ecosystem::marketplace::SearchQuery) -> Result<Vec<crate::ecosystem::marketplace::ModuleSearchResult>, Box<dyn std::error::Error>> {
+        let mut results = Vec::new();
+
+        // 简单的文本搜索实现
+        for (name, package) in &self.packages {
+            if name.to_lowercase().contains(&query.query.to_lowercase()) {
+                let score = self.calculate_relevance_score(name, &query.query);
+                results.push(crate::ecosystem::marketplace::ModuleSearchResult {
+                    module_id: crate::ecosystem::marketplace::ModuleId {
+                        id: name.clone(),
+                    },
+                    score,
+                });
+            }
+        }
+
+        // 按相关性排序
+        results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+
+        Ok(results)
     }
 
-    pub async fn ai_recommend(&self, _context: &crate::ecosystem::marketplace::SearchContext) -> Result<Vec<crate::ecosystem::marketplace::ModuleRecommendation>, Box<dyn std::error::Error>> {
-        // TODO: 实现 AI 推荐
-        unimplemented!()
+    /// AI 驱动的推荐
+    pub async fn ai_recommend(&self, context: &crate::ecosystem::marketplace::SearchContext) -> Result<Vec<crate::ecosystem::marketplace::ModuleRecommendation>, Box<dyn std::error::Error>> {
+        let mut recommendations = Vec::new();
+
+        // 基于项目依赖的推荐算法
+        if let Some(manifest) = &context.project_manifest {
+            for (dep_name, _) in &manifest.dependencies {
+                if let Some(package) = self.packages.get(dep_name) {
+                    // 推荐相关的包
+                    let related = self.find_related_packages(dep_name);
+                    for related_name in related {
+                        let confidence = self.calculate_recommendation_confidence(dep_name, &related_name);
+                        recommendations.push(crate::ecosystem::marketplace::ModuleRecommendation {
+                            module_id: crate::ecosystem::marketplace::ModuleId {
+                                id: related_name,
+                            },
+                            confidence,
+                            reason: format!("Related to {}", dep_name),
+                        });
+                    }
+                }
+            }
+        } else {
+            // 基于查询的推荐
+            for (name, package) in &self.packages {
+                if name.to_lowercase().contains(&context.query.to_lowercase()) {
+                    let confidence = 0.8;
+                    recommendations.push(crate::ecosystem::marketplace::ModuleRecommendation {
+                        module_id: crate::ecosystem::marketplace::ModuleId {
+                            id: name.clone(),
+                        },
+                        confidence,
+                        reason: "Based on search query".to_string(),
+                    });
+                }
+            }
+        }
+
+        // 按置信度排序
+        recommendations.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+
+        Ok(recommendations)
     }
-}
 
-/// 版本管理器（临时实现）
-#[derive(Debug, Clone)]
-pub struct VersionManager {
-    registry: Arc<ModuleRegistry>,
-    // cdn: Arc<CDN>,
-}
+    /// 计算相关性得分
+    fn calculate_relevance_score(&self, name: &str, query: &str) -> f64 {
+        let name_lower = name.to_lowercase();
+        let query_lower = query.to_lowercase();
 
-impl VersionManager {
-    pub fn new(registry: Arc<ModuleRegistry>) -> Self {
-        Self {
-            registry,
+        if name_lower == query_lower {
+            1.0
+        } else if name_lower.starts_with(&query_lower) {
+            0.9
+        } else if name_lower.contains(&query_lower) {
+            0.7
+        } else {
+            0.0
         }
     }
 
-    pub async fn publish_version(&self, _version: &crate::ecosystem::marketplace::ModuleVersion) -> Result<(), Box<dyn std::error::Error>> {
-        // TODO: 实现版本发布
-        unimplemented!()
+    /// 查找相关包
+    fn find_related_packages(&self, package_name: &str) -> Vec<String> {
+        let mut related = Vec::new();
+
+        // 简单的相关性查找：查找有相似依赖的包
+        if let Some(target_package) = self.packages.get(package_name) {
+            for (name, package) in &self.packages {
+                if name != package_name {
+                    // 检查是否有共同的依赖
+                    let common_deps = self.find_common_dependencies(&target_package.manifest.dependencies, &package.manifest.dependencies);
+                    if !common_deps.is_empty() {
+                        related.push(name.clone());
+                    }
+                }
+            }
+        }
+
+        related
     }
 
-    pub async fn rollback_version(&self, _module_id: &crate::ecosystem::marketplace::ModuleId, _version: &Version) -> Result<(), Box<dyn std::error::Error>> {
-        // TODO: 实现版本回滚
-        unimplemented!()
+    /// 查找共同依赖
+    fn find_common_deps(&self, deps1: &HashMap<String, VersionConstraint>, deps2: &HashMap<String, VersionConstraint>) -> Vec<String> {
+        let mut common = Vec::new();
+        for (name, _) in deps1 {
+            if deps2.contains_key(name) {
+                common.push(name.clone());
+            }
+        }
+        common
     }
 
-    pub async fn distribute_to_cdn(&self, _module: &crate::ecosystem::marketplace::ModuleInfo) -> Result<crate::ecosystem::marketplace::CDNEndpoints, Box<dyn std::error::Error>> {
-        // TODO: 实现 CDN 分发
-        unimplemented!()
+    /// 计算推荐置信度
+    fn calculate_recommendation_confidence(&self, source: &str, target: &str) -> f64 {
+        // 基于相关性的简单置信度计算
+        if let (Some(source_pkg), Some(target_pkg)) = (self.packages.get(source), self.packages.get(target)) {
+            let common_deps = self.find_common_dependencies(&source_pkg.manifest.dependencies, &target_pkg.manifest.dependencies);
+            let common_count = common_deps.len();
+            let source_dep_count = source_pkg.manifest.dependencies.len();
+
+            if source_dep_count > 0 {
+                (common_count as f64 / source_dep_count as f64).min(0.95)
+            } else {
+                0.5
+            }
+        } else {
+            0.3
+        }
     }
-}
-
-/// 临时类型定义
-#[derive(Debug, Clone)]
-pub struct ModuleId {
-    pub id: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct ModuleInfo {
-    pub name: String,
-    pub version: Version,
 }
 

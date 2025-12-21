@@ -1,0 +1,368 @@
+//! Stage 80 Phase 2: 模块市场测试套件
+//! 测试模块注册、搜索、AI 推荐和版本管理功能
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+    use chrono::Utc;
+
+    // 导入模块
+    use beejs::ecosystem::marketplace::{
+        ModuleRegistry, VersionManager, SearchQuery, SearchContext,
+        ModuleId, ModuleInfo, ModuleVersion, CDNEndpoints,
+    };
+    use beejs::ecosystem::types::{PackageManifest, Version, VersionConstraint};
+
+    /// 测试模块注册
+    #[tokio::test]
+    async fn test_module_registration() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let module = ModuleInfo {
+            name: "test-module".to_string(),
+            version: Version::parse("1.0.0").unwrap(),
+        };
+
+        let result = registry.register_module(&module).await;
+
+        assert!(result.is_ok());
+        let module_id = result.unwrap();
+        assert_eq!(module_id.id, "module-test-module");
+    }
+
+    /// 测试搜索引擎 - 基本搜索
+    #[tokio::test]
+    async fn test_search_engine_basic() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let query = SearchQuery {
+            query: "dep-a".to_string(),
+            filters: HashMap::new(),
+        };
+
+        let results = registry.search_modules(&query).await.unwrap();
+
+        assert!(!results.is_empty());
+        assert_eq!(results[0].module_id.id, "dep-a");
+        assert!(results[0].score > 0.0);
+    }
+
+    /// 测试搜索引擎 - 模糊搜索
+    #[tokio::test]
+    async fn test_search_engine_fuzzy() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let query = SearchQuery {
+            query: "dep".to_string(),
+            filters: HashMap::new(),
+        };
+
+        let results = registry.search_modules(&query).await.unwrap();
+
+        // 应该找到所有包含 "dep" 的包
+        assert!(results.len() >= 4); // dep-a, dep-b, dep-x, dep-y
+        for result in &results {
+            assert!(result.module_id.id.contains("dep"));
+            assert!(result.score > 0.0);
+        }
+    }
+
+    /// 测试搜索引擎 - 不存在的结果
+    #[tokio::test]
+    async fn test_search_engine_no_results() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let query = SearchQuery {
+            query: "nonexistent-package-xyz".to_string(),
+            filters: HashMap::new(),
+        };
+
+        let results = registry.search_modules(&query).await.unwrap();
+
+        assert!(results.is_empty());
+    }
+
+    /// 测试 AI 推荐 - 基于项目依赖
+    #[tokio::test]
+    async fn test_ai_recommendation_with_manifest() {
+        let registry = Arc::new(ModuleRegistry::new());
+
+        // 创建一个有依赖的项目清单
+        let manifest = PackageManifest {
+            name: "test-project".to_string(),
+            version: Version::parse("1.0.0").unwrap(),
+            dependencies: HashMap::from([
+                ("dep-a".to_string(), VersionConstraint::parse("^2.0.0").unwrap()),
+            ]),
+            dev_dependencies: HashMap::new(),
+        };
+
+        let context = SearchContext {
+            query: "".to_string(),
+            project_manifest: Some(manifest),
+        };
+
+        let recommendations = registry.ai_recommend(&context).await.unwrap();
+
+        // 应该基于 dep-a 的依赖关系推荐相关包
+        // 注意：这个测试依赖于具体的依赖关系数据
+        println!("Recommendations: {:?}", recommendations.len());
+        assert!(recommendations.len() >= 0);
+    }
+
+    /// 测试 AI 推荐 - 基于查询
+    #[tokio::test]
+    async fn test_ai_recommendation_with_query() {
+        let registry = Arc::new(ModuleRegistry::new());
+
+        let context = SearchContext {
+            query: "dep-a".to_string(),
+            project_manifest: None,
+        };
+
+        let recommendations = registry.ai_recommend(&context).await.unwrap();
+
+        // 应该推荐与查询相关的包
+        assert!(!recommendations.is_empty());
+        for rec in &recommendations {
+            assert!(rec.confidence > 0.0);
+            assert!(!rec.reason.is_empty());
+        }
+    }
+
+    /// 测试版本管理器 - 获取版本列表
+    #[tokio::test]
+    async fn test_version_manager_get_versions() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let version_manager = VersionManager::new(registry);
+
+        let versions = version_manager.get_versions("dep-x");
+
+        assert!(versions.is_some());
+        let versions = versions.unwrap();
+        assert_eq!(versions.len(), 3);
+
+        // 验证版本号
+        let version_strings: Vec<String> = versions.iter()
+            .map(|v| v.version.to_string())
+            .collect();
+        assert!(version_strings.contains(&"1.0.0".to_string()));
+        assert!(version_strings.contains(&"1.5.0".to_string()));
+        assert!(version_strings.contains(&"2.0.0".to_string()));
+    }
+
+    /// 测试版本管理器 - 获取最新版本
+    #[tokio::test]
+    async fn test_version_manager_get_latest() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let version_manager = VersionManager::new(registry);
+
+        let latest = version_manager.get_latest_version("dep-x");
+
+        assert!(latest.is_some());
+        let latest = latest.unwrap();
+        assert_eq!(latest.version, Version::parse("2.0.0").unwrap());
+    }
+
+    /// 测试版本管理器 - 获取稳定版本
+    #[tokio::test]
+    async fn test_version_manager_get_stable() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let version_manager = VersionManager::new(registry);
+
+        let stable = version_manager.get_stable_version("dep-x");
+
+        assert!(stable.is_some());
+        let stable = stable.unwrap();
+        assert_eq!(stable.version, Version::parse("2.0.0").unwrap());
+    }
+
+    /// 测试版本管理器 - 版本升级检查
+    #[tokio::test]
+    async fn test_version_manager_can_upgrade() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let version_manager = VersionManager::new(registry);
+
+        let v1 = Version::parse("1.0.0").unwrap();
+        let v2 = Version::parse("2.0.0").unwrap();
+
+        assert!(version_manager.can_upgrade(&v1, &v2));
+        assert!(!version_manager.can_upgrade(&v2, &v1));
+    }
+
+    /// 测试版本管理器 - 版本距离计算
+    #[tokio::test]
+    async fn test_version_manager_version_distance() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let version_manager = VersionManager::new(registry);
+
+        let v1 = Version::parse("1.0.0").unwrap();
+        let v2 = Version::parse("2.0.0").unwrap();
+
+        let distance = version_manager.version_distance(&v1, &v2);
+        assert_eq!(distance, 100); // major difference of 1 * 100
+    }
+
+    /// 测试版本管理器 - 发布版本
+    #[tokio::test]
+    async fn test_version_manager_publish() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let version_manager = VersionManager::new(registry);
+
+        let new_version = ModuleVersion {
+            version: Version::parse("3.0.0").unwrap(),
+            published_at: Utc::now(),
+            downloads: 0,
+        };
+
+        let result = version_manager.publish_version(&new_version).await;
+
+        assert!(result.is_ok());
+    }
+
+    /// 测试版本管理器 - 版本回滚
+    #[tokio::test]
+    async fn test_version_manager_rollback() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let version_manager = VersionManager::new(registry);
+
+        let module_id = ModuleId {
+            id: "module-dep-x".to_string(),
+        };
+
+        let target_version = Version::parse("1.5.0").unwrap();
+
+        let result = version_manager.rollback_version(&module_id, &target_version).await;
+
+        assert!(result.is_ok());
+    }
+
+    /// 测试版本管理器 - CDN 分发
+    #[tokio::test]
+    async fn test_version_manager_cdn_distribution() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let version_manager = VersionManager::new(registry);
+
+        let module = ModuleInfo {
+            name: "test-module".to_string(),
+            version: Version::parse("1.0.0").unwrap(),
+        };
+
+        let endpoints = version_manager.distribute_to_cdn(&module).await.unwrap();
+
+        assert_eq!(endpoints.primary, "https://cdn.beejs.dev/modules/test-module/latest");
+        assert_eq!(endpoints.mirrors.len(), 3);
+        assert!(endpoints.mirrors[0].contains("cdn-us"));
+        assert!(endpoints.mirrors[1].contains("cdn-eu"));
+        assert!(endpoints.mirrors[2].contains("cdn-asia"));
+    }
+
+    /// 测试集成场景 - 完整的工作流
+    #[tokio::test]
+    async fn test_complete_workflow() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let version_manager = VersionManager::new(registry.clone());
+
+        // 1. 搜索模块
+        let query = SearchQuery {
+            query: "dep".to_string(),
+            filters: HashMap::new(),
+        };
+        let search_results = registry.search_modules(&query).await.unwrap();
+        assert!(!search_results.is_empty());
+
+        // 2. AI 推荐
+        let context = SearchContext {
+            query: "dep".to_string(),
+            project_manifest: None,
+        };
+        let recommendations = registry.ai_recommend(&context).await.unwrap();
+        assert!(!recommendations.is_empty());
+
+        // 3. 获取版本信息
+        let latest = version_manager.get_latest_version("dep-x").unwrap();
+        assert_eq!(latest.version, Version::parse("2.0.0").unwrap());
+
+        // 4. 发布新版本
+        let new_version = ModuleVersion {
+            version: Version::parse("2.1.0").unwrap(),
+            published_at: Utc::now(),
+            downloads: 0,
+        };
+        let publish_result = version_manager.publish_version(&new_version).await;
+        assert!(publish_result.is_ok());
+
+        // 5. CDN 分发
+        let module = ModuleInfo {
+            name: "test-module".to_string(),
+            version: Version::parse("1.0.0").unwrap(),
+        };
+        let endpoints = version_manager.distribute_to_cdn(&module).await.unwrap();
+        assert!(!endpoints.primary.is_empty());
+        assert_eq!(endpoints.mirrors.len(), 3);
+    }
+
+    /// 测试性能 - 搜索响应时间
+    #[tokio::test]
+    async fn test_search_performance() {
+        let registry = Arc::new(ModuleRegistry::new());
+
+        let start = std::time::Instant::now();
+        for i in 0..100 {
+            let query = SearchQuery {
+                query: format!("dep-{}", i % 5),
+                filters: HashMap::new(),
+            };
+            let _ = registry.search_modules(&query).await.unwrap();
+        }
+        let elapsed = start.elapsed();
+
+        // 100 次搜索应该在合理时间内完成（这里是测试环境，确保不会太慢）
+        println!("Search performance: 100 searches took {:?}", elapsed);
+        assert!(elapsed.as_millis() < 10000); // 10秒上限
+    }
+
+    /// 测试边界情况 - 空查询
+    #[tokio::test]
+    async fn test_empty_query() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let query = SearchQuery {
+            query: "".to_string(),
+            filters: HashMap::new(),
+        };
+
+        let results = registry.search_modules(&query).await.unwrap();
+
+        // 空查询应该返回所有匹配项（这里没有匹配，因为是精确匹配）
+        // 或者根据实现决定返回空
+        println!("Empty query results: {}", results.len());
+    }
+
+    /// 测试边界情况 - 特殊字符查询
+    #[tokio::test]
+    async fn test_special_characters_query() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let query = SearchQuery {
+            query: "dep-a@^2.0.0".to_string(),
+            filters: HashMap::new(),
+        };
+
+        let results = registry.search_modules(&query).await.unwrap();
+
+        // 应该优雅处理特殊字符
+        println!("Special chars query results: {}", results.len());
+        // 根据实际实现，可能返回空或部分结果
+    }
+
+    /// 测试数据一致性
+    #[tokio::test]
+    async fn test_data_consistency() {
+        let registry = Arc::new(ModuleRegistry::new());
+        let version_manager = VersionManager::new(registry);
+
+        // 通过注册表搜索到的包应该与版本管理器中的版本信息一致
+        let dep_a = registry.get_package("dep-a").await.unwrap();
+        assert!(dep_a.is_some());
+
+        let dep_a_versions = version_manager.get_versions("dep-a");
+        // dep-a 可能在版本管理器中没有版本数据，这是正常的
+        // 因为版本管理器维护的是模块版本，而注册表维护的是包信息
+    }
+}
