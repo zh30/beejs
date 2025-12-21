@@ -12,6 +12,7 @@ use crate::debugger::{
     breakpoint::{BreakpointManager, Breakpoint},
     stack_trace::{StackTrace, StackFrame},
     variable_scope::VariableInspector,
+    watch::{WatchManager, WatchExpression},
     DebugEvent, DebugResult, DebugStats, StepType, SourceLocation,
     config::DebugConfig,
     v8_stubs::{DebugEvent as V8DebugEvent, DebugExecutionState},
@@ -31,6 +32,7 @@ pub struct DebuggerEngine {
     config: DebugConfig,
     state: Arc<Mutex<DebugState>>,
     breakpoint_manager: BreakpointManager,
+    watch_manager: WatchManager,
     current_stack: Arc<Mutex<Option<StackTrace>>>,
     stats: Arc<Mutex<DebugStats>>,
     current_breakpoint_id: Option<String>,
@@ -90,6 +92,7 @@ impl DebuggerEngine {
             config,
             state: Arc::new(Mutex::new(DebugState::Running)),
             breakpoint_manager: BreakpointManager::new(),
+            watch_manager: WatchManager::new(),
             current_stack: Arc::new(Mutex::new(None)),
             stats: Arc::new(Mutex::new(DebugStats::new())),
             current_breakpoint_id: None,
@@ -444,5 +447,65 @@ impl DebuggerEngine {
     pub fn is_stepping(&self) -> bool {
         let state = self.state.lock().unwrap();
         matches!(*state, DebugState::Stepping)
+    }
+
+    // =========================================
+    // Watch Expression Methods
+    // =========================================
+
+    /// Add a watch expression
+    pub fn add_watch(&mut self, expression: &str) -> DebugResult<WatchExpression> {
+        match self.watch_manager.add(expression) {
+            Ok(watch) => {
+                let mut stats = self.stats.lock().unwrap();
+                stats.watches_added += 1;
+                DebugResult::ok(watch)
+            }
+            Err(e) => DebugResult::err(e),
+        }
+    }
+
+    /// Remove a watch expression by ID
+    pub fn remove_watch(&mut self, id: &str) -> DebugResult<()> {
+        match self.watch_manager.remove(id) {
+            Ok(()) => DebugResult::ok(()),
+            Err(e) => DebugResult::err(e),
+        }
+    }
+
+    /// Get all watch expressions
+    pub fn get_all_watches(&self) -> Vec<WatchExpression> {
+        self.watch_manager.list().into_iter().cloned().collect()
+    }
+
+    /// Get the number of watch expressions
+    pub fn get_watch_count(&self) -> usize {
+        self.watch_manager.count()
+    }
+
+    /// Clear all watch expressions
+    pub fn clear_all_watches(&mut self) {
+        self.watch_manager.clear();
+    }
+
+    /// Update a watch expression value
+    pub fn update_watch_value(
+        &mut self,
+        id: &str,
+        value: &str,
+        value_type: &str,
+    ) -> DebugResult<()> {
+        match self.watch_manager.update_value(id, value, value_type) {
+            Ok(()) => DebugResult::ok(()),
+            Err(e) => DebugResult::err(e),
+        }
+    }
+
+    /// Set an error on a watch expression
+    pub fn set_watch_error(&mut self, id: &str, error: &str) -> DebugResult<()> {
+        match self.watch_manager.set_error(id, error) {
+            Ok(()) => DebugResult::ok(()),
+            Err(e) => DebugResult::err(e),
+        }
     }
 }

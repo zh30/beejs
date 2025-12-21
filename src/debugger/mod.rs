@@ -16,6 +16,7 @@ pub mod config;
 pub mod v8_stubs;
 pub mod session;
 pub mod cli;
+pub mod watch;
 
 pub use engine::{DebuggerEngine, DebugState, SimpleEventListener};
 pub use breakpoint::{Breakpoint, BreakpointManager, BreakpointCondition};
@@ -23,6 +24,7 @@ pub use stack_trace::{StackFrame, StackTrace, StackFrameInfo};
 pub use variable_scope::{VariableScope, ScopeType, VariableInspector};
 pub use session::DebugSession;
 pub use config::DebugConfig;
+pub use watch::{WatchExpression, WatchManager};
 
 /// Debug event types
 #[derive(Debug, Clone, PartialEq)]
@@ -140,6 +142,7 @@ pub struct DebugStats {
     pub steps_executed: u64,
     pub exceptions_caught: u64,
     pub variables_inspected: u64,
+    pub watches_added: u64,
     pub start_time: std::time::Instant,
 }
 
@@ -151,6 +154,7 @@ impl Default for DebugStats {
             steps_executed: 0,
             exceptions_caught: 0,
             variables_inspected: 0,
+            watches_added: 0,
             start_time: std::time::Instant::now(),
         }
     }

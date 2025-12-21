@@ -3,9 +3,73 @@
 ## 项目概述
 Beejs 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 实现，旨在为 AI 时代提供更高效的 JS/TS 脚本执行能力，**通过进程池复用系统实现 10-50x 性能提升**。
 
-**当前状态 (2025-12-21)**: ✅ Stage 74 Phase 1 Web API 核心实现完成
+**当前状态 (2025-12-21)**: ✅ Stage 75 调试器增强 - Watch 变量监控
 
 ## 最新更新 (2025-12-21)
+
+### ✅ Stage 75: 调试器增强 - Watch 变量监控 (2025-12-21 21:30)
+**进度**: ✅ Phase 1 完成 (Watch 变量管理器实现)
+
+#### 完成功能
+
+##### 1. **Watch 变量管理器** ✅
+- ✅ `WatchExpression` - 监控表达式数据结构
+  * 唯一 ID、表达式、最后值、值类型
+  * 错误状态追踪、评估次数统计
+  * 格式化输出支持
+- ✅ `WatchManager` - 管理所有 watch 表达式
+  * 添加、删除、查询 watch
+  * 更新值、设置错误
+  * 保持添加顺序
+  * 清除所有 watch
+
+##### 2. **DebuggerEngine Watch 集成** ✅
+- ✅ `add_watch(expression)` - 添加 watch 表达式
+- ✅ `remove_watch(id)` - 移除 watch
+- ✅ `get_all_watches()` - 获取所有 watch
+- ✅ `get_watch_count()` - watch 数量
+- ✅ `clear_all_watches()` - 清除所有
+- ✅ `update_watch_value()` - 更新值
+- ✅ `set_watch_error()` - 设置错误
+
+##### 3. **统计信息增强** ✅
+- ✅ `DebugStats.watches_added` - 追踪 watch 添加次数
+
+##### 4. **测试覆盖** ✅
+- ✅ 18 个新测试用例全部通过
+- ✅ 总计 58 个调试器测试通过 (40 原有 + 18 新增)
+
+#### 测试结果
+```
+running 18 tests (stage75_debugger_watch_tests)
+test tests::test_add_watch_expression ... ok
+test tests::test_clear_all_watches ... ok
+test tests::test_debugger_engine_add_watch ... ok
+test tests::test_debugger_engine_clear_watches ... ok
+test tests::test_debugger_engine_remove_watch ... ok
+test tests::test_debugger_engine_watch_count ... ok
+test tests::test_duplicate_watch_expressions ... ok
+test tests::test_get_watch_by_id ... ok
+test tests::test_list_all_watches ... ok
+test tests::test_remove_nonexistent_watch ... ok
+test tests::test_remove_watch_expression ... ok
+test tests::test_update_watch_value ... ok
+test tests::test_watch_expression_complex_value ... ok
+test tests::test_watch_expression_formatting ... ok
+test tests::test_watch_expression_structure ... ok
+test tests::test_watch_expression_with_error ... ok
+test tests::test_watch_manager_creation ... ok
+test tests::test_watch_stats ... ok
+
+test result: ok. 18 passed; 0 failed
+```
+
+#### 下一阶段
+- [ ] Stage 75 Phase 2: 表达式求值与 V8 集成
+- [ ] Stage 76: 性能分析器增强
+- [ ] Stage 77: WebAssembly 集成
+
+---
 
 ### ✅ Stage 74: Web API 核心实现 (2025-12-21 11:30)
 **进度**: ✅ 95% 完成 (Blob/FormData API 方法正确暴露，但数据存储受 V8 版本限制)
