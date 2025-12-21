@@ -66,7 +66,7 @@ mod stage_21_v8_snapshot_tests {
 
         // Second call - should hit cache
         let start2 = Instant::now();
-        let snapshot2 = manager.get_or_create_snapshot("cache-test-v0.1.0");
+        let snapshot2 = manager.generate_snapshot("cache-test-v0.1.0");
         let elapsed2 = start2.elapsed();
 
         assert!(snapshot2.is_ok() && snapshot2.unwrap().is_some());

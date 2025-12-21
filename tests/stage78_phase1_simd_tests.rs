@@ -28,9 +28,19 @@ mod stage78_simd_tests {
         println!("     Threads Support: {}", features.threads_support);
         println!("     Vector Width: {:?}", features.optimal_vector_width);
 
-        // 至少应该支持一种 SIMD 指令集（现代 CPU 都支持）
-        let has_any_simd = features.has_avx512 || features.has_avx2 || features.has_sse4_2;
-        assert!(has_any_simd, "应该至少支持一种 SIMD 指令集");
+        // 至少应该支持一种 SIMD 指令集或 NEON（现代 CPU 都支持）
+        #[cfg(target_arch = "x86_64")]
+        {
+            let has_any_simd = features.has_avx512 || features.has_avx2 || features.has_sse4_2;
+            assert!(has_any_simd, "x86_64 应该至少支持一种 SIMD 指令集");
+        }
+
+        #[cfg(target_arch = "aarch64")]
+        {
+            // ARM64 使用 NEON (128-bit)，这里用 Sse4(128) 表示
+            let has_neon = matches!(features.optimal_vector_width, beejs::wasm::simd_engine::VectorWidth::Sse4(128));
+            assert!(has_neon, "aarch64 应该支持 NEON SIMD");
+        }
 
         println!("✅ 测试 1 通过: CPU 特性检测成功");
     }
