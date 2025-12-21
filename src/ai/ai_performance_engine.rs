@@ -272,7 +272,7 @@ impl AiPerformanceEngine {
             }
 
             *progress.lock().unwrap() = 1.0;
-            *is_training = false;
+            *self.is_training.lock().unwrap() = false;
         });
     }
 
