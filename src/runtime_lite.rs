@@ -439,7 +439,9 @@ impl RuntimeLite {
         let has_web_api = code_trimmed.contains("new URL") ||
                           code_trimmed.contains("new URLSearchParams") ||
                           code_trimmed.contains("fetch(") ||
-                          code_trimmed.contains("new WebSocket");
+                          code_trimmed.contains("new WebSocket") ||
+                          code_trimmed.contains("new Blob") ||
+                          code_trimmed.contains("new File");
 
         if has_web_api {
             return self.execute_standard(code);

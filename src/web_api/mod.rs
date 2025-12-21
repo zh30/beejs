@@ -8,6 +8,7 @@ pub mod url;
 pub mod events;
 pub mod form_data;
 pub mod abort;
+pub mod blob;        // Stage 74: Blob/File API
 pub mod timers;      // Stage 74: Timer APIs
 pub mod encoding;    // Stage 74: TextEncoder/TextDecoder
 pub mod performance; // Stage 74: Performance API
@@ -17,6 +18,7 @@ use rusty_v8 as v8;
 
 // 从各模块导入设置函数
 use abort::setup_abort_api;
+use blob::setup_blob_api;
 use crypto::setup_crypto_api;
 use encoding::setup_encoding_api;
 use events::setup_events_api;
@@ -34,6 +36,16 @@ pub fn init_web_api(
 ) -> Result<()> {
     eprintln!("🔧 [STAGE74] init_web_api called");
 
+    // Write to file to confirm this is called
+    let _ = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/tmp/init_web_api.log")
+        .and_then(|mut file| {
+            use std::io::Write;
+            writeln!(file, "init_web_api called at {}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs())
+        });
+
     // 按照依赖顺序初始化各个 API
 
     // 1. 基础 API（无依赖）
@@ -48,6 +60,10 @@ pub fn init_web_api(
     eprintln!("🔧 [STAGE74] Setting up abort API...");
     setup_abort_api(scope, context)?;
     eprintln!("✅ [STAGE74] abort API done");
+
+    eprintln!("🔧 [STAGE74] Setting up blob API...");
+    setup_blob_api(scope, context)?;     // Stage 74: Blob/File API
+    eprintln!("✅ [STAGE74] blob API done");
 
     eprintln!("🔧 [STAGE74] Setting up timer API...");
     setup_timer_api(scope, context)?;

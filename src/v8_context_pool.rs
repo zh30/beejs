@@ -153,10 +153,14 @@ impl V8ContextPool {
             let context = v8::Context::new(&mut scope);
             let mut context_scope = v8::ContextScope::new(&mut scope, context);
 
-            // Initialize Web APIs (fetch, WebSocket, URL, etc.)
+            // Initialize Web APIs (fetch, WebSocket, URL, Blob, File, etc.)
+            eprintln!("🔧 [CONTEXT_POOL] Initializing Web APIs...");
+
             if let Err(e) = crate::web_api::init_web_api(&mut context_scope, &context) {
                 eprintln!("⚠️ Web API initialization failed: {:?}", e);
                 // Don't fail - continue with basic context
+            } else {
+                eprintln!("✅ [CONTEXT_POOL] Web APIs initialized successfully");
             }
 
             v8::Global::new(&mut context_scope, context)
