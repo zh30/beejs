@@ -268,14 +268,9 @@ impl AiPerformanceEngine {
             // 训练张量优化器
             {
                 let mut optimizer = tensor_optimizer.lock().unwrap();
-                {
-                {
-            let optimizer_clone = Arc::clone(&optimizer);
-            let mut optimizer_guard = optimizer_clone.lock().unwrap();
-            optimizer_guard.optimize(&history_data).await;
-        }
+                let optimizer_clone = Arc::clone(&optimizer);
+                let mut optimizer_guard = optimizer_clone.lock().unwrap();
                 optimizer_guard.optimize(&history_data).await;
-            };
             }
 
             *progress.lock().unwrap() = 1.0;

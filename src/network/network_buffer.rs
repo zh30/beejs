@@ -1,7 +1,7 @@
 //! 网络缓冲区管理
 //! 高性能的网络缓冲区池，支持零拷贝和预分配
 
-use super::{NetworkIoConfig, NetworkIoStats};
+use super::{NetworkConfig, NetworkStats};
 use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 use std::ptr::NonNull;
@@ -150,7 +150,8 @@ impl BufferPool {
     pub fn new(default_buffer_size: usize) -> Self {
         let config = BufferConfig::default();
         Self {
-            config: small_pool_size: config.small_pool_size,
+            small_pool: Arc::new(Mutex::new(VecDeque::new())),
+            config: config,
             medium_pool: Arc::new(Mutex::new(VecDeque::new())),
             large_pool: Arc::new(Mutex::new(VecDeque::new())),
             huge_pool: Arc::new(Mutex::new(VecDeque::new())),

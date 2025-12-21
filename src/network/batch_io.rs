@@ -1,7 +1,7 @@
 //! 批量 I/O 操作引擎
 //! 通过批处理多个 I/O 操作来提高网络吞吐量
 
-use super::{NetworkIoConfig, NetworkIoStats};
+use super::{NetworkConfig, NetworkStats};
 use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
 use std::collections::VecDeque;
@@ -58,7 +58,7 @@ pub struct BatchStats {
 
 /// 批量 I/O 引擎
 pub struct BatchIoEngine {
-    config: NetworkIoConfig,
+    config: NetworkConfig,
     batch_config: BatchConfig,
     stats: Arc<RwLock<BatchStats>>,
     pending_operations: Arc<RwLock<VecDeque<BatchOperation>>>,
@@ -68,8 +68,8 @@ pub struct BatchIoEngine {
 
 impl BatchIoEngine {
     /// 创建新的批量 I/O 引擎
-    pub fn new(config: NetworkIoConfig) -> Self {
-        let batch_config = BatchConfig::default            processor();
+    pub fn new(config: NetworkConfig) -> Self {
+        let batch_config = BatchConfig::default.processor();
         Self {
 _handle: None,
             batch_config,
@@ -128,6 +128,7 @@ _handle: None,
 
     /// 处理一批操作
     async fn process_batch(
+        &self,
         pending_operations: &Arc<RwLock<VecDeque<BatchOperation>>>,
         stats: &Arc<RwLock<BatchStats>>,
     ) {

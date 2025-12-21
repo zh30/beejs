@@ -1,8 +1,9 @@
 //! io_uring 引擎
 //! 基于 Linux io_uring 的高性能异步 I/O
 
-use super::{NetworkIoConfig, NetworkIoStats};
+use super::{NetworkConfig, NetworkStats};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::{RwLock, mpsc};
 use std::collections::HashMap;
 
@@ -63,7 +64,7 @@ pub struct UringStats {
 
 /// io_uring 引擎
 pub struct IoUringEngine {
-    config: NetworkIoConfig,
+    config: NetworkConfig,
     uring_config: UringConfig,
     stats: Arc<RwLock<UringStats>>,
     active_operations: Arc<RwLock<HashMap<u64, std::time::Instant>>>,
@@ -73,7 +74,7 @@ pub struct IoUringEngine {
 
 impl IoUringEngine {
     /// 创建新的 io_uring 引擎
-    pub fn new(config: NetworkIoConfig) -> Self {
+    pub fn new(config: NetworkConfig) -> Self {
         let uring_config = UringConfig::default();
 
         Self {

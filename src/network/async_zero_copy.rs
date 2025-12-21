@@ -1,13 +1,14 @@
 //! 异步零拷贝传输
 //! 实现高性能的异步零拷贝数据传输
 
-use super::{NetworkIoConfig, NetworkIoStats};
+use super::{NetworkConfig, NetworkStats};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::{RwLock, oneshot};
 use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use memmap2::Mmap;
+use memmap2::{Mmap, MmapOptions};
 
 /// 零拷贝错误
 #[derive(Debug, thiserror::Error)]
@@ -49,7 +50,7 @@ pub struct TransferStats {
 /// 零拷贝 Future
 pub struct ZeroCopyFuture {
     id: u64,
-    receiver: oneshot::<Result<u64, ZeroCopyError>>,
+    receiver: oneshot::Receiver<Result<u64, ZeroCopyError>>,
 }
 
 impl ZeroCopyFuture {
@@ -71,7 +72,7 @@ impl Future for ZeroCopyFuture {
 
 /// 异步零拷贝引擎
 pub struct AsyncZeroCopy {
-    config: NetworkIoConfig,
+    config: NetworkConfig,
     stats: Arc<RwLock<TransferStats>>,
     active_transfers: Arc<RwLock<std::collections::HashMap<u64, TransferRequest>>>,
     transfer_counter: Arc<RwLock<u64>>,
@@ -79,7 +80,7 @@ pub struct AsyncZeroCopy {
 
 impl AsyncZeroCopy {
     /// 创建新的异步零拷贝引擎
-    pub fn new(config: NetworkIoConfig) -> Self {
+    pub fn new(config: NetworkConfig) -> Self {
         Self {
             stats: Arc::new(RwLock::new(TransferStats {
                 total_transfers: 0,

@@ -407,8 +407,8 @@ impl EnhancedGcOptimizer {
         self.metrics.total_gc_time_ms.fetch_add(duration.as_millis() as usize, Ordering::Relaxed);
 
         match decision.strategy {
-            GcStrategy::Emergency => self.metrics.emergency_collections.fetch_add(1, Ordering::Relaxed),;
-            GcStrategy::Predictive => self.metrics.predictive_collections.fetch_add(1, Ordering::Relaxed),;
+            GcStrategy::Emergency => self.metrics.emergency_collections.fetch_add(1, Ordering::Relaxed),
+            GcStrategy::Predictive => self.metrics.predictive_collections.fetch_add(1, Ordering::Relaxed),
             GcStrategy::Incremental => self.metrics.incremental_collections.fetch_add(1, Ordering::Relaxed),
             GcStrategy::Parallel => self.metrics.parallel_collections.fetch_add(1, Ordering::Relaxed),
             _ => {}

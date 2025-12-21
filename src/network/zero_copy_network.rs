@@ -1,7 +1,7 @@
 //! 零拷贝网络栈
 //! 实现基于 DMA 和内存映射的高性能网络 I/O
 
-use super::{NetworkIoConfig, NetworkIoStats};
+use super::{NetworkConfig, NetworkStats};
 use std::sync::Arc;
 use tokio::sync::{RwLock, Mutex};
 use std::net::{SocketAddr, TcpListener, TcpStream};
@@ -52,7 +52,7 @@ impl Default for NetworkZeroCopyStats {
 
 /// 零拷贝套接字
 pub struct ZeroCopySocket {
-    config: NetworkIoConfig,
+    config: NetworkConfig,
     zero_copy_config: ZeroCopyConfig,
     stats: Arc<RwLock<NetworkZeroCopyStats>>,
     mmap_pool: Arc<Mutex<Vec<Mmap>>>,
@@ -60,7 +60,7 @@ pub struct ZeroCopySocket {
 
 impl ZeroCopySocket {
     /// 创建新的零拷贝套接字
-    pub fn new(config: NetworkIoConfig) -> Self {
+    pub fn new(config: NetworkConfig) -> Self {
         Self {
             zero_copy_config: ZeroCopyConfig::default(),
             stats: Arc::new(RwLock::new(NetworkZeroCopyStats::default())),
@@ -74,7 +74,7 @@ impl ZeroCopySocket {
         let listener = TcpListener::bind(addr)?;
         Ok(ZeroCopyListener {
             listener,
-            config: NetworkIoConfig::default(),
+            config: NetworkConfig::default(),
             stats: Arc::new(RwLock::new(NetworkZeroCopyStats::default())),
         })
     }
@@ -167,7 +167,7 @@ impl ZeroCopySocket {
 /// 零拷贝监听器
 pub struct ZeroCopyListener {
     listener: TcpListener,
-    config: NetworkIoConfig,
+    config: NetworkConfig,
     stats: Arc<RwLock<NetworkZeroCopyStats>>,
 }
 
