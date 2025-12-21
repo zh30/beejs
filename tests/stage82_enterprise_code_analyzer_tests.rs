@@ -1,0 +1,289 @@
+//! Stage 82 企业代码库分析器测试
+//! 测试企业级多仓库代码分析功能
+
+use std::path::Path;
+use std::sync::Arc;
+use beejs::enterprise::code_analyzer::{
+    EnterpriseCodeAnalyzer, RepositoryInfo, CodebaseMetrics,
+    TechnicalDebtReport, DependencyGraph,
+    RefactoringSuggestion
+};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::test;
+
+    /// 测试多仓库分析功能
+    #[test]
+    async fn test_multi_repository_analysis() {
+        // 准备测试数据
+        let repositories = vec![
+            RepositoryInfo {
+                id: "repo-1".to_string(),
+                name: "frontend-app".to_string(),
+                path: Path::new("/test/frontend").to_path_buf(),
+                language: "TypeScript".to_string(),
+                framework: Some("React".to_string()),
+                dependencies: vec!["react".to_string(), "typescript".to_string()],
+            },
+            RepositoryInfo {
+                id: "repo-2".to_string(),
+                name: "backend-api".to_string(),
+                path: Path::new("/test/backend").to_path_buf(),
+                language: "JavaScript".to_string(),
+                framework: Some("Node.js".to_string()),
+                dependencies: vec!["express".to_string(), "mongodb".to_string()],
+            },
+            RepositoryInfo {
+                id: "repo-3".to_string(),
+                name: "shared-utils".to_string(),
+                path: Path::new("/test/shared").to_path_buf(),
+                language: "TypeScript".to_string(),
+                framework: None,
+                dependencies: vec![],
+            },
+        ];
+
+        let analyzer = EnterpriseCodeAnalyzer::new();
+
+        // 执行分析
+        let result = analyzer
+            .analyze_enterprise_codebase(&repositories)
+            .await
+            .expect("Failed to analyze repositories");
+
+        // 验证结果
+        assert!(result.repositories.len() == 3);
+        assert!(result.metrics.total_lines_of_code > 0);
+        assert!(result.architecture_patterns.len() > 0);
+    }
+
+    /// 测试架构模式检测
+    #[test]
+    async fn test_architecture_pattern_detection() {
+        let repositories = vec![
+            RepositoryInfo {
+                id: "microservice-1".to_string(),
+                name: "user-service".to_string(),
+                path: Path::new("/test/user-service").to_path_buf(),
+                language: "TypeScript".to_string(),
+                framework: Some("Express".to_string()),
+                dependencies: vec!["express".to_string(), "mongoose".to_string()],
+            },
+            RepositoryInfo {
+                id: "microservice-2".to_string(),
+                name: "order-service".to_string(),
+                path: Path::new("/test/order-service").to_path_buf(),
+                language: "TypeScript".to_string(),
+                framework: Some("Express".to_string()),
+                dependencies: vec!["express".to_string(), "kafka".to_string()],
+            },
+        ];
+
+        let analyzer = EnterpriseCodeAnalyzer::new();
+
+        let patterns = analyzer
+            .detect_architecture_patterns(&repositories)
+            .await
+            .expect("Failed to detect patterns");
+
+        // 验证检测到微服务架构
+        assert!(patterns.iter().any(|p| p.name.contains("Microservices")));
+        assert!(patterns.len() >= 1);
+    }
+
+    /// 测试技术债务评估
+    #[test]
+    async fn test_technical_debt_assessment() {
+        // 创建模拟的代码库指标
+        let metrics = CodebaseMetrics {
+            total_lines_of_code: 100000,
+            complexity_score: 8.5,
+            code_duplication_rate: 0.25,
+            test_coverage: 0.65,
+            maintainability_index: 6.8,
+            technical_debt_ratio: 0.30,
+            cyclomatic_complexity: 7.2,
+            out_of_date_dependencies: 15,
+            deprecated_api_usage: 8,
+        };
+
+        let analyzer = EnterpriseCodeAnalyzer::new();
+
+        let debt_report = analyzer
+            .assess_technical_debt(&metrics)
+            .await
+            .expect("Failed to assess technical debt");
+
+        // 验证技术债务报告
+        assert!(debt_report.debt_ratio > 0.0);
+        assert!(debt_report.debt_items.len() > 0);
+        assert!(debt_report.estimated_remediation_cost > 0.0);
+    }
+
+    /// 测试重构建议生成
+    #[test]
+    async fn test_refactoring_suggestions_generation() {
+        let debt_items = vec![
+            beejs::enterprise::code_analyzer::DebtItem {
+                category: "Code Quality".to_string(),
+                description: "High code duplication in utils module".to_string(),
+                severity: "High".to_string(),
+                estimated_effort: "3 days".to_string(),
+                impact: "Maintainability".to_string(),
+            },
+            beejs::enterprise::code_analyzer::DebtItem {
+                category: "Dependencies".to_string(),
+                description: "15 outdated dependencies".to_string(),
+                severity: "Medium".to_string(),
+                estimated_effort: "1 day".to_string(),
+                impact: "Security".to_string(),
+            },
+        ];
+
+        let analyzer = EnterpriseCodeAnalyzer::new();
+
+        let suggestions = analyzer
+            .suggest_refactoring(&debt_items)
+            .await
+            .expect("Failed to generate suggestions");
+
+        // 验证重构建议
+        assert!(suggestions.len() > 0);
+        assert!(suggestions.iter().any(|s| s.priority == "High"));
+    }
+
+    /// 测试跨仓库依赖映射
+    #[test]
+    async fn test_cross_repository_dependency_mapping() {
+        let repositories = vec![
+            RepositoryInfo {
+                id: "frontend".to_string(),
+                name: "web-app".to_string(),
+                path: Path::new("/test/frontend").to_path_buf(),
+                language: "TypeScript".to_string(),
+                framework: Some("React".to_string()),
+                dependencies: vec!["@company/shared-utils".to_string()],
+            },
+            RepositoryInfo {
+                id: "backend".to_string(),
+                name: "api-server".to_string(),
+                path: Path::new("/test/backend").to_path_buf(),
+                language: "TypeScript".to_string(),
+                framework: Some("Express".to_string()),
+                dependencies: vec!["@company/shared-utils".to_string()],
+            },
+            RepositoryInfo {
+                id: "shared".to_string(),
+                name: "shared-utils".to_string(),
+                path: Path::new("/test/shared").to_path_buf(),
+                language: "TypeScript".to_string(),
+                framework: None,
+                dependencies: vec![],
+            },
+        ];
+
+        let analyzer = EnterpriseCodeAnalyzer::new();
+
+        let dependency_graph = analyzer
+            .map_cross_repository_dependencies(&repositories)
+            .await
+            .expect("Failed to map dependencies");
+
+        // 验证依赖关系
+        assert!(dependency_graph.cross_repository_dependencies.len() > 0);
+        assert!(dependency_graph
+            .cross_repository_dependencies
+            .iter()
+            .any(|dep| dep.from_repo == "frontend" && dep.to_repo == "shared"));
+    }
+
+    /// 测试循环依赖检测
+    #[test]
+    async fn test_circular_dependency_detection() {
+        let dependency_graph = DependencyGraph {
+            nodes: vec![
+                "frontend".to_string(),
+                "backend".to_string(),
+                "shared".to_string(),
+            ],
+            edges: vec![
+                ("frontend".to_string(), "shared".to_string()),
+                ("backend".to_string(), "shared".to_string()),
+                ("shared".to_string(), "frontend".to_string()), // 创建循环
+            ],
+        };
+
+        let analyzer = EnterpriseCodeAnalyzer::new();
+
+        let circular_deps = analyzer
+            .identify_circular_dependencies(&dependency_graph)
+            .await
+            .expect("Failed to identify circular dependencies");
+
+        // 验证检测到循环依赖
+        assert!(circular_deps.len() > 0);
+        assert!(circular_deps
+            .iter()
+            .any(|dep| dep.path.iter().any(|p| p == "frontend") && dep.path.iter().any(|p| p == "shared")));
+    }
+
+    /// 测试企业分析报告生成
+    #[test]
+    async fn test_enterprise_analysis_report_generation() {
+        let repositories = vec![
+            RepositoryInfo {
+                id: "repo-1".to_string(),
+                name: "app1".to_string(),
+                path: Path::new("/test/app1").to_path_buf(),
+                language: "TypeScript".to_string(),
+                framework: Some("React".to_string()),
+                dependencies: vec!["react".to_string()],
+            },
+        ];
+
+        let analyzer = EnterpriseCodeAnalyzer::new();
+
+        let report = analyzer
+            .generate_comprehensive_report(&repositories)
+            .await
+            .expect("Failed to generate report");
+
+        // 验证报告内容
+        assert!(report.summary.total_repositories == 1);
+        assert!(report.summary.total_lines_of_code > 0);
+        assert!(report.technical_debt_assessment.is_some());
+        assert!(report.recommendations.len() > 0);
+    }
+
+    /// 测试分析性能（大规模仓库）
+    #[test]
+    async fn test_large_scale_analysis_performance() {
+        // 创建 50 个模拟仓库
+        let mut repositories = Vec::new();
+        for i in 0..50 {
+            repositories.push(RepositoryInfo {
+                id: format!("repo-{}", i),
+                name: format!("repository-{}", i),
+                path: Path::new(&format!("/test/repo-{}", i)).to_path_buf(),
+                language: if i % 2 == 0 { "TypeScript".to_string() } else { "JavaScript".to_string() },
+                framework: Some("React".to_string()),
+                dependencies: vec!["react".to_string(), "typescript".to_string()],
+            });
+        }
+
+        let analyzer = EnterpriseCodeAnalyzer::new();
+
+        let start = std::time::Instant::now();
+        let result = analyzer
+            .analyze_enterprise_codebase(&repositories)
+            .await
+            .expect("Failed to analyze large codebase");
+        let elapsed = start.elapsed();
+
+        // 验证性能要求：50个仓库应在10分钟内分析完成
+        assert!(elapsed.as_secs() < 600);
+        assert!(result.repositories.len() == 50);
+    }
+}
