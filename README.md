@@ -2,7 +2,7 @@
 
 [![Performance](https://img.shields.io/badge/Performance-1000x%2B-brightgreen)](#性能对比)
 [![Test Coverage](https://img.shields.io/badge/Test%20Coverage-90%25-success)](#测试套件)
-[![Stage](https://img.shields.io/badge/Stage-83-blue)](#项目阶段)
+[![Stage](https://img.shields.io/badge/Stage-85-blue)](#项目阶段)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](#许可证)
 
 **Beejs** 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 构建，专为 AI 时代提供极速的脚本执行能力。
@@ -146,7 +146,7 @@ cat benchmark_reports/*.json
 
 ## 🏆 项目成就
 
-### Stage 83 成果 (最新)
+### Stage 85 成果 (最新)
 
 - ✅ AI 代码生成器集成 (Stage 81)
 - ✅ 团队协作优化系统 (Stage 82)
@@ -157,6 +157,16 @@ cat benchmark_reports/*.json
   - 日志聚合系统
   - GitOps 工作流引擎
   - 智能扩缩容系统
+- ✅ 企业级安全与合规 (Stage 84)
+  - 数据加密引擎
+  - 身份验证与授权
+  - 审计日志系统
+  - 风险评估与合规报告
+- ✅ AI 驱动运维 (Stage 85)
+  - 智能故障预测引擎
+  - 自动根因分析系统
+  - 异常检测与趋势分析
+  - 变更影响分析
 
 ### 历史成果
 
