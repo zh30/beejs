@@ -15,6 +15,9 @@ pub mod ai_memory_pool;
 pub mod ai_batch_processor;
 pub mod ai_async_queue;
 pub mod model_interface;
+pub mod ai_performance_engine;
+pub mod performance_predictor;
+pub mod intelligent_scheduler;
 
 // Re-export 公共 API
 pub use matrix_accelerator::{Matrix, MatrixAccelerator, MatrixPair, OptimizedMatrix, MatrixAcceleratorStats};
@@ -22,7 +25,9 @@ pub use tensor_optimizer::{Tensor, TensorShape, TensorData, TensorOptimizer, Gra
 pub use code_generator::{
     AICodeGenerator, CodeContext, CodeCompletion, CompletionItem, GeneratedCode,
     Language, TestType, TestFramework, ProjectInfo, CodeSuggestion, TestFile,
-    RefactorSuggestion, MockAiModel, AiModel, CompletionKind
+    RefactorSuggestion, MockAiModel, AiModel, CompletionKind,
+    PerformanceImpact, PerformanceAwareConfig, PatternAnalyzer, CommonPattern,
+    LanguageHints, PatternHint
 };
 pub use smart_debugger::{
     SmartDebugger, ErrorInfo, StackFrame, Diagnosis, RootCause, FixSuggestion,
@@ -36,6 +41,12 @@ pub use predictive_scaler::{
     PredictiveScaler, Metrics, TimeFrame, ResourcePrediction, TrendAnalysis,
     ScalingStrategy, ScalingAction, ScalingResult, Task, Schedule
 };
+pub use ai_performance_engine::{
+    AiPerformanceEngine, AiPerformanceEngineConfig, PerformanceMetrics,
+    PerformancePrediction, OptimizationSuggestion, OptimizationType
+};
+pub use performance_predictor::PerformancePredictor;
+pub use intelligent_scheduler::IntelligentScheduler;
 
 // Re-export HardwareFeatures from wasm::simd_engine for AI operations
 pub use crate::wasm::simd_engine::HardwareFeatures as AiHardwareFeatures;

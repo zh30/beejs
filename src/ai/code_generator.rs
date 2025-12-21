@@ -98,6 +98,37 @@ pub struct CompletionItem {
     pub confidence: f64,
     pub description: Option<String>,
     pub kind: CompletionKind,
+    pub performance_impact: Option<PerformanceImpact>,
+    pub context_aware: bool,
+}
+
+/// 性能影响评估
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceImpact {
+    pub estimated_execution_time_ms: f64,
+    pub memory_overhead_mb: f64,
+    pub complexity_score: u8,
+    pub optimization_suggestions: Vec<String>,
+}
+
+/// 性能感知配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceAwareConfig {
+    pub enable_performance_analysis: bool,
+    pub performance_threshold_ms: f64,
+    pub max_memory_overhead_mb: f64,
+    pub prefer_performance: bool,
+}
+
+impl Default for PerformanceAwareConfig {
+    fn default() -> Self {
+        Self {
+            enable_performance_analysis: true,
+            performance_threshold_ms: 10.0,
+            max_memory_overhead_mb: 100.0,
+            prefer_performance: false,
+        }
+    }
 }
 
 /// 补全类型
@@ -126,6 +157,8 @@ pub struct AICodeGenerator {
     model: Arc<dyn AiModel>,
     context_cache: Arc<RwLock<ContextCache>>,
     code_db: Arc<CodeDatabase>,
+    performance_config: Arc<RwLock<PerformanceAwareConfig>>,
+    pattern_analyzer: Arc<PatternAnalyzer>,
 }
 
 impl Clone for AICodeGenerator {
@@ -134,6 +167,8 @@ impl Clone for AICodeGenerator {
             model: self.model.clone(),
             context_cache: self.context_cache.clone(),
             code_db: self.code_db.clone(),
+            performance_config: self.performance_config.clone(),
+            pattern_analyzer: self.pattern_analyzer.clone(),
         }
     }
 }
@@ -290,6 +325,260 @@ impl MockAiModel {
     }
 }
 
+/// 模式分析器 - 用于分析代码模式并提供智能补全
+#[derive(Debug, Clone)]
+pub struct PatternAnalyzer {
+    common_patterns: Arc<RwLock<Vec<CommonPattern>>>,
+    language_specific_hints: Arc<RwLock<LanguageHints>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CommonPattern {
+    pub pattern: String,
+    pub completions: Vec<String>,
+    pub language: Language,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct LanguageHints {
+    pub javascript: Vec<PatternHint>,
+    pub typescript: Vec<PatternHint>,
+    pub python: Vec<PatternHint>,
+    pub rust: Vec<PatternHint>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PatternHint {
+    pub trigger: String,
+    pub completion: String,
+    pub description: String,
+    pub performance_score: f64,
+}
+
+impl PatternAnalyzer {
+    pub fn new() -> Self {
+        let common_patterns = vec![
+            CommonPattern {
+                pattern: "fun".to_string(),
+                completions: vec![
+                    "ction myFunction() {\n  // TODO: Implement\n}".to_string(),
+                    "ction getData() {\n  return data;\n}".to_string(),
+                ],
+                language: Language::JavaScript,
+                confidence: 0.95,
+            },
+            CommonPattern {
+                pattern: "asy".to_string(),
+                completions: vec![
+                    "nc function asyncFunc() {\n  const result = await fetch('/api');\n  return result;\n}".to_string(),
+                ],
+                language: Language::JavaScript,
+                confidence: 0.90,
+            },
+            CommonPattern {
+                pattern: "imp".to_string(),
+                completions: vec![
+                    "ort { something } from 'module';".to_string(),
+                    "ort something from 'module';".to_string(),
+                ],
+                language: Language::JavaScript,
+                confidence: 0.98,
+            },
+            CommonPattern {
+                pattern: "int".to_string(),
+                completions: vec![
+                    "erface MyInterface {\n  id: number;\n  name: string;\n}".to_string(),
+                ],
+                language: Language::TypeScript,
+                confidence: 0.92,
+            },
+            CommonPattern {
+                pattern: "fn ".to_string(),
+                completions: vec![
+                    "pub fn function_name() {\n  // TODO: Implement\n}".to_string(),
+                ],
+                language: Language::Rust,
+                confidence: 0.95,
+            },
+        ];
+
+        let javascript = vec![
+            PatternHint {
+                trigger: "for".to_string(),
+                completion: "for (let i = 0; i < array.length; i++) {\n  // TODO\n}".to_string(),
+                description: "传统 for 循环".to_string(),
+                performance_score: 0.7,
+            },
+            PatternHint {
+                trigger: "map".to_string(),
+                completion: ".map(item => {\n  // TODO: Transform item\n  return transformed;\n})".to_string(),
+                description: "数组映射".to_string(),
+                performance_score: 0.9,
+            },
+            PatternHint {
+                trigger: "filter".to_string(),
+                completion: ".filter(item => {\n  // TODO: Filter condition\n  return condition;\n})".to_string(),
+                description: "数组过滤".to_string(),
+                performance_score: 0.9,
+            },
+        ];
+
+        let typescript = vec![
+            PatternHint {
+                trigger: "interface".to_string(),
+                completion: "interface MyInterface {\n  // TODO: Define properties\n}".to_string(),
+                description: "TypeScript 接口".to_string(),
+                performance_score: 1.0,
+            },
+            PatternHint {
+                trigger: "type".to_string(),
+                completion: "type MyType = {\n  // TODO: Define type\n};".to_string(),
+                description: "TypeScript 类型".to_string(),
+                performance_score: 1.0,
+            },
+        ];
+
+        let python = vec![
+            PatternHint {
+                trigger: "def".to_string(),
+                completion: "def function_name():\n    # TODO: Implement\n    pass".to_string(),
+                description: "Python 函数".to_string(),
+                performance_score: 1.0,
+            },
+            PatternHint {
+                trigger: "class".to_string(),
+                completion: "class ClassName:\n    def __init__(self):\n        # TODO: Initialize\n        pass".to_string(),
+                description: "Python 类".to_string(),
+                performance_score: 1.0,
+            },
+        ];
+
+        let rust = vec![
+            PatternHint {
+                trigger: "fn ".to_string(),
+                completion: "pub fn function_name() -> Result<T, E> {\n    // TODO: Implement\n    Ok(T)\n}".to_string(),
+                description: "Rust 函数".to_string(),
+                performance_score: 1.0,
+            },
+            PatternHint {
+                trigger: "struct".to_string(),
+                completion: "#[derive(Debug)]\npub struct MyStruct {\n    // TODO: Define fields\n}".to_string(),
+                description: "Rust 结构体".to_string(),
+                performance_score: 1.0,
+            },
+        ];
+
+        Self {
+            common_patterns: Arc::new(RwLock::new(common_patterns)),
+            language_specific_hints: Arc::new(RwLock::new(LanguageHints {
+                javascript,
+                typescript,
+                python,
+                rust,
+            })),
+        }
+    }
+
+    /// 分析代码片段并返回匹配的补全项
+    pub async fn analyze_pattern(&self, partial_code: &str, language: &Language) -> Vec<CompletionItem> {
+        let mut items = Vec::new();
+
+        // 检查常见模式
+        let patterns = self.common_patterns.read().await;
+        for pattern in patterns.iter() {
+            if pattern.language == *language && partial_code.contains(&pattern.pattern) {
+                for completion in &pattern.completions {
+                    items.push(CompletionItem {
+                        text: completion.clone(),
+                        display_text: completion.lines().next().unwrap_or("").to_string(),
+                        confidence: pattern.confidence,
+                        description: Some(format!("常见模式: {}", pattern.pattern)),
+                        kind: CompletionKind::Snippet,
+                        performance_impact: Some(self.estimate_performance_impact(completion, language)),
+                        context_aware: true,
+                    });
+                }
+            }
+        }
+        drop(patterns);
+
+        // 检查语言特定提示
+        let hints = self.language_specific_hints.read().await;
+        let language_hints = match language {
+            Language::JavaScript => &hints.javascript,
+            Language::TypeScript => &hints.typescript,
+            Language::Python => &hints.python,
+            Language::Rust => &hints.rust,
+            _ => &Vec::new(),
+        };
+
+        for hint in language_hints {
+            if partial_code.contains(&hint.trigger) {
+                items.push(CompletionItem {
+                    text: hint.completion.clone(),
+                    display_text: hint.description.clone(),
+                    confidence: 0.9,
+                    description: Some(hint.description.clone()),
+                    kind: CompletionKind::Snippet,
+                    performance_impact: Some(PerformanceImpact {
+                        estimated_execution_time_ms: 1.0 / hint.performance_score,
+                        memory_overhead_mb: 0.1,
+                        complexity_score: (hint.performance_score * 10.0) as u8,
+                        optimization_suggestions: vec!["使用缓存优化".to_string(), "考虑懒加载".to_string()],
+                    }),
+                    context_aware: true,
+                });
+            }
+        }
+
+        items
+    }
+
+    /// 估算代码性能影响
+    fn estimate_performance_impact(&self, code: &str, language: &Language) -> PerformanceImpact {
+        let lines = code.lines().count();
+        let complexity_score = (lines as f64 / 5.0).min(10.0) as u8;
+
+        let (execution_time, memory_overhead) = match language {
+            Language::JavaScript | Language::TypeScript => {
+                if code.contains("for") || code.contains("while") {
+                    (5.0, 1.0)
+                } else if code.contains("map") || code.contains("filter") {
+                    (2.0, 0.5)
+                } else {
+                    (1.0, 0.1)
+                }
+            }
+            Language::Python => {
+                if code.contains("for") {
+                    (10.0, 2.0)
+                } else {
+                    (2.0, 0.5)
+                }
+            }
+            Language::Rust => {
+                if code.contains("async") {
+                    (3.0, 0.8)
+                } else {
+                    (0.5, 0.2)
+                }
+            }
+            _ => (1.0, 0.5),
+        };
+
+        PerformanceImpact {
+            estimated_execution_time_ms: execution_time,
+            memory_overhead_mb: memory_overhead,
+            complexity_score,
+            optimization_suggestions: vec![
+                "优化循环结构".to_string(),
+                "使用更高效的数据结构".to_string(),
+            ],
+        }
+    }
+}
+
 /// 上下文缓存
 #[derive(Debug, Clone)]
 pub struct ContextCache {
@@ -363,11 +652,17 @@ impl CodeDatabase {
 
 impl AICodeGenerator {
     /// 创建新的 AI 代码生成器
-    pub fn new(model: Arc<dyn AiModel>, context_cache: Arc<RwLock<ContextCache>>, code_db: Arc<CodeDatabase>) -> Self {
+    pub fn new(
+        model: Arc<dyn AiModel>,
+        context_cache: Arc<RwLock<ContextCache>>,
+        code_db: Arc<CodeDatabase>,
+    ) -> Self {
         Self {
             model,
             context_cache,
             code_db,
+            performance_config: Arc::new(RwLock::new(PerformanceAwareConfig::default())),
+            pattern_analyzer: Arc::new(PatternAnalyzer::new()),
         }
     }
 
@@ -377,6 +672,34 @@ impl AICodeGenerator {
         let context_cache = Arc::new(RwLock::new(ContextCache::new(1000)));
         let code_db = Arc::new(CodeDatabase::new());
         Self::new(model, context_cache, code_db)
+    }
+
+    /// 创建带性能感知的 AI 代码生成器
+    pub fn new_with_performance_aware(
+        model: Arc<dyn AiModel>,
+        context_cache: Arc<RwLock<ContextCache>>,
+        code_db: Arc<CodeDatabase>,
+        performance_config: PerformanceAwareConfig,
+    ) -> Self {
+        Self {
+            model,
+            context_cache,
+            code_db,
+            performance_config: Arc::new(RwLock::new(performance_config)),
+            pattern_analyzer: Arc::new(PatternAnalyzer::new()),
+        }
+    }
+
+    /// 更新性能感知配置
+    pub async fn update_performance_config(&self, config: PerformanceAwareConfig) {
+        let mut perf_config = self.performance_config.write().await;
+        *perf_config = config;
+    }
+
+    /// 获取性能感知配置
+    pub async fn get_performance_config(&self) -> PerformanceAwareConfig {
+        let config = self.performance_config.read().await;
+        config.clone()
     }
 
     /// 基于提示词生成代码
@@ -416,7 +739,7 @@ impl AICodeGenerator {
         })
     }
 
-    /// 代码补全
+    /// 代码补全 - 增强版，支持性能感知和模式分析
     pub async fn complete_code(
         &self,
         partial_code: &str,
@@ -426,29 +749,153 @@ impl AICodeGenerator {
         // 1. 分析上下文
         let context_analysis = self.analyze_context(partial_code, cursor_position, context)?;
 
-        // 2. 生成补全
-        let completions = self.model.complete(partial_code, cursor_position, context)?;
+        // 2. 使用模式分析器获取智能补全
+        let pattern_completions = self.pattern_analyzer.analyze_pattern(partial_code, &context.language).await;
 
-        // 3. 处理和排序
+        // 3. 生成 AI 补全
+        let ai_completions = self.model.complete(partial_code, cursor_position, context)?;
+
+        // 4. 处理和合并补全项
         let mut completion_items = Vec::new();
-        for (i, completion) in completions.iter().enumerate() {
+
+        // 添加模式分析器生成的补全
+        for item in pattern_completions {
+            completion_items.push(item);
+        }
+
+        // 添加 AI 模型生成的补全
+        for (i, completion) in ai_completions.iter().enumerate() {
             let kind = self.detect_completion_kind(completion, partial_code);
+            let perf_config = self.performance_config.read().await;
+
+            // 计算性能影响（如果启用）
+            let performance_impact = if perf_config.enable_performance_analysis {
+                Some(self.estimate_ai_completion_performance(completion, &context.language))
+            } else {
+                None
+            };
+
             completion_items.push(CompletionItem {
                 text: completion.clone(),
                 display_text: completion.clone(),
                 confidence: 0.9 - (i as f64 * 0.1),
                 description: Some(format!("AI 推荐的补全 (置信度: {:.0}%)", (0.9 - (i as f64 * 0.1)) * 100.0)),
                 kind,
+                performance_impact,
+                context_aware: false,
             });
         }
 
-        // 4. 获取替换范围
+        // 5. 根据性能和置信度排序
+        self.sort_completions(&mut completion_items).await;
+
+        // 6. 获取替换范围
         let replace_range = self.get_replace_range(partial_code, cursor_position);
 
         Ok(CodeCompletion {
             completions: completion_items,
             replace_range,
         })
+    }
+
+    /// 实时代码补全 - 专为快速响应优化
+    pub async fn complete_code_realtime(
+        &self,
+        partial_code: &str,
+        cursor_position: usize,
+        context: &CodeContext,
+    ) -> Result<CodeCompletion, Box<dyn std::error::Error>> {
+        // 快速模式分析（不使用 AI 模型）
+        let pattern_completions = self.pattern_analyzer.analyze_pattern(partial_code, &context.language).await;
+
+        let replace_range = self.get_replace_range(partial_code, cursor_position);
+
+        Ok(CodeCompletion {
+            completions: pattern_completions,
+            replace_range,
+        })
+    }
+
+    /// 性能感知补全排序
+    async fn sort_completions(&self, completions: &mut Vec<CompletionItem>) {
+        let perf_config = self.performance_config.read().await;
+
+        if perf_config.prefer_performance {
+            // 按性能优先排序
+            completions.sort_by(|a, b| {
+                let score_a = self.calculate_performance_score(a, &perf_config);
+                let score_b = self.calculate_performance_score(b, &perf_config);
+                score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+            });
+        } else {
+            // 按置信度排序
+            completions.sort_by(|a, b| {
+                b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal)
+            });
+        }
+    }
+
+    /// 计算性能评分
+    fn calculate_performance_score(&self, item: &CompletionItem, config: &PerformanceAwareConfig) -> f64 {
+        let confidence_score = item.confidence;
+        let performance_score = if let Some(ref impact) = item.performance_impact {
+            // 性能分数 = 1 / (1 + 执行时间 + 内存开销)
+            1.0 / (1.0 + impact.estimated_execution_time_ms + impact.memory_overhead_mb)
+        } else {
+            0.5
+        };
+
+        // 综合评分
+        confidence_score * 0.7 + performance_score * 0.3
+    }
+
+    /// 估算 AI 补全的性能影响
+    fn estimate_ai_completion_performance(&self, completion: &str, language: &Language) -> PerformanceImpact {
+        let lines = completion.lines().count();
+        let complexity_score = (lines as f64 / 3.0).min(10.0) as u8;
+
+        let (execution_time, memory_overhead) = match language {
+            Language::JavaScript | Language::TypeScript => {
+                if completion.contains("async") {
+                    (3.0, 0.8)
+                } else if completion.contains("for") || completion.contains("while") {
+                    (5.0, 1.2)
+                } else if completion.contains("class") {
+                    (4.0, 2.0)
+                } else {
+                    (1.5, 0.5)
+                }
+            }
+            Language::Python => {
+                if completion.contains("def ") {
+                    (2.0, 1.0)
+                } else if completion.contains("class ") {
+                    (5.0, 3.0)
+                } else {
+                    (2.0, 1.0)
+                }
+            }
+            Language::Rust => {
+                if completion.contains("async") {
+                    (2.0, 0.5)
+                } else if completion.contains("struct") {
+                    (3.0, 1.0)
+                } else {
+                    (1.0, 0.5)
+                }
+            }
+            _ => (2.0, 1.0),
+        };
+
+        PerformanceImpact {
+            estimated_execution_time_ms: execution_time,
+            memory_overhead_mb: memory_overhead,
+            complexity_score,
+            optimization_suggestions: vec![
+                "考虑使用更高效的数据结构".to_string(),
+                "避免不必要的循环".to_string(),
+            ],
+        }
     }
 
     /// 分析代码质量并生成重构建议
