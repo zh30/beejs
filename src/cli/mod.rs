@@ -17,6 +17,11 @@ pub mod init_command;
 pub mod info_command;
 pub mod doctor_command;
 
+// Stage 91 Phase 4.2: 增强 REPL 模块
+pub mod repl_completer;
+pub mod repl_highlighter;
+pub mod repl_enhanced;
+
 pub use repl::Repl;
 pub use commands::{CliApp, SubCommand, RunCommand, TestCommand, ReplCommand, BundleCommand, ProfileCommand, InitCommand as InitCommandArgs, InfoCommandArgs, DoctorCommandArgs, UpgradeCommand, ProjectTemplateArg};
 pub use script_executor::{
@@ -29,3 +34,8 @@ pub use output_formatter::OutputFormatter;
 pub use init_command::{InitCommand, InitConfig, ProjectTemplate};
 pub use info_command::{InfoCommand, SystemInfo};
 pub use doctor_command::{DoctorCommand, CheckStatus, DiagnosticCheck};
+
+// Stage 91 Phase 4.2: 导出增强 REPL
+pub use repl_completer::{ReplCompleter, CompletionCandidate, CompletionKind, CompletionContext};
+pub use repl_highlighter::{ReplHighlighter, HighlightTheme, HighlightedToken, TokenType};
+pub use repl_enhanced::{EnhancedRepl, EnhancedReplConfig, EnhancedReplResult, EnhancedReplStats};
