@@ -4,6 +4,7 @@
 
 pub mod module_cache;
 pub mod module_loader;
+pub mod simd_engine;
 // 暂时注释掉有编译问题的模块
 // pub mod js_interop;
 // pub mod memory_manager;
@@ -12,3 +13,7 @@ pub mod module_loader;
 
 pub use module_cache::{WasmModuleCache, CacheStats};
 pub use module_loader::{WasmModuleLoader, WasmModule, LoaderStats};
+pub use simd_engine::{
+    SimdEngine, HardwareFeatures, SimdCapability, VectorOperation,
+    VectorWidth, SimdStats, detect_cpu_features,
+};
