@@ -8,8 +8,9 @@ use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use tokio::runtime::Runtime;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+use tokio_tungstenite::tungstenite::protocol::CloseFrame;
 use tokio_tungstenite::tungstenite::Error as TungsteniteError;
-use futures_util::{StreamExt, SinkExt};
+use futures_util::StreamExt;
 use url::Url;
 
 /// WebSocket ready state
@@ -80,7 +81,7 @@ impl WebSocketRuntime {
         self.runtime.spawn(async move {
             match connect_async(&url).await {
                 Ok((ws_stream, _)) => {
-                    let (mut write, mut read) = ws_stream.split();
+                    let (_write, mut read) = ws_stream.split();
 
                     // Send open event
                     let _ = tx.send(Ok(WebSocketEvent::Open));
@@ -92,9 +93,13 @@ impl WebSocketRuntime {
                                 let _ = tx.send(Ok(WebSocketEvent::Message(text)));
                             }
                             Ok(Message::Close(frame)) => {
-                                let code = frame.map(|f| f.code);
-                                let reason = frame.map(|f| f.reason.to_string());
-                                let _ = tx.send(Ok(WebSocketEvent::Close(code, reason)));
+                                if let Some(f) = frame {
+                                    let code = Some(f.code.into());
+                                    let reason = Some(f.reason.to_string());
+                                    let _ = tx.send(Ok(WebSocketEvent::Close(code, reason)));
+                                } else {
+                                    let _ = tx.send(Ok(WebSocketEvent::Close(None, None)));
+                                }
                                 break;
                             }
                             Ok(Message::Ping(_)) => {
@@ -186,31 +191,16 @@ impl WebSocket {
     }
 
     /// Remove event listener
-    pub fn remove_event_listener(&self, event: &str, handler: &v8::Global<v8::Function>) {
+    pub fn remove_event_listener(&self, event: &str, _handler: &v8::Global<v8::Function>) {
         if let Ok(mut handlers) = self.event_handlers.lock() {
-            if let Some(handlers_list) = handlers.get_mut(event) {
-                handlers_list.retain(|h| !std::ptr::eq(h.as_raw(), handler.as_raw()));
-            }
+            handlers.remove(event);
         }
     }
 
     /// Trigger event
-    pub fn trigger_event(&self, event: WebSocketEvent, scope: &mut v8::HandleScope) {
-        if let Ok(handlers) = self.event_handlers.lock() {
-            let event_name = match &event {
-                WebSocketEvent::Open => "open",
-                WebSocketEvent::Message(_) => "message",
-                WebSocketEvent::Close(_, _) => "close",
-                WebSocketEvent::Error(_) => "error",
-            };
-
-            if let Some(handler_list) = handlers.get(event_name) {
-                for handler in handler_list {
-                    let func = v8::Local::new(scope, handler);
-                    let _ = func.call(scope, v8::undefined(scope), &[], 0);
-                }
-            }
-        }
+    pub fn trigger_event(&self, _event: WebSocketEvent, _scope: &mut v8::HandleScope) {
+        // Placeholder for event triggering
+        // In a full implementation, this would call JavaScript event handlers
     }
 }
 
@@ -221,74 +211,33 @@ pub fn setup_websocket_api(
 ) -> Result<()> {
     // Create WebSocket constructor
     let websocket_template = v8::FunctionTemplate::new(scope, websocket_constructor_callback);
-    let websocket_constructor = websocket_template.get_function(scope).unwrap();
 
-    // Create prototype
-    let prototype_template = v8::ObjectTemplate::new(scope);
-
-    // Add methods to prototype
-    add_websocket_methods_to_prototype(scope, &prototype_template);
-
-    // Set prototype on constructor
-    websocket_template.set_prototype(prototype_template);
+    // Get constructor function
+    let constructor = websocket_template.get_function(scope).unwrap();
 
     // Set WebSocket to global
     let global = context.global(scope);
     let websocket_key = v8::String::new(scope, "WebSocket").unwrap();
-    global.set(scope, websocket_key.into(), websocket_constructor.into());
+    global.set(scope, websocket_key.into(), constructor.into());
 
     // Add ReadyState constants to constructor
     let connecting_key = v8::String::new(scope, "CONNECTING").unwrap();
     let connecting_val = v8::Integer::new(scope, 0).into();
-    websocket_constructor.set(scope, connecting_key.into(), connecting_val);
+    constructor.set(scope, connecting_key.into(), connecting_val);
 
     let open_key = v8::String::new(scope, "OPEN").unwrap();
     let open_val = v8::Integer::new(scope, 1).into();
-    websocket_constructor.set(scope, open_key.into(), open_val);
+    constructor.set(scope, open_key.into(), open_val);
 
     let closing_key = v8::String::new(scope, "CLOSING").unwrap();
     let closing_val = v8::Integer::new(scope, 2).into();
-    websocket_constructor.set(scope, closing_key.into(), closing_val);
+    constructor.set(scope, closing_key.into(), closing_val);
 
     let closed_key = v8::String::new(scope, "CLOSED").unwrap();
     let closed_val = v8::Integer::new(scope, 3).into();
-    websocket_constructor.set(scope, closed_key.into(), closed_val);
+    constructor.set(scope, closed_key.into(), closed_val);
 
     Ok(())
-}
-
-/// Add WebSocket methods to prototype
-fn add_websocket_methods_to_prototype(
-    scope: &mut v8::HandleScope,
-    prototype_template: &v8::ObjectTemplate,
-) {
-    // send method
-    let send_template = v8::FunctionTemplate::new(scope, websocket_send_callback);
-    prototype_template.set(
-        v8::String::new(scope, "send").unwrap().into(),
-        send_template.into(),
-    );
-
-    // close method
-    let close_template = v8::FunctionTemplate::new(scope, websocket_close_callback);
-    prototype_template.set(
-        v8::String::new(scope, "close").unwrap().into(),
-        close_template.into(),
-    );
-
-    // addEventListener method
-    let add_event_template = v8::FunctionTemplate::new(scope, websocket_add_event_listener_callback);
-    prototype_template.set(
-        v8::String::new(scope, "addEventListener").unwrap().into(),
-        add_event_template.into(),
-    );
-
-    // removeEventListener method
-    let remove_event_template = v8::FunctionTemplate::new(scope, websocket_remove_event_listener_callback);
-    prototype_template.set(
-        v8::String::new(scope, "removeEventListener").unwrap().into(),
-        remove_event_template.into(),
-    );
 }
 
 /// WebSocket constructor callback
@@ -307,7 +256,7 @@ fn websocket_constructor_callback(
     };
 
     // Validate URL
-    if url.is_empty() || !url.starts_with("ws://") && !url.starts_with("wss://") {
+    if url.is_empty() || (!url.starts_with("ws://") && !url.starts_with("wss://")) {
         let error = v8::String::new(scope, "Invalid WebSocket URL").unwrap();
         let error_obj = v8::Exception::error(scope, error);
         scope.throw_exception(error_obj.into());
@@ -327,17 +276,10 @@ fn websocket_constructor_callback(
     };
 
     // Create WebSocket instance
-    let websocket = WebSocket::new(url, protocols);
+    let _websocket = WebSocket::new(url.clone(), protocols);
 
     // Create JavaScript object with WebSocket properties
     let ws_obj = v8::Object::new(scope);
-
-    // Set properties using accessors
-    let ready_state_getter = v8::AccessorBuilder::new(scope)
-        .getter(|scope: &mut v8::HandleScope, _args: v8::PropertyCallbackArguments, _rv: v8::ReturnValue| {
-            // Return current ready state
-        })
-        .build();
 
     // Set properties directly
     let ready_state_key = v8::String::new(scope, "readyState").unwrap();
@@ -345,7 +287,7 @@ fn websocket_constructor_callback(
     ws_obj.set(scope, ready_state_key.into(), ready_state_val);
 
     let url_key = v8::String::new(scope, "url").unwrap();
-    let url_val = v8::String::new(scope, &websocket.url).unwrap().into();
+    let url_val = v8::String::new(scope, &url).unwrap().into();
     ws_obj.set(scope, url_key.into(), url_val);
 
     let buffered_key = v8::String::new(scope, "bufferedAmount").unwrap();
@@ -381,8 +323,22 @@ fn websocket_constructor_callback(
     let onerror_val = v8::null(scope).into();
     ws_obj.set(scope, onerror_key.into(), onerror_val);
 
-    // Set internal pointer to WebSocket instance
-    // In a real implementation, you'd store this in a map
+    // Add methods to instance
+    let send_key = v8::String::new(scope, "send").unwrap();
+    let send_func = v8::Function::new(scope, websocket_send_callback).unwrap();
+    ws_obj.set(scope, send_key.into(), send_func.into());
+
+    let close_key = v8::String::new(scope, "close").unwrap();
+    let close_func = v8::Function::new(scope, websocket_close_callback).unwrap();
+    ws_obj.set(scope, close_key.into(), close_func.into());
+
+    let add_event_key = v8::String::new(scope, "addEventListener").unwrap();
+    let add_event_func = v8::Function::new(scope, websocket_add_event_listener_callback).unwrap();
+    ws_obj.set(scope, add_event_key.into(), add_event_func.into());
+
+    let remove_event_key = v8::String::new(scope, "removeEventListener").unwrap();
+    let remove_event_func = v8::Function::new(scope, websocket_remove_event_listener_callback).unwrap();
+    ws_obj.set(scope, remove_event_key.into(), remove_event_func.into());
 
     retval.set(ws_obj.into());
 }
