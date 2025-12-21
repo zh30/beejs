@@ -1,6 +1,8 @@
 //! Enterprise Module
 //! Provides enterprise-grade security, compliance, and governance features
 
+use std::sync::Arc;
+
 pub mod security_manager;
 pub mod compliance_manager;
 

@@ -10,7 +10,7 @@ use std::collections::HashMap;
 /// Go VM (Virtual Machine) wrapper
 #[derive(Debug)]
 pub struct GoVM {
-    _handle: Option<gvm::VMHandle>,
+    _handle: Option<()>, // Placeholder for Go VM handle
 }
 
 /// Go routine identifier
@@ -85,7 +85,7 @@ impl GoRuntime {
         let vm = Arc::new(GoVM::new()?);
         let goroutines = Arc::new(RwLock::new(HashMap::new()));
         let executor = Arc::new(GoExecutor {
-            bee_runtime: Arc::new(MockBeeRuntime),
+            bee_runtime: bee_api.runtime.clone(),
         });
 
         Ok(GoRuntime {

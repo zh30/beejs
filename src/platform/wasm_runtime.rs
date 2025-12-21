@@ -215,11 +215,11 @@ impl JS2WASMCompiler {
         Ok(WASMCompilationResult {
             module,
             success,
-            warnings        })
+            warnings,
+            errors,
+        })
     }
 
-,
-            errors,
     /// Optimize compiled WASM
     pub async fn optimize_wasm(&self, module: &WASMModule) -> Result<WASMModule> {
         // In real implementation, would perform WASM optimizations:

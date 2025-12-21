@@ -1,0 +1,112 @@
+//! Stage 89 Phase 1: V8 API 兼容性测试
+//! 测试 V8 API 兼容性检查器和迁移工具
+
+use beejs::v8_engine::compatibility::{V8CompatibilityChecker, V8APIStatus, DeprecatedAPI};
+use beejs::v8_engine::V8EngineFlags;
+use std::collections::HashMap;
+
+#[tokio::test]
+async fn test_v8_api_compatibility_check() {
+    let checker = V8CompatibilityChecker::new();
+
+    // 测试 API 兼容性检查
+    let report = checker.check_compatibility().await.unwrap();
+
+    assert!(!report.api_map.is_empty(), "API map should not be empty");
+    println!("Checked {} APIs", report.api_map.len());
+}
+
+#[tokio::test]
+async fn test_deprecated_api_migration() {
+    let checker = V8CompatibilityChecker::new();
+
+    // 测试已弃用 API 迁移
+    let migration_plans = checker.migrate_deprecated_apis().await.unwrap();
+
+    // 验证迁移计划
+    for plan in migration_plans {
+        assert!(!plan.api_name.is_empty(), "API name should not be empty");
+        assert!(!plan.replacement.is_empty() || plan.action == "remove", "Should have replacement or be removed");
+        println!("Migration plan: {} -> {}", plan.api_name, plan.replacement);
+    }
+}
+
+#[tokio::test]
+async fn test_v8_version_compatibility() {
+    let checker = V8CompatibilityChecker::new();
+
+    // 测试当前 V8 版本兼容性
+    let current_version = checker.get_current_v8_version().await.unwrap();
+    println!("Current V8 version: {}", current_version);
+
+    assert!(!current_version.is_empty(), "Should detect V8 version");
+    assert!(current_version.starts_with("0."), "Version format should be correct");
+}
+
+#[tokio::test]
+fn test_api_status_enum() {
+    // 测试 API 状态枚举
+    let status = V8APIStatus::Stable;
+    assert_eq!(format!("{:?}", status), "Stable");
+
+    let status = V8APIStatus::Deprecated;
+    assert_eq!(format!("{:?}", status), "Deprecated");
+
+    let status = V8APIStatus::Experimental;
+    assert_eq!(format!("{:?}", status), "Experimental");
+}
+
+#[tokio::test]
+async fn test_v8_flags_compatibility() {
+    let flags = V8EngineFlags::new();
+
+    // 测试 V8 标志兼容性
+    let compatible_flags = flags.get_compatible_flags().await.unwrap();
+
+    assert!(!compatible_flags.is_empty(), "Should have compatible flags");
+    println!("Found {} compatible flags", compatible_flags.len());
+}
+
+#[tokio::test]
+async fn test_rusty_v8_version_check() {
+    let checker = V8CompatibilityChecker::new();
+
+    // 检查 rusty_v8 版本兼容性
+    let is_compatible = checker.check_rusty_v8_version().await.unwrap();
+
+    // 根据 Cargo.toml 中的版本 (0.22) 进行检查
+    assert!(is_compatible, "rusty_v8 0.22 should be compatible");
+}
+
+#[tokio::test]
+async fn test_v8_api_usage_scan() {
+    let checker = V8CompatibilityChecker::new();
+
+    // 扫描源代码中的 V8 API 使用情况
+    let usage_report = checker.scan_api_usage_in_source().await.unwrap();
+
+    assert!(!usage_report.deprecated_apis.is_empty() || !usage_report.experimental_apis.is_empty(),
+            "Should scan API usage");
+
+    println!("Found {} deprecated APIs, {} experimental APIs",
+             usage_report.deprecated_apis.len(),
+             usage_report.experimental_apis.len());
+}
+
+#[tokio::test]
+async fn test_compatibility_report_generation() {
+    let checker = V8CompatibilityChecker::new();
+
+    // 生成完整的兼容性报告
+    let report = checker.generate_full_report().await.unwrap();
+
+    assert!(report.summary.total_apis > 0, "Should have total APIs count");
+    assert!(report.summary.compatible_apis >= 0, "Should have compatible APIs count");
+    assert!(report.summary.deprecated_apis >= 0, "Should have deprecated APIs count");
+
+    println!("Compatibility Report:");
+    println!("  Total APIs: {}", report.summary.total_apis);
+    println!("  Compatible: {}", report.summary.compatible_apis);
+    println!("  Deprecated: {}", report.summary.deprecated_apis);
+    println!("  Compatibility: {:.2}%", report.summary.compatibility_percentage);
+}

@@ -119,6 +119,9 @@ tch = { version = "0.11", optional = true }  # 可选依赖，支持条件编译
 pyo3 = { version = "0.21", features = ["auto-initialize"] }  # Python integration
 # go-vm = "0.5"  # Go VM integration (placeholder, not published yet)
 
+# Stage 89: V8 API 兼容性修复 - 启用前向兼容性
+pyo3-build-config = { version = "0.21", features = ["resolve-config"] }  # 支持前向兼容构建
+
 # Stage 83: Enterprise Kubernetes & DevOps dependencies (暂时注释，等待实现)
 # kube = { version = "0.87", features = ["runtime", "derive"] }
 # k8s-openapi = { version = "0.21", default-features = false, features = ["schemars"] }

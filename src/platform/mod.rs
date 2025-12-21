@@ -1,6 +1,8 @@
 //! Platform Support Module
 //! Provides cross-platform runtime support for mobile and WebAssembly
 
+use std::sync::Arc;
+
 pub mod mobile_runtime;
 pub mod wasm_runtime;
 

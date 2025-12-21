@@ -14,7 +14,7 @@ pub enum ComplianceFramework {
     HIPAA,         // Health Insurance Portability and Accountability Act
     SOC2,          // System and Organization Controls 2
     ISO27001,      // Information Security Management
-    PCI DSS,       // Payment Card Industry Data Security Standard
+    PCI_DSS,       // Payment Card Industry Data Security Standard
     CCPA,          // California Consumer Privacy Act
     SOX,           // Sarbanes-Oxley Act
     FedRAMP,       // Federal Risk and Authorization Management Program
@@ -168,7 +168,7 @@ impl ComplianceFrameworks {
             ComplianceFramework::HIPAA => "HIPAA".to_string(),
             ComplianceFramework::SOC2 => "SOC2".to_string(),
             ComplianceFramework::ISO27001 => "ISO27001".to_string(),
-            ComplianceFramework::PCI DSS => "PCI_DSS".to_string(),
+            ComplianceFramework::PCI_DSS => "PCI_DSS".to_string(),
             ComplianceFramework::CCPA => "CCPA".to_string(),
             ComplianceFramework::SOX => "SOX".to_string(),
             ComplianceFramework::FedRAMP => "FedRAMP".to_string(),
@@ -274,7 +274,7 @@ impl ComplianceChecker {
             ComplianceFramework::HIPAA => "HIPAA",
             ComplianceFramework::SOC2 => "SOC2",
             ComplianceFramework::ISO27001 => "ISO27001",
-            ComplianceFramework::PCI DSS => "PCI_DSS",
+            ComplianceFramework::PCI_DSS => "PCI_DSS",
             ComplianceFramework::CCPA => "CCPA",
             ComplianceFramework::SOX => "SOX",
             ComplianceFramework::FedRAMP => "FedRAMP",
@@ -433,7 +433,7 @@ impl ComplianceManager {
             ComplianceFramework::HIPAA => "HIPAA",
             ComplianceFramework::SOC2 => "SOC2",
             ComplianceFramework::ISO27001 => "ISO27001",
-            ComplianceFramework::PCI DSS => "PCI DSS",
+            ComplianceFramework::PCI_DSS => "PCI DSS",
             ComplianceFramework::CCPA => "CCPA",
             ComplianceFramework::SOX => "SOX",
             ComplianceFramework::FedRAMP => "FedRAMP",

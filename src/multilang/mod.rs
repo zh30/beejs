@@ -1,6 +1,8 @@
 //! Multi-language Support Module
 //! Provides seamless integration between Beejs and multiple programming languages
 
+use std::sync::Arc;
+
 pub mod python_runtime;
 pub mod go_runtime;
 pub mod rust_native;
@@ -28,13 +30,13 @@ impl MultiLanguageRuntime {
     }
 
     /// Initialize Python runtime
-    pub fn init_python(&mut self, bee_api: Arc<BeeAPI>) -> Result<()> {
+    pub fn init_python(&mut self, bee_api: Arc<go_runtime::BeeAPI>) -> Result<()> {
         self.python = Some(PythonRuntime::new(bee_api)?);
         Ok(())
     }
 
     /// Initialize Go runtime
-    pub fn init_go(&mut self, bee_api: Arc<BeeAPI>) -> Result<()> {
+    pub fn init_go(&mut self, bee_api: Arc<go_runtime::BeeAPI>) -> Result<()> {
         self.go = Some(GoRuntime::new(bee_api)?);
         Ok(())
     }
@@ -79,7 +81,7 @@ mod tests {
         let mut runtime = MultiLanguageRuntime::new();
 
         // Test Python execution
-        let python_api = Arc::new(BeeAPI {
+        let python_api = Arc::new(go_runtime::BeeAPI {
             runtime: Arc::new(MockBeeRuntime),
         });
         runtime.init_python(python_api).unwrap();
@@ -88,7 +90,7 @@ mod tests {
         assert!(result.is_ok());
 
         // Test Go execution
-        let go_api = Arc::new(BeeAPI {
+        let go_api = Arc::new(go_runtime::BeeAPI {
             runtime: Arc::new(MockBeeRuntime),
         });
         runtime.init_go(go_api).unwrap();
