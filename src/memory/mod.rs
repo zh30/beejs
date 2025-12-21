@@ -1,344 +1,166 @@
-//! Stage 55.3.2: Memory Optimization Module
+//! 极致内存管理优化模块
 //!
-//! This module implements comprehensive memory optimization strategies for achieving
-//! 30-50% memory usage reduction compared to Node.js and optimized garbage collection.
-//!
-//! Features:
-//! - Zero-copy memory allocation
-//! - Intelligent memory pooling
-//! - Generational garbage collection
-//! - Memory compression
-//! - Leak detection and prevention
+//! Stage 90 Phase 2: 实现零拷贝内存管理和增量垃圾回收优化
+//! 目标：< 5MB 基础内存占用，支持高效并发访问
 
-pub mod generational_gc;
-pub mod memory_compression;
-pub mod leak_detector;
-pub mod zero_copy_allocator;
-
-pub use zero_copy_allocator::*;
-pub use generational_gc::{GenerationalGC, GCStats};
-pub use memory_compression::MemoryCompression;
-pub use leak_detector::MemoryLeakDetector;
-
-use crate::memory_pool::SmartMemoryPool;
-use std::sync::{Arc, Mutex, atomic::AtomicU64};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
 
-/// Memory optimization configuration
-#[derive(Debug, Clone)]
-pub struct MemoryOptimizationConfig {
-    /// Enable zero-copy allocation
-    pub enable_zero_copy: bool,
-    /// Enable intelligent pooling
-    pub enable_pooling: bool,
-    /// Enable generational GC
-    pub enable_generational_gc: bool,
-    /// Enable memory compression
-    pub enable_compression: bool,
-    /// Enable leak detection
-    pub enable_leak_detection: bool,
-    /// Pool configuration
-    pub pool_config: PoolConfig,
-    /// GC configuration
-    pub gc_config: generational_gc::GCConfig,
-    /// Compression configuration
-    pub compression_config: memory_compression::CompressionConfig,
-    /// Leak detection configuration
-    pub leak_detection_config: leak_detector::LeakDetectorConfig,
-    /// Zero-copy allocator configuration
-    pub allocator_config: zero_copy_allocator::AllocatorConfig,
-}
+pub mod zero_copy;
+pub mod gc_optimizer;
 
-impl Default for MemoryOptimizationConfig {
-    fn default() -> Self {
-        Self {
-            enable_zero_copy: true,
-            enable_pooling: true,
-            enable_generational_gc: true,
-            enable_compression: true,
-            enable_leak_detection: true,
-            pool_config: crate::memory_pool::PoolConfig::default(),
-            gc_config: generational_gc::GCConfig::default(),
-            compression_config: memory_compression::CompressionConfig::default(),
-            leak_detection_config: leak_detector::LeakDetectorConfig::default(),
-            allocator_config: zero_copy_allocator::AllocatorConfig::default(),
-        }
-    }
-}
+pub use zero_copy::*;
+pub use gc_optimizer::*;
 
-/// Memory optimization manager - orchestrates all memory optimization strategies
-pub struct MemoryOptimizationManager {
-    /// Zero-copy allocator
-    zero_copy_allocator: Option<ZeroCopyAllocator>,
-    /// Smart memory pool
-    memory_pool: Option<SmartMemoryPool>,
-    /// Generational GC
-    generational_gc: Option<GenerationalGC>,
-    /// Memory compressor
-    memory_compressor: Option<MemoryCompression>,
-    /// Leak detector
-    leak_detector: Option<MemoryLeakDetector>,
-    /// Configuration
-    config: MemoryOptimizationConfig,
-    /// Performance statistics
-    stats: Arc<Mutex<MemoryOptimizationStats>>,
-}
-
-impl std::fmt::Debug for MemoryOptimizationManager {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MemoryOptimizationManager")
-            .field("config", &self.config)
-            .field("stats", &self.stats)
-            .finish()
-    }
-}
-
+/// 内存使用统计
 #[derive(Debug, Clone, Default)]
-pub struct MemoryOptimizationStats {
-    pub total_allocations: usize,
-    pub total_frees: usize,
-    pub zero_copy_allocations: usize,
-    pub pooled_allocations: usize,
-    pub gc_collections: usize,
-    pub compressed_bytes: usize,
-    pub memory_saved_bytes: usize,
-    pub active_allocations: usize,
+pub struct MemoryStats {
+    pub total_allocated: AtomicUsize,
+    pub total_freed: AtomicUsize,
+    pub current_usage: AtomicUsize,
+    pub peak_usage: AtomicUsize,
+    pub allocation_count: AtomicUsize,
+    pub free_count: AtomicUsize,
 }
 
-/// Pool configuration (re-exported for convenience) - 使用 memory_pool 中的定义
-pub use crate::memory_pool::PoolConfig;
-
-/// GC configuration (re-exported for convenience) - 使用 generational_gc 中的定义
-pub use generational_gc::GCConfig;
-
-/// Compression configuration (re-exported for convenience)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompressionConfig {
-    pub compression_threshold: usize,
-    pub compression_algorithm: String,
-    pub compression_level: u8,
-}
-
-impl Default for CompressionConfig {
-    fn default() -> Self {
-        Self {
-            compression_threshold: 1024,
-            compression_algorithm: "lz4".to_string(),
-            compression_level: 1,
-        }
-    }
-}
-
-/// Leak detection configuration (re-exported for convenience)
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LeakDetectionConfig {
-    pub enable_tracking: bool,
-    pub track_stack_traces: bool,
-    pub max_tracked_allocations: usize,
-    pub leak_threshold: usize,
-}
-
-impl Default for LeakDetectionConfig {
-    fn default() -> Self {
-        Self {
-            enable_tracking: true,
-            track_stack_traces: false,
-            max_tracked_allocations: 10000,
-            leak_threshold: 100,
-        }
-    }
-}
-
-impl MemoryOptimizationManager {
-    /// Create new memory optimization manager
-    pub fn new(config: MemoryOptimizationConfig) -> Self {
-        let mut manager = Self {
-            zero_copy_allocator: None,
-            memory_pool: None,
-            generational_gc: None,
-            memory_compressor: None,
-            leak_detector: None,
-            config: config.clone(),
-            stats: Arc::new(Mutex::new(MemoryOptimizationStats::default())),
-        };
-
-        // Initialize components based on configuration
-        if config.enable_zero_copy {
-            manager.zero_copy_allocator = Some(ZeroCopyAllocator::new(config.allocator_config.clone()));
-        }
-        if config.enable_pooling {
-            manager.memory_pool = Some(SmartMemoryPool::new(config.pool_config));
-        }
-        if config.enable_generational_gc {
-            manager.generational_gc = Some(GenerationalGC::new(config.gc_config.clone()));
-        }
-        if config.enable_compression {
-            manager.memory_compressor = Some(MemoryCompression::new(config.compression_config.clone()));
-        }
-        if config.enable_leak_detection {
-            manager.leak_detector = Some(MemoryLeakDetector::new(config.leak_detection_config.clone()));
-        }
-
-        manager
+impl MemoryStats {
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    /// Allocate memory with all optimizations
-    pub fn allocate(&self, size: usize) -> Result<AllocationHandle, String> {
-        let mut stats = self.stats.lock().unwrap();
-        stats.total_allocations += 1;
+    pub fn record_allocation(&self, size: usize) {
+        self.total_allocated.fetch_add(size, Ordering::Relaxed);
+        self.current_usage.fetch_add(size, Ordering::Relaxed);
+        self.allocation_count.fetch_add(1, Ordering::Relaxed);
 
-        // Try zero-copy allocation first
-        if let Some(ref allocator) = self.zero_copy_allocator {
-            let ptr = allocator.allocate(size);
-            if !ptr.is_null() {
-                stats.zero_copy_allocations += 1;
-                return Ok(AllocationHandle { ptr, size });
+        // 更新峰值使用量
+        let current = self.current_usage.load(Ordering::Relaxed);
+        let mut peak = self.peak_usage.load(Ordering::Relaxed);
+        while current > peak {
+            match self.peak_usage.compare_exchange_weak(
+                peak, current, Ordering::Relaxed, Ordering::Relaxed
+            ) {
+                Ok(_) => break,
+                Err(actual) => peak = actual,
             }
         }
-
-        // Try memory pool
-        if let Some(ref pool) = self.memory_pool {
-            if let Some(handle) = pool.allocate_object_buffer(size) {
-                stats.pooled_allocations += 1;
-                return Ok(handle);
-            }
-        }
-
-        // Fallback to standard allocation
-        let layout = std::alloc::Layout::from_size_align(size, 8).map_err(|e| e.to_string())?;
-        let ptr = unsafe { std::alloc::alloc(layout) };
-
-        if ptr.is_null() {
-            return Err("Out of memory".to_string());
-        }
-
-        stats.active_allocations += 1;
-
-        Ok(AllocationHandle { ptr, size })
     }
 
-    /// Free memory with all optimizations
-    pub fn free(&self, handle: AllocationHandle) -> Result<(), String> {
-        let mut stats = self.stats.lock().unwrap();
-        stats.total_frees += 1;
-        stats.active_allocations = stats.active_allocations.saturating_sub(1);
-
-        // Try memory pool first
-        if let Some(ref pool) = self.memory_pool {
-            if pool.try_deallocate_object_buffer(handle.ptr, handle.size) {
-                return Ok(());
-            }
-        }
-
-        // Free via allocator
-        if let Some(ref allocator) = self.zero_copy_allocator {
-            let _ = allocator.deallocate(handle.ptr, handle.size);
-        }
-
-        // Fallback to standard deallocation
-        let layout = unsafe {
-            std::alloc::Layout::from_size_align_unchecked(handle.size, 8)
-        };
-        unsafe {
-            std::alloc::dealloc(handle.ptr, layout);
-        }
-
-        Ok(())
+    pub fn record_deallocation(&self, size: usize) {
+        self.total_freed.fetch_add(size, Ordering::Relaxed);
+        self.current_usage.fetch_sub(size, Ordering::Relaxed);
+        self.free_count.fetch_add(1, Ordering::Relaxed);
     }
 
-    /// Run garbage collection
-    pub fn gc_collect(&self) -> Result<GCStats, String> {
-        if let Some(ref gc) = self.generational_gc {
-            // Note: This is a placeholder - actual implementation would call the real GC method
-            let stats = GCStats::default();
-            let mut total_stats = self.stats.lock().unwrap();
-            total_stats.gc_collections += 1;
-            Ok(stats)
+    pub fn get_stats(&self) -> MemoryStatsSnapshot {
+        MemoryStatsSnapshot {
+            total_allocated: self.total_allocated.load(Ordering::Relaxed),
+            total_freed: self.total_freed.load(Ordering::Relaxed),
+            current_usage: self.current_usage.load(Ordering::Relaxed),
+            peak_usage: self.peak_usage.load(Ordering::Relaxed),
+            allocation_count: self.allocation_count.load(Ordering::Relaxed),
+            free_count: self.free_count.load(Ordering::Relaxed),
+        }
+    }
+}
+
+/// 内存统计快照
+#[derive(Debug, Clone)]
+pub struct MemoryStatsSnapshot {
+    pub total_allocated: usize,
+    pub total_freed: usize,
+    pub current_usage: usize,
+    pub peak_usage: usize,
+    pub allocation_count: usize,
+    pub free_count: usize,
+}
+
+impl MemoryStatsSnapshot {
+    pub fn efficiency(&self) -> f64 {
+        if self.total_allocated == 0 {
+            1.0
         } else {
-            Err("GC not enabled".to_string())
+            self.total_freed as f64 / self.total_allocated as f64
         }
     }
 
-    /// Get performance statistics
-    pub fn get_stats(&self) -> MemoryOptimizationStats {
-        self.stats.lock().unwrap().clone()
-    }
-
-    /// Compress memory regions
-    pub fn compress_memory(&self, data: &[u8]) -> Result<Vec<u8>, String> {
-        if let Some(ref compressor) = self.memory_compressor {
-            let address = data.as_ptr() as usize;
-            match compressor.compress(data, address) {
-                Ok(block) => Ok(block.compressed_data),
-                Err(e) => Err(format!("Compression failed: {:?}", e)),
-            }
+    pub fn average_allocation_size(&self) -> f64 {
+        if self.allocation_count == 0 {
+            0.0
         } else {
-            Ok(data.to_vec())
-        }
-    }
-
-    /// Detect memory leaks
-    pub fn detect_leaks(&self) -> Vec<leak_detector::LeakReport> {
-        if let Some(ref detector) = self.leak_detector {
-            vec![detector.detect_leaks()]
-        } else {
-            vec![]
+            self.total_allocated as f64 / self.allocation_count as f64
         }
     }
 }
 
-/// Memory allocation handle
+/// 内存分配句柄
 #[derive(Debug)]
 pub struct AllocationHandle {
     pub ptr: *mut u8,
     pub size: usize,
 }
 
+impl AllocationHandle {
+    pub fn new(ptr: *mut u8, size: usize) -> Self {
+        Self { ptr, size }
+    }
+}
+
 impl Drop for AllocationHandle {
     fn drop(&mut self) {
         unsafe {
-            let layout = std::alloc::Layout::from_size_align_unchecked(self.size, 8);
+            let layout = std::alloc::Layout::from_size_align_unchecked(self.size, std::mem::align_of::<usize>());
             std::alloc::dealloc(self.ptr, layout);
         }
     }
 }
 
+/// 全局内存统计实例
+pub static GLOBAL_MEMORY_STATS: MemoryStats = MemoryStats {
+    total_allocated: AtomicUsize::new(0),
+    total_freed: AtomicUsize::new(0),
+    current_usage: AtomicUsize::new(0),
+    peak_usage: AtomicUsize::new(0),
+    allocation_count: AtomicUsize::new(0),
+    free_count: AtomicUsize::new(0),
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::Ordering;
 
     #[test]
-    fn test_memory_optimization_manager_creation() {
-        let config = MemoryOptimizationConfig::default();
-        let manager = MemoryOptimizationManager::new(config);
-        assert!(manager.zero_copy_allocator.is_some());
-        assert!(manager.memory_pool.is_some());
-        assert!(manager.generational_gc.is_some());
+    fn test_memory_stats() {
+        let stats = MemoryStats::new();
+
+        // 记录分配
+        stats.record_allocation(1024);
+        stats.record_allocation(2048);
+
+        // 记录释放
+        stats.record_deallocation(1024);
+
+        let snapshot = stats.get_stats();
+        assert_eq!(snapshot.total_allocated, 3072);
+        assert_eq!(snapshot.total_freed, 1024);
+        assert_eq!(snapshot.current_usage, 2048);
+        assert_eq!(snapshot.allocation_count, 2);
+        assert_eq!(snapshot.free_count, 1);
+        assert_eq!(snapshot.efficiency(), 1024.0 / 3072.0);
+        assert_eq!(snapshot.average_allocation_size(), 1536.0);
     }
 
     #[test]
-    fn test_allocation_and_deallocation() {
-        let config = MemoryOptimizationConfig::default();
-        let manager = MemoryOptimizationManager::new(config);
+    fn test_peak_usage_tracking() {
+        let stats = MemoryStats::new();
 
-        let handle = manager.allocate(1024).unwrap();
-        assert!(!handle.ptr.is_null());
-        assert_eq!(handle.size, 1024);
+        stats.record_allocation(1000);
+        assert_eq!(stats.peak_usage.load(Ordering::Relaxed), 1000);
 
-        manager.free(handle).unwrap();
-    }
+        stats.record_allocation(500);
+        assert_eq!(stats.peak_usage.load(Ordering::Relaxed), 1500);
 
-    #[test]
-    fn test_stats_tracking() {
-        let config = MemoryOptimizationConfig::default();
-        let manager = MemoryOptimizationManager::new(config);
-
-        let _h1 = manager.allocate(100).unwrap();
-        let _h2 = manager.allocate(200).unwrap();
-
-        let stats = manager.get_stats();
-        assert!(stats.total_allocations >= 2);
+        stats.record_deallocation(1200);
+        assert_eq!(stats.peak_usage.load(Ordering::Relaxed), 1500);
     }
 }
