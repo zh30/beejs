@@ -34,17 +34,6 @@ pub fn init_web_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
-    eprintln!("🔧 [STAGE74] init_web_api called");
-
-    // Write to file to confirm this is called
-    let _ = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("/tmp/init_web_api.log")
-        .and_then(|mut file| {
-            use std::io::Write;
-            writeln!(file, "init_web_api called at {}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs())
-        });
 
     // 按照依赖顺序初始化各个 API
 

@@ -443,14 +443,15 @@ impl RuntimeLite {
                           code_trimmed.contains("new Blob") ||
                           code_trimmed.contains("new File");
 
-        if has_web_api {
-            return self.execute_standard(code);
-        }
-
         // Optimized path: Skip setup for pure eval scripts with no console output
-        if code_trimmed.starts_with("console.log") || code_trimmed.starts_with("console.error") {
+        // BUT skip this optimization if code contains Web API usage
+        if (code_trimmed.starts_with("console.log") || code_trimmed.starts_with("console.error")) && !has_web_api {
             // For scripts that only print, use minimal setup
             return self.execute_simple_print(code);
+        }
+
+        if has_web_api {
+            return self.execute_standard(code);
         }
 
         // Standard execution path for other scripts
