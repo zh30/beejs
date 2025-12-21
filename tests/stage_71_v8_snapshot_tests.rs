@@ -3,11 +3,10 @@
 
 #[cfg(test)]
 mod v8_snapshot_tests {
-    use super::*;
-    use std::sync::{Arc, Mutex};
-    use std::time::SystemTime;
-    use crate::runtime_lite::RuntimeLite;
-    use crate::v8_snapshot::{V8Snapshot, SnapshotManager, SnapshotConfig};
+    use beejs::runtime_lite::RuntimeLite;
+    use beejs::v8_snapshot::{V8Snapshot, SnapshotManager, SnapshotConfig};
+    use beejs::startup_optimizer::{MemoryPreallocator, JITPrecompiler};
+    use std::sync::Arc;
 
     #[test]
     fn test_v8_snapshot_creation() {
@@ -174,8 +173,9 @@ mod v8_snapshot_tests {
 
         // 验证错误类型
         if let Err(e) = result {
-            assert!(e.to_string().contains("not found") ||
-                   e.to_string().contains("does not exist"));
+            let err_msg = e.to_string();
+            assert!(err_msg.contains("not found") ||
+                   err_msg.contains("does not exist"));
         }
     }
 
