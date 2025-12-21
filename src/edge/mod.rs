@@ -13,6 +13,8 @@ pub mod local_cache;
 pub mod offline_engine;
 pub mod intelligent_router;
 pub mod distributed_coordinator;
+pub mod performance_optimizer;
+pub mod network_optimizer;
 
 pub use cache_strategy::*;
 pub use node_manager::*;
@@ -20,3 +22,5 @@ pub use local_cache::{*, CacheStats as LocalCacheStats};
 pub use offline_engine::{*, ExecutionResult as OfflineExecutionResult};
 pub use intelligent_router::*;
 pub use distributed_coordinator::*;
+pub use performance_optimizer::*;
+pub use network_optimizer::*;
