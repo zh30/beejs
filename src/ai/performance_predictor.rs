@@ -363,7 +363,7 @@ mod tests {
                 throughput: 10000.0 - i as f64 * 50.0,
                 latency: 100.0 + i as f64,
                 concurrent_tasks: 100,
-                timestamp: std::time::Instant::now(),
+                timestamp: std::time::Instant::now().elapsed().as_nanos() as u64,
             });
         }
 

@@ -575,8 +575,9 @@ mod tests {
         let queue_length = scheduler.get_queue_length().await;
         assert!(queue_length > 0);
 
-        // 启动后台任务
-        scheduler.start_background_tasks();
+        // 启动后台任务 (克隆一个引用)
+        let scheduler_clone = Arc::clone(&scheduler);
+        scheduler_clone.start_background_tasks();
 
         // 等待任务完成
         tokio::time::sleep(Duration::from_millis(200)).await;
