@@ -44,7 +44,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_setup_network_apis() {
         // TODO: 实现真正的缓冲池测试
-        let _buffer_pool: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new()),)));
+        let _buffer_pool: _ = Arc::new(Mutex::new(std::sync::Mutex::new(Mutex::new(),)));
         let _connection_pool: _ = Arc::new(Mutex::new(ConnectionPool::new(Default::default()),.unwrap());
         let network_statistics: _ = Arc::new(Mutex::new(NetworkStats {)),
             total_connections: 0,

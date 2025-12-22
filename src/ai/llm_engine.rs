@@ -199,7 +199,7 @@ impl AiLlmEngine {
         let kv_cache: _ = self.allocate_kv_cache()?;
         let entry: _ = TokenCacheEntry {
             tokens: tokens.to_vec(),
-            kv_cache: Arc::new(std::sync::Mutex::new(Mutex::new(kv_cache))),
+            kv_cache: Arc::new(std::sync::Mutex::new(kv_cache)),
             last_access: Instant::now(),
             access_count: 1,
         };

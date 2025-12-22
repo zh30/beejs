@@ -307,7 +307,7 @@ impl V8EngineOptimizer {
     /// Create new V8 engine optimizer
     pub fn new() -> Self {
         Self {
-            jit_stats: Arc::new(std::sync::Mutex::new(Mutex::new(JitCompilationStats::default()))),
+            jit_stats: Arc::new(std::sync::Mutex::new(JitCompilationStats::default())),
             memory_optimizer: Arc::new(std::sync::Mutex::new(MemoryLayoutOptimizer::new())),
             inline_cache: Arc::new(std::sync::Mutex::new(InlineCacheOptimizer::new(1024))),
             hot_path_detector: Arc::new(std::sync::Mutex::new(HotPathDetector::new(1000))),

@@ -82,7 +82,7 @@ impl AccelerationEngine {
             active_tasks: Arc::new(Mutex::new(HashMap::new()))
             batch_queue: Arc::new(Mutex::new(VecDeque::new()))
             performance_stats: Arc::new(Mutex::new(AccelerationStats::default()))
-            batch_config: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BatchConfig {)),
+            batch_config: Arc::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BatchConfig {),
                 dynamic_batching: false,
                 max_batch_size: 32,
                 batch_timeout_ms: 10,
