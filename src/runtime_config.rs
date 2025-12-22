@@ -592,7 +592,7 @@ impl RuntimeConfigManager {
     pub fn enable_auto_tuning(&mut self) {
         info!("启用配置自动调优");
         self.auto_tuner = Some(Arc::new(std::sync::Mutex::new(AutoTuner {
-            config_manager: Arc::new(self.clone())),
+            config_manager: Arc::new(self.clone()),
             is_tuning: false,
             tuning_interval_s: 60,
             metrics_collector: Arc::new(std::sync::Mutex::new(PerformanceMetricsCollector::new())),
