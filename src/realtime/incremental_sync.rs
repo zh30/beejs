@@ -73,8 +73,8 @@ impl IncrementalSync {
     pub fn new(compression: CompressionConfig) -> Result<Self> {
         info!("🔄 初始化增量同步引擎 (算法: {:?})", compression.algorithm);
 
-        let sync_state: _ = Arc::new(Mutex::new(RocksDB::new())?);
-        let change_cache: _ = Arc::new(Mutex::new(RocksDB::new())?);
+        let sync_state: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RocksDB::new()))?);
+        let change_cache: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RocksDB::new()))?);
 
         Ok(Self {
             sync_state,

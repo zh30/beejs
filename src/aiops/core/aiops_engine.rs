@@ -116,9 +116,9 @@ impl AIOpsEngine {
     pub fn new(config: AIOpsConfig) -> Self {
         Self {
             config: config.clone(),
-            status: Arc::new(Mutex::new(RwLock::new(EngineStatus::Stopped)),
-            model_manager: Arc::new(Mutex::new(ModelManager::new()),
-            data_collector: Arc::new(Mutex::new(DataCollector::new(config.collection_interval)),
+            status: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(EngineStatus::Stopped))),
+            model_manager: Arc::new(std::sync::Mutex::new(Mutex::new(ModelManager::new())),
+            data_collector: Arc::new(std::sync::Mutex::new(Mutex::new(DataCollector::new(config.collection_interval))),
         }
     }
 

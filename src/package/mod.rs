@@ -10,8 +10,8 @@ pub struct PackageInfo {
     pub name: String,
     pub version: String,
     pub description: String,
-    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
-    pub dev_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
+    pub dev_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 /// Package lock entry

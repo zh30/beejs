@@ -321,7 +321,7 @@ async fn test_peak_load_handling() -> Result<(), Box<dyn std::error::Error>> {
             let handle: _ = tokio::spawn(async {
                 let code: _ = r#"
                     // 计算密集型任务
-                    let sum = 0;
+                    let sum: _ = 0;
                     for (let i: _ = 0; i < 10000; i++) {
                         sum += Math.sqrt(i) * Math.sin(i) * Math.cos(i);
                     }

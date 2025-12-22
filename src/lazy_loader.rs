@@ -23,7 +23,7 @@ impl LazyLoader {
     /// Create a new lazy loader
     pub fn new() -> Self {
         Self {
-            stats: Arc::new(Mutex::new(LazyLoaderStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(LazyLoaderStats::default())),
         }
     }
 

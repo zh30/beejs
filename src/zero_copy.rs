@@ -207,7 +207,7 @@ impl MemoryMappedFile {
         let mapping: _ = unsafe { memmap2::MmapOptions::new().map(&file)? };
 
         Ok(Self {
-            mapping: Arc::new(Mutex::new(mapping)),
+            mapping: Arc::new(std::sync::Mutex::new(Mutex::new(mapping))),
             file,
         })
     }
@@ -261,7 +261,7 @@ impl ZeroCopyManager {
     pub fn new() -> Self {
         Self {
             buffer_pool: LockFreeBufferPool::new(),
-            channel_stats: Arc::new(Mutex::new(AtomicStats::new()),
+            channel_stats: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicStats::new())),
         }
     }
 
@@ -539,7 +539,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_atomic_operations_performance() {
-        let counter: _ = Arc::new(Mutex::new(LockFreeCounter::new(0));
+        let counter: _ = Arc::new(std::sync::Mutex::new(Mutex::new(LockFreeCounter::new(0)));
         let iterations: _ = 100000;
         let thread_count: _ = 4;
 
@@ -588,10 +588,10 @@ impl ZeroCopyFileCache {
     /// 创建新的文件缓存管理器
     pub fn new(max_entries: usize) -> Self {
         Self {
-            cache: Arc::new(Mutex::new(lru::LruCache::new(
-                std::num::NonZeroUsize::new(max_entries)).unwrap()),
+            cache: Arc::new(std::sync::Mutex::new(Mutex::new(lru::LruCache::new(
+                std::num::NonZeroUsize::new(max_entries))).unwrap()),
             max_entries,
-            stats: Arc::new(Mutex::new(AtomicStats::new()),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicStats::new())),
         }
     }
 
@@ -611,7 +611,7 @@ impl ZeroCopyFileCache {
         // 缓存未命中，加载文件
         let file: _ = tokio::fs::File::open(path).await?;
         let mapping: _ = unsafe { memmap2::MmapOptions::new().map(&file)? };
-        let mapping: _ = Arc::new(Mutex::new(mapping));
+        let mapping: _ = Arc::new(std::sync::Mutex::new(Mutex::new(mapping)));
 
         // 添加到缓存
         {
@@ -674,11 +674,11 @@ impl ZeroCopyIoMonitor {
     /// 创建新的 I/O 监控器
     pub fn new() -> Self {
         Self {
-            zero_copy_bytes: Arc::new(Mutex::new(AtomicUsize::new(0)),
-            copied_bytes: Arc::new(Mutex::new(AtomicUsize::new(0)),
-            file_ops: Arc::new(Mutex::new(AtomicUsize::new(0)),
-            cache_hits: Arc::new(Mutex::new(AtomicUsize::new(0)),
-            cache_misses: Arc::new(Mutex::new(AtomicUsize::new(0)),
+            zero_copy_bytes: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
+            copied_bytes: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
+            file_ops: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
+            cache_hits: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
+            cache_misses: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
         }
     }
 

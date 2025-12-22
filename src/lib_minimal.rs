@@ -43,9 +43,9 @@ impl Runtime {
         Ok(Self {
             stack_size,
             max_heap,
-            execution_count: Arc::new(Mutex::new(AtomicUsize::new(0)),
+            execution_count: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
             verbose,
-            isolate: Arc::new(Mutex::new(isolate)),
+            isolate: Arc::new(std::sync::Mutex::new(Mutex::new(isolate))),
             context,
         })
     }

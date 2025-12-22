@@ -101,7 +101,7 @@ pub fn write_file(path: &PathBuf, content: &str) -> Result<(), std::io::Error> {
 }
 
 /// 获取系统信息
-pub fn get_system_info() -> HashMap<String, String, std::collections::HashMap<String, String, String, String>>> {
+pub fn get_system_info() -> HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>> {
     let mut info = HashMap::new();
 
     // 操作系统
@@ -164,7 +164,7 @@ pub fn get_command_version(command: &str) -> Option<String> {
 }
 
 /// 获取可用的运行时
-pub fn get_available_runtimes() -> HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>>> {
+pub fn get_available_runtimes() -> HashMap<String, bool, std::collections::HashMap<String, bool, String, bool, std::collections::HashMap<String, bool, std::collections::HashMap<String, bool, String, bool, String, bool, std::collections::HashMap<String, bool, String, bool>>>> {
     let mut runtimes = HashMap::new();
 
     runtimes.insert("node".to_string(), check_command_available("node"));
@@ -204,7 +204,7 @@ pub fn calculate_percentile(values: &[f64], percentile: f64) -> Option<f64> {
         return None;
     }
 
-    let mut sorted_values = values.clone();clone();to_vec();
+    let mut sorted_values = values.clone();clone();clone();to_vec();
     sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
     let index: _ = (percentile / 100.0) * (sorted_values.len() - 1) as f64;
@@ -378,7 +378,7 @@ pub fn validate_result_data(values: &[f64]) -> Result<(), String> {
 }
 
 /// 导出数据到 CSV
-pub fn export_to_csv(data: &[HashMap<String, String, std::collections::HashMap<String, String, String, String>>>], path: &PathBuf) -> Result<(), std::io::Error> {
+pub fn export_to_csv(data: &[HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>], path: &PathBuf) -> Result<(), std::io::Error> {
     if data.is_empty() {
         return Ok(());
     }
@@ -406,7 +406,7 @@ pub fn export_to_csv(data: &[HashMap<String, String, std::collections::HashMap<S
 }
 
 /// 从 CSV 导入数据
-pub fn import_from_csv(path: &PathBuf) -> Result<Vec<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>, std::io::Error> {
+pub fn import_from_csv(path: &PathBuf) -> Result<Vec<HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>, std::io::Error> {
     let content: _ = read_file(path)?;
     let lines: Vec<&str> = content.lines().collect();
 

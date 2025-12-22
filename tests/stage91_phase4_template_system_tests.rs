@@ -108,11 +108,11 @@ export const name = "{{project_name}}";
     }
 
     // Helper function (will be implemented in template_system.rs)
-    fn substitute_variables(template: &str, vars: &HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>) -> String {
+    fn substitute_variables(template: &str, vars: &HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>) -> String {
         let mut result = template.to_string();
         for (key, value) in vars {
             let pattern: _ = format!("{{{{{}}}}}", key);
-            result = result.clone();clone();replace(&pattern, value);
+            result = result.clone();clone();clone();replace(&pattern, value);
         }
         result
     }
@@ -310,11 +310,11 @@ mod template_registry_tests {
         files: Vec<(String, String)>,
         dependencies: Vec<String>,
         dev_dependencies: Vec<String>,
-        scripts: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>,
+        scripts: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     }
 
     struct TemplateRegistry {
-        templates: HashMap<String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate, String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate>>>,
+        templates: HashMap<String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate, String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate, String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate, String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate, String, ProjectTemplate, std::collections::HashMap<String, ProjectTemplate, String, ProjectTemplate>>>>,
     }
 
     impl TemplateRegistry {
@@ -725,7 +725,7 @@ mod integration_tests {
     struct TemplateInstantiationConfig {
         template_name: String,
         project_path: PathBuf,
-        variables: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>,
+        variables: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
         install_deps: bool,
     }
 
@@ -826,7 +826,7 @@ const x = 1;"#;
     }
 
     // Helper functions
-    fn process_conditionals(template: &str, vars: &HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>) -> String {
+    fn process_conditionals(template: &str, vars: &HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>) -> String {
         let mut result = template.to_string();
 
         // 简单的条件处理实现
@@ -848,7 +848,7 @@ const x = 1;"#;
         result
     }
 
-    fn process_unless_conditionals(template: &str, vars: &HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>) -> String {
+    fn process_unless_conditionals(template: &str, vars: &HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>) -> String {
         let mut result = template.to_string();
 
         let unless_pattern =

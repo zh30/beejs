@@ -70,7 +70,7 @@ pub struct PerformanceBaseline {
     pub memory_stats: Option<crate::benchmarks::MemoryStats>,
     pub timestamp: u64,
     pub sample_count: usize,
-    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 /// 性能回归检测结果
@@ -113,7 +113,7 @@ impl RegressionSeverity {
 /// 性能回归检测器
 pub struct PerformanceRegressionDetector {
     thresholds: PerformanceThresholds,
-    baselines: HashMap<String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline>>>,
+    baselines: HashMap<String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline, String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline>>>>,
     baseline_dir: PathBuf,
 }
 
@@ -396,7 +396,7 @@ impl PerformanceRegressionDetector {
     }
 
     /// 获取所有基线数据
-    pub fn get_all_baselines(&self) -> &HashMap<String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline>>> {
+    pub fn get_all_baselines(&self) -> &HashMap<String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline, String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline>>>> {
         &self.baselines
     }
 

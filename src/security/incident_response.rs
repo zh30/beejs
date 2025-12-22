@@ -42,7 +42,7 @@ pub struct ThreatDetectionResult {
 /// 威胁检测器
 #[derive(Debug)]
 pub struct ThreatDetector {
-    detection_rules: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>>,
+    detection_rules: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, std::collections::HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, String, f64, std::collections::HashMap<String, f64, String, f64>>>>,
 }
 
 impl ThreatDetector {
@@ -81,14 +81,14 @@ impl ThreatDetector {
 pub struct VulnerabilityScanResult {
     pub vulnerabilities_found: bool,
     pub vulnerability_count: usize,
-    pub severity_distribution: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>,
+    pub severity_distribution: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>>>,
     pub timestamp: std::time::SystemTime,
 }
 
 /// 漏洞扫描器
 #[derive(Debug)]
 pub struct VulnerabilityScanner {
-    scan_rules: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>>,
+    scan_rules: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, std::collections::HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, String, f64, std::collections::HashMap<String, f64, String, f64>>>>,
 }
 
 impl VulnerabilityScanner {
@@ -152,7 +152,7 @@ pub struct Incident {
 /// 事件检测器
 #[derive(Debug)]
 pub struct IncidentDetector {
-    detection_patterns: HashMap<String, IncidentType, std::collections::HashMap<String, IncidentType, String, IncidentType>>>,
+    detection_patterns: HashMap<String, IncidentType, std::collections::HashMap<String, IncidentType, String, IncidentType, std::collections::HashMap<String, IncidentType, std::collections::HashMap<String, IncidentType, String, IncidentType, String, IncidentType, std::collections::HashMap<String, IncidentType, String, IncidentType>>>>,
 }
 
 impl IncidentDetector {
@@ -185,7 +185,7 @@ impl IncidentDetector {
 /// 自动修复器
 #[derive(Debug)]
 pub struct AutoRemediator {
-    remediation_rules: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    remediation_rules: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 impl AutoRemediator {
@@ -213,7 +213,7 @@ impl AutoRemediator {
 /// 事件升级器
 #[derive(Debug)]
 pub struct EscalationManager {
-    escalation_rules: HashMap<IncidentSeverity, Vec<String, std::collections::HashMap<IncidentSeverity, Vec<String, IncidentSeverity, Vec<String>>>,
+    escalation_rules: HashMap<IncidentSeverity, Vec<String, std::collections::HashMap<IncidentSeverity, Vec<String, IncidentSeverity, Vec<String, std::collections::HashMap<IncidentSeverity, Vec<String, std::collections::HashMap<IncidentSeverity, Vec<String, IncidentSeverity, Vec<String, IncidentSeverity, Vec<String, std::collections::HashMap<IncidentSeverity, Vec<String, IncidentSeverity, Vec<String>>>>,
 }
 
 impl EscalationManager {

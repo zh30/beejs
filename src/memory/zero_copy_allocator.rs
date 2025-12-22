@@ -10,9 +10,9 @@ use std::collections::{HashMap, BTreeMap};
 /// 通过直接内存映射和智能池化策略，实现接近零开销的内存分配
 pub struct ZeroCopyAllocator {
     /// 内存池按大小分类管理
-    pools: Arc<Mutex<HashMap<usize, MemoryPool, std::collections::HashMap<usize, MemoryPool, usize, MemoryPool>>>,
+    pools: Arc<Mutex<HashMap<usize, MemoryPool, std::collections::HashMap<usize, MemoryPool, usize, MemoryPool, std::collections::HashMap<usize, MemoryPool, std::collections::HashMap<usize, MemoryPool, usize, MemoryPool, usize, MemoryPool, std::collections::HashMap<usize, MemoryPool, usize, MemoryPool>>>>,
     /// 大内存直接分配池
-    large_allocations: Arc<Mutex<HashMap<usize, LargeAllocation, std::collections::HashMap<usize, LargeAllocation, usize, LargeAllocation>>>,
+    large_allocations: Arc<Mutex<HashMap<usize, LargeAllocation, std::collections::HashMap<usize, LargeAllocation, usize, LargeAllocation, std::collections::HashMap<usize, LargeAllocation, std::collections::HashMap<usize, LargeAllocation, usize, LargeAllocation, usize, LargeAllocation, std::collections::HashMap<usize, LargeAllocation, usize, LargeAllocation>>>>,
     /// 统计信息
     stats: Arc<AllocatorStats>,
     /// 配置参数
@@ -111,10 +111,10 @@ impl ZeroCopyAllocator {
         }
 
         Self {
-            pools: Arc::new(Mutex::new(pools)),
-            large_allocations: Arc::new(Mutex::new(HashMap::new())),
-            stats: Arc::new(Mutex::new(AllocatorStats {
-                total_allocations: AtomicU64::new(0)),
+            pools: Arc::new(std::sync::Mutex::new(Mutex::new(pools))),
+            large_allocations: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(AllocatorStats {
+                total_allocations: AtomicU64::new(0))),
                 total_deallocations: AtomicU64::new(0),
                 zero_copy_allocations: AtomicU64::new(0),
                 pool_hits: AtomicU64::new(0),

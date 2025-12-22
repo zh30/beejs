@@ -593,14 +593,14 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_enhanced_repl_creation() {
-        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap());
         let repl: _ = EnhancedRepl::new(runtime);
         assert!(repl.is_ok());
     }
 
     #[test]
     fn test_enhanced_repl_config() {
-        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap());
         let config: _ = EnhancedReplConfig::default();
         let repl: _ = EnhancedRepl::with_config(runtime, config);
         assert!(repl.is_ok());
@@ -608,7 +608,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_multiline_detection() {
-        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
         assert!(repl.is_multiline_start("function foo() {"));
@@ -618,7 +618,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_save_session() {
-        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
         // Add some commands to history
@@ -634,7 +634,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_load_file() {
-        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
         // Create a temporary file with JavaScript code
@@ -647,7 +647,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_inspect_command() {
-        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
         let result: _ = repl.inspect_expression("42");
@@ -656,7 +656,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_time_command() {
-        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
         let result: _ = repl.time_expression("1 + 1");
@@ -665,7 +665,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_type_command() {
-        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
         let result: _ = repl.type_expression("42");
@@ -674,7 +674,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_await_command() {
-        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap());
         let mut repl = EnhancedRepl::new(runtime).unwrap();
 
         let result: _ = repl.await_expression("Promise.resolve(42)");
@@ -683,7 +683,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_get_stats() {
-        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap());
+        let runtime: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap());
         let repl: _ = EnhancedRepl::new(runtime).unwrap();
 
         let stats: _ = repl.get_stats();

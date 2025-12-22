@@ -27,7 +27,7 @@ pub struct GenerationalGC {
 #[derive(Debug)]
 struct YoungGeneration {
     /// 活跃对象集合
-    live_objects: HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>>,
+    live_objects: HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo, usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>>>,
     /// 空闲空间
     free_space: usize,
     /// 总空间
@@ -42,7 +42,7 @@ struct YoungGeneration {
 #[derive(Debug)]
 struct OldGeneration {
     /// 活跃对象集合
-    live_objects: HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>>,
+    live_objects: HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo, usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>>>,
     /// 总空间
     total_space: usize,
     /// 压缩统计
@@ -145,9 +145,9 @@ impl Default for GCConfig {
 impl GenerationalGC {
     /// 创建新的分代 GC
     pub fn new(config: GCConfig) -> Self {
-        let stop_flag: _ = Arc::new(Mutex::new(AtomicUsize::new(0));
-        let stats: _ = Arc::new(Mutex::new(GCStats {
-            young_gc_count: AtomicU64::new(0)),
+        let stop_flag: _ = Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)));
+        let stats: _ = Arc::new(std::sync::Mutex::new(Mutex::new(GCStats {
+            young_gc_count: AtomicU64::new(0))),
             old_gc_count: AtomicU64::new(0),
             total_collected_objects: AtomicU64::new(0),
             total_collected_bytes: AtomicU64::new(0),
@@ -157,16 +157,16 @@ impl GenerationalGC {
             promotion_failures: AtomicU64::new(0),
         });
 
-        let young_gen: _ = Arc::new(Mutex::new(RwLock::new(YoungGeneration {
-            live_objects: HashMap::new()),
+        let young_gen: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(YoungGeneration {
+            live_objects: HashMap::new())),
             free_space: config.young_gen_size,
             total_space: config.young_gen_size,
             created_at: Instant::now(),
             last_gc: Instant::now(),
         }));
 
-        let old_gen: _ = Arc::new(Mutex::new(RwLock::new(OldGeneration {
-            live_objects: HashMap::new()),
+        let old_gen: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(OldGeneration {
+            live_objects: HashMap::new())),
             total_space: config.old_gen_size,
             compaction_count: AtomicUsize::new(0),
             created_at: Instant::now(),
@@ -277,7 +277,7 @@ impl GenerationalGC {
     }
 
     /// 标记-清除算法
-    fn mark_and_sweep(&self, objects: &HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>>) -> (HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>>, u64) {
+    fn mark_and_sweep(&self, objects: &HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo, usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>>>) -> (HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo, usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>>>, u64) {
         let mut live_objects = HashMap::new();
         let mut collected_bytes = 0u64;
 
@@ -306,7 +306,7 @@ impl GenerationalGC {
     }
 
     /// 晋升对象到老年代
-    fn promote_objects(&self, young_gen: &mut YoungGeneration, live_objects: &HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>>) -> usize {
+    fn promote_objects(&self, young_gen: &mut YoungGeneration, live_objects: &HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo, usize, ObjectInfo, std::collections::HashMap<usize, ObjectInfo, usize, ObjectInfo>>>>) -> usize {
         let mut promoted_count = 0;
         let mut old_gen = self.old_gen.write().unwrap();
 

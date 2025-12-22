@@ -186,7 +186,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_concurrent_snapshot_operations() {
         let mut runtime1 = RuntimeLite::new(false).unwrap();
         let mut runtime2 = RuntimeLite::new(false).unwrap();
-        let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(SnapshotManager::new(SnapshotConfig::default()))));
+        let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(SnapshotManager::new(SnapshotConfig::default())))));
 
         let manager_clone: _ = manager.clone();
 

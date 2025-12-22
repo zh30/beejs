@@ -141,7 +141,7 @@ pub struct V8APIAdapter {
     /// 配置
     config: AdapterConfig,
     /// 适配器映射
-    adapters: Arc<RwLock<HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem>>>,
+    adapters: Arc<RwLock<HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem, std::collections::HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem, String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem>>>>,
     /// 统计信息
     stats: Arc<RwLock<AdaptationStats>>,
 }
@@ -151,15 +151,15 @@ impl V8APIAdapter {
     pub fn new(config: AdapterConfig) -> Self {
         let mut adapter = Self {
             config,
-            adapters: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
-            stats: Arc::new(Mutex::new(RwLock::new(AdaptationStats {
+            adapters: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AdaptationStats {
                 total_adapters: 0,
                 successful_adapters: 0,
                 failed_adapters: 0,
                 skipped_adapters: 0,
                 avg_performance_impact: 0.0,
                 total_performance_impact: 0.0,
-            })),
+            }))),
         };
 
         // 初始化内置适配器
@@ -419,7 +419,7 @@ impl V8APIAdapter {
     }
 
     /// 获取所有适配器
-    pub async fn get_all_adapters(&self) -> HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem>>> {
+    pub async fn get_all_adapters(&self) -> HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem, std::collections::HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem, String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem>>>> {
         let adapters: _ = self.adapters.read().await;
         adapters.clone()
     }
@@ -492,7 +492,7 @@ impl V8APIAdapter {
 
     /// 导入适配器配置
     pub async fn import_config(&mut self, config_json: &str) -> Result<(), anyhow::Error> {
-        let adapters: HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem>>> = serde_json::from_str(config_json)?;
+        let adapters: HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem, std::collections::HashMap<String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem, String, AdapterItem, std::collections::HashMap<String, AdapterItem, String, AdapterItem>>>> = serde_json::from_str(config_json)?;
         let mut adapters_map = self.adapters.try_write().unwrap();
         *adapters_map = adapters;
         Ok(())

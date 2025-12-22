@@ -48,7 +48,7 @@ pub enum SecurityPolicy {
     /// Block operations based on rules
     Restrictive,
     /// Custom policy with specific rules
-    Custom(HashMap<String, SecurityRule, std::collections::HashMap<String, SecurityRule, String, SecurityRule>>>),
+    Custom(HashMap<String, SecurityRule, std::collections::HashMap<String, SecurityRule, String, SecurityRule, std::collections::HashMap<String, SecurityRule, std::collections::HashMap<String, SecurityRule, String, SecurityRule, String, SecurityRule, std::collections::HashMap<String, SecurityRule, String, SecurityRule>>>>),
 }
 
 /// Security rule definition
@@ -65,10 +65,10 @@ pub struct SecurityRule {
 /// Enhanced security manager with RBAC support
 #[derive(Debug)]
 pub struct SecurityManager {
-    policies: HashMap<String, SecurityPolicy, std::collections::HashMap<String, SecurityPolicy, String, SecurityPolicy>>>,
+    policies: HashMap<String, SecurityPolicy, std::collections::HashMap<String, SecurityPolicy, String, SecurityPolicy, std::collections::HashMap<String, SecurityPolicy, std::collections::HashMap<String, SecurityPolicy, String, SecurityPolicy, String, SecurityPolicy, std::collections::HashMap<String, SecurityPolicy, String, SecurityPolicy>>>>,
     audit_log: Arc<RwLock<Vec<SecurityEvent>>,
-    users: Arc<RwLock<HashMap<String, User, std::collections::HashMap<String, User, String, User>>>,
-    roles: Arc<RwLock<HashMap<String, UserPermissions, std::collections::HashMap<String, UserPermissions, String, UserPermissions>>>,
+    users: Arc<RwLock<HashMap<String, User, std::collections::HashMap<String, User, String, User, std::collections::HashMap<String, User, std::collections::HashMap<String, User, String, User, String, User, std::collections::HashMap<String, User, String, User>>>>,
+    roles: Arc<RwLock<HashMap<String, UserPermissions, std::collections::HashMap<String, UserPermissions, String, UserPermissions, std::collections::HashMap<String, UserPermissions, std::collections::HashMap<String, UserPermissions, String, UserPermissions, String, UserPermissions, std::collections::HashMap<String, UserPermissions, String, UserPermissions>>>>,
 }
 
 /// Security audit event
@@ -79,7 +79,7 @@ pub struct SecurityEvent {
     pub source: String,
     pub action: String,
     pub result: SecurityResult,
-    pub details: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub details: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 /// Security result
@@ -94,9 +94,9 @@ impl SecurityManager {
     pub fn new() -> Self {
         let mut manager = Self {
             policies: HashMap::new(),
-            audit_log: Arc::new(Mutex::new(RwLock::new(Vec::new())),
-            users: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
-            roles: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            audit_log: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
+            users: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
+            roles: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         };
 
         // Initialize default roles
@@ -235,7 +235,7 @@ impl SecurityManager {
         &self,
         policy_name: &str,
         operation: &str,
-        context: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+        context: &HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     ) -> Result<SecurityResult> {
         let policy: _ = self.policies.get(policy_name)
             .ok_or_else(|| anyhow!("Policy not found: {}", policy_name))?;
@@ -282,7 +282,7 @@ impl SecurityManager {
         source: String,
         action: String,
         result: SecurityResult,
-        mut details: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+        mut details: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     ) {
         let event: _ = SecurityEvent {
             timestamp: std::time::SystemTime::now(),
@@ -304,7 +304,7 @@ impl SecurityManager {
     }
 
     /// Get user statistics
-    pub async fn get_user_stats(&self) -> HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>> {
+    pub async fn get_user_stats(&self) -> HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value, String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>> {
         let users: _ = self.users.read().await;
         let mut stats = HashMap::new();
 

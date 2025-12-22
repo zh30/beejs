@@ -136,8 +136,8 @@ impl HotReloader {
     pub fn with_config(config: WatcherConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(Mutex::new(WatcherStats::new()),
-            running: Arc::new(Mutex::new(AtomicBool::new(false)),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(WatcherStats::new())),
+            running: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicBool::new(false))),
         }
     }
 

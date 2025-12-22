@@ -276,7 +276,7 @@ impl TrendAnalyzer {
             return None;
         }
 
-        let mut sorted_values = values.clone();clone();clone();
+        let mut sorted_values = values.clone();clone();clone();clone();
         sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let n: _ = sorted_values.len();

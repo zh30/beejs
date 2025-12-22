@@ -60,7 +60,7 @@ pub struct ModuleIndexer {
 #[derive(Debug, Clone)]
 pub struct SearchQuery {
     pub query: String,
-    pub filters: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub filters: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 /// 搜索结果

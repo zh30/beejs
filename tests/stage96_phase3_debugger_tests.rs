@@ -230,7 +230,7 @@ async fn test_session_manager() {
 /// Test connection manager
 #[tokio::test]
 async fn test_connection_manager() {
-    let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(ConnectionManager::new()))));
+    let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(ConnectionManager::new())))));
 
     // Create connection
     let conn_id: _ = {
@@ -391,7 +391,7 @@ async fn test_async_call_stack() {
 /// Test remote debugging multi-instance support
 #[tokio::test]
 async fn test_remote_debug_multi_instance() {
-    let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(SessionManager::new()))));
+    let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(SessionManager::new())))));
 
     // Create multiple sessions
     let session1: _ = {
@@ -430,7 +430,7 @@ async fn test_remote_debug_multi_instance() {
 /// Test breakpoint synchronization
 #[tokio::test]
 async fn test_breakpoint_synchronization() {
-    let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(BreakpointManager::new()))));
+    let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(BreakpointManager::new())))));
 
     // Add breakpoint
     let breakpoint: _ = Breakpoint {
@@ -559,9 +559,9 @@ async fn test_full_debugging_workflow() {
     // This test simulates a complete debugging session
 
     // 1. Create debugging components
-    let breakpoint_manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(BreakpointManager::new()))));
-    let variable_inspector: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(VariableInspector::new()))));
-    let call_stack: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(CallStackView::new()))));
+    let breakpoint_manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(BreakpointManager::new())))));
+    let variable_inspector: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(VariableInspector::new())))));
+    let call_stack: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(RwLock::new(CallStackView::new())))));
 
     // 2. Set a breakpoint
     let breakpoint: _ = Breakpoint {

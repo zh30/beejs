@@ -13,7 +13,7 @@ pub enum Metric {
     Counter {
         name: String,
         value: u64,
-        labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+        labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
         timestamp: DateTime<Utc>,
     },
 
@@ -21,7 +21,7 @@ pub enum Metric {
     Gauge {
         name: String,
         value: f64,
-        labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+        labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
         timestamp: DateTime<Utc>,
     },
 
@@ -29,7 +29,7 @@ pub enum Metric {
     Histogram {
         name: String,
         values: Vec<f64>,
-        labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+        labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
         timestamp: DateTime<Utc>,
     },
 }
@@ -96,8 +96,8 @@ pub struct Alert {
     pub description: String,
     pub severity: AlertSeverity,
     pub condition: AlertCondition,
-    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
-    pub annotations: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
+    pub annotations: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     pub enabled: bool,
 }
 
@@ -148,7 +148,7 @@ pub struct AlertEvent {
     pub severity: AlertSeverity,
     pub status: AlertStatus,
     pub description: String,
-    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     pub timestamp: DateTime<Utc>,
     pub resolved_at: Option<DateTime<Utc>>,
 }
@@ -176,22 +176,22 @@ pub struct MonitoringManager {
     config: MonitoringConfig,
 
     /// Metrics storage
-    metrics: Arc<RwLock<std::collections::HashMap<String, Vec<Metric, std::collections::HashMap<String, Vec<Metric, String, Vec<Metric>>>>,
+    metrics: Arc<RwLock<std::collections::HashMap<String, Vec<Metric, std::collections::HashMap<String, Vec<Metric, String, Vec<Metric, std::collections::HashMap<String, Vec<Metric, std::collections::HashMap<String, Vec<Metric, String, Vec<Metric, String, Vec<Metric, std::collections::HashMap<String, Vec<Metric, String, Vec<Metric>>>>>,
 
     /// Cluster metrics
-    cluster_metrics: Arc<RwLock<std::collections::HashMap<String, Vec<ClusterMetrics, std::collections::HashMap<String, Vec<ClusterMetrics, String, Vec<ClusterMetrics>>>>,
+    cluster_metrics: Arc<RwLock<std::collections::HashMap<String, Vec<ClusterMetrics, std::collections::HashMap<String, Vec<ClusterMetrics, String, Vec<ClusterMetrics, std::collections::HashMap<String, Vec<ClusterMetrics, std::collections::HashMap<String, Vec<ClusterMetrics, String, Vec<ClusterMetrics, String, Vec<ClusterMetrics, std::collections::HashMap<String, Vec<ClusterMetrics, String, Vec<ClusterMetrics>>>>>,
 
     /// Tenant metrics
-    tenant_metrics: Arc<RwLock<std::collections::HashMap<String, Vec<TenantMetrics, std::collections::HashMap<String, Vec<TenantMetrics, String, Vec<TenantMetrics>>>>,
+    tenant_metrics: Arc<RwLock<std::collections::HashMap<String, Vec<TenantMetrics, std::collections::HashMap<String, Vec<TenantMetrics, String, Vec<TenantMetrics, std::collections::HashMap<String, Vec<TenantMetrics, std::collections::HashMap<String, Vec<TenantMetrics, String, Vec<TenantMetrics, String, Vec<TenantMetrics, std::collections::HashMap<String, Vec<TenantMetrics, String, Vec<TenantMetrics>>>>>,
 
     /// System metrics
     system_metrics: Arc<RwLock<Vec<SystemMetrics>>,
 
     /// Alert definitions
-    alerts: Arc<RwLock<std::collections::HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert>>>,
+    alerts: Arc<RwLock<std::collections::HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert, std::collections::HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert, String, Alert, std::collections::HashMap<String, Alert, String, Alert>>>>,
 
     /// Active alert events
-    active_alerts: Arc<RwLock<std::collections::HashMap<String, AlertEvent, std::collections::HashMap<String, AlertEvent, String, AlertEvent>>>,
+    active_alerts: Arc<RwLock<std::collections::HashMap<String, AlertEvent, std::collections::HashMap<String, AlertEvent, String, AlertEvent, std::collections::HashMap<String, AlertEvent, std::collections::HashMap<String, AlertEvent, String, AlertEvent, String, AlertEvent, std::collections::HashMap<String, AlertEvent, String, AlertEvent>>>>,
 }
 
 impl MonitoringManager {
@@ -199,12 +199,12 @@ impl MonitoringManager {
     pub fn new(config: MonitoringConfig) -> Self {
         MonitoringManager {
             config,
-            metrics: Arc::new(Mutex::new(RwLock::new(std::collections::HashMap::new())),
-            cluster_metrics: Arc::new(Mutex::new(RwLock::new(std::collections::HashMap::new())),
-            tenant_metrics: Arc::new(Mutex::new(RwLock::new(std::collections::HashMap::new())),
-            system_metrics: Arc::new(Mutex::new(RwLock::new(Vec::new())),
-            alerts: Arc::new(Mutex::new(RwLock::new(std::collections::HashMap::new())),
-            active_alerts: Arc::new(Mutex::new(RwLock::new(std::collections::HashMap::new())),
+            metrics: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new())),
+            cluster_metrics: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new())),
+            tenant_metrics: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new())),
+            system_metrics: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
+            alerts: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new())),
+            active_alerts: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new())),
         }
     }
 
@@ -436,8 +436,8 @@ impl MonitoringManager {
     }
 
     async fn evaluate_alerts(
-        alerts: &Arc<RwLock<std::collections::HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert>>>,
-        active_alerts: &Arc<RwLock<std::collections::HashMap<String, AlertEvent, std::collections::HashMap<String, AlertEvent, String, AlertEvent>>>,
+        alerts: &Arc<RwLock<std::collections::HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert, std::collections::HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert, String, Alert, std::collections::HashMap<String, Alert, String, Alert>>>>,
+        active_alerts: &Arc<RwLock<std::collections::HashMap<String, AlertEvent, std::collections::HashMap<String, AlertEvent, String, AlertEvent, std::collections::HashMap<String, AlertEvent, std::collections::HashMap<String, AlertEvent, String, AlertEvent, String, AlertEvent, std::collections::HashMap<String, AlertEvent, String, AlertEvent>>>>,
     ) {
         let alerts_read: _ = alerts.read().await;
         let mut active_alerts_write = active_alerts.write().await;

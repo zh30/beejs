@@ -145,12 +145,12 @@ impl AiBatchProcessor {
         let max_concurrent_batches: _ = config.max_concurrent_batches;
         Self {
             config,
-            pending_tasks: Arc::new(Mutex::new(VecDeque::new())),
-            active_batches: Arc::new(Mutex::new(0)),
-            batch_semaphore: Arc::new(Mutex::new(Semaphore::new(max_concurrent_batches)),
-            next_task_id: Arc::new(Mutex::new(0)),
-            stats: Arc::new(Mutex::new(BatchStats::default())),
-            results: Arc::new(Mutex::new(Vec::new())),
+            pending_tasks: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())),
+            active_batches: Arc::new(std::sync::Mutex::new(Mutex::new(0))),
+            batch_semaphore: Arc::new(std::sync::Mutex::new(Mutex::new(Semaphore::new(max_concurrent_batches))),
+            next_task_id: Arc::new(std::sync::Mutex::new(Mutex::new(0))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(BatchStats::default())),
+            results: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -217,7 +217,7 @@ impl AiBatchProcessor {
 
             // 将批次结果添加到全局结果集合
             {
-                let mut all_results = results.clone();clone();lock().unwrap();
+                let mut all_results = results.clone();clone();clone();lock().unwrap();
                 all_results.extend(batch_results);
             }
 
@@ -431,7 +431,7 @@ impl AiBatchProcessor {
 
                 // 将批次结果添加到全局结果集合
                 {
-                    let mut all_results = results.clone();clone();lock().unwrap();
+                    let mut all_results = results.clone();clone();clone();lock().unwrap();
                     all_results.extend(batch_results);
                 }
 

@@ -87,7 +87,7 @@ pub struct MobileRuntime {
 impl iOSRuntime {
     /// Create a new iOS runtime
     pub fn new(mobile_api: Arc<MobileAPI>) -> Result<Self> {
-        let isolate_pool: _ = Arc::new(Mutex::new(IsolatePool::new(10));
+        let isolate_pool: _ = Arc::new(std::sync::Mutex::new(Mutex::new(IsolatePool::new(10)));
 
         Ok(iOSRuntime {
             isolate_pool,
@@ -116,7 +116,7 @@ impl iOSRuntime {
 impl AndroidRuntime {
     /// Create a new Android runtime
     pub fn new(jni_env: Arc<JNIEnv>) -> Result<Self> {
-        let isolate_pool: _ = Arc::new(Mutex::new(IsolatePool::new(10));
+        let isolate_pool: _ = Arc::new(std::sync::Mutex::new(Mutex::new(IsolatePool::new(10)));
 
         Ok(AndroidRuntime {
             jni_env,
@@ -145,7 +145,7 @@ impl IsolatePool {
     /// Create a new isolate pool
     pub fn new(max_isolates: usize) -> Self {
         IsolatePool {
-            isolates: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            isolates: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
             max_isolates,
         }
     }
@@ -289,7 +289,7 @@ use std::collections::{HashMap, BTreeMap};
             MobileCapability::PushNotifications,
         ];
 
-        let mobile_api: _ = Arc::new(Mutex::new(MobileAPI::new(MobilePlatform::iOS, capabilities));
+        let mobile_api: _ = Arc::new(std::sync::Mutex::new(Mutex::new(MobileAPI::new(MobilePlatform::iOS, capabilities)));
         let runtime: _ = iOSRuntime::new(mobile_api).unwrap();
 
         let result: _ = runtime.execute_ios("console.log('Hello iOS')").await;
@@ -301,7 +301,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_android_runtime() {
-        let jni_env: _ = Arc::new(Mutex::new(JNIEnv { _env: std::ptr::null_mut()) });
+        let jni_env: _ = Arc::new(std::sync::Mutex::new(Mutex::new(JNIEnv { _env: std::ptr::null_mut())) });
         let runtime: _ = AndroidRuntime::new(jni_env).unwrap();
 
         let result: _ = runtime.execute_android("console.log('Hello Android')").await;
@@ -317,14 +317,14 @@ use std::collections::{HashMap, BTreeMap};
 
         // Test iOS
         let capabilities: _ = vec![MobileCapability::Camera];
-        let mobile_api: _ = Arc::new(Mutex::new(MobileAPI::new(MobilePlatform::iOS, capabilities));
+        let mobile_api: _ = Arc::new(std::sync::Mutex::new(Mutex::new(MobileAPI::new(MobilePlatform::iOS, capabilities)));
         runtime.init_ios(mobile_api).unwrap();
 
         let result: _ = runtime.execute_mobile("ios", "console.log('iOS')").await;
         assert!(result.is_ok());
 
         // Test Android
-        let jni_env: _ = Arc::new(Mutex::new(JNIEnv { _env: std::ptr::null_mut()) });
+        let jni_env: _ = Arc::new(std::sync::Mutex::new(Mutex::new(JNIEnv { _env: std::ptr::null_mut())) });
         runtime.init_android(jni_env).unwrap();
 
         let result: _ = runtime.execute_mobile("android", "console.log('Android')").await;

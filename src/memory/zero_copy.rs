@@ -174,10 +174,10 @@ impl OptimizedMemoryPool {
     pub fn new(config: MemoryPoolConfig) -> Self {
         Self {
             config: config.clone(),
-            small_pool: Arc::new(Mutex::new(VecDeque::new())),
-            medium_pool: Arc::new(Mutex::new(VecDeque::new())),
-            large_pool: Arc::new(Mutex::new(VecDeque::new())),
-            stats: Arc::new(Mutex::new(MemoryPoolStats::default()),
+            small_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())),
+            medium_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())),
+            large_pool: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(MemoryPoolStats::default())),
         }
     }
 

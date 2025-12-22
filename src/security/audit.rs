@@ -31,7 +31,7 @@ pub struct AuditLogEntry {
     pub timestamp: std::time::SystemTime,
     pub ip_address: String,
     pub result: String, // "success" or "failure"
-    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 /// 审计日志系统

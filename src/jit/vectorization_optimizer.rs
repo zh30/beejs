@@ -77,7 +77,7 @@ impl Default for VectorizationConfig {
 pub struct VectorizationOptimizer {
     config: VectorizationConfig,
     optimization_history: Vec<VectorizationResult>,
-    alignment_cache: HashMap<u64, usize, std::collections::HashMap<u64, usize, u64, usize>>>,
+    alignment_cache: HashMap<u64, usize, std::collections::HashMap<u64, usize, u64, usize, std::collections::HashMap<u64, usize, std::collections::HashMap<u64, usize, u64, usize, u64, usize, std::collections::HashMap<u64, usize, u64, usize>>>>,
 }
 
 impl VectorizationOptimizer {

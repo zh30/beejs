@@ -62,7 +62,7 @@ pub struct CacheConfig {
 /// WASM 缓存管理器
 pub struct WasmCacheManager {
     cache: Arc<RwLock<LruCache<String, CacheEntry>>,
-    access_patterns: Arc<RwLock<HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>>,
+    access_patterns: Arc<RwLock<HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern, std::collections::HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern, String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>>>,
     config: CacheConfig,
     statistics: Arc<RwLock<CacheStatistics>>,
 }
@@ -81,13 +81,13 @@ impl WasmCacheManager {
         info!("🚀 初始化 WASM 缓存管理器 (策略: {:?}, 最大大小: {}, 最大内存: {}MB)",
               config.strategy, config.max_size, config.max_memory_mb);
 
-        let cache: _ = Arc::new(Mutex::new(RwLock::new(LruCache::new(NonZero::new(config.max_size)).unwrap_or(NonZero::new(100).unwrap()));
+        let cache: _ = Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(LruCache::new(NonZero::new(config.max_size))).unwrap_or(NonZero::new(100).unwrap());
 
         let manager: _ = Self {
             cache,
-            access_patterns: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            access_patterns: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
             config,
-            statistics: Arc::new(Mutex::new(RwLock::new(CacheStatistics {
+            statistics: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CacheStatistics {
                 total_entries: 0,
                 hits: 0,
                 misses: 0,
@@ -95,7 +95,7 @@ impl WasmCacheManager {
                 hit_rate: 0.0,
                 avg_access_time_ms: 0.0,
                 total_size_bytes: 0,
-            })),
+            }))),
         };
 
         info!("✅ 缓存管理器初始化完成");
@@ -200,7 +200,7 @@ impl WasmCacheManager {
     }
 
     /// 智能预热 - 基于访问模式
-    pub async fn smart_prewarm(&self, usage_history: &HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>) -> Result<()> {
+    pub async fn smart_prewarm(&self, usage_history: &HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>>>) -> Result<()> {
         info!("🧠 开始智能预热 (基于 {} 个模块的使用历史)", usage_history.len());
 
         let start_time: _ = std::time::Instant::now();

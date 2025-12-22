@@ -165,8 +165,8 @@ use std::collections::{HashMap, BTreeMap};
 
         // 并发读取性能测试
         let start: _ = SystemTime::now();
-        let read_count: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicUsize::new(0))));
-        let manager_arc: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(manager)));
+        let read_count: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicUsize::new(0)))));
+        let manager_arc: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(manager))));
 
         let mut handles = vec![];
         for handle in reader_handles {

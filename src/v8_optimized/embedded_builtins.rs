@@ -19,7 +19,7 @@ pub struct EmbeddedBuiltinsManager {
     stats: Arc<BuiltinStats>,
 
     /// 预编译的内置函数缓存
-    builtin_cache: HashMap<String, BuiltinFunction, std::collections::HashMap<String, BuiltinFunction, String, BuiltinFunction>>>,
+    builtin_cache: HashMap<String, BuiltinFunction, std::collections::HashMap<String, BuiltinFunction, String, BuiltinFunction, std::collections::HashMap<String, BuiltinFunction, std::collections::HashMap<String, BuiltinFunction, String, BuiltinFunction, String, BuiltinFunction, std::collections::HashMap<String, BuiltinFunction, String, BuiltinFunction>>>>,
 }
 
 /// 内置函数类型
@@ -107,8 +107,8 @@ impl EmbeddedBuiltinsManager {
     /// 创建新的内置函数管理器
     pub fn new() -> Self {
         let mut manager = Self {
-            string_interner: Arc::new(Mutex::new(StringInterner::new()),
-            stats: Arc::new(Mutex::new(BuiltinStats::new()),
+            string_interner: Arc::new(std::sync::Mutex::new(Mutex::new(StringInterner::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(BuiltinStats::new())),
             builtin_cache: HashMap::new(),
         };
 

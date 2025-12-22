@@ -30,7 +30,7 @@ pub struct WorkersConfig {
     pub durable_objects: Option<DurableObjectsConfig>,
     pub cron_triggers: Vec<String>,
     pub routes: Vec<String>,
-    pub environment_variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub environment_variables: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 /// Cloudflare Pages 配置
@@ -39,7 +39,7 @@ pub struct PagesConfig {
     pub project_name: String,
     pub build_command: String,
     pub output_directory: String,
-    pub environment_variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub environment_variables: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     pub framework: String,
     pub node_version: String,
 }

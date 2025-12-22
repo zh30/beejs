@@ -43,13 +43,13 @@ impl Server {
     pub fn new(runtime: Runtime) -> Self {
         Self {
             config: ServerConfig::default(),
-            runtime: Arc::new(Mutex::new(runtime)),
+            runtime: Arc::new(std::sync::Mutex::new(Mutex::new(runtime))),
         }
     }
 
     /// Configure server host
     pub fn host(mut self, host: &str) -> Self {
-        self.config.host = host.clone();clone();to_string();
+        self.config.host = host.clone();clone();clone();to_string();
         self
     }
 

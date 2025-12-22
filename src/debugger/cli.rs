@@ -319,8 +319,8 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_parse_continue_command() {
         let console: _ = DebugConsole::new(
-            Arc::new(Mutex::new(DebuggerEngine::new(Default::default())),
-            Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap()),
+            Arc::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(Default::default())),
+            Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap()),
         );
         assert!(matches!(console.parse_command("continue").unwrap(), DebugCliCommand::Continue));
         assert!(matches!(console.parse_command("c").unwrap(), DebugCliCommand::Continue));
@@ -329,8 +329,8 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_parse_break_command() {
         let console: _ = DebugConsole::new(
-            Arc::new(Mutex::new(DebuggerEngine::new(Default::default())),
-            Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap()),
+            Arc::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(Default::default())),
+            Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap()),
         );
         assert!(matches!(console.parse_command("break 10").unwrap(), DebugCliCommand::Break(10));
         assert!(matches!(console.parse_command("b 20").unwrap(), DebugCliCommand::Break(20));
@@ -339,8 +339,8 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_parse_print_command() {
         let console: _ = DebugConsole::new(
-            Arc::new(Mutex::new(DebuggerEngine::new(Default::default())),
-            Arc::new(Mutex::new(RuntimeLite::new(false)).unwrap()),
+            Arc::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(Default::default())),
+            Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false))).unwrap()),
         );
         if let DebugCliCommand::Print(expr) = console.parse_command("print myVar").unwrap() {
             assert_eq!(expr, "myVar");

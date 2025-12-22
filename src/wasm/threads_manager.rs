@@ -132,7 +132,7 @@ impl SharedMemoryRegion {
         let aligned_size: _ = ((size + page_size - 1) / page_size) * page_size;
 
         Self {
-            data: Arc::new(Mutex::new(RwLock::new(vec![0u8; aligned_size])),
+            data: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(vec![0u8; aligned_size]))),
             size: aligned_size,
             alignment: page_size,
         }
@@ -319,7 +319,7 @@ pub struct WasmThreadsManager {
     /// 统计信息
     stats: Arc<ManagerStats>,
     /// 线程本地存储
-    thread_local_storage: RwLock<HashMap<String, Box<dyn std::any::Any + Send + Sync, std::collections::HashMap<String, Box<dyn std::any::Any + Send + Sync, String, Box<dyn std::any::Any + Send + Sync>>>,
+    thread_local_storage: RwLock<HashMap<String, Box<dyn std::any::Any + Send + Sync, std::collections::HashMap<String, Box<dyn std::any::Any + Send + Sync, String, Box<dyn std::any::Any + Send + Sync, std::collections::HashMap<String, Box<dyn std::any::Any + Send + Sync, std::collections::HashMap<String, Box<dyn std::any::Any + Send + Sync, String, Box<dyn std::any::Any + Send + Sync, String, Box<dyn std::any::Any + Send + Sync, std::collections::HashMap<String, Box<dyn std::any::Any + Send + Sync, String, Box<dyn std::any::Any + Send + Sync>>>>,
 }
 
 /// 内部统计（可安全跨线程共享）
@@ -347,8 +347,8 @@ impl WasmThreadsManager {
         Self {
             config,
             initialized: true,
-            shutdown: Arc::new(Mutex::new(AtomicBool::new(false)),
-            stats: Arc::new(Mutex::new(ManagerStats::new()),
+            shutdown: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicBool::new(false))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ManagerStats::new())),
             thread_local_storage: RwLock::new(HashMap::new()),
         }
     }
@@ -399,7 +399,7 @@ impl WasmThreadsManager {
         self.stats.total_tasks.fetch_add(1, Ordering::Relaxed);
         self.stats.active_threads.fetch_add(1, Ordering::Relaxed);
 
-        let cancelled: _ = Arc::new(Mutex::new(AtomicBool::new(false));
+        let cancelled: _ = Arc::new(std::sync::Mutex::new(Mutex::new(AtomicBool::new(false)));
         let cancelled_clone: _ = cancelled.clone();
         let stats: _ = self.stats.clone();
 

@@ -31,7 +31,7 @@ impl Default for CoverageTrackingConfig {
 #[derive(Debug, Clone, Default)]
 pub struct LineCoverage {
     pub total_lines: usize,
-    pub covered_lines: HashMap<usize, u32, std::collections::HashMap<usize, u32, usize, u32>>>, // line_number -> hit_count
+    pub covered_lines: HashMap<usize, u32, std::collections::HashMap<usize, u32, usize, u32, std::collections::HashMap<usize, u32, std::collections::HashMap<usize, u32, usize, u32, usize, u32, std::collections::HashMap<usize, u32, usize, u32>>>>, // line_number -> hit_count
 }
 
 impl LineCoverage {
@@ -72,8 +72,8 @@ impl LineCoverage {
 /// Branch coverage tracking
 #[derive(Debug, Clone, Default)]
 pub struct BranchCoverage {
-    pub total_branches: HashMap<usize, usize, std::collections::HashMap<usize, usize, usize, usize>>>, // line_number -> branch_count
-    pub covered_branches: HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32>>>, // (line_number, branch_index) -> hit_count
+    pub total_branches: HashMap<usize, usize, std::collections::HashMap<usize, usize, usize, usize, std::collections::HashMap<usize, usize, std::collections::HashMap<usize, usize, usize, usize, usize, usize, std::collections::HashMap<usize, usize, usize, usize>>>>, // line_number -> branch_count
+    pub covered_branches: HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32, (usize, usize), u32, std::collections::HashMap<(usize, usize), u32, (usize, usize), u32>>>>, // (line_number, branch_index) -> hit_count
 }
 
 impl BranchCoverage {
@@ -120,8 +120,8 @@ impl BranchCoverage {
 /// Function coverage tracking
 #[derive(Debug, Clone, Default)]
 pub struct FunctionCoverage {
-    pub total_functions: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>, // function_name -> line_number
-    pub covered_functions: HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>>, // function_name -> hit_count
+    pub total_functions: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>>>, // function_name -> line_number
+    pub covered_functions: HashMap<String, u32, std::collections::HashMap<String, u32, String, u32, std::collections::HashMap<String, u32, std::collections::HashMap<String, u32, String, u32, String, u32, std::collections::HashMap<String, u32, String, u32>>>>, // function_name -> hit_count
 }
 
 impl FunctionCoverage {
@@ -206,14 +206,14 @@ impl PerFileCoverage {
 /// Global coverage tracker
 pub struct CoverageTracker {
     config: CoverageTrackingConfig,
-    files: Arc<Mutex<HashMap<String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, String, PerFileCoverage>>>,
+    files: Arc<Mutex<HashMap<String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, String, PerFileCoverage, String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, String, PerFileCoverage>>>>,
 }
 
 impl CoverageTracker {
     pub fn new(config: CoverageTrackingConfig) -> Self {
         CoverageTracker {
             config,
-            files: Arc::new(Mutex::new(HashMap::new())),
+            files: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -297,7 +297,7 @@ impl CoverageTracker {
     }
 
     /// Get all coverage data
-    pub fn get_all_coverage(&self) -> HashMap<String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, String, PerFileCoverage>>> {
+    pub fn get_all_coverage(&self) -> HashMap<String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, String, PerFileCoverage, String, PerFileCoverage, std::collections::HashMap<String, PerFileCoverage, String, PerFileCoverage>>>> {
         let files: _ = self.files.lock().unwrap();
         files.clone()
     }
@@ -376,7 +376,7 @@ static GLOBAL_TRACKER: once_cell::sync::OnceCell<Arc<CoverageTracker>> =
 
 /// Initialize global coverage tracker
 pub fn init_global_tracker(config: CoverageTrackingConfig) -> Arc<CoverageTracker> {
-    let tracker: _ = Arc::new(Mutex::new(CoverageTracker::new(config));
+    let tracker: _ = Arc::new(std::sync::Mutex::new(Mutex::new(CoverageTracker::new(config)));
     GLOBAL_TRACKER.set(tracker.clone()).ok();
     tracker
 }

@@ -70,7 +70,7 @@ pub struct BaselineCalculator {
 impl BaselineCalculator {
     pub fn new() -> Self {
         Self {
-            historical_data: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            historical_data: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -289,7 +289,7 @@ impl StatisticalAnomalyDetector {
     pub fn new() -> Self {
         Self {
             threshold_config: ThresholdConfig::default(),
-            baseline_calculator: Arc::new(Mutex::new(BaselineCalculator::new()),
+            baseline_calculator: Arc::new(std::sync::Mutex::new(Mutex::new(BaselineCalculator::new())),
         }
     }
 
@@ -377,8 +377,8 @@ pub struct MLAnomalyDetector {
 impl MLAnomalyDetector {
     pub fn new() -> Self {
         Self {
-            model: Arc::new(Mutex::new(RwLock::new(MLModel::new(2.0))),
-            feature_extractor: Arc::new(Mutex::new(FeatureExtractor::new(10)),
+            model: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(MLModel::new(2.0))),
+            feature_extractor: Arc::new(std::sync::Mutex::new(Mutex::new(FeatureExtractor::new(10))),
         }
     }
 
@@ -444,8 +444,8 @@ pub struct AnomalyDetector {
 impl AnomalyDetector {
     pub fn new() -> Self {
         Self {
-            statistical_detector: Arc::new(Mutex::new(StatisticalAnomalyDetector::new()),
-            ml_detector: Arc::new(Mutex::new(MLAnomalyDetector::new()),
+            statistical_detector: Arc::new(std::sync::Mutex::new(Mutex::new(StatisticalAnomalyDetector::new())),
+            ml_detector: Arc::new(std::sync::Mutex::new(Mutex::new(MLAnomalyDetector::new())),
         }
     }
 

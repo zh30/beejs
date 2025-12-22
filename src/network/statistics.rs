@@ -116,7 +116,7 @@ impl NetworkIoStatistics {
         };
 
         Self {
-            stats: Arc::new(Mutex::new(stats)),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(stats))),
             config,
         }
     }

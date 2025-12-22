@@ -85,7 +85,7 @@ pub struct DepthStats {
     /// 平均调用深度
     pub avg_depth: f64,
     /// 深度分布
-    pub depth_distribution: HashMap<usize, usize, std::collections::HashMap<usize, usize, usize, usize>>>,
+    pub depth_distribution: HashMap<usize, usize, std::collections::HashMap<usize, usize, usize, usize, std::collections::HashMap<usize, usize, std::collections::HashMap<usize, usize, usize, usize, usize, usize, std::collections::HashMap<usize, usize, usize, usize>>>>,
 }
 
 /// 调用栈分析器
@@ -98,7 +98,7 @@ pub struct CallStackAnalyzer {
     /// 调用历史
     call_history: Vec<StackFrame>,
     /// 函数调用计数
-    function_call_counts: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>,
+    function_call_counts: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>>>,
     /// 递归检测
     recursion_tracker: RecursionTracker,
     /// 统计信息
@@ -111,7 +111,7 @@ struct RecursionTracker {
     /// 当前递归栈（存储 &str 切片以避免所有权问题）
     current_recursion_stack: Vec<String>,
     /// 递归信息
-    recursion_info: HashMap<String, RecursionInfo, std::collections::HashMap<String, RecursionInfo, String, RecursionInfo>>>,
+    recursion_info: HashMap<String, RecursionInfo, std::collections::HashMap<String, RecursionInfo, String, RecursionInfo, std::collections::HashMap<String, RecursionInfo, std::collections::HashMap<String, RecursionInfo, String, RecursionInfo, String, RecursionInfo, std::collections::HashMap<String, RecursionInfo, String, RecursionInfo>>>>,
 }
 
 /// 分析器统计信息
@@ -369,7 +369,7 @@ impl CallStackAnalyzer {
 
     /// 计算深度统计
     fn calculate_depth_stats(&self) -> DepthStats {
-        let mut depth_distribution: HashMap<usize, usize, std::collections::HashMap<usize, usize, usize, usize>>> = HashMap::new();
+        let mut depth_distribution: HashMap<usize, usize, std::collections::HashMap<usize, usize, usize, usize, std::collections::HashMap<usize, usize, std::collections::HashMap<usize, usize, usize, usize, usize, usize, std::collections::HashMap<usize, usize, usize, usize>>>> = HashMap::new();
 
         for frame in &self.call_history {
             *depth_distribution
@@ -401,7 +401,7 @@ impl CallStackAnalyzer {
     }
 
     /// 获取函数调用统计
-    pub fn get_function_call_counts(&self) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>> {
+    pub fn get_function_call_counts(&self) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>>> {
         self.function_call_counts.clone()
     }
 

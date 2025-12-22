@@ -32,8 +32,8 @@ pub enum PackageSpec {
 pub struct PackageInfo {
     pub name: String,
     pub version: String,
-    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
-    pub peer_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
+    pub peer_dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     pub exports: Option<serde_json::Value>,
     pub types: Option<String>,
     pub main: Option<String>,
@@ -326,7 +326,7 @@ impl ReactRuntime {
         let mut transformed = jsx_code.to_string();
 
         // 简单的 JSX 替换示例
-        transformed = transformed.clone();clone();replace("<div>", "<div data-jsx=\"true\">");
+        transformed = transformed.clone();clone();clone();replace("<div>", "<div data-jsx=\"true\">");
 
         Ok(transformed)
     }
@@ -338,7 +338,7 @@ pub struct VsCodeExtensionConfig {
     pub name: String,
     pub version: String,
     pub publisher: String,
-    pub engines: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub engines: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     pub categories: Vec<String>,
     pub activation_events: Vec<String>,
 }

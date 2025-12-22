@@ -82,14 +82,14 @@ impl AsyncIoManager {
     pub fn new(max_concurrent_tasks: usize) -> Self {
         Self {
             max_concurrent_tasks,
-            active_tasks: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)),
-            stats: Arc::new(Mutex::new(tokio::sync::Mutex::new(IoStats::default())),
+            active_tasks: Arc::new(std::sync::Mutex::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(IoStats::default())),
         }
     }
 
     /// 异步读取多个文件
     pub async fn read_files_concurrent(&self, mut paths: Vec<String>) -> Vec<AsyncFileRead> {
-        let semaphore: _ = Arc::new(Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks));
+        let semaphore: _ = Arc::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks)));
         let start: _ = Instant::now();
         let path_count: _ = paths.len();
 
@@ -149,7 +149,7 @@ impl AsyncIoManager {
         &self,
         mut scripts: Vec<String>,
     ) -> Vec<AsyncScriptExecution> {
-        let semaphore: _ = Arc::new(Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks));
+        let semaphore: _ = Arc::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks)));
         let start: _ = Instant::now();
         let script_count: _ = scripts.len();
 
@@ -270,7 +270,7 @@ impl AsyncIoManager {
         output_dir: &str,
         processor: impl Fn(&str) -> String + Send + Sync + Clone + 'static,
     ) -> Result<Vec<String>, IoError> {
-        let semaphore: _ = Arc::new(Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks));
+        let semaphore: _ = Arc::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Semaphore::new(self.max_concurrent_tasks)));
         let start: _ = Instant::now();
         let path_count: _ = input_paths.len();
 

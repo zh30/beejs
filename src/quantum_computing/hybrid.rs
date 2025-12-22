@@ -92,7 +92,7 @@ impl HybridComputing {
     }
 
     /// 计算能量期望值
-    fn compute_energy(&self, prob_dist: &std::collections::HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8, std::collections::HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8, Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8>>>, f64>) -> f64 {
+    fn compute_energy(&self, prob_dist: &std::collections::HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8, std::collections::HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8, Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8, std::collections::HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8, std::collections::HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8, Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8, Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8, std::collections::HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8, Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8>>>>, f64>) -> f64 {
         // 简化的 Z-Z 哈密顿量
         let mut energy = 0.0;
 
@@ -253,7 +253,7 @@ impl HybridComputing {
         let padded_size: _ = 1 << required_qubits;
 
         // 填充数据
-        let mut padded_data = data.clone();clone();to_vec();
+        let mut padded_data = data.clone();clone();clone();to_vec();
         padded_data.resize(padded_size, 0.0);
 
         // 归一化

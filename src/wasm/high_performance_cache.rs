@@ -47,7 +47,7 @@ impl HighPerfCacheEntry {
         let size: _ = wasm_bytes.len();
 
         HighPerfCacheEntry {
-            wasm_bytes: Arc::new(Mutex::new(wasm_bytes)),
+            wasm_bytes: Arc::new(std::sync::Mutex::new(Mutex::new(wasm_bytes))),
             precompiled_module: None,
             cached_at: now,
             last_access: now,
@@ -163,9 +163,9 @@ impl HighPerfCacheStats {
 /// - 细粒度锁
 pub struct HighPerformanceWasmCache {
     /// L1 内存缓存 (使用 RwLock 提供更好的并发性能)
-    l1_cache: Arc<RwLock<HashMap<String, Arc<HighPerfCacheEntry, std::collections::HashMap<String, Arc<HighPerfCacheEntry, String, Arc<HighPerfCacheEntry>>>>,
+    l1_cache: Arc<RwLock<HashMap<String, Arc<HighPerfCacheEntry, std::collections::HashMap<String, Arc<HighPerfCacheEntry, String, Arc<HighPerfCacheEntry, std::collections::HashMap<String, Arc<HighPerfCacheEntry, std::collections::HashMap<String, Arc<HighPerfCacheEntry, String, Arc<HighPerfCacheEntry, String, Arc<HighPerfCacheEntry, std::collections::HashMap<String, Arc<HighPerfCacheEntry, String, Arc<HighPerfCacheEntry>>>>>,
     /// L2 文件缓存
-    l2_cache: Arc<Mutex<HashMap<String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf>>>,
+    l2_cache: Arc<Mutex<HashMap<String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf, std::collections::HashMap<String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf, String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf>>>>,
     /// 缓存配置
     config: HighPerfCacheConfig,
     /// 统计信息
@@ -187,10 +187,10 @@ impl HighPerformanceWasmCache {
         }
 
         Ok(HighPerformanceWasmCache {
-            l1_cache: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
-            l2_cache: Arc::new(Mutex::new(HashMap::new())),
+            l1_cache: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
+            l2_cache: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new())),
             config,
-            stats: Arc::new(Mutex::new(HighPerfCacheStats::default()),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(HighPerfCacheStats::default())),
         })
     }
 
@@ -206,7 +206,7 @@ impl HighPerformanceWasmCache {
         };
 
         // 创建高性能缓存条目
-        let entry: _ = Arc::new(Mutex::new(HighPerfCacheEntry::new(wasm_bytes, hash.clone()));
+        let entry: _ = Arc::new(std::sync::Mutex::new(Mutex::new(HighPerfCacheEntry::new(wasm_bytes, hash.clone()));
 
         // 存储到 L1 缓存
         {
@@ -271,7 +271,7 @@ impl HighPerformanceWasmCache {
                     self.record_load_time(load_time);
                     self.stats.hits.fetch_add(1, Ordering::Relaxed);
 
-                    return Ok(Arc::new(Mutex::new(wasm_bytes));
+                    return Ok(Arc::new(std::sync::Mutex::new(Mutex::new(wasm_bytes)));
                 }
             }
         }
@@ -382,8 +382,8 @@ impl HighPerformanceWasmCache {
 
     /// 克隆缓存 (用于异步操作)
     fn clone(&self) -> Arc<Self> {
-        Arc::new(Mutex::new(HighPerformanceWasmCache {
-            l1_cache: Arc::clone(&self.l1_cache)),
+        Arc::new(std::sync::Mutex::new(Mutex::new(HighPerformanceWasmCache {
+            l1_cache: Arc::clone(&self.l1_cache))),
             l2_cache: Arc::clone(&self.l2_cache),
             config: self.config.clone(),
             stats: Arc::clone(&self.stats),
@@ -455,7 +455,7 @@ use std::collections::{HashMap, BTreeMap};
 
         // 验证零拷贝 (Arc 克隆，不拷贝数据)
         let wasm_bytes_ref: _ = &wasm_bytes;
-        assert!(Arc::ptr_eq(&loaded_bytes, &Arc::new(Mutex::new(wasm_bytes_ref.to_vec())) || std::ptr::eq(loaded_bytes.as_ptr(), wasm_bytes_ref.as_ptr());
+        assert!(Arc::ptr_eq(&loaded_bytes, &Arc::new(std::sync::Mutex::new(Mutex::new(wasm_bytes_ref.to_vec())) || std::ptr::eq(loaded_bytes.as_ptr(), wasm_bytes_ref.as_ptr());
 
         let stats: _ = cache.get_stats();
         assert_eq!(stats.zero_copy_operations.load(Ordering::Relaxed), 1);

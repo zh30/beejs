@@ -37,7 +37,7 @@ pub struct IntelligentRouter {
     predictor: Arc<LoadPredictor>,
     optimizer: Arc<RouteOptimizer>,
     model: Arc<MLModel>,
-    route_cache: Arc<RwLock<HashMap<String, NodeId, std::collections::HashMap<String, NodeId, String, NodeId>>>,
+    route_cache: Arc<RwLock<HashMap<String, NodeId, std::collections::HashMap<String, NodeId, String, NodeId, std::collections::HashMap<String, NodeId, std::collections::HashMap<String, NodeId, String, NodeId, String, NodeId, std::collections::HashMap<String, NodeId, String, NodeId>>>>,
 }
 
 /// Load prediction
@@ -109,7 +109,7 @@ pub struct LoadSample {
 /// Route optimizer
 #[derive(Debug)]
 pub struct RouteOptimizer {
-    routes: Arc<RwLock<HashMap<String, Route, std::collections::HashMap<String, Route, String, Route>>>,
+    routes: Arc<RwLock<HashMap<String, Route, std::collections::HashMap<String, Route, String, Route, std::collections::HashMap<String, Route, std::collections::HashMap<String, Route, String, Route, String, Route, std::collections::HashMap<String, Route, String, Route>>>>,
 }
 
 /// Machine learning model
@@ -122,7 +122,7 @@ pub struct MLModel {
 /// Task scheduler
 #[derive(Debug)]
 pub struct TaskScheduler {
-    nodes: Arc<RwLock<HashMap<NodeId, NodeStatus, std::collections::HashMap<NodeId, NodeStatus, NodeId, NodeStatus>>>,
+    nodes: Arc<RwLock<HashMap<NodeId, NodeStatus, std::collections::HashMap<NodeId, NodeStatus, NodeId, NodeStatus, std::collections::HashMap<NodeId, NodeStatus, std::collections::HashMap<NodeId, NodeStatus, NodeId, NodeStatus, NodeId, NodeStatus, std::collections::HashMap<NodeId, NodeStatus, NodeId, NodeStatus>>>>,
 }
 
 /// Learning engine
@@ -136,10 +136,10 @@ impl IntelligentRouter {
     /// Create a new intelligent router
     pub async fn new() -> Result<Self> {
         let router: _ = IntelligentRouter {
-            predictor: Arc::new(Mutex::new(LoadPredictor::new()).await?),
-            optimizer: Arc::new(Mutex::new(RouteOptimizer::new()).await?),
-            model: Arc::new(Mutex::new(MLModel::new("routing_model_v1".to_string()).await?),
-            route_cache: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            predictor: Arc::new(std::sync::Mutex::new(Mutex::new(LoadPredictor::new())).await?),
+            optimizer: Arc::new(std::sync::Mutex::new(Mutex::new(RouteOptimizer::new())).await?),
+            model: Arc::new(std::sync::Mutex::new(Mutex::new(MLModel::new("routing_model_v1".to_string())).await?),
+            route_cache: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         };
 
         println!("Intelligent router initialized");
@@ -195,7 +195,7 @@ impl IntelligentRouter {
     }
 
     /// Predict load for all nodes
-    async fn predict_load_for_all_nodes(&self) -> Result<HashMap<NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, NodeId, LoadPrediction>>> {
+    async fn predict_load_for_all_nodes(&self) -> Result<HashMap<NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, NodeId, LoadPrediction, NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, NodeId, LoadPrediction>>>> {
         let mut predictions = HashMap::new();
 
         // In real implementation, would query all active nodes
@@ -214,7 +214,7 @@ impl IntelligentRouter {
     }
 
     /// Select optimal node based on request and predictions
-    async fn select_optimal_node(&self, request: &Request, predictions: &HashMap<NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, NodeId, LoadPrediction>>>) -> Result<NodeId> {
+    async fn select_optimal_node(&self, request: &Request, predictions: &HashMap<NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, NodeId, LoadPrediction, NodeId, LoadPrediction, std::collections::HashMap<NodeId, LoadPrediction, NodeId, LoadPrediction>>>>) -> Result<NodeId> {
         let mut best_node = None;
         let mut best_score = f64::MIN;
 
@@ -268,8 +268,8 @@ impl AdaptiveScheduler {
     /// Create a new adaptive scheduler
     pub async fn new() -> Result<Self> {
         let scheduler: _ = AdaptiveScheduler {
-            scheduler: Arc::new(Mutex::new(TaskScheduler::new()).await?),
-            learning_engine: Arc::new(Mutex::new(LearningEngine::new()).await?),
+            scheduler: Arc::new(std::sync::Mutex::new(Mutex::new(TaskScheduler::new())).await?),
+            learning_engine: Arc::new(std::sync::Mutex::new(Mutex::new(LearningEngine::new())).await?),
         };
 
         println!("Adaptive scheduler initialized");
@@ -307,7 +307,7 @@ impl LoadPredictor {
     /// Create a new load predictor
     pub async fn new() -> Result<Self> {
         let predictor: _ = LoadPredictor {
-            history: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            history: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
         };
 
         println!("Load predictor initialized");
@@ -362,7 +362,7 @@ impl RouteOptimizer {
     /// Create a new route optimizer
     pub async fn new() -> Result<Self> {
         let optimizer: _ = RouteOptimizer {
-            routes: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            routes: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         };
 
         println!("Route optimizer initialized");
@@ -424,7 +424,7 @@ impl MLModel {
         }
 
         // Normalize to [0, 1]
-        prediction = prediction.clone();clone();clamp(0.0, 1.0);
+        prediction = prediction.clone();clone();clone();clamp(0.0, 1.0);
 
         Ok(vec![prediction])
     }
@@ -434,7 +434,7 @@ impl TaskScheduler {
     /// Create a new task scheduler
     pub async fn new() -> Result<Self> {
         let scheduler: _ = TaskScheduler {
-            nodes: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            nodes: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         };
 
         println!("Task scheduler initialized");
@@ -463,7 +463,7 @@ impl LearningEngine {
     pub async fn new() -> Result<Self> {
         let engine: _ = LearningEngine {
             adaptation_rate: 0.1,
-            history: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            history: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
         };
 
         println!("Learning engine initialized");

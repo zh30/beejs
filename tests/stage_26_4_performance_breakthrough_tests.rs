@@ -328,7 +328,7 @@ pub struct V8SnapshotPreheater {
 impl V8SnapshotPreheater {
     pub fn new() -> Self {
         Self {
-            snapshots: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new())))),
+            snapshots: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))))),
         }
     }
 
@@ -357,7 +357,7 @@ impl CLIStartupOptimizer {
     pub fn new() -> Self {
         Self {
             lazy_loading: false,
-            loaded_modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new())))),
+            loaded_modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))))),
         }
     }
 
@@ -388,7 +388,7 @@ pub struct DelayedInitializer {
 impl DelayedInitializer {
     pub fn new() -> Self {
         Self {
-            initialized_modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashSet::new())))),
+            initialized_modules: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashSet::new()))))),
         }
     }
 
@@ -409,14 +409,14 @@ impl DelayedInitializer {
 #[derive(Debug, Clone)]
 pub struct JITOptimizer {
     aggressive_mode: bool,
-    executions: Arc<std::sync::Mutex<std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>>>>,
+    executions: Arc<std::sync::Mutex<std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>,
 }
 
 impl JITOptimizer {
     pub fn new() -> Self {
         Self {
             aggressive_mode: false,
-            executions: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new())))),
+            executions: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new()))))),
         }
     }
 
@@ -459,13 +459,13 @@ pub struct JITStats {
 
 #[derive(Debug, Clone)]
 pub struct HotPathDetector {
-    execution_times: Arc<std::sync::Mutex<std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration>>>>>>,
+    execution_times: Arc<std::sync::Mutex<std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration>>>>>>>,
 }
 
 impl HotPathDetector {
     pub fn new() -> Self {
         Self {
-            execution_times: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new())))),
+            execution_times: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new()))))),
         }
     }
 
@@ -502,13 +502,13 @@ pub struct HotPathInfo {
 
 #[derive(Debug, Clone)]
 pub struct AdaptiveOptimizer {
-    execution_counts: Arc<std::sync::Mutex<std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>>>>,
+    execution_counts: Arc<std::sync::Mutex<std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>,
 }
 
 impl AdaptiveOptimizer {
     pub fn new() -> Self {
         Self {
-            execution_counts: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new())))),
+            execution_counts: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new()))))),
         }
     }
 
@@ -534,15 +534,15 @@ impl AdaptiveOptimizer {
 
 #[derive(Debug, Clone)]
 pub struct ZeroCopyMemoryManager {
-    memory_blocks: Arc<std::sync::Mutex<std::collections::HashMap<usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8, usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8>>>>>>,
+    memory_blocks: Arc<std::sync::Mutex<std::collections::HashMap<usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8, usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8, usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8, usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8, usize, Vec<u8, std::collections::HashMap<usize, Vec<u8, usize, Vec<u8>>>>>>>,
     next_id: Arc<std::sync::Mutex<usize>>,
 }
 
 impl ZeroCopyMemoryManager {
     pub fn new() -> Self {
         Self {
-            memory_blocks: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new())))),
-            next_id: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(1)))),
+            memory_blocks: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new()))))),
+            next_id: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(1))))),
         }
     }
 
@@ -582,8 +582,8 @@ impl ObjectPool {
 
         Self {
             pool_size,
-            available: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(available)))),
-            allocated: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashSet::new())))),
+            available: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(available))))),
+            allocated: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashSet::new()))))),
         }
     }
 

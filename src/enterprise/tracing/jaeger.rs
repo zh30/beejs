@@ -143,9 +143,9 @@ impl JaegerTracer {
 
         Ok(Self {
             config,
-            span_buffer: Arc::new(Mutex::new(Vec::new())),
-            last_flush: Arc::new(Mutex::new(Instant::now())),
-            udp_socket: Arc::new(Mutex::new(udp_socket)),
+            span_buffer: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new())),
+            last_flush: Arc::new(std::sync::Mutex::new(Mutex::new(Instant::now())),
+            udp_socket: Arc::new(std::sync::Mutex::new(Mutex::new(udp_socket))),
         })
     }
 
@@ -259,7 +259,7 @@ impl JaegerTracer {
         info!("Flushing {} spans to Jaeger", spans_to_send.len());
 
         // Group spans by operation name
-        let mut spans_by_operation: HashMap<String, Vec<JaegerSpan, std::collections::HashMap<String, Vec<JaegerSpan, String, Vec<JaegerSpan>>> = HashMap::new();
+        let mut spans_by_operation: HashMap<String, Vec<JaegerSpan, std::collections::HashMap<String, Vec<JaegerSpan, String, Vec<JaegerSpan, std::collections::HashMap<String, Vec<JaegerSpan, std::collections::HashMap<String, Vec<JaegerSpan, String, Vec<JaegerSpan, String, Vec<JaegerSpan, std::collections::HashMap<String, Vec<JaegerSpan, String, Vec<JaegerSpan>>>> = HashMap::new();
         for span in spans_to_send {
             spans_by_operation
                 .entry(span.operation_name.clone())
@@ -395,7 +395,7 @@ impl JaegerTracer {
     }
 
     /// Get tracer statistics
-    pub fn get_stats(&self) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>> {
+    pub fn get_stats(&self) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>>> {
         let buffer: _ = self.span_buffer.lock().unwrap();
         let last_flush: _ = self.last_flush.lock().unwrap();
 

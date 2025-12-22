@@ -53,7 +53,7 @@ pub struct VoiceRecognition {
     /// 配置
     config: VoiceConfig,
     /// 注册的命令
-    commands: HashMap<String, VoiceCommand, std::collections::HashMap<String, VoiceCommand, String, VoiceCommand>>>,
+    commands: HashMap<String, VoiceCommand, std::collections::HashMap<String, VoiceCommand, String, VoiceCommand, std::collections::HashMap<String, VoiceCommand, std::collections::HashMap<String, VoiceCommand, String, VoiceCommand, String, VoiceCommand, std::collections::HashMap<String, VoiceCommand, String, VoiceCommand>>>>,
     /// 是否正在监听
     listening: bool,
 }

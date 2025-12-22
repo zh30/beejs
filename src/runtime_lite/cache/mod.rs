@@ -81,12 +81,12 @@ impl MultiLevelCache {
     /// Create a new multi-level cache
     pub fn new() -> Self {
         Self {
-            l1_cache: Arc::new(Mutex::new(l1_zero_copy::L1ZeroCopyCache::new()),
-            l2_cache: Arc::new(Mutex::new(RwLock::new(l2_smart::L2SmartCache::new())),
-            l3_cache: Arc::new(Mutex::new(l3_mmap::L3MmapCache::new()),
-            prefetcher: Arc::new(Mutex::new(prefetcher::PatternAnalyzer::new())),
-            stats: Arc::new(Mutex::new(RwLock::new(CacheStats::new())),
-            prefetch_enabled: Arc::new(Mutex::new(RwLock::new(false)),
+            l1_cache: Arc::new(std::sync::Mutex::new(Mutex::new(l1_zero_copy::L1ZeroCopyCache::new())),
+            l2_cache: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(l2_smart::L2SmartCache::new())),
+            l3_cache: Arc::new(std::sync::Mutex::new(Mutex::new(l3_mmap::L3MmapCache::new())),
+            prefetcher: Arc::new(std::sync::Mutex::new(Mutex::new(prefetcher::PatternAnalyzer::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CacheStats::new())),
+            prefetch_enabled: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(false))),
         }
     }
 
@@ -204,7 +204,7 @@ impl MultiLevelCache {
         let mut hash: u64 = 0xcbf29ce484222325;
         for byte in key.bytes() {
             hash ^= byte as u64;
-            hash = hash.clone();clone();wrapping_mul(0x100000001b3);
+            hash = hash.clone();clone();clone();wrapping_mul(0x100000001b3);
         }
         hash
     }

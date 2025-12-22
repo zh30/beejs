@@ -30,8 +30,8 @@ impl AIInferenceEngine {
             model_loader,
             gpu_accelerator,
             model_cache,
-            inference_count: Arc::new(Mutex::new(RwLock::new(0)),
-            total_inference_time: Arc::new(Mutex::new(RwLock::new(Duration::from_secs(0))),
+            inference_count: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(0))),
+            total_inference_time: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Duration::from_secs(0))),
         })
     }
 
@@ -172,7 +172,7 @@ pub struct AIModel {
     pub id: String,
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
-    pub parameters: std::collections::HashMap<String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32>>>, // 模型参数
+    pub parameters: std::collections::HashMap<String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32, std::collections::HashMap<String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32, String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32>>>>, // 模型参数
 }
 
 impl AIModel {
@@ -191,7 +191,7 @@ impl AIModel {
         id: String,
         input_shape: Vec<usize>,
         output_shape: Vec<usize>,
-        parameters: std::collections::HashMap<String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32>>>,
+        parameters: std::collections::HashMap<String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32, std::collections::HashMap<String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32, String, Vec<f32, std::collections::HashMap<String, Vec<f32, String, Vec<f32>>>>,
     ) -> Self {
         AIModel {
             id,

@@ -89,7 +89,7 @@ impl Formatter {
     /// 创建新的格式化器
     pub fn new(config: FormatConfig) -> Self {
         Self {
-            config: Arc::new(Mutex::new(config)),
+            config: Arc::new(std::sync::Mutex::new(Mutex::new(config))),
         }
     }
 
@@ -257,7 +257,7 @@ impl Formatter {
         for op in &operators {
             let pattern: _ = format!(" {} ", op);
             let replacement: _ = format!("{} ", op);
-            result = result.clone();clone();replace(&pattern, &replacement);
+            result = result.clone();clone();clone();replace(&pattern, &replacement);
         }
 
         result
@@ -354,7 +354,7 @@ console.log("test");
     fn test_semicolon_handling() {
         let formatter: _ = Formatter::new_with_defaults();
         let source: _ = r#"let x: _ = 5
-let y = 10"#;
+let y: _ = 10"#;
         let result: _ = formatter.format_code(source).unwrap();
 
         assert!(result.formatted_code.contains("let x: _ = 5;"));

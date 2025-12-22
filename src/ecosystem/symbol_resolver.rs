@@ -11,8 +11,8 @@ use std::collections::{HashMap, BTreeMap};
 /// 符号解析器
 #[derive(Debug)]
 pub struct SymbolResolver {
-    symbol_table: HashMap<String, SymbolInfo, std::collections::HashMap<String, SymbolInfo, String, SymbolInfo>>>,
-    import_graph: HashMap<String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String>>>,
+    symbol_table: HashMap<String, SymbolInfo, std::collections::HashMap<String, SymbolInfo, String, SymbolInfo, std::collections::HashMap<String, SymbolInfo, std::collections::HashMap<String, SymbolInfo, String, SymbolInfo, String, SymbolInfo, std::collections::HashMap<String, SymbolInfo, String, SymbolInfo>>>>,
+    import_graph: HashMap<String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String, std::collections::HashMap<String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String, String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String>>>>,
     config: ResolverConfig,
 }
 
@@ -266,7 +266,7 @@ impl SymbolResolver {
     }
 
     /// 获取导入图
-    pub fn get_import_graph(&self) -> &HashMap<String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String>>> {
+    pub fn get_import_graph(&self) -> &HashMap<String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String, std::collections::HashMap<String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String, String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String>>>> {
         &self.import_graph
     }
 

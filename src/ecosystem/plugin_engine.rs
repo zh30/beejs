@@ -85,7 +85,7 @@ pub struct PluginMetadata {
     /// 所需权限
     pub permissions: Vec<String>,
     /// 依赖项
-    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub dependencies: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 impl PluginMetadata {
@@ -114,7 +114,7 @@ pub struct PluginConfig {
     /// 最大内存 (MB)
     pub max_memory_mb: u64,
     /// 自定义选项
-    pub options: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>,
+    pub options: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value, std::collections::HashMap<String, Value, std::collections::HashMap<String, Value, String, Value, String, Value, std::collections::HashMap<String, Value, String, Value>>>>,
 }
 
 impl Default for PluginConfig {
@@ -291,7 +291,7 @@ impl PluginSandbox {
     /// 创建新沙箱
     pub fn new(permissions: PermissionSet) -> Self {
         Self {
-            permissions: Arc::new(Mutex::new(permissions)),
+            permissions: Arc::new(std::sync::Mutex::new(Mutex::new(permissions))),
             limits: ResourceLimits::default(),
         }
     }
@@ -299,7 +299,7 @@ impl PluginSandbox {
     /// 创建带资源限制的沙箱
     pub fn with_limits(permissions: PermissionSet, limits: ResourceLimits) -> Self {
         Self {
-            permissions: Arc::new(Mutex::new(permissions)),
+            permissions: Arc::new(std::sync::Mutex::new(Mutex::new(permissions))),
             limits,
         }
     }
@@ -357,14 +357,14 @@ impl PluginSandbox {
 
 /// 插件注册表
 pub struct PluginRegistry {
-    plugins: Arc<RwLock<HashMap<PluginId, PluginMetadata, std::collections::HashMap<PluginId, PluginMetadata, PluginId, PluginMetadata>>>,
+    plugins: Arc<RwLock<HashMap<PluginId, PluginMetadata, std::collections::HashMap<PluginId, PluginMetadata, PluginId, PluginMetadata, std::collections::HashMap<PluginId, PluginMetadata, std::collections::HashMap<PluginId, PluginMetadata, PluginId, PluginMetadata, PluginId, PluginMetadata, std::collections::HashMap<PluginId, PluginMetadata, PluginId, PluginMetadata>>>>,
 }
 
 impl PluginRegistry {
     /// 创建新注册表
     pub fn new() -> Self {
         Self {
-            plugins: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            plugins: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -480,8 +480,8 @@ impl PluginLoader {
     /// 解析依赖
     pub async fn resolve_dependencies(
         &self,
-        deps: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
-    ) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>, PluginError> {
+        deps: &HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
+    ) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>, PluginError> {
         // 模拟依赖解析
         let mut resolved = HashMap::new();
         for (name, version) in deps {
@@ -584,7 +584,7 @@ pub struct PluginEngine {
     /// API
     api: Arc<PluginAPI>,
     /// 插件实例
-    instances: Arc<RwLock<HashMap<PluginId, PluginInstance, std::collections::HashMap<PluginId, PluginInstance, PluginId, PluginInstance>>>,
+    instances: Arc<RwLock<HashMap<PluginId, PluginInstance, std::collections::HashMap<PluginId, PluginInstance, PluginId, PluginInstance, std::collections::HashMap<PluginId, PluginInstance, std::collections::HashMap<PluginId, PluginInstance, PluginId, PluginInstance, PluginId, PluginInstance, std::collections::HashMap<PluginId, PluginInstance, PluginId, PluginInstance>>>>,
 }
 
 impl PluginEngine {
@@ -592,10 +592,10 @@ impl PluginEngine {
     pub fn new() -> Self {
         Self {
             initialized: AtomicBool::new(false),
-            registry: Arc::new(Mutex::new(PluginRegistry::new()),
-            loader: Arc::new(Mutex::new(PluginLoader::new()),
-            api: Arc::new(Mutex::new(PluginAPI::new()),
-            instances: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            registry: Arc::new(std::sync::Mutex::new(Mutex::new(PluginRegistry::new())),
+            loader: Arc::new(std::sync::Mutex::new(Mutex::new(PluginLoader::new())),
+            api: Arc::new(std::sync::Mutex::new(Mutex::new(PluginAPI::new())),
+            instances: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -623,7 +623,7 @@ impl PluginEngine {
         let sandbox: _ = PluginSandbox::new(permissions);
 
         // 创建实例
-        let status: _ = Arc::new(Mutex::new(std::sync::RwLock::new(PluginStatus::Loaded));
+        let status: _ = Arc::new(std::sync::Mutex::new(Mutex::new(std::sync::RwLock::new(PluginStatus::Loaded)));
         let instance: _ = PluginInstance {
             metadata: metadata.clone(),
             status: status.clone(),

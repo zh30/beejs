@@ -72,10 +72,10 @@ impl SmartMemoryPool {
     /// 创建新的智能内存池
     pub fn new(config: PoolConfig) -> Self {
         let pool: _ = Self {
-            string_buffers: Arc::new(Mutex::new(VecDeque::new())),
-            object_buffers: Arc::new(Mutex::new(VecDeque::new())),
+            string_buffers: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())),
+            object_buffers: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new())),
             config: config.clone(),
-            stats: Arc::new(Mutex::new(MemoryStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(MemoryStats::default())),
         };
 
         // 预热池 - 预分配一些缓冲区

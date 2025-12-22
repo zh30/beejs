@@ -43,10 +43,10 @@ pub struct PackageJson {
     pub version: String,
     pub description: Option<String>,
     pub main: Option<String>,
-    pub scripts: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
-    pub dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
-    pub dev_dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
-    pub peer_dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub scripts: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
+    pub dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
+    pub dev_dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
+    pub peer_dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     pub author: Option<String>,
     pub license: Option<String>,
     pub repository: Option<Repository>,
@@ -65,7 +65,7 @@ pub struct PackageInfo {
     pub version: String,
     pub description: Option<String>,
     pub dist: PackageDist,
-    pub dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

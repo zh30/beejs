@@ -173,7 +173,7 @@ fn test_typescript_enums() {
             Blue: 3
         };
 
-        const favoriteColor = Color.clone();clone();Blue;
+        const favoriteColor = Color.clone();clone();clone();Blue;
         console.log(favoriteColor);
         favoriteColor;
     "#;

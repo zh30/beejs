@@ -36,7 +36,7 @@ pub struct RuntimeLite {
 
     /// Cache for pre-compiled scripts to avoid repeated compilation
     /// Stage 65: Enhanced with LRU eviction and expiration
-    script_cache: Arc<std::sync::Mutex<HashMap<String, ScriptCacheEntry, std::collections::HashMap<String, ScriptCacheEntry, String, ScriptCacheEntry>>>,
+    script_cache: Arc<std::sync::Mutex<HashMap<String, ScriptCacheEntry, std::collections::HashMap<String, ScriptCacheEntry, String, ScriptCacheEntry, std::collections::HashMap<String, ScriptCacheEntry, std::collections::HashMap<String, ScriptCacheEntry, String, ScriptCacheEntry, String, ScriptCacheEntry, std::collections::HashMap<String, ScriptCacheEntry, String, ScriptCacheEntry>>>>,
     /// Maximum cache size (Stage 65: Dynamic based on memory)
     max_cache_size: usize,
     /// Cache expiration time (Stage 65: TTL-based eviction)
@@ -60,7 +60,7 @@ pub struct RuntimeLite {
 
     /// Stage 63: Inline cache for fast property access and function calls
     /// ⚡ Lazy initialized: only created when actually needed (Stage 67 optimization)
-    inline_cache: Arc<OnceCell<std::sync::Mutex<HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>>,
+    inline_cache: Arc<OnceCell<std::sync::Mutex<HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry, CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>>>,
     cache_stats: Arc<OnceCell<CacheStatistics>>,
 
     /// Stage 64: V8 Context Pool for reusing initialized contexts
@@ -142,18 +142,18 @@ impl RuntimeLite {
 
         // Stage 67: ⚡ LAZY INITIALIZATION - JIT optimization components
         // Only initialized when actually needed, reducing startup time by ~100-150ms
-        let jit_optimizer: _ = Arc::new(Mutex::new(OnceCell::new());
-        let hot_path_optimizer: _ = Arc::new(Mutex::new(OnceCell::new());
-        let optimization_pipeline: _ = Arc::new(Mutex::new(OnceCell::new());
+        let jit_optimizer: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
+        let hot_path_optimizer: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
+        let optimization_pipeline: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
 
         // Stage 67: ⚡ LAZY INITIALIZATION - Inline cache
         // Only initialized when actually needed
-        let inline_cache: _ = Arc::new(Mutex::new(OnceCell::new());
-        let cache_stats: _ = Arc::new(Mutex::new(OnceCell::new());
+        let inline_cache: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
+        let cache_stats: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
 
         // Stage 64: Initialize V8 Context Pool for performance optimization
         // Keep up to 4 contexts, each valid for 10 minutes
-        let context_pool: _ = Arc::new(Mutex::new(V8ContextPool::new(4, Duration::from_secs(600)));
+        let context_pool: _ = Arc::new(std::sync::Mutex::new(Mutex::new(V8ContextPool::new(4, Duration::from_secs(600)));
 
         // Stage 69 Phase 2: Initialize high-performance V8 configuration
         // Use high_performance configuration for maximum speed
@@ -169,12 +169,12 @@ impl RuntimeLite {
 
         // Stage 67: ⚡ LAZY INITIALIZATION - Multi-level Cache
         // Only initialized when actually needed, reducing startup time by ~50-80ms
-        let multi_cache: _ = Arc::new(Mutex::new(OnceCell::new());
+        let multi_cache: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
 
         // Stage 77: ⚡ LAZY INITIALIZATION - WASM Integration
         // Only initialized when actually needed, reducing startup time
-        let wasm_cache: _ = Arc::new(Mutex::new(OnceCell::new());
-        let wasm_loader: _ = Arc::new(Mutex::new(OnceCell::new());
+        let wasm_cache: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
+        let wasm_loader: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
 
         if verbose {
             println!("RuntimeLite: ⚡ LAZY INITIALIZATION - JIT optimization enabled on-demand");
@@ -185,14 +185,14 @@ impl RuntimeLite {
         }
 
         Ok(Self {
-            execution_count: Arc::new(Mutex::new(AtomicUsize::new(0)),
-            script_cache: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new())),
-            cache_hits: Arc::new(Mutex::new(AtomicUsize::new(0)),
-            cache_misses: Arc::new(Mutex::new(AtomicUsize::new(0)),
+            execution_count: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
+            script_cache: Arc::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new())),
+            cache_hits: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
+            cache_misses: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
             max_cache_size: 200, // Stage 65: Increased from 100 to 200
             cache_ttl: Duration::from_secs(300), // Stage 65: 5 minute TTL
             v8_snapshot,
-            memory_pool: Arc::new(Mutex::new(SmartMemoryPool::new(PoolConfig::default())),
+            memory_pool: Arc::new(std::sync::Mutex::new(Mutex::new(SmartMemoryPool::new(PoolConfig::default())),
             jit_optimizer,
             hot_path_optimizer,
             optimization_pipeline,
@@ -228,16 +228,16 @@ impl RuntimeLite {
         }
 
         // Stage 67: ⚡ LAZY INITIALIZATION - JIT optimization components
-        let jit_optimizer: _ = Arc::new(Mutex::new(OnceCell::new());
-        let hot_path_optimizer: _ = Arc::new(Mutex::new(OnceCell::new());
-        let optimization_pipeline: _ = Arc::new(Mutex::new(OnceCell::new());
+        let jit_optimizer: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
+        let hot_path_optimizer: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
+        let optimization_pipeline: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
 
         // Stage 67: ⚡ LAZY INITIALIZATION - Inline cache
-        let inline_cache: _ = Arc::new(Mutex::new(OnceCell::new());
-        let cache_stats: _ = Arc::new(Mutex::new(OnceCell::new());
+        let inline_cache: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
+        let cache_stats: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
 
         // Stage 64: Initialize V8 Context Pool for performance optimization
-        let context_pool: _ = Arc::new(Mutex::new(V8ContextPool::new(4, Duration::from_secs(600)));
+        let context_pool: _ = Arc::new(std::sync::Mutex::new(Mutex::new(V8ContextPool::new(4, Duration::from_secs(600)));
 
         // Stage 69 Phase 2: Use provided V8 configuration
         let v8_config: _ = config;
@@ -251,11 +251,11 @@ impl RuntimeLite {
         }
 
         // Stage 67: ⚡ LAZY INITIALIZATION - Multi-level Cache
-        let multi_cache: _ = Arc::new(Mutex::new(OnceCell::new());
+        let multi_cache: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
 
         // Stage 77: ⚡ LAZY INITIALIZATION - WASM Integration
-        let wasm_cache: _ = Arc::new(Mutex::new(OnceCell::new());
-        let wasm_loader: _ = Arc::new(Mutex::new(OnceCell::new());
+        let wasm_cache: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
+        let wasm_loader: _ = Arc::new(std::sync::Mutex::new(Mutex::new(OnceCell::new()));
 
         if verbose {
             println!("RuntimeLite: ⚡ LAZY INITIALIZATION - JIT optimization enabled on-demand");
@@ -266,14 +266,14 @@ impl RuntimeLite {
         }
 
         Ok(Self {
-            execution_count: Arc::new(Mutex::new(AtomicUsize::new(0)),
-            script_cache: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new())),
-            cache_hits: Arc::new(Mutex::new(AtomicUsize::new(0)),
-            cache_misses: Arc::new(Mutex::new(AtomicUsize::new(0)),
+            execution_count: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
+            script_cache: Arc::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new())),
+            cache_hits: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
+            cache_misses: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))),
             max_cache_size: 200,
             cache_ttl: Duration::from_secs(300),
             v8_snapshot,
-            memory_pool: Arc::new(Mutex::new(SmartMemoryPool::new(PoolConfig::default())),
+            memory_pool: Arc::new(std::sync::Mutex::new(Mutex::new(SmartMemoryPool::new(PoolConfig::default())),
             jit_optimizer,
             hot_path_optimizer,
             optimization_pipeline,
@@ -341,7 +341,7 @@ impl RuntimeLite {
     }
 
     /// Get or initialize inline cache (lazy initialization)
-    fn get_inline_cache(&self) -> &std::sync::Mutex<HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>> {
+    fn get_inline_cache(&self) -> &std::sync::Mutex<HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry, CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>>> {
         self.inline_cache.get_or_init(|| {
             eprintln!("[LAZY] Initializing inline cache on first use...");
             std::sync::Mutex::new(HashMap::new())
@@ -1682,7 +1682,7 @@ use std::collections::{HashMap, BTreeMap};
                 ':' => {
                     if !in_string {
                         prop_found = true;
-                        current_prop = current_prop.clone();clone();trim().to_string();
+                        current_prop = current_prop.clone();clone();clone();trim().to_string();
                         // 移除引号
                         if (current_prop.starts_with('"') && current_prop.ends_with('"')) ||
                            (current_prop.starts_with('\'') && current_prop.ends_with('\'')) {
@@ -1698,7 +1698,7 @@ use std::collections::{HashMap, BTreeMap};
                 ',' => {
                     if !in_string {
                         if prop_found && current_prop == prop_name {
-                            current_value = current_value.clone();clone();trim().to_string();
+                            current_value = current_value.clone();clone();clone();trim().to_string();
                             // 移除值两端的空格和引号
                             if (current_value.starts_with('"') && current_value.ends_with('"')) ||
                                (current_value.starts_with('\'') && current_value.ends_with('\'')) {
@@ -1726,7 +1726,7 @@ use std::collections::{HashMap, BTreeMap};
 
         // 检查最后一个属性
         if prop_found && current_prop == prop_name {
-            current_value = current_value.clone();clone();trim().to_string();
+            current_value = current_value.clone();clone();clone();trim().to_string();
             if (current_value.starts_with('"') && current_value.ends_with('"')) ||
                (current_value.starts_with('\'') && current_value.ends_with('\'')) {
                 current_value = current_value[1..current_value.len()-1].to_string();
@@ -1905,7 +1905,7 @@ static GLOBAL_LITE_RUNTIME: std::sync::OnceLock<std::sync::Arc<RuntimeLite>> = s
 /// Get or create the global lightweight runtime (maximum reuse)
 pub fn get_global_lite_runtime(verbose: bool) -> Result<std::sync::Arc<RuntimeLite>> {
     GLOBAL_LITE_RUNTIME.get_or_init(|| {
-        std::sync::Arc::new(Mutex::new(RuntimeLite::new(verbose)).expect("Failed to create lite runtime"))
+        std::sync::Arc::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(verbose))).expect("Failed to create lite runtime"))
     });
 
     Ok(GLOBAL_LITE_RUNTIME.get().unwrap().clone())
@@ -1923,10 +1923,10 @@ pub struct CacheStatistics {
 impl CacheStatistics {
     pub fn new() -> Self {
         Self {
-            hits: Arc::new(Mutex::new(AtomicU64::new(0)),
-            misses: Arc::new(Mutex::new(AtomicU64::new(0)),
-            evictions: Arc::new(Mutex::new(AtomicU64::new(0)),
-            total_operations: Arc::new(Mutex::new(AtomicU64::new(0)),
+            hits: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicU64::new(0))),
+            misses: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicU64::new(0))),
+            evictions: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicU64::new(0))),
+            total_operations: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicU64::new(0))),
         }
     }
 

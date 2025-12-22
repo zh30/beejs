@@ -35,7 +35,7 @@ pub struct CloudConfig {
     pub provider: CloudProvider,
     pub region: String,
     pub credentials: Option<CloudCredentials>,
-    pub settings: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub settings: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 /// 云平台凭据
@@ -247,7 +247,7 @@ pub struct FunctionConfig {
     pub handler: String,
     pub memory_size: Option<u32>,
     pub timeout: Option<u32>,
-    pub environment: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub environment: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     pub kv_namespace: Option<String>,
 }
 

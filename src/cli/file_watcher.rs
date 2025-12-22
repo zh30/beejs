@@ -49,7 +49,7 @@ pub struct FileWatcher {
     /// Configuration
     config: FileWatcherConfig,
     /// Last modification times
-    last_modified: Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>,
+    last_modified: Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime, PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>>,
     /// Event sender
     event_sender: mpsc::UnboundedSender<FileEvent>,
     /// Running flag
@@ -66,9 +66,9 @@ impl FileWatcher {
         Self {
             paths,
             config,
-            last_modified: Arc::new(Mutex::new(HashMap::new())),
+            last_modified: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new())),
             event_sender,
-            running: Arc::new(Mutex::new(false)),
+            running: Arc::new(std::sync::Mutex::new(Mutex::new(false))),
         }
     }
 
@@ -144,7 +144,7 @@ impl FileWatcher {
 /// Scan a path for file changes
 async fn scan_path(
     path: &Path,
-    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>,
+    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime, PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>>,
     event_sender: &mpsc::UnboundedSender<FileEvent>,
     config: &FileWatcherConfig,
 ) -> anyhow::Result<()> {
@@ -162,7 +162,7 @@ async fn scan_path(
 /// Scan a single file
 async fn scan_file(
     path: &Path,
-    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>,
+    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime, PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>>,
     event_sender: &mpsc::UnboundedSender<FileEvent>,
 ) -> anyhow::Result<()> {
     // Check file extension
@@ -206,7 +206,7 @@ async fn scan_file(
 /// Scan a directory recursively
 async fn scan_directory(
     dir: &Path,
-    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>,
+    last_modified: &Arc<Mutex<HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime, PathBuf, SystemTime, std::collections::HashMap<PathBuf, SystemTime, PathBuf, SystemTime>>>>,
     event_sender: &mpsc::UnboundedSender<FileEvent>,
     config: &FileWatcherConfig,
 ) -> anyhow::Result<()> {

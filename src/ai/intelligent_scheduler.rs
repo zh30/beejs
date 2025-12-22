@@ -147,11 +147,11 @@ pub struct IntelligentScheduler {
     /// 工作线程状态
     pub workers: Arc<RwLock<Vec<WorkerState>>>,
     /// 调度决策历史
-    decision_history: Arc<RwLock<VecDeque<SchedulingDecision>>,
+    decision_history: Arc<RwLock<VecDeque<SchedulingDecision>>>,
     /// 任务完成回调
     task_completion_tx: mpsc::UnboundedSender<(String, Result<(), String>)>,
     /// 任务完成接收端
-    task_completion_rx: Arc<Mutex<mpsc::UnboundedReceiver<(String, Result<(), String>)>>,
+    task_completion_rx: Arc<Mutex<mpsc::UnboundedReceiver<(String, Result<(), String>)>>>,
     /// 调度统计
     stats: Arc<Mutex<SchedulerStats>>,
 }
@@ -213,13 +213,13 @@ impl IntelligentScheduler {
 
         Self {
             config: config.clone(),
-            ai_engine: Arc::new(Mutex::new(AiPerformanceEngine::new(ai_config))),
-            task_queue: Arc::new(Mutex::new(RwLock::new(VecDeque::with_capacity(config.max_queue_length)))),
-            workers: Arc::new(Mutex::new(RwLock::new(workers))),
-            decision_history: Arc::new(Mutex::new(RwLock::new(VecDeque::with_capacity(config.prediction_window)))),
+            ai_engine: Arc::new(std::sync::Mutex::new(Mutex::new(AiPerformanceEngine::new(ai_config))),
+            task_queue: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(VecDeque::with_capacity(config.max_queue_length))),
+            workers: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(workers))),
+            decision_history: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(VecDeque::with_capacity(config.prediction_window))),
             task_completion_tx,
-            task_completion_rx: Arc::new(Mutex::new(task_completion_rx)),
-            stats: Arc::new(Mutex::new(SchedulerStats::default())),
+            task_completion_rx: Arc::new(std::sync::Mutex::new(Mutex::new(task_completion_rx))),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(SchedulerStats::default())),
         }
     }
 
@@ -299,7 +299,7 @@ impl IntelligentScheduler {
                 let task_id: _ = task.id.clone();
                 tokio::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(task.estimated_duration)).await;
-                    let _: _ = completion_tx.send((task_id, Ok(())));
+                    let _: _ = completion_tx.send((task_id, Ok(());
                 });
             } else {
                 // 没有合适的工作线程，重新放回队列
@@ -553,7 +553,7 @@ use std::collections::{HashMap, BTreeMap};
     async fn test_submit_and_schedule_task() {
         let config: _ = IntelligentSchedulerConfig::default();
         let ai_config: _ = AiPerformanceEngineConfig::default();
-        let scheduler: _ = Arc::new(Mutex::new(IntelligentScheduler::new(config, ai_config)));
+        let scheduler: _ = Arc::new(std::sync::Mutex::new(Mutex::new(IntelligentScheduler::new(config, ai_config)));
 
         // 提交任务
         let task: _ = Task {

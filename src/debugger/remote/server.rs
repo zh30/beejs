@@ -23,7 +23,7 @@ impl DebugServer {
         Ok(Self {
             addr,
             listener: None,
-            running: Arc::new(Mutex::new(RwLock::new(false)),
+            running: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(false))),
         })
     }
 
@@ -47,7 +47,7 @@ impl DebugServer {
 
 /// Session manager
 pub struct SessionManager {
-    sessions: std::collections::HashMap<String, Session, std::collections::HashMap<String, Session, String, Session>>>,
+    sessions: std::collections::HashMap<String, Session, std::collections::HashMap<String, Session, String, Session, std::collections::HashMap<String, Session, std::collections::HashMap<String, Session, String, Session, String, Session, std::collections::HashMap<String, Session, String, Session>>>>,
 }
 
 #[derive(Debug, Clone)]

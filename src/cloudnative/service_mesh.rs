@@ -45,7 +45,7 @@ pub struct EnvoyConfig {
 /// Listener manager
 #[derive(Debug)]
 pub struct ListenerManager {
-    listeners: Arc<RwLock<HashMap<String, EnvoyListener, std::collections::HashMap<String, EnvoyListener, String, EnvoyListener>>>,
+    listeners: Arc<RwLock<HashMap<String, EnvoyListener, std::collections::HashMap<String, EnvoyListener, String, EnvoyListener, std::collections::HashMap<String, EnvoyListener, std::collections::HashMap<String, EnvoyListener, String, EnvoyListener, String, EnvoyListener, std::collections::HashMap<String, EnvoyListener, String, EnvoyListener>>>>,
 }
 
 /// Envoy listener
@@ -67,7 +67,7 @@ pub struct EnvoyFilter {
 /// Service discovery
 #[derive(Debug)]
 pub struct ServiceDiscovery {
-    services: Arc<RwLock<HashMap<String, ServiceInfo, std::collections::HashMap<String, ServiceInfo, String, ServiceInfo>>>,
+    services: Arc<RwLock<HashMap<String, ServiceInfo, std::collections::HashMap<String, ServiceInfo, String, ServiceInfo, std::collections::HashMap<String, ServiceInfo, std::collections::HashMap<String, ServiceInfo, String, ServiceInfo, String, ServiceInfo, std::collections::HashMap<String, ServiceInfo, String, ServiceInfo>>>>,
     config: ServiceMeshConfig,
 }
 
@@ -77,7 +77,7 @@ pub struct ServiceInfo {
     pub name: String,
     pub namespace: String,
     pub endpoints: Vec<ServiceEndpoint>,
-    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     pub mtls_enabled: bool,
 }
 
@@ -158,14 +158,14 @@ pub struct MeshRequest {
     pub service: String,
     pub method: String,
     pub path: String,
-    pub headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub headers: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     pub body: Option<Vec<u8>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MeshResponse {
     pub status_code: u16,
-    pub headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub headers: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     pub body: Option<Vec<u8>>,
 }
 
@@ -176,7 +176,7 @@ pub struct ServiceMesh {
     proxy: Arc<EnvoyProxy>,
     discovery: Arc<ServiceDiscovery>,
     routes: Arc<RwLock<Vec<TrafficRoute>>,
-    circuit_breakers: Arc<RwLock<HashMap<String, CircuitBreaker, std::collections::HashMap<String, CircuitBreaker, String, CircuitBreaker>>>,
+    circuit_breakers: Arc<RwLock<HashMap<String, CircuitBreaker, std::collections::HashMap<String, CircuitBreaker, String, CircuitBreaker, std::collections::HashMap<String, CircuitBreaker, std::collections::HashMap<String, CircuitBreaker, String, CircuitBreaker, String, CircuitBreaker, std::collections::HashMap<String, CircuitBreaker, String, CircuitBreaker>>>>,
 }
 
 impl ServiceMeshConfig {
@@ -209,7 +209,7 @@ impl EnvoyProxy {
     pub fn new(config: EnvoyConfig) -> Self {
         EnvoyProxy {
             config,
-            listener_manager: Arc::new(Mutex::new(ListenerManager::new()),
+            listener_manager: Arc::new(std::sync::Mutex::new(Mutex::new(ListenerManager::new())),
         }
     }
 
@@ -233,7 +233,7 @@ impl EnvoyProxy {
 impl ListenerManager {
     fn new() -> Self {
         ListenerManager {
-            listeners: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            listeners: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -254,7 +254,7 @@ impl ServiceDiscovery {
     /// Create a new service discovery
     pub fn new(config: ServiceMeshConfig) -> Self {
         ServiceDiscovery {
-            services: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            services: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
             config,
         }
     }
@@ -300,20 +300,20 @@ impl ServiceDiscovery {
 impl ServiceMesh {
     /// Create a new service mesh
     pub fn new(config: ServiceMeshConfig) -> Result<Self> {
-        let proxy: _ = Arc::new(Mutex::new(EnvoyProxy::new(EnvoyConfig {
-            address: "0.0.0.0".to_string()),
+        let proxy: _ = Arc::new(std::sync::Mutex::new(Mutex::new(EnvoyProxy::new(EnvoyConfig {
+            address: "0.0.0.0".to_string())),
             port: 15001,
             access_log_path: "/var/log/envoy/access.log".to_string(),
         }));
 
-        let discovery: _ = Arc::new(Mutex::new(ServiceDiscovery::new(config.clone()));
+        let discovery: _ = Arc::new(std::sync::Mutex::new(Mutex::new(ServiceDiscovery::new(config.clone()));
 
         Ok(ServiceMesh {
             mesh_type: config.mesh_type,
             proxy,
             discovery,
-            routes: Arc::new(Mutex::new(RwLock::new(Vec::new())),
-            circuit_breakers: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            routes: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
+            circuit_breakers: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         })
     }
 

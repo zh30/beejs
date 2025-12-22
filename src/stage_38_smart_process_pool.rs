@@ -52,7 +52,7 @@ impl Default for SmartWarmupStrategy {
 #[derive(Debug, Clone)]
 pub struct TaskPattern {
     /// 任务复杂度分布
-    pub complexity_distribution: HashMap<TaskComplexity, f64, std::collections::HashMap<TaskComplexity, f64, TaskComplexity, f64>>>,
+    pub complexity_distribution: HashMap<TaskComplexity, f64, std::collections::HashMap<TaskComplexity, f64, TaskComplexity, f64, std::collections::HashMap<TaskComplexity, f64, std::collections::HashMap<TaskComplexity, f64, TaskComplexity, f64, TaskComplexity, f64, std::collections::HashMap<TaskComplexity, f64, TaskComplexity, f64>>>>,
     /// 平均任务大小
     pub avg_task_size: usize,
     /// 任务间隔模式
@@ -60,7 +60,7 @@ pub struct TaskPattern {
     /// 峰值时段
     pub peak_hours: Vec<u8>,
     /// 任务类型频率
-    pub task_type_frequency: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>,
+    pub task_type_frequency: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, std::collections::HashMap<String, usize, std::collections::HashMap<String, usize, String, usize, String, usize, std::collections::HashMap<String, usize, String, usize>>>>,
 }
 
 impl TaskPattern {
@@ -182,7 +182,7 @@ pub struct SmartLoadBalancer {
     /// 负载均衡策略
     pub strategy: LoadBalancingStrategy,
     /// 工作进程性能历史
-    pub worker_performance_history: HashMap<u32, Vec<WorkerPerformanceRecord, std::collections::HashMap<u32, Vec<WorkerPerformanceRecord, u32, Vec<WorkerPerformanceRecord>>>,
+    pub worker_performance_history: HashMap<u32, Vec<WorkerPerformanceRecord, std::collections::HashMap<u32, Vec<WorkerPerformanceRecord, u32, Vec<WorkerPerformanceRecord, std::collections::HashMap<u32, Vec<WorkerPerformanceRecord, std::collections::HashMap<u32, Vec<WorkerPerformanceRecord, u32, Vec<WorkerPerformanceRecord, u32, Vec<WorkerPerformanceRecord, std::collections::HashMap<u32, Vec<WorkerPerformanceRecord, u32, Vec<WorkerPerformanceRecord>>>>,
     /// 全局性能统计
     pub global_stats: Arc<Mutex<GlobalPerformanceStats>>,
 }
@@ -235,7 +235,7 @@ pub struct GlobalPerformanceStats {
 #[derive(Debug)]
 pub struct MemorySharingManager {
     /// 共享内存区域
-    pub shared_regions: HashMap<String, SharedMemoryRegion, std::collections::HashMap<String, SharedMemoryRegion, String, SharedMemoryRegion>>>,
+    pub shared_regions: HashMap<String, SharedMemoryRegion, std::collections::HashMap<String, SharedMemoryRegion, String, SharedMemoryRegion, std::collections::HashMap<String, SharedMemoryRegion, std::collections::HashMap<String, SharedMemoryRegion, String, SharedMemoryRegion, String, SharedMemoryRegion, std::collections::HashMap<String, SharedMemoryRegion, String, SharedMemoryRegion>>>>,
     /// 内存池配置
     pub memory_pool_config: MemoryPoolConfig,
 }
@@ -385,13 +385,13 @@ impl SmartProcessPool {
         Ok(Self {
             base_config: base_config.clone(),
             warmup_strategy: SmartWarmupStrategy::default(),
-            load_balancer: Arc::new(Mutex::new(RwLock::new(SmartLoadBalancer {
+            load_balancer: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(SmartLoadBalancer {
                 strategy: LoadBalancingStrategy::PerformanceBased,
-                worker_performance_history: HashMap::new()),
-                global_stats: Arc::new(Mutex::new(GlobalPerformanceStats::default())),
+                worker_performance_history: HashMap::new())),
+                global_stats: Arc::new(std::sync::Mutex::new(Mutex::new(GlobalPerformanceStats::default())),
             })),
-            memory_manager: Arc::new(Mutex::new(RwLock::new(MemorySharingManager {
-                shared_regions: HashMap::new()),
+            memory_manager: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(MemorySharingManager {
+                shared_regions: HashMap::new())),
                 memory_pool_config: MemoryPoolConfig {
                     shared_memory_enabled: true,
                     max_shared_regions: 100,
@@ -399,13 +399,13 @@ impl SmartProcessPool {
                     compression_enabled: true,
                 },
             })),
-            predictor: Arc::new(Mutex::new(RwLock::new(PerformancePredictor {
-                performance_history: VecDeque::new()),
+            predictor: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(PerformancePredictor {
+                performance_history: VecDeque::new())),
                 prediction_model: LinearRegressionModel::new(5), // 5个特征
                 prediction_window: 100,
             })),
-            pattern_analyzer: Arc::new(Mutex::new(RwLock::new(TaskPattern::new())),
-            monitoring_active: Arc::new(Mutex::new(AtomicBool::new(false)),
+            pattern_analyzer: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(TaskPattern::new())),
+            monitoring_active: Arc::new(std::sync::Mutex::new(Mutex::new(AtomicBool::new(false))),
             perf_channel: perf_tx,
         })
     }
@@ -497,7 +497,7 @@ impl SmartProcessPool {
             TaskComplexity::Complex => warmup_count = 4,
         }
 
-        warmup_count = warmup_count.clone();clone();min(self.warmup_strategy.max_warmup_workers);
+        warmup_count = warmup_count.clone();clone();clone();min(self.warmup_strategy.max_warmup_workers);
 
         println!("智能预热: 预测任务复杂度 {:?}, 预热 {} 个进程", complexity, warmup_count);
 

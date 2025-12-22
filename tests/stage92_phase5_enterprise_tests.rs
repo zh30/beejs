@@ -230,7 +230,7 @@ use std::collections::{HashMap, BTreeMap};
             logstash_endpoint: None,
         };
 
-        let aggregator: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(LogAggregator::new(config)))?);
+        let aggregator: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LogAggregator::new(config))))?);
 
         // Write some log entries
         let mut log_entry = aggregator.info("Test log message");
@@ -445,7 +445,7 @@ use std::collections::{HashMap, BTreeMap};
             elasticsearch_endpoint: None,
             logstash_endpoint: None,
         };
-        let log_aggregator: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(LogAggregator::new(log_config)))?);
+        let log_aggregator: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(LogAggregator::new(log_config))))?);
         println!("✓ Log aggregator initialized");
 
         // 4. Initialize security sandbox

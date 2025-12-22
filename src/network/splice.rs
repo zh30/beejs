@@ -55,7 +55,7 @@ impl Splice {
     /// 创建新的 splice 传输器
     pub fn new() -> Self {
         Self {
-            stats: Arc::new(Mutex::new(std::sync::Mutex::new(SpliceStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(SpliceStats::default())),
         }
     }
 

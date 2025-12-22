@@ -100,7 +100,7 @@ pub struct DataPoint {
     pub y: f64,
     pub label: Option<String>,
     pub color: Option<String>,
-    pub metadata: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>,
+    pub metadata: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value, String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>>,
 }
 
 /// Data series
@@ -197,14 +197,14 @@ pub struct EventHandler {
 pub struct InteractiveFeature {
     pub feature_type: String,
     pub enabled: bool,
-    pub config: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>,
+    pub config: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value, String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>>,
 }
 
 /// Responsive configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResponsiveConfig {
     pub enabled: bool,
-    pub breakpoints: HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>>,
+    pub breakpoints: HashMap<String, u32, std::collections::HashMap<String, u32, String, u32, std::collections::HashMap<String, u32, std::collections::HashMap<String, u32, String, u32, String, u32, std::collections::HashMap<String, u32, String, u32>>>>,
 }
 
 impl Default for VisualizationConfig {

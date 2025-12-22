@@ -134,7 +134,7 @@ use std::collections::{HashMap, BTreeMap};
         assert!(result.is_ok());
 
         // Initialize WASM runtime
-        let bee_api: _ = Arc::new(Mutex::new(MockBeeWasmAPI));
+        let bee_api: _ = Arc::new(std::sync::Mutex::new(Mutex::new(MockBeeWasmAPI)));
         runtime.init_wasm(bee_api).unwrap();
 
         // Test WASM execution
@@ -154,7 +154,7 @@ use std::collections::{HashMap, BTreeMap};
         assert!(platforms.contains(&"ios".to_string());
         assert!(platforms.contains(&"android".to_string());
 
-        let bee_api: _ = Arc::new(Mutex::new(MockBeeWasmAPI));
+        let bee_api: _ = Arc::new(std::sync::Mutex::new(Mutex::new(MockBeeWasmAPI)));
         runtime.init_wasm(bee_api).unwrap();
         let platforms: _ = runtime.supported_platforms();
         assert!(platforms.contains(&"wasm".to_string());

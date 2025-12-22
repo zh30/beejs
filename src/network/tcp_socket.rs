@@ -60,10 +60,10 @@ impl ZeroCopyTcpSocket {
     /// 返回新的 ZeroCopyTcpSocket 实例
     pub fn new(stream: TcpStream, buffer_size: usize) -> Self {
         let mut socket = Self {
-            stream: Arc::new(Mutex::new(stream)),
-            send_buffer: Arc::new(Mutex::new(Vec::with_capacity(buffer_size))),
+            stream: Arc::new(std::sync::Mutex::new(Mutex::new(stream))),
+            send_buffer: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(buffer_size))),
             buffer_size,
-            stats: Arc::new(Mutex::new(ZeroCopyStats::default())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(ZeroCopyStats::default())),
         };
 
         // 应用 TCP 优化设置

@@ -61,7 +61,7 @@ impl WebSocketServer {
     pub fn new(config: WebSocketConfig, runtime: Runtime) -> Self {
         Self {
             config,
-            runtime: Arc::new(Mutex::new(runtime)),
+            runtime: Arc::new(std::sync::Mutex::new(Mutex::new(runtime))),
         }
     }
 

@@ -73,7 +73,7 @@ pub struct ClusterConfig {
     /// Enable auto-scaling
     pub auto_scaling: Option<bool>,
     /// Node selector labels
-    pub node_selector: Option<BTreeMap<String, String, String, String, String, String, String, String>>,
+    pub node_selector: Option<BTreeMap<String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String>>,
     /// Tolerations
     pub tolerations: Option<Vec<Toleration>>,
 }
@@ -318,7 +318,7 @@ impl BeejsOperator {
             .run(
                 self.reconcile(),
                 self.error_policy(),
-                Arc::new(Mutex::new(self.clone()),
+                Arc::new(std::sync::Mutex::new(Mutex::new(self.clone())),
             )
             .await
             .context("Failed to start controller")?;
@@ -330,8 +330,8 @@ impl BeejsOperator {
 
     /// Reconciliation logic
     fn reconcile(&self) -> Arc<dyn Fn(BeejsCluster) -> Action + Send + Sync + 'static> {
-        Arc::new(Mutex::new(move |beejs_cluster: BeejsCluster| {
-            let client: _ = self.client.clone());
+        Arc::new(std::sync::Mutex::new(Mutex::new(move |beejs_cluster: BeejsCluster| {
+            let client: _ = self.client.clone()));
             let clusters: _ = self.clusters.clone();
             let deployments: _ = self.deployments.clone();
             let statefulsets: _ = self.statefulsets.clone();
@@ -394,8 +394,8 @@ impl BeejsOperator {
 
     /// Error policy
     fn error_policy(&self) -> Arc<dyn Fn(&kube::Error, &BeejsCluster) -> Action + Send + Sync + 'static> {
-        Arc::new(Mutex::new(move |_error, _beejs_cluster| {
-            warn!("Error occurred during reconciliation"));
+        Arc::new(std::sync::Mutex::new(Mutex::new(move |_error, _beejs_cluster| {
+            warn!("Error occurred during reconciliation")));
             Action::requeue(Duration::from_secs(60))
         })
     }
@@ -651,7 +651,7 @@ impl BeejsOperator {
     }
 
     /// Generate labels for cluster resources
-    fn labels_for_cluster(name: &str) -> BTreeMap<String, String, String, String, String, String, String, String> {
+    fn labels_for_cluster(name: &str) -> BTreeMap<String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String> {
         let mut labels = BTreeMap::new();
         labels.insert("beejs.io/cluster".to_string(), name.to_string());
         labels.insert("beejs.io/component".to_string(), "cluster".to_string());
@@ -838,7 +838,7 @@ impl BeejsOperator {
                 needs_healing = true;
 
                 // Force restart of failed pods by patching the StatefulSet
-                let mut patched_ss = ss.clone();clone();clone();
+                let mut patched_ss = ss.clone();clone();clone();clone();
                 if let Some(spec) = &mut patched_ss.spec {
                     if let Some(template) = &mut spec.template.spec {
                         // Add annotation to force pod recreation
@@ -887,7 +887,7 @@ impl BeejsOperator {
     pub async fn get_cluster_metrics(
         &self,
         beejs_cluster: &BeejsCluster,
-    ) -> Result<BTreeMap<String, String, String, String, String, String, String, String>> {
+    ) -> Result<BTreeMap<String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String>> {
         let mut metrics = BTreeMap::new();
         let name: _ = beejs_cluster.name_any();
         let namespace: _ = beejs_cluster.namespace().unwrap_or_default();

@@ -87,7 +87,7 @@ use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_successful_error_recovery() {
         let recovery_manager: _ = ErrorRecoveryManager::new(5);
-        let attempt_counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0))));
+        let attempt_counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::atomic::AtomicUsize::new(0)))));
         let attempt_counter_clone: _ = attempt_counter.clone();
 
         let result: Result<String, String> = recovery_manager
@@ -283,7 +283,7 @@ struct AllocationRecord {
 impl MemoryLeakDetector {
     pub fn new() -> Self {
         Self {
-            allocations: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new())))),
+            allocations: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))))),
         }
     }
 
@@ -324,8 +324,8 @@ impl MemoryMonitor {
     pub fn new(threshold: usize) -> Self {
         Self {
             threshold,
-            total_allocated: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(0)))),
-            allocations: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new())))),
+            total_allocated: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(0))))),
+            allocations: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))))),
         }
     }
 
@@ -375,7 +375,7 @@ impl ErrorRecoveryManager {
     pub fn new(max_retries: usize) -> Self {
         Self {
             max_retries,
-            retry_count: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(0)))),
+            retry_count: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(0))))),
         }
     }
 
@@ -430,8 +430,8 @@ pub struct RuntimeHealthChecker {
 impl RuntimeHealthChecker {
     pub fn new() -> Self {
         Self {
-            is_degraded: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(false)))),
-            healing_triggered: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(false)))),
+            is_degraded: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(false))))),
+            healing_triggered: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(false))))),
         }
     }
 
@@ -471,8 +471,8 @@ pub struct GracefulDegradationManager {
 impl GracefulDegradationManager {
     pub fn new() -> Self {
         Self {
-            is_degraded: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(false)))),
-            max_concurrent: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(1000)))),
+            is_degraded: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(false))))),
+            max_concurrent: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(1000))))),
         }
     }
 
@@ -517,8 +517,8 @@ impl CircuitBreaker {
         Self {
             failure_threshold,
             recovery_timeout,
-            failure_count: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(0)))),
-            last_failure_time: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(None)))),
+            failure_count: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(0))))),
+            last_failure_time: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(None))))),
         }
     }
 
@@ -563,15 +563,15 @@ impl CircuitBreaker {
 pub struct MetricsDashboard {
     execution_times: Arc<std::sync::Mutex<Vec<Duration>>>,
     memory_usage: Arc<std::sync::Mutex<Vec<(usize, Instant)>>>,
-    operation_times: Arc<std::sync::Mutex<std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration>>>>>>,
+    operation_times: Arc<std::sync::Mutex<std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration, String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration>>>>>>>,
 }
 
 impl MetricsDashboard {
     pub fn new() -> Self {
         Self {
-            execution_times: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new())))),
-            memory_usage: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new())))),
-            operation_times: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new())))),
+            execution_times: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))))),
+            memory_usage: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(Vec::new()))))),
+            operation_times: Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::collections::HashMap::new()))))),
         }
     }
 

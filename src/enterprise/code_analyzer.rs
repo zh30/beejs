@@ -163,9 +163,9 @@ impl EnterpriseCodeAnalyzer {
     /// 创建新的分析器实例
     pub fn new() -> Self {
         Self {
-            metrics_cache: Arc::new(Mutex::new(RwLock::new(MetricsCache::new())),
-            pattern_detector: Arc::new(Mutex::new(PatternDetector::new()),
-            debt_analyzer: Arc::new(Mutex::new(DebtAnalyzer::new()),
+            metrics_cache: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(MetricsCache::new())),
+            pattern_detector: Arc::new(std::sync::Mutex::new(Mutex::new(PatternDetector::new())),
+            debt_analyzer: Arc::new(std::sync::Mutex::new(Mutex::new(DebtAnalyzer::new())),
         }
     }
 
@@ -452,7 +452,7 @@ impl EnterpriseCodeAnalyzer {
 // 内部辅助结构体
 
 struct MetricsCache {
-    cache: std::collections::HashMap<String, CodebaseMetrics, std::collections::HashMap<String, CodebaseMetrics, String, CodebaseMetrics>>>,
+    cache: std::collections::HashMap<String, CodebaseMetrics, std::collections::HashMap<String, CodebaseMetrics, String, CodebaseMetrics, std::collections::HashMap<String, CodebaseMetrics, std::collections::HashMap<String, CodebaseMetrics, String, CodebaseMetrics, String, CodebaseMetrics, std::collections::HashMap<String, CodebaseMetrics, String, CodebaseMetrics>>>>,
 }
 
 impl MetricsCache {

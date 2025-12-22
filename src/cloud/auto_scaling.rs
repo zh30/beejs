@@ -47,7 +47,7 @@ pub enum ScalingStrategy {
     /// 复合策略
     Composite {
         strategies: Vec<ScalingStrategy>,
-        weights: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>>,
+        weights: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, std::collections::HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, String, f64, std::collections::HashMap<String, f64, String, f64>>>>,
     },
 }
 
@@ -65,7 +65,7 @@ pub struct ScalingDecision {
     pub action: ScalingAction,
     pub reason: String,
     pub confidence: f64,
-    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 /// 性能指标
@@ -102,8 +102,8 @@ impl AutoScaler {
         Self {
             config,
             strategy,
-            current_replicas: Arc::new(Mutex::new(RwLock::new(config.min_replicas)),
-            metrics_history: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            current_replicas: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(config.min_replicas))),
+            metrics_history: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
             cloud_manager,
             decision_callback: None,
         }
@@ -437,7 +437,7 @@ pub struct LoadPredictor {
 impl LoadPredictor {
     pub fn new() -> Self {
         Self {
-            history: Arc::new(Mutex::new(RwLock::new(Vec::new())),
+            history: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new())),
         }
     }
 

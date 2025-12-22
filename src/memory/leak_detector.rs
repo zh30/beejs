@@ -9,7 +9,7 @@ use std::collections::{HashMap, BTreeMap};
 /// 通过对象生命周期追踪和访问模式分析，实现零内存泄漏保障
 pub struct MemoryLeakDetector {
     /// 活动对象跟踪
-    active_objects: Arc<RwLock<HashMap<usize, ObjectTrackingInfo, std::collections::HashMap<usize, ObjectTrackingInfo, usize, ObjectTrackingInfo>>>,
+    active_objects: Arc<RwLock<HashMap<usize, ObjectTrackingInfo, std::collections::HashMap<usize, ObjectTrackingInfo, usize, ObjectTrackingInfo, std::collections::HashMap<usize, ObjectTrackingInfo, std::collections::HashMap<usize, ObjectTrackingInfo, usize, ObjectTrackingInfo, usize, ObjectTrackingInfo, std::collections::HashMap<usize, ObjectTrackingInfo, usize, ObjectTrackingInfo>>>>,
     /// 泄漏检测统计
     stats: Arc<LeakDetectionStats>,
     /// 配置参数
@@ -153,7 +153,7 @@ pub struct LeakReport {
     /// 最老的泄漏对象年龄 (秒)
     oldest_leak_age_seconds: u64,
     /// 泄漏对象类型分布
-    leak_type_distribution: HashMap<ObjectType, usize, std::collections::HashMap<ObjectType, usize, ObjectType, usize>>>,
+    leak_type_distribution: HashMap<ObjectType, usize, std::collections::HashMap<ObjectType, usize, ObjectType, usize, std::collections::HashMap<ObjectType, usize, std::collections::HashMap<ObjectType, usize, ObjectType, usize, ObjectType, usize, std::collections::HashMap<ObjectType, usize, ObjectType, usize>>>>,
     /// 泄漏详细信息
     leak_details: Vec<LeakDetail>,
 }
@@ -195,8 +195,8 @@ pub enum LeakSeverity {
 impl MemoryLeakDetector {
     /// 创建新的内存泄漏检测器
     pub fn new(config: LeakDetectorConfig) -> Self {
-        let stats: _ = Arc::new(Mutex::new(LeakDetectionStats {
-            total_allocated: AtomicU64::new(0)),
+        let stats: _ = Arc::new(std::sync::Mutex::new(Mutex::new(LeakDetectionStats {
+            total_allocated: AtomicU64::new(0))),
             total_freed: AtomicU64::new(0),
             active_objects: AtomicUsize::new(0),
             leaked_objects: AtomicU64::new(0),
@@ -209,7 +209,7 @@ impl MemoryLeakDetector {
             avg_object_age_seconds: AtomicU64::new(0),
         });
 
-        let stop_flag: _ = Arc::new(Mutex::new(AtomicUsize::new(0));
+        let stop_flag: _ = Arc::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)));
 
         // 启动检测线程
         let detection_thread: _ = Some(Self::start_detection_thread(
@@ -219,7 +219,7 @@ impl MemoryLeakDetector {
         ));
 
         Self {
-            active_objects: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            active_objects: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
             stats,
             config,
             detection_thread,
@@ -310,7 +310,7 @@ impl MemoryLeakDetector {
 
                 leak_details.push(leak_detail);
                 total_leaked_bytes += info.size;
-                oldest_leak_age = oldest_leak_age.clone();clone();max(age_seconds);
+                oldest_leak_age = oldest_leak_age.clone();clone();clone();max(age_seconds);
 
                 *leak_type_distribution.entry(info.object_type).or_insert(0) += 1;
 
@@ -466,7 +466,7 @@ impl MemoryLeakDetector {
     }
 
     /// 获取所有活跃对象
-    pub fn get_all_active_objects(&self) -> HashMap<usize, ObjectTrackingInfo, std::collections::HashMap<usize, ObjectTrackingInfo, usize, ObjectTrackingInfo>>> {
+    pub fn get_all_active_objects(&self) -> HashMap<usize, ObjectTrackingInfo, std::collections::HashMap<usize, ObjectTrackingInfo, usize, ObjectTrackingInfo, std::collections::HashMap<usize, ObjectTrackingInfo, std::collections::HashMap<usize, ObjectTrackingInfo, usize, ObjectTrackingInfo, usize, ObjectTrackingInfo, std::collections::HashMap<usize, ObjectTrackingInfo, usize, ObjectTrackingInfo>>>> {
         let objects: _ = self.active_objects.read().unwrap();
         objects.clone()
     }

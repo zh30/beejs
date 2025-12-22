@@ -48,8 +48,8 @@ pub struct TraceEvent {
     pub node_id: String,
     pub service_name: String,
     pub operation_name: String,
-    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
-    pub baggage: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
+    pub baggage: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 /// 跨度（Span）
@@ -62,9 +62,9 @@ pub struct Span {
     pub service_name: String,
     pub start_time: Instant,
     pub end_time: Option<Instant>,
-    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     pub events: Vec<TraceEvent>,
-    pub baggage: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub baggage: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 impl Span {
@@ -118,7 +118,7 @@ impl Span {
 pub struct Trace {
     pub trace_id: TraceId,
     pub root_span: Span,
-    pub spans: HashMap<SpanId, Span, std::collections::HashMap<SpanId, Span, SpanId, Span>>>,
+    pub spans: HashMap<SpanId, Span, std::collections::HashMap<SpanId, Span, SpanId, Span, std::collections::HashMap<SpanId, Span, std::collections::HashMap<SpanId, Span, SpanId, Span, SpanId, Span, std::collections::HashMap<SpanId, Span, SpanId, Span>>>>,
     pub start_time: Instant,
     pub end_time: Option<Instant>,
     pub duration: Option<Duration>,
@@ -184,7 +184,7 @@ pub struct PerformanceStats {
     pub p90_trace_duration: Duration,
     pub p99_trace_duration: Duration,
     pub slowest_operations: Vec<(String, Duration)>,
-    pub operation_counts: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>>,
+    pub operation_counts: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64, std::collections::HashMap<String, u64, std::collections::HashMap<String, u64, String, u64, String, u64, std::collections::HashMap<String, u64, String, u64>>>>,
 }
 
 /// 链路追踪配置
@@ -204,8 +204,8 @@ pub struct DistributedTracer {
     config: TracingConfig,
     node_manager: Arc<NodeManager>,
     task_executor: Arc<TaskExecutor>,
-    active_traces: Arc<RwLock<HashMap<TraceId, Trace, std::collections::HashMap<TraceId, Trace, TraceId, Trace>>>,
-    completed_traces: Arc<RwLock<HashMap<TraceId, Trace, std::collections::HashMap<TraceId, Trace, TraceId, Trace>>>,
+    active_traces: Arc<RwLock<HashMap<TraceId, Trace, std::collections::HashMap<TraceId, Trace, TraceId, Trace, std::collections::HashMap<TraceId, Trace, std::collections::HashMap<TraceId, Trace, TraceId, Trace, TraceId, Trace, std::collections::HashMap<TraceId, Trace, TraceId, Trace>>>>,
+    completed_traces: Arc<RwLock<HashMap<TraceId, Trace, std::collections::HashMap<TraceId, Trace, TraceId, Trace, std::collections::HashMap<TraceId, Trace, std::collections::HashMap<TraceId, Trace, TraceId, Trace, TraceId, Trace, std::collections::HashMap<TraceId, Trace, TraceId, Trace>>>>,
     performance_stats: Arc<RwLock<PerformanceStats>>,
 }
 
@@ -231,9 +231,9 @@ impl DistributedTracer {
             config,
             node_manager,
             task_executor,
-            active_traces: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
-            completed_traces: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
-            performance_stats: Arc::new(Mutex::new(RwLock::new(initial_stats)),
+            active_traces: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
+            completed_traces: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
+            performance_stats: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(initial_stats))),
         }
     }
 
@@ -348,7 +348,7 @@ impl DistributedTracer {
         span_id: &SpanId,
         event_type: TraceEventType,
         node_id: String,
-        tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+        tags: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
     ) {
         let event: _ = TraceEvent {
             trace_id: trace_id.clone(),
@@ -526,7 +526,7 @@ impl DistributedTracer {
 pub struct TraceContext {
     pub trace_id: TraceId,
     pub span_id: SpanId,
-    pub baggage: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>,
+    pub baggage: HashMap<String, String, std::collections::HashMap<String, String, String, String, std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String, String, String, std::collections::HashMap<String, String, String, String>>>>,
 }
 
 impl TraceContext {

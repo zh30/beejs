@@ -37,7 +37,7 @@ mod tests {
         // Create pool with default config
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false; // Avoid V8 issues in tests
-        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)))));
 
         // Submit 15,000 concurrent tasks
         let mut handles = Vec::with_capacity(concurrent_scripts);
@@ -91,7 +91,7 @@ mod tests {
         let tasks_per_type: _ = 500;
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false;
-        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)))));
 
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
@@ -194,7 +194,7 @@ mod tests {
         let tasks_per_worker: _ = 200;
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false;
-        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)))));
 
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
@@ -242,7 +242,7 @@ mod tests {
         let operations_per_region: _ = 20; // Reduced for testing
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false;
-        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)))));
 
         // Submit tasks that simulate shared memory access
         let mut handles = Vec::new();
@@ -298,7 +298,7 @@ mod tests {
         use beejs::string_interner::GlobalInterner;
 
         // Test string interning
-        let interner: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(GlobalInterner::new())));
+        let interner: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(GlobalInterner::new()))));
 
         // Pre-populate cache with common objects
         for i in 0..100 {
@@ -346,7 +346,7 @@ mod tests {
         let total_tasks: _ = 5000;
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false;
-        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)))));
 
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
@@ -389,7 +389,7 @@ mod tests {
         for iteration in 0..test_iterations {
             let mut config = ConcurrentConfig::default();
             config.enable_prewarm = false;
-            let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
+            let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)))));
             let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
 
             // Submit tasks
@@ -457,7 +457,7 @@ use std::collections::{HashMap, BTreeMap};
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut config = ConcurrentConfig::default();
         config.enable_prewarm = false;
-        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config))));
+        let pool: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config)))));
 
         let mut handles = Vec::new();
         for i in 0..10000 {
@@ -511,7 +511,7 @@ use std::collections::{HashMap, BTreeMap};
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut config2 = ConcurrentConfig::default();
         config2.enable_prewarm = false;
-        let pool2: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config2))));
+        let pool2: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config2)))));
 
         let mut handles2 = Vec::new();
         for i in 0..5000 {
@@ -553,7 +553,7 @@ use std::collections::{HashMap, BTreeMap};
         let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let mut config3 = ConcurrentConfig::default();
         config3.enable_prewarm = false;
-        let pool3: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config3))));
+        let pool3: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(ConcurrentRuntimePool::new(config3)))));
 
         let mut handles3 = Vec::new();
         for i in 0..2000 {

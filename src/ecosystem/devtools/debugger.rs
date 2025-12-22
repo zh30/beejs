@@ -34,7 +34,7 @@ pub struct Breakpoint {
 }
 
 /// 断点映射
-pub type BreakpointMap = HashMap<BreakpointId, Breakpoint, std::collections::HashMap<BreakpointId, Breakpoint, BreakpointId, Breakpoint>>>;
+pub type BreakpointMap = HashMap<BreakpointId, Breakpoint, std::collections::HashMap<BreakpointId, Breakpoint, BreakpointId, Breakpoint, std::collections::HashMap<BreakpointId, Breakpoint, std::collections::HashMap<BreakpointId, Breakpoint, BreakpointId, Breakpoint, BreakpointId, Breakpoint, std::collections::HashMap<BreakpointId, Breakpoint, BreakpointId, Breakpoint>>>>;
 
 /// 线程检查器
 #[derive(Debug, Clone)]
@@ -42,7 +42,7 @@ pub struct ThreadInspector {
     pub thread_id: ThreadId,
     pub status: ThreadStatus,
     pub current_location: Option<SourceLocation>,
-    pub variables: HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>>,
+    pub variables: HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue, std::collections::HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue, String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>>>,
 }
 
 /// 线程状态
@@ -62,12 +62,12 @@ pub enum VariableValue {
     Boolean(bool),
     Number(f64),
     String(String),
-    Object(HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>>),
+    Object(HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue, std::collections::HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue, String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>>>),
     Array(Vec<VariableValue>),
 }
 
 /// 线程检查器集合
-pub type ThreadInspectors = HashMap<ThreadId, ThreadInspector, std::collections::HashMap<ThreadId, ThreadInspector, ThreadId, ThreadInspector>>>;
+pub type ThreadInspectors = HashMap<ThreadId, ThreadInspector, std::collections::HashMap<ThreadId, ThreadInspector, ThreadId, ThreadInspector, std::collections::HashMap<ThreadId, ThreadInspector, std::collections::HashMap<ThreadId, ThreadInspector, ThreadId, ThreadInspector, ThreadId, ThreadInspector, std::collections::HashMap<ThreadId, ThreadInspector, ThreadId, ThreadInspector>>>>;
 
 /// 高级调试器
 #[derive(Debug)]
@@ -82,8 +82,8 @@ impl Debugger {
     /// 创建新的调试器
     pub fn new() -> Self {
         Self {
-            breakpoints: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
-            inspectors: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            breakpoints: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
+            inspectors: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -215,7 +215,7 @@ impl Debugger {
         &self,
         thread_id: ThreadId,
         location: Option<SourceLocation>,
-        variables: HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>>,
+        variables: HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue, std::collections::HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue, String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>>>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut inspectors = self.inspectors.write().map_err(|_| "Failed to acquire write lock")?;
 
@@ -252,7 +252,7 @@ pub struct ThreadState {
     pub thread_id: ThreadId,
     pub status: ThreadStatus,
     pub current_location: Option<SourceLocation>,
-    pub variables: HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>>,
+    pub variables: HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue, std::collections::HashMap<String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue, String, VariableValue, std::collections::HashMap<String, VariableValue, String, VariableValue>>>>,
 }
 
 impl Default for Debugger {

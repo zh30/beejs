@@ -98,7 +98,7 @@ pub struct WasmMemoryManager {
     /// 预分配的内存池
     memory_pool: Arc<Mutex<Vec<MemoryBlock>>,
     /// 大块内存分配器
-    large_allocator: Arc<Mutex<HashMap<usize, MemoryBlock, std::collections::HashMap<usize, MemoryBlock, usize, MemoryBlock>>>,
+    large_allocator: Arc<Mutex<HashMap<usize, MemoryBlock, std::collections::HashMap<usize, MemoryBlock, usize, MemoryBlock, std::collections::HashMap<usize, MemoryBlock, std::collections::HashMap<usize, MemoryBlock, usize, MemoryBlock, usize, MemoryBlock, std::collections::HashMap<usize, MemoryBlock, usize, MemoryBlock>>>>,
     /// 内存统计
     stats: Arc<MemoryStats>,
     /// 最大池大小
@@ -142,9 +142,9 @@ impl WasmMemoryManager {
         }
 
         Ok(WasmMemoryManager {
-            memory_pool: Arc::new(Mutex::new(memory_pool)),
-            large_allocator: Arc::new(Mutex::new(HashMap::new())),
-            stats: Arc::new(Mutex::new(MemoryStats::default()),
+            memory_pool: Arc::new(std::sync::Mutex::new(Mutex::new(memory_pool))),
+            large_allocator: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new())),
+            stats: Arc::new(std::sync::Mutex::new(Mutex::new(MemoryStats::default())),
             max_pool_size: pool_size,
             pool_threshold: 4096,
         })
@@ -376,7 +376,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_allocation() {
-        let manager: _ = Arc::new(Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(Mutex::new(WasmMemoryManager::new(1024 * 1024))).unwrap());
 
         let ptr: _ = manager.allocate(1024);
         assert!(ptr.is_ok());
@@ -385,7 +385,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_deallocation() {
-        let manager: _ = Arc::new(Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(Mutex::new(WasmMemoryManager::new(1024 * 1024))).unwrap());
 
         let ptr: _ = manager.allocate(1024).unwrap();
         let result: _ = manager.deallocate(ptr);
@@ -394,7 +394,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_stats() {
-        let manager: _ = Arc::new(Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(Mutex::new(WasmMemoryManager::new(1024 * 1024))).unwrap());
 
         let ptr1: _ = manager.allocate(1024).unwrap();
         let ptr2: _ = manager.allocate(2048).unwrap();
@@ -411,7 +411,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_batch_operations() {
-        let manager: _ = Arc::new(Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(Mutex::new(WasmMemoryManager::new(1024 * 1024))).unwrap());
 
         let sizes: _ = vec![1024, 2048, 4096];
         let pointers: _ = manager.batch_allocate(&sizes);
@@ -442,7 +442,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_memory_leak_detection() {
-        let manager: _ = Arc::new(Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(Mutex::new(WasmMemoryManager::new(1024 * 1024))).unwrap());
 
         let ptr: _ = manager.allocate(1024).unwrap();
         manager.deallocate(ptr).unwrap();
@@ -453,7 +453,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_large_allocation() {
-        let manager: _ = Arc::new(Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(Mutex::new(WasmMemoryManager::new(1024 * 1024))).unwrap());
 
         // 分配 2MB 大块内存
         let ptr: _ = manager.allocate(2 * 1024 * 1024);
@@ -467,7 +467,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_reset() {
-        let manager: _ = Arc::new(Mutex::new(WasmMemoryManager::new(1024 * 1024)).unwrap());
+        let manager: _ = Arc::new(std::sync::Mutex::new(Mutex::new(WasmMemoryManager::new(1024 * 1024))).unwrap());
 
         manager.allocate(1024).unwrap();
         manager.reset();

@@ -86,13 +86,13 @@ pub struct KnowledgeTransferSuggestion {
 /// 技能分析器
 pub struct SkillAnalyzer {
     // 技能数据库
-    skill_database: Arc<RwLock<HashMap<String, HashMap<String, f64, std::collections::HashMap<String, HashMap<String, f64, String, HashMap<String, f64>>>>,
+    skill_database: Arc<RwLock<HashMap<String, HashMap<String, f64, std::collections::HashMap<String, HashMap<String, f64, String, HashMap<String, f64, std::collections::HashMap<String, HashMap<String, f64, std::collections::HashMap<String, HashMap<String, f64, String, HashMap<String, f64, String, HashMap<String, f64, std::collections::HashMap<String, HashMap<String, f64, String, HashMap<String, f64>>>>>,
 }
 
 impl SkillAnalyzer {
     pub fn new() -> Self {
         Self {
-            skill_database: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            skill_database: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -127,13 +127,13 @@ impl SkillAnalyzer {
 /// 工作负载平衡器
 pub struct WorkloadBalancer {
     // 工作负载历史数据
-    workload_history: Arc<RwLock<HashMap<String, Vec<u32, std::collections::HashMap<String, Vec<u32, String, Vec<u32>>>>,
+    workload_history: Arc<RwLock<HashMap<String, Vec<u32, std::collections::HashMap<String, Vec<u32, String, Vec<u32, std::collections::HashMap<String, Vec<u32, std::collections::HashMap<String, Vec<u32, String, Vec<u32, String, Vec<u32, std::collections::HashMap<String, Vec<u32, String, Vec<u32>>>>>,
 }
 
 impl WorkloadBalancer {
     pub fn new() -> Self {
         Self {
-            workload_history: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            workload_history: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -180,13 +180,13 @@ impl WorkloadBalancer {
 /// 知识追踪器
 pub struct KnowledgeTracker {
     // 知识图谱
-    knowledge_graph: Arc<RwLock<HashMap<String, HashMap<String, u32, std::collections::HashMap<String, HashMap<String, u32, String, HashMap<String, u32>>>>,
+    knowledge_graph: Arc<RwLock<HashMap<String, HashMap<String, u32, std::collections::HashMap<String, HashMap<String, u32, String, HashMap<String, u32, std::collections::HashMap<String, HashMap<String, u32, std::collections::HashMap<String, HashMap<String, u32, String, HashMap<String, u32, String, HashMap<String, u32, std::collections::HashMap<String, HashMap<String, u32, String, HashMap<String, u32>>>>>,
 }
 
 impl KnowledgeTracker {
     pub fn new() -> Self {
         Self {
-            knowledge_graph: Arc::new(Mutex::new(RwLock::new(HashMap::new())),
+            knowledge_graph: Arc::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -200,7 +200,7 @@ impl KnowledgeTracker {
     }
 
     /// 获取知识图谱
-    pub async fn get_knowledge_graph(&self, member_id: &str) -> HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>> {
+    pub async fn get_knowledge_graph(&self, member_id: &str) -> HashMap<String, u32, std::collections::HashMap<String, u32, String, u32, std::collections::HashMap<String, u32, std::collections::HashMap<String, u32, String, u32, String, u32, std::collections::HashMap<String, u32, String, u32>>>> {
         let graph: _ = self.knowledge_graph.read().await;
         graph.get(member_id).cloned().unwrap_or_default()
     }
@@ -242,9 +242,9 @@ pub struct TeamCollaborationOptimizer {
 impl TeamCollaborationOptimizer {
     pub fn new() -> Self {
         Self {
-            skill_analyzer: Arc::new(Mutex::new(SkillAnalyzer::new()),
-            workload_balancer: Arc::new(Mutex::new(WorkloadBalancer::new()),
-            knowledge_tracker: Arc::new(Mutex::new(KnowledgeTracker::new()),
+            skill_analyzer: Arc::new(std::sync::Mutex::new(Mutex::new(SkillAnalyzer::new())),
+            workload_balancer: Arc::new(std::sync::Mutex::new(Mutex::new(WorkloadBalancer::new())),
+            knowledge_tracker: Arc::new(std::sync::Mutex::new(Mutex::new(KnowledgeTracker::new())),
         }
     }
 
