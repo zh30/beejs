@@ -11,6 +11,7 @@ use std::collections::BTreeMap;
 
 use super::{MetricType, Runtime};
 use std::time::{Duration, Instant};
+use std::collections::HashMap;
 
 /// 基准测试结果
 #[derive(Debug, Clone, Serialize, Deserialize)]

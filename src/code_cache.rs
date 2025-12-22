@@ -1,9 +1,10 @@
 
 
 use std::collections::{BTreeMap, HashMap};
-use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
+use std::hash::{Hash, Hasher, DefaultHasher};
 
 /// 字节码缓存条目
 #[derive(Debug, Clone)]

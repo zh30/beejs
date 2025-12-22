@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use super::{BenchmarkError, BenchmarkResult, BenchmarkResult as Result, Runtime};
 use std::time::{Duration, Instant};
+use std::path::PathBuf;
 
 /// 运行时检测器
 #[derive(Debug)]

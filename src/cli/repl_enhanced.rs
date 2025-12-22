@@ -17,6 +17,8 @@ use std::fs::File;
 use anyhow::{Result, Error};
 use rusty_v8 as v8;
 use std::time::{Duration, Instant};
+use std::collections::VecDeque;
+use std::task::Context;
 
 /// Enhanced REPL configuration
 #[derive(Debug, Clone)]

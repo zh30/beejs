@@ -6,6 +6,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
+use std::collections::VecDeque;
+use std::time::SystemTime;
 
 /// A historical performance data point
 #[derive(Debug, Clone, Serialize, Deserialize)]

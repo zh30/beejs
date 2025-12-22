@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::{Arc, Mutex, atomic::Ordering};
 use std::time::{Duration, Instant};
 use std::sync::atomic::Ordering;
+use std::sync::atomic::AtomicU64;
 
 /// 加速配置
 #[derive(Debug, Clone)]

@@ -11,6 +11,9 @@
 //! - AI 推理性能基准测试
 //! - 内存和资源基准测试
 //! - 自动化性能回归检测
+use std::collections::HashMap;
+use std::time::SystemTime;
+use std::hash::Hash;
 pub mod startup;
 pub mod execution;
 pub mod memory;

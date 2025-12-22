@@ -4,6 +4,7 @@
 //! based on frequency, timing, and dependency relationships.
 
 use std::collections::{HashMap};
+use std::collections::BTreeMap;
 
 /// Access pattern for a script
 #[derive(Debug, Clone)]

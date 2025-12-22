@@ -8,6 +8,8 @@ use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use tracing::{info, warn, error, debug};
 use uuid::Uuid;
+use std::sync::atomic::AtomicU64;
+use std::time::SystemTime;
 /// Tenant ID type
 pub type TenantId = String;
 /// Cluster ID type

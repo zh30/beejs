@@ -308,6 +308,7 @@ mod tests {
 
 
     use super::*;
+use std::path::Path;
     #[test]
     fn test_argocd_application_creation() {
         let app: _ = ArgoCDApplication::new(

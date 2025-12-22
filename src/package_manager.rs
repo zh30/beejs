@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use tempfile::{NamedTempFile, TempDir};
+use std::io::Write;
+use std::hash::Hash;
 
 #[allow(unused_imports)]
 /// Package manager configuration

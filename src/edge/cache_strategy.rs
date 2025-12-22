@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use tokio::time::{TokioDuration, TokioInstant};
 use anyhow::{Result, Error};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
 
 /// Multi-layer edge cache
 #[derive(Debug)]

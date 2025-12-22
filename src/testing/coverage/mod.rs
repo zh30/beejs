@@ -6,6 +6,7 @@
 //! - Branch coverage
 //! - Function coverage
 //! - HTML/JSON/LCOV report generation
+use std::io::Write;
 pub mod tracker;
 pub mod report_generator;
 pub use tracker::*;

@@ -5,6 +5,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
+use std::hash::Hash;
 
 /// 线程 ID
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

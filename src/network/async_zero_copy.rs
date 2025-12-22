@@ -7,6 +7,9 @@ use std::sync::{Arc, Mutex, RwLock};
 use super::{NetworkConfig, NetworkStats};
 use memmap2::{Mmap, MmapOptions};
 use std::time::{Duration, Instant};
+use std::task::Poll;
+use std::task::Context;
+use std::pin::Pin;
 /// 零拷贝错误
 #[derive(Debug, thiserror::Error)]
 pub enum ZeroCopyError {

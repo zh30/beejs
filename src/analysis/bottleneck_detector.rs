@@ -7,6 +7,7 @@
 use crate::performance_analyzer::{ExecutionMetrics, PerformanceReport};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use std::hash::Hash;
 
 /// Types of performance bottlenecks
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

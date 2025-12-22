@@ -7,8 +7,12 @@ use crate::memory_optimizer::adaptive_gc::::{AdaptiveGCController, GCStrategy};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{Mutex as AsyncMutex, RwLock as AsyncRwLock};
 use std::time::{Duration, Instant};
+use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::sync::{Mutex, RwLock};
 std::sync::{Arc, Mutex, RwLock}, atomic::{AtomicUsize, Ordering}};
 
 /// Stage 93 自适应 GC 配置

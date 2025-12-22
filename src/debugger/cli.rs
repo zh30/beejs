@@ -8,6 +8,7 @@ use std::io::{Write, self};
 use std::sync::{Arc, Mutex};
 use std::fs::File;
 use anyhow::{Result, Error};
+use std::io::Read;
 
 /// Interactive debug command
 #[derive(Debug, Clone)]

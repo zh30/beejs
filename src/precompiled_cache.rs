@@ -5,9 +5,11 @@ use anyhow::{Context, Result, anyhow};
 use crate::code_cache::{BytecodeCache, CacheConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
+use std::path::PathBuf;
+use std::hash::{Hash, Hasher, DefaultHasher};
 
 /// 预编译模块缓存统计
 #[derive(Debug, Clone, Default)]

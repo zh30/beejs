@@ -2,6 +2,10 @@
 //! Stage 80 - 生态系统完善
 //! Stage 86 - 生态完善 (插件系统增强)
 //! Stage 91 Phase 3 - 生态系统集成
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::hash::Hasher;
+use std::hash::Hash;
 pub mod package;
 pub mod marketplace;
 pub mod marketplace_core;

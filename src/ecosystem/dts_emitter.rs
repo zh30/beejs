@@ -5,6 +5,7 @@
 use super::*;
 use std::collections::HashMap;
 use std::collections::{BTreeMap};
+use std::path::Path;
 /// .d.ts 文件发射器
 #[derive(Debug)]
 pub struct DtsEmitter {

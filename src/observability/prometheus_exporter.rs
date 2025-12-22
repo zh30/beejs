@@ -10,6 +10,8 @@ use std::sync::{Arc, Mutex};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tracing::{error, info};
+use std::io::Read;
+use std::net::{SocketAddr, TcpListener as StdTcpListener};
 
 /// Prometheus metrics exporter
 pub struct PrometheusExporter {

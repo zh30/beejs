@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 use std::ptr::NonNull;
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::collections::VecDeque;
 
 /// 内存块
 #[derive(Debug)]

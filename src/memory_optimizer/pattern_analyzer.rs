@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
+use std::hash::Hash;
 
 /// 内存分配记录
 #[derive(Debug, Clone, Serialize, Deserialize)]

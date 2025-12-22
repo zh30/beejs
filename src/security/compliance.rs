@@ -5,6 +5,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use thiserror::Error;
+use std::collections::HashMap;
 
 /// 合规性错误
 #[derive(Error, Debug)]

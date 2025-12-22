@@ -8,6 +8,8 @@ use std::sync::{Arc, Mutex};
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use crate::ecosystem::types::*;
+use std::hash::Hash;
+use std::sync::RwLock;
 /// 用户 ID
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct UserId {

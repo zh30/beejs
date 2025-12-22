@@ -5,6 +5,7 @@
 //! - 与 Bun、Node.js 等运行时的对比
 //! - 性能回归检测
 //! - 实时性能监控
+use std::hash::Hash;
 pub mod engine;
 pub mod config;
 pub mod result;

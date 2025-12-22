@@ -8,6 +8,9 @@ use std::sync::{Arc, Mutex};
 use std::fs::File;
 use anyhow::{Result, Error};
 use std::time::Duration;
+use std::time::SystemTime;
+use std::io::Write;
+use std::io::Read;
 
 /// File change event
 #[derive(Debug, Clone)]

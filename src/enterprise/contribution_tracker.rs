@@ -3,6 +3,7 @@
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};
+use std::collections::HashMap;
 
 /// 开发者信息
 #[derive(Debug, Clone)]

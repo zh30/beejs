@@ -11,6 +11,8 @@ use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, Me
 use crate::performance_comparison::{BenchmarkTestCase, PerformanceComparisonResult};
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 /// 运行时配置
 #[derive(Debug, Clone)]

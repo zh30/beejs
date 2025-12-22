@@ -6,6 +6,8 @@ use std::sync::{Arc, Mutex, RwLock};
 use super::service_discovery::{NodeInfo, ServiceDiscovery};
 use tracing::{info, warn};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
+use std::hash::Hash;
 
 /// 节点状态枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

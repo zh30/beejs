@@ -10,6 +10,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use crate::cli::script_executor::ModuleSystem;
+use std::io::Read;
 /// Module resolution result
 #[derive(Debug, Clone)]
 pub struct ResolutionResult {

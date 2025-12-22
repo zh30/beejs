@@ -2,12 +2,14 @@
 //! 提供一致性哈希、智能路由、流量熔断等功能
 
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex, RwLock};
 
 use tracing::{debug, info, warn};
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::AtomicU64;
+use std::time::SystemTime;
+use std::hash::{Hash, Hasher, DefaultHasher};
 
 // ============================================================================
 // 一致性哈希 (Consistent Hashing)

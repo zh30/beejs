@@ -5,6 +5,7 @@ use crate::network::{NetworkConfig, NetworkError};
 use std::collections::BTreeMap;
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
 /// epoll 事件管理器
 pub struct EpollManager {

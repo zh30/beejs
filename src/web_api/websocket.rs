@@ -8,6 +8,9 @@ use std::sync::atomic::Ordering;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use anyhow::{Result, Error};
 use rusty_v8 as v8;
+use std::sync::atomic::AtomicU64;
+use std::task::Poll;
+use std::task::Context;
 
 /// WebSocket ready state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

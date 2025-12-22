@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
+use std::collections::HashMap;
+use std::hash::Hash;
 
 /// 权限控制错误
 #[derive(Error, Debug)]

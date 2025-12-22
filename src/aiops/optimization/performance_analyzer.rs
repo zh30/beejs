@@ -5,6 +5,7 @@
 
 
 use std::collections::{BTreeMap, HashMap};
+use std::hash::Hash;
 /// 性能指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PerformanceMetricType {

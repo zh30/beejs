@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 use serde::{Serialize, Deserialize};
 
 use tracing::{info, warn, error, debug};
+use std::sync::RwLock;
 /// BeejsCluster custom resource definition
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]

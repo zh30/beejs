@@ -7,6 +7,8 @@ use anyhow::{Result, anyhow};
 use crate::memory::zero_copy_enhanced::{AccessPattern, EnhancedZeroCopy};
 use std::collections::{HashMap};
 use std::ptr::NonNull;
+use std::sync::Arc;
+use std::sync::{Mutex, RwLock};
 
 /// 访问历史条目
 #[derive(Debug, Clone)]
@@ -409,6 +411,6 @@ mod tests {
         assert!(strategy.min_confidence > 0.0);
     }
 }
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{Mutex as AsyncMutex, RwLock as AsyncRwLock};
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};

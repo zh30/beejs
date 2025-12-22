@@ -648,6 +648,7 @@ impl SimdEngine {
         #[cfg(feature = "parallel")]
         {
             use rayon::prelude::*;
+use std::sync::atomic::AtomicU64;
             results.par_iter()
                 .zip(batch_a.par_iter())
                 .zip(batch_b.par_iter())

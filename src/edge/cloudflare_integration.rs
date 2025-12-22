@@ -4,6 +4,7 @@
 use std::collections::{BTreeMap, HashMap};
 use super::cdn_provider::::{CdnEndpoint, CdnProvider, CdnProviderType, DeploymentResult, DeploymentStatus, EndpointStatus, ProviderHealth};
 use std::time::Duration;
+use std::time::SystemTime;
 
 /// Cloudflare Workers integration
 #[derive(Debug)]

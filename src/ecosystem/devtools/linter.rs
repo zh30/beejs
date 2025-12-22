@@ -3,6 +3,7 @@
 
 
 use serde::{Serialize, Deserialize};
+use std::hash::Hash;
 /// 检查规则
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LintRule {

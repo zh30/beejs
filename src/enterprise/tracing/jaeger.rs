@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use tracing::{debug, error, info, warn};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
 
 /// Jaeger collector configuration
 #[derive(Debug, Clone)]

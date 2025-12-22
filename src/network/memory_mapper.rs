@@ -10,6 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::fs::File;
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicU64;
 
 /// 内存映射类型
 #[derive(Debug, Clone, Copy, PartialEq)]

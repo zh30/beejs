@@ -7,10 +7,10 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex, atomic::Ordering};
 use std::time::Instant;
 use std::sync::atomic::Ordering;
+use std::hash::{Hash, Hasher, DefaultHasher};
 
 /// 插件市场主引擎
 #[derive(Debug, Clone)]

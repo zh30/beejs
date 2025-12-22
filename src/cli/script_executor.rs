@@ -10,6 +10,7 @@
 use std::path::PathBuf;
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
+use std::path::Path;
 /// File type enumeration for script detection
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileType {

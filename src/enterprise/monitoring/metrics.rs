@@ -7,6 +7,7 @@ use serde::{Serialize, Deserialize};
 
 use tracing::{info, warn, error, debug, instrument};
 use chrono::{DateTime, Utc};
+use std::sync::RwLock;
 /// Metric types for enterprise monitoring
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum Metric {

@@ -13,6 +13,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use rusty_v8 as v8;
 use std::time::{Duration, Instant};
+use std::path::PathBuf;
+use std::task::Context;
 
 /// JavaScript 核心基准测试套件
 pub struct JavaScriptCoreBenchmark;

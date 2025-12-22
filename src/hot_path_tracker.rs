@@ -2,10 +2,11 @@
 
 use crate::code_analyzer::{CodeAnalyzer, CodeComplexity};
 use std::collections::{BTreeMap, HashMap};
-use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicU64;
+use std::hash::{Hash, Hasher, DefaultHasher};
 
 /// 热路径代码信息
 #[derive(Debug, Clone)]

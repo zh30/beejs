@@ -5,6 +5,7 @@
 //! These will be replaced with actual V8 integrations in the future.
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};
+use std::task::Context;
 /// Stub for V8 DebugEvent
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DebugEvent {

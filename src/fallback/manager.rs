@@ -4,6 +4,8 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
+use std::collections::HashMap;
+use std::hash::Hash;
 
 /// 功能标识枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

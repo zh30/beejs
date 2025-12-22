@@ -10,6 +10,8 @@ use crate::ai_inference::tensor_ops::Tensor;
 use anyhow::{Result};
 
 use async_trait::async_trait;
+use std::sync::RwLock;
+use std::path::Path;
 /// ONNX Runtime 推理引擎
 #[derive(Debug)]
 pub struct OnnxEngine {

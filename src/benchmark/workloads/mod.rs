@@ -6,6 +6,7 @@
 //! - 内存密集型工作负载
 //! - 并发型工作负载
 //! - AI 工作负载
+use std::collections::HashMap;
 pub mod compute_intensive;
 pub mod io_intensive;
 pub mod memory_intensive;

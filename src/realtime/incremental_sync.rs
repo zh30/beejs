@@ -6,9 +6,10 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info};
+use std::time::SystemTime;
+use std::hash::{Hash, Hasher, DefaultHasher};
 
 /// 文档变更类型
 #[derive(Debug, Clone, Serialize, Deserialize)]

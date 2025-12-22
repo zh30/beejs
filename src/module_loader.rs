@@ -4,6 +4,7 @@ use anyhow::{Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::io::Read;
 
 /// Module loader for handling require() and module system
 #[derive(Debug, Clone)]

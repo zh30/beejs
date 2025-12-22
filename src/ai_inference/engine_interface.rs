@@ -5,6 +5,7 @@
 use crate::ai_inference::Tensor;
 use anyhow::Result;
 use async_trait::async_trait;
+use std::sync::RwLock;
 /// AI 模型格式枚举
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModelFormat {

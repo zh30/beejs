@@ -10,6 +10,8 @@ use tracing::{debug, info, warn};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
+use std::num::NonZeroUsize;
 /// 缓存条目
 #[derive(Debug, Clone)]
 pub struct CacheEntry {

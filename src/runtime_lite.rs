@@ -14,6 +14,9 @@ use anyhow::Result;
 use rusty_v8 as v8;
 use std::cell::OnceCell;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU64, AtomicUsize};
+use std::time::Instant;
 /// Script cache entry tuple
 type ScriptCacheEntry = (v8::Global<v8::Script>, String, Instant);
 /// Lightweight Runtime - minimal V8 runtime for fast startup

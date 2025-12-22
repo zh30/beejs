@@ -12,6 +12,9 @@ use wasmtime::{Config, Engine, Module};
 use anyhow::{Context, Result};
 use memmap2::{Mmap, MmapOptions};
 use std::time::Instant;
+use std::path::Path;
+use std::path::PathBuf;
+use std::num::NonZeroUsize;
 /// 零拷贝加载结果
 #[derive(Debug, Clone)]
 pub struct ZeroCopyLoadResult {

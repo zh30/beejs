@@ -9,6 +9,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
 use std::fs::File;
 use std::time::{Duration, Instant};
+use std::io::Write;
 
 /// 零拷贝发送方向
 #[derive(Debug, Clone, Copy, PartialEq)]

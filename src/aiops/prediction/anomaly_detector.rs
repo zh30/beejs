@@ -8,6 +8,7 @@ use crate::core::error::::{AIOpsError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
+use std::hash::Hash;
 
 /// Types of anomalies that can be detected
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

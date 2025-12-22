@@ -1,6 +1,7 @@
 //! path polyfill
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};
+use std::path::Path;
 pub fn register(scope: &mut v8::HandleScope, global: &v8::Local<v8::Object>) {
     let path_key: _ = v8::String::new(scope, "path").unwrap();
     let path_obj: _ = v8::Object::new(scope);

@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use super::{AIInferenceEngine, InferenceResult};
 use std::time::{Duration, Instant};
+use std::collections::VecDeque;
 
 /// 动态批处理配置
 #[derive(Debug, Clone)]

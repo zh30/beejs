@@ -5,6 +5,7 @@
 //! - 多运行时测试执行器
 //! - 结果收集和分析
 //! - 性能对比报告生成
+use std::collections::HashMap;
 pub mod benchmark_runner;
 pub mod result_collector;
 pub mod comparison_report;

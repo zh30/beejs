@@ -4,6 +4,7 @@
 use std::collections::{BTreeMap, HashMap};
 use super::super::crd::{ClusterPhase, Condition, ConditionStatus, ConditionType, WorkloadPhase};
 use tracing::{debug, error, info, warn};
+use std::time::SystemTime;
 
 /// Cluster lifecycle manager
 pub struct ClusterLifecycle {

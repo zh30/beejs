@@ -6,6 +6,7 @@ use std::io::{Write, self};
 use std::sync::{Arc, Mutex};
 use anyhow::{Result, Error};
 use std::time::{Duration, Instant};
+use std::collections::VecDeque;
 
 /// REPL configuration
 #[derive(Debug, Clone)]

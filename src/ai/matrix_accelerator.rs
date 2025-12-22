@@ -278,6 +278,7 @@ impl MatrixAccelerator {
         if is_x86_feature_detected!("sse4.2") {
 use std::collections::{HashMap, BTreeMap};
 use std::sync::atomic::Ordering;
+use std::sync::atomic::AtomicU64;
             let mut sum = _mm_setzero_ps();
             let len: _ = a.len() / 4;
             for i in 0..len {

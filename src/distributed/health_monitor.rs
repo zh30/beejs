@@ -8,6 +8,7 @@ use super::node_manager::{HealthStatus, NodeManager, NodeStatus};
 use tokio::time::{interval, sleep};
 use tracing::{info, warn};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
 
 /// 健康检查配置
 #[derive(Debug, Clone)]

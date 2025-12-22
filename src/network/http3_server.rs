@@ -4,6 +4,7 @@
 use crate::network::{NetworkConfig, NetworkError};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
 
 /// HTTP/3 路由处理器类型
 pub type Http3Handler = fn(&str, &[u8]) -> Result<Vec<u8>, NetworkError>;

@@ -8,6 +8,7 @@ use super::{NetworkConfig, NetworkStats};
 use tokio::sync::{RwLock, mpsc};
 use std::time::{Duration, Instant};
 use std::sync::atomic::Ordering;
+use std::sync::atomic::AtomicU64;
 
 /// 智能批处理配置
 #[derive(Debug, Clone)]

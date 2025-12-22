@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex};
 use tracing::{debug, info};
 use wasmtime::{Engine, Instance, Memory, Module, Store};
 use std::time::Instant;
+use std::collections::HashMap;
 
 /// WASM 执行结果
 #[derive(Debug, Clone)]

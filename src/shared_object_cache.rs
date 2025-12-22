@@ -3,10 +3,10 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::hash::{Hash, Hasher, DefaultHasher};
 
 /// 共享值类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

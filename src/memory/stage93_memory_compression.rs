@@ -7,6 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 use std::collections::{DefaultHasher};
 use std::ptr::NonNull;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::RwLock;
+use std::hash::DefaultHasher;
 
 /// Stage 93 内存压缩配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::io::Read;
 
 /// 访问模式
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::ai_inference::{engine_interface::{InferenceResult, ModelHandle}, tensor_ops::Tensor};
 use anyhow::Result;
+use std::sync::RwLock;
 
 // serde imports removed - unused
 /// 批处理优化策略

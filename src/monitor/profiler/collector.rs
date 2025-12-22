@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
 
 pub use super::storage::{
     PerformanceEvent, PerformanceEventType, RingBuffer, SamplingStrategy, SamplingConfig,

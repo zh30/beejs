@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
+use std::io::Read;
 
 /// Test file patterns
 const TEST_FILE_PATTERNS: &[&str] = &[

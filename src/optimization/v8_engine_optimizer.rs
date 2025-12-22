@@ -17,6 +17,7 @@ use rusty_v8::{Isolate, HandleScope, Local, Value, Object, Function};
 
 use once_cell::sync::Lazy;
 use crossbeam::utils::CachePadded;
+use std::sync::atomic::AtomicU64;
 /// Advanced V8 engine optimizer
 pub struct V8EngineOptimizer {
     /// JIT compilation statistics

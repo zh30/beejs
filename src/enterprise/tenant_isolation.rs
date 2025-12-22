@@ -13,6 +13,7 @@ use std::{
 };
 use uuid::Uuid;
 use tracing::{info, warn, error, debug};
+use std::hash::Hash;
 /// Tenant identifier
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct TenantId(String);

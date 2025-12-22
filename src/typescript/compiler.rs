@@ -3,6 +3,7 @@
 
 use anyhow::{Result, bail};
 use std::collections::{BTreeMap, HashMap};
+use std::path::Path;
 
 /// TypeScript 编译器配置
 #[derive(Debug, Clone)]

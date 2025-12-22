@@ -5,6 +5,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// Module type
 #[derive(Debug, Clone, PartialEq)]

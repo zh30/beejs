@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use std::sync::RwLock;
+use std::hash::Hash;
 
 /// Go VM (Virtual Machine) wrapper
 #[derive(Debug)]

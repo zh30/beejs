@@ -7,6 +7,9 @@ use tokio::sync::RwLock as AsyncRwLock;
 use serde::{Deserialize, Serialize};
 use crate::ai::tensor_optimizer::TensorOptimizer;
 use crate::ai::performance_predictor::PerformancePredictor;
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::sync::RwLock;
 /// 性能指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {

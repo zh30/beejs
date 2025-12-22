@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 use tiny_http::{Request, Response, Server as HttpServer};
 use tracing::{info, warn};
 use std::time::Instant;
+use std::io::Read;
 
 /// Server configuration
 #[derive(Debug, Clone)]

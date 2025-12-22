@@ -4,6 +4,7 @@
 //! 提供统一的优化接口。
 
 use super::{
+use std::time::SystemTime;
     auto_tuner::{AutoTuner, OptimizationFeedback, OptimizationResult},
     performance_analyzer::{
         PerformanceAnalyzer, PerformanceMetric, PerformanceMetrics,

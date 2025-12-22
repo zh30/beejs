@@ -12,6 +12,11 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::fs::File;
 use std::path::PathBuf;
+use std::time::Duration;
+use std::time::Instant;
+use std::path::Path;
+use std::io::Write;
+use std::io::Read;
 
 // use beejs::debugger::DebugSession;  // Temporarily disabled - V8 API compatibility issues
 /// Temporary debug command structure

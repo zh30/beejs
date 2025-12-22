@@ -10,6 +10,8 @@
 
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::collections::HashSet;
 /// V8 optimization configuration for maximum performance
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct V8OptimizationConfig {

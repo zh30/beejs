@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info, warn};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
 
 pub use super::{
     autoscaler::{Autoscaler, AutoscalerConfig, ClusterMetrics, ScalingAction},

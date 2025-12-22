@@ -9,6 +9,7 @@ use crate::debugger::{DebugResult, SourceLocation};
 use std::collections::{BTreeMap};
 use std::time::SystemTime;
 use std::sync::atomic::Ordering;
+use std::sync::atomic::AtomicU64;
 /// Unique breakpoint ID generator
 static BREAKPOINT_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 /// Breakpoint condition type

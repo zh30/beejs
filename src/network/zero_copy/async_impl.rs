@@ -15,6 +15,8 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{Mutex as TokioMutex, Semaphore};
 use std::time::{Duration, Instant};
+use std::sync::atomic::AtomicU64;
+use std::net::TcpListener as StdTcpListener;
 
 pub use super::{
     ZeroCopyConfig, ZeroCopyError, ZeroCopyMonitor, ZeroCopyMetrics,

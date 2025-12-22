@@ -5,6 +5,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, atomic::Ordering};
 use std::time::{Duration, Instant};
 use std::sync::atomic::Ordering;
+use std::sync::atomic::AtomicU64;
+use std::hash::Hash;
 
 /// 性能分析器
 pub struct Profiler {

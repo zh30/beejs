@@ -6,6 +6,7 @@
 
 use clap::{Parser, Subcommand};
 use std::collections::{BTreeMap, HashMap};
+use std::path::PathBuf;
 
 /// Main CLI application
 #[derive(Parser, Debug)]

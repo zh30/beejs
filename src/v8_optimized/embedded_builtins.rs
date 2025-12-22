@@ -7,6 +7,11 @@ use std::collections::{BTreeMap, HashMap};
 
 use crate::string_interner::StringInterner;
 use anyhow::{anyhow, Result};
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
+use std::hash::Hash;
 /// 嵌入式内置函数管理器
 /// 管理所有高频操作的 Rust 实现
 pub struct EmbeddedBuiltinsManager {

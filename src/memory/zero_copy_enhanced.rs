@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::ptr::NonNull;
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::num::NonZeroUsize;
 
 /// DMA 直接内存访问配置
 #[derive(Debug, Clone)]

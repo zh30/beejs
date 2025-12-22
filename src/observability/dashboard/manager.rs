@@ -14,6 +14,8 @@ use tracing::{info, warn, error, debug};
 use reqwest::Client as HttpClient;
 use serde_json::{json, Value};
 use std::time::Duration;
+use std::sync::RwLock;
+use std::time::SystemTime;
 /// Dashboard Manager - Main entry point for Grafana integration
 pub struct DashboardManager {
     /// Configuration

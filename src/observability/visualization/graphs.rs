@@ -10,6 +10,9 @@ use anyhow::{Context, Result, anyhow};
 use std::collections::BTreeMap;
 use serde::{Serialize, Deserialize};
 use tracing::{debug, error, warn};
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::collections::VecDeque;
 
 /// Graph node with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]

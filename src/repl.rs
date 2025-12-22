@@ -7,6 +7,7 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::io::{self, Write};
+use std::task::Context;
 /// REPL configuration
 #[derive(Clone)]
 pub struct ReplConfig {

@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use tracing::{debug, info, instrument, warn};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
 /// 追踪ID
 pub type TraceId = String;
 /// 跨度ID

@@ -16,6 +16,10 @@ use std::sync::{Arc, Mutex};
 // - 自动化 CI/CD 集成
 
 use rusty_v8 as v8;
+use std::path::Path;
+use std::path::PathBuf;
+use std::hash::Hash;
+use std::task::Context;
 // 模块声明
 // Stage 92: AI 原生性能引擎 (temporarily disabled)
 // pub mod ai {

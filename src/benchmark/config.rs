@@ -11,6 +11,8 @@ use std::collections::BTreeMap;
 
 use super::{MetricType, Runtime};
 use std::time::Duration;
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 /// 基准测试配置
 #[derive(Debug, Clone, Serialize, Deserialize)]

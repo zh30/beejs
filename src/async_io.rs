@@ -8,6 +8,7 @@ use tokio::io::{AsyncWriteExt, BufWriter};
 use tokio::time::{TokioDuration, TokioInstant};
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::path::Path;
 
 /// 异步I/O管理器
 #[derive(Debug)]

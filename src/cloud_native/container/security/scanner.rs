@@ -6,6 +6,8 @@ use std::path::Path;
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
 use tracing::info;
+use std::io::Read;
+use std::hash::Hash;
 /// Security scanner for container images
 pub struct SecurityScanner {
     /// Vulnerability database

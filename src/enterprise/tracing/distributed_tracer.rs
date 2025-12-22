@@ -3,6 +3,7 @@
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::time::SystemTime;
 /// 分布式追踪器
 #[derive(Debug, Clone)]
 pub struct DistributedTracer {

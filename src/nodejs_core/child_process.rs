@@ -3,6 +3,7 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};
+use std::task::Context;
 /// 设置child_process API
 pub fn setup_child_process_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,

@@ -1,7 +1,7 @@
 //! 热点分析模块
 //! 识别性能热点函数和性能瓶颈
 
-
+use std::time::Duration;
 use std::collections::{BTreeMap, HashMap};
 /// 热点函数
 #[derive(Debug, Clone)]

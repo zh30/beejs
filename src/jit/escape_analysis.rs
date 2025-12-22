@@ -371,6 +371,7 @@ mod tests {
     use super::*;
 use std::collections::{BTreeMap};
 use std::time::{Duration, Instant};
+use std::collections::{HashMap, HashSet};
     #[test]
     fn test_plain_object_escape_analysis() {
         let optimizer: _ = EscapeAnalysisOptimizer::new();

@@ -9,6 +9,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock};
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
+use std::hash::Hasher;
 
 /// 缓存条目结构体
 #[derive(Debug, Clone)]

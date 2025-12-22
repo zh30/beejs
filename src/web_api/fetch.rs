@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use anyhow::{Result, Error};
 use rusty_v8 as v8;
 use std::time::Duration;
+use std::task::Context;
 
 /// Fetch API configuration
 #[derive(Debug, Clone)]

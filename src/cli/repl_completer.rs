@@ -4,6 +4,7 @@
 
 use rustyline::Result;
 use rusty_v8 as v8;
+use std::task::Context;
 /// Auto-completion candidate
 #[derive(Debug, Clone)]
 pub struct CompletionCandidate {

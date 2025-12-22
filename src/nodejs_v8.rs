@@ -7,6 +7,7 @@ use std::env;
 use anyhow::{Result, anyhow};
 use rusty_v8 as v8;
 use crate::module_loader::ModuleLoader;
+use std::task::Context;
 /// Node.js compatibility module for V8
 /// Provides fs, path, process and other Node.js core modules
 /// Set up all Node.js compatibility globals

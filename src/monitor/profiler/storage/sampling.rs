@@ -3,6 +3,8 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
+use std::hash::Hash;
 
 /// 性能事件类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

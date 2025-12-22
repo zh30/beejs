@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio;
 use std::collections::{BTreeMap};
+use std::collections::HashMap;
+use std::collections::HashSet;
 /// 类型生成器
 #[derive(Debug)]
 pub struct TypeDefinitionGenerator {

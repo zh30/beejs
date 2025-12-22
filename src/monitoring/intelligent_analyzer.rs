@@ -1,6 +1,7 @@
 //! 智能性能分析器 - Stage 90 Phase 5.4
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
+use std::hash::Hash;
 /// 分析报告
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisReport {

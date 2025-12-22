@@ -1,5 +1,6 @@
 //! Enterprise Module
 //! Provides enterprise-grade security, compliance, and governance features
+use std::time::SystemTime;
 pub mod security_manager;
 pub mod compliance_manager;
 // Stage 96 Phase 2: Enterprise Features

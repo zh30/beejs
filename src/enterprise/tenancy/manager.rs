@@ -3,6 +3,8 @@
 
 
 use tracing::{info, warn, error, debug};
+use std::sync::RwLock;
+use std::hash::Hash;
 /// Tenant identifier
 #[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TenantId(pub String);

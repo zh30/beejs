@@ -8,6 +8,7 @@ use crate::core::error::::{AIOpsError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
+use std::hash::Hash;
 
     AnomalyDetector, StatisticalAnomalyDetector, AnomalyDetectorConfig,
     TrendAnalyzer, LinearTrendAnalyzer, TrendAnalyzerConfig,

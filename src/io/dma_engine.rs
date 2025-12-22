@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::fs::File;
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::path::Path;
 
 /// DMA buffer for zero-copy memory operations
 #[derive(Debug)]

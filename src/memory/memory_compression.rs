@@ -2,6 +2,12 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::sync::RwLock;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::Ordering;
 std::sync::{Arc, Mutex, RwLock}, atomic::{AtomicUsize, Ordering}};
 
 /// 内存压缩优化器 - 自动压缩冷数据以减少内存占用

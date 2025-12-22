@@ -11,6 +11,9 @@ use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{EnvFilter, Registry};
 use tracing_subscriber::fmt::{FormatEvent, FormatFields};
 use anyhow::{Result, Error};
+use std::path::Path;
+use std::io::Write;
+use std::task::Context;
 
 /// Structured logger with JSON formatting and context support
 pub struct StructuredLogger {

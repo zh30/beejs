@@ -13,6 +13,8 @@ use anyhow::{Result, Context, anyhow};
 use tracing::{info, debug, warn, error};
 use serde_json::{json, Value};
 use std::time::Instant;
+use std::time::SystemTime;
+use std::sync::RwLock;
 /// Chart Renderer - Handles real-time chart rendering
 pub struct ChartRenderer {
     /// Render configuration

@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use rusty_v8 as v8;
+use std::task::Context;
 
 /// Node.js compatibility module for V8
 /// Provides fs, path, process and other Node.js core modules

@@ -3,6 +3,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, Instant};
+use std::hash::Hash;
 
 /// 使用更快、抗碰撞的哈希算法（FNV-1a变种）
 /// 比标准DefaultHasher快约30%，碰撞率更低

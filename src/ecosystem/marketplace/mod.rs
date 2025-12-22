@@ -1,5 +1,6 @@
 //! 模块市场
 //! Stage 80 Phase 2 - 模块市场和发现系统
+use std::hash::Hash;
 pub mod registry;
 pub mod version_manager;
 pub use registry::*;

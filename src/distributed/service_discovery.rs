@@ -7,6 +7,8 @@ use super::node_manager::{NodeMetadata, NodeStatus};
 use tokio::time::interval;
 use tracing::{debug, info, warn};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
+use std::hash::Hash;
 
 /// 服务发现配置
 #[derive(Debug, Clone)]

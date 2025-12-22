@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use thiserror::Error;
 use std::collections::{BTreeMap};
 use std::time::SystemTime;
+use std::hash::Hash;
 /// 事件响应错误
 #[derive(Error, Debug)]
 pub enum IncidentResponseError {

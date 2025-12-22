@@ -3,6 +3,7 @@
 
 use std::collections::{HashMap, BinaryHeap};
 use std::cmp::Reverse;
+use std::hash::Hash;
 /// 任务类型枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TaskType {

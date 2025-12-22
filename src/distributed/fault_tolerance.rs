@@ -10,6 +10,8 @@ use super::task_scheduler::{Task, TaskScheduler};
 use tokio::time::{interval, sleep};
 use tracing::{debug, info, warn};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
+use std::hash::Hash;
 
 /// 故障检测配置
 #[derive(Debug, Clone)]

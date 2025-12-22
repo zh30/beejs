@@ -6,6 +6,11 @@ use std::sync::{Arc, Mutex, RwLock, Weak};
 use anyhow::{Result, Error};
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::collections::VecDeque;
+use std::time::SystemTime;
+use std::path::PathBuf;
+use std::io::Write;
+use std::io::Read;
 
 /// 共享内存区域
 /// 包装一个可共享的内存区域，支持跨进程/隔离区访问

@@ -2,6 +2,7 @@
 //! Provides simplified tracing implementation for distributed tracing
 
 use std::collections::{BTreeMap, HashMap};
+use std::sync::atomic::AtomicU64;
 
 /// Global span ID counter
 static SPAN_ID_COUNTER: AtomicU64 = AtomicU64::new(1);

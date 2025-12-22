@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, RwLock};
+use std::hash::Hash;
 
 /// 字符串符号 - 唯一标识一个interned字符串
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

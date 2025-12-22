@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use wasmtime::{Config, Engine, Instance, Linker, Module, Store};
 use std::time::{Duration, Instant};
+use std::hash::Hasher;
 
 /// WebAssembly 模块结构体
 ///

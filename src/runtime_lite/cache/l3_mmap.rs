@@ -4,11 +4,12 @@
 //! of large script files and infrequently accessed cold data.
 
 use std::collections::{BTreeMap, HashMap};
-use std::hash::{Hash, Hasher};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex, RwLock};
 use std::fs::File;
 use std::time::{Duration, Instant};
+use std::path::PathBuf;
+use std::hash::{Hash, Hasher, DefaultHasher};
 
 /// L3 Cache entry for memory-mapped files
 #[derive(Debug, Clone)]

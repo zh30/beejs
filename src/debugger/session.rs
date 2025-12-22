@@ -8,6 +8,8 @@ use crate::{RuntimeLite, debugger};
 use crate::debugger::cli::DebugConsole;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::path::PathBuf;
+use std::io::Read;
 
 /// Debug session that manages the runtime and debugger
 pub struct DebugSession {

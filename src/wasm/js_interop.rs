@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 use wasmtime::{Func, Instance, Store, Val};
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::AtomicU64;
 
 /// JavaScript 值枚举
 #[derive(Debug, Clone)]

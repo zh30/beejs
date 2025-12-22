@@ -11,6 +11,11 @@ use std::collections::BTreeMap;
 use std::sync::{RwLock};
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
+use std::sync::atomic::AtomicU64;
+use std::collections::HashMap;
+use std::collections::VecDeque;
+use std::time::SystemTime;
+use std::path::Path;
 
 /// Execution event for history tracking
 #[derive(Debug, Clone)]

@@ -12,6 +12,8 @@ use std::fs::File;
 use anyhow::{Result, Error};
 use std::time::Duration;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicU64;
+use std::time::SystemTime;
 
 /// File change event types
 #[derive(Debug, Clone, PartialEq, Eq)]

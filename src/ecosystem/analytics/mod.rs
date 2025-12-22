@@ -5,3 +5,4 @@ pub use collector::*;
 use chrono::{DateTime, Utc, Duration};
 use std::collections::{HashMap, VecDeque};
 use std::collections::{BTreeMap};
+use std::time::Duration;

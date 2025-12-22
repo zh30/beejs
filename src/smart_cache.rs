@@ -12,6 +12,8 @@
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use std::collections::HashMap;
+use std::collections::VecDeque;
 
 /// 缓存条目
 #[derive(Debug, Clone)]

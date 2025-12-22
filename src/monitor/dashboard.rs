@@ -7,6 +7,7 @@ use crate::monitor::performance_monitor::{MetricType, MetricValue};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use std::time::SystemTime;
 
 /// Web 仪表板配置
 #[derive(Debug, Clone)]

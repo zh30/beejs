@@ -12,7 +12,6 @@
 use anyhow::{Context, Result};
 use crate::{OptimizeMode, Runtime};
 use std::collections::{BTreeMap, HashMap};
-use std::hash::{Hash, Hasher};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 
@@ -20,6 +19,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::io::Read;
+use std::hash::{Hash, Hasher, DefaultHasher};
 
 // Import Runtime for worker execution
 #[allow(unused_imports)]

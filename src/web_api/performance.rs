@@ -4,6 +4,7 @@
 
 use anyhow::Result;
 use rusty_v8 as v8;
+use std::task::Context;
 /// Global start time for performance.now()
 static PERFORMANCE_START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
 /// Get or initialize the performance start time

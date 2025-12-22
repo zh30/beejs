@@ -7,6 +7,8 @@
 //! - 增量 GC 和并行 GC
 
 use anyhow::{Result, anyhow};
+use std::sync::Arc;
+use std::sync::{Mutex, RwLock};
 
 /// GC 配置
 #[derive(Debug, Clone)]
@@ -533,6 +535,6 @@ mod tests {
         assert!(prediction.is_some());
     }
 }
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{Mutex as AsyncMutex, RwLock as AsyncRwLock};
 use std::time::{Duration, Instant};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};

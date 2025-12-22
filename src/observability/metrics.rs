@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
 use tracing::{debug, info, warn, error};
 use std::time::Duration;
+use std::collections::VecDeque;
 
 /// Custom metrics system that manages all runtime metrics
 pub struct CustomMetrics {

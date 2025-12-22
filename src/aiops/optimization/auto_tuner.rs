@@ -4,6 +4,7 @@
 //! 自动应用优化设置并监控效果。
 
 use super::{
+use std::time::SystemTime;
     performance_analyzer::{
         PerformanceAnalyzer,
         PerformanceMetrics,
