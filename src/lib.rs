@@ -1,20 +1,21 @@
 use std::collections::{HashMap};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{Ordering};
-//! Beejs: 高性能 JavaScript/TypeScript 运行时
-//!
-//! Stage 92: 企业级性能突破与 AI 原生优化
-//! 使用 Rust 和 V8 构建的高性能 JS/TS 运行时，为 AI 时代提供更高效的脚本执行能力。
-//! 通过 AI 驱动的智能优化系统实现 1000-5000x 性能提升。
-//!
-//! ## 主要特性
-//! - 基于 V8 的高性能 JavaScript 执行
-//! - WebAssembly 集成支持
-//! - TypeScript 原生支持
-//! - 进程池复用系统
-//! - 自动性能基准测试
-//! - 性能回归检测
-//! - 自动化 CI/CD 集成
+// Beejs: 高性能 JavaScript/TypeScript 运行时
+//
+// Stage 92: 企业级性能突破与 AI 原生优化
+// 使用 Rust 和 V8 构建的高性能 JS/TS 运行时，为 AI 时代提供更高效的脚本执行能力。
+// 通过 AI 驱动的智能优化系统实现 1000-5000x 性能提升。
+//
+// ## 主要特性
+// - 基于 V8 的高性能 JavaScript 执行
+// - WebAssembly 集成支持
+// - TypeScript 原生支持
+// - 进程池复用系统
+// - 自动性能基准测试
+// - 性能回归检测
+// - 自动化 CI/CD 集成
+
 use rusty_v8 as v8;
 // 模块声明
 // Stage 92: AI 原生性能引擎 (temporarily disabled)
