@@ -13,7 +13,7 @@
 //! - Memory usage reduction: 30-50%
 
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 use tokio::task;
 
 #[cfg(test)]
@@ -23,7 +23,7 @@ mod tests {
     /// Test 1: Validate 15,000+ concurrent script execution
     #[tokio::test]
     async fn test_15000_concurrent_scripts() {
-        use beejs::{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
+        use beejs{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
 
         // Check if V8 is available
         if !is_v8_available() {
@@ -81,7 +81,7 @@ mod tests {
     /// Test 2: Validate smart scheduling optimization (Stage 12.3.1)
     #[tokio::test]
     async fn test_smart_scheduling_optimization() {
-        use beejs::{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
+        use beejs{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
 
         if !is_v8_available() {
             println!("⚠️  Skipping test: V8 engine not available");
@@ -183,7 +183,7 @@ mod tests {
     /// Test 3: Validate work stealing optimization (Stage 12.3.2)
     #[tokio::test]
     async fn test_work_stealing_optimization() {
-        use beejs::{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
+        use beejs{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
 
         if !is_v8_available() {
             println!("⚠️  Skipping test: V8 engine not available");
@@ -231,7 +231,7 @@ mod tests {
     /// Test 4: Validate memory sharing optimization (Stage 12.3.3)
     #[tokio::test]
     async fn test_memory_sharing_optimization() {
-        use beejs::{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
+        use beejs{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
 
         if !is_v8_available() {
             println!("⚠️  Skipping test: V8 engine not available");
@@ -335,7 +335,7 @@ mod tests {
     /// Test 6: Load balancing efficiency validation
     #[tokio::test]
     async fn test_load_balancing_efficiency() {
-        use beejs::{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
+        use beejs{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
 
         if !is_v8_available() {
             println!("⚠️  Skipping test: V8 engine not available");
@@ -374,7 +374,7 @@ mod tests {
     /// Test 7: Performance regression validation
     #[tokio::test]
     async fn test_performance_regression_validation() {
-        use beejs::{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
+        use beejs{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
 
         if !is_v8_available() {
             println!("⚠️  Skipping test: V8 engine not available");
@@ -443,9 +443,9 @@ mod tests {
     async fn test_end_to_end_concurrent_performance() {
         println!("\n=== Stage 12.3.4 End-to-End Concurrent Performance Benchmark ===\n");
 
-        use beejs::{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+        use beejs{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
         if !is_v8_available() {
             println!("⚠️  Skipping test: V8 engine not available");

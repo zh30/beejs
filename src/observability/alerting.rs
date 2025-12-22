@@ -2,15 +2,13 @@
 //!
 //! This module provides an alerting system that can monitor metrics,
 //! detect anomalies, and send notifications via various channels.
-use anyhow::{Context, Result};use prometheus::proto::MetricFamily;
-use reqwest::blocking::Client;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
-use std::time::{Duration, Instant, SystemTime};
-use tokio::sync::RwLock;
-use tracing::{error, info};
+
+use anyhow::<Context, Result>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use tracing::<error, info>;
+
 /// Alert severity levels
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AlertSeverity {
@@ -398,8 +396,6 @@ impl BuiltInAlertRules {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_alerting_system_creation() {
         let system: _ = AlertingSystem::new();

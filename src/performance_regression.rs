@@ -7,17 +7,18 @@
 //! - 智能回归检测算法
 //! - 性能阈值动态调整
 //! - 详细性能报告生成
-use crate::benchmarks::{
+
+use crate::benchmarks::<
     BenchmarkResult, MetricType, PerformanceDelta,
     BenchmarkConfig
-};
-use serde::{Deserialize, Serialize};
+>;
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::<SystemTime, UNIX_EPOCH>;
 use thiserror::Error;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// 性能回归检测错误
 #[derive(Error, Debug)]
 pub enum RegressionError {

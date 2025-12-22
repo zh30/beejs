@@ -1,9 +1,13 @@
 //! WASM 编译器模块
 //!
 //! 提供 Wasmtime 引擎管理和 JavaScript 到 WebAssembly 的编译功能
-use wasmtime::{Engine, Module, Config, OptLevel};
-use wasmtime_wasi::{WasiCtxBuilder, WasiCtx};
-use anyhow::{Result, Context, anyhow};
+
+use anyhow::<Context, Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use wasmtime::<Config, Engine, Module, OptLevel>;
+use wasmtime_wasi::<WasiCtx, WasiCtxBuilder>;
+
 /// Wasm 编译器结构体
 ///
 /// 负责管理 Wasmtime 引擎实例，提供 JavaScript 到 WebAssembly 的编译功能
@@ -82,7 +86,6 @@ impl WasmCompiler {
     /// # 返回值
     /// * `Result<Vec<u8>` - WASM 字节码
     fn generate_demo_wasm(&self, js_code: &str) -> Result<Vec<u8> {
-        use wasm_encoder::*;
         let mut module = Module::new();
         // Type section
         let mut types = TypeSection::new();
@@ -159,8 +162,6 @@ impl Default for WasmCompiler {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_compiler_creation() {
         let compiler: _ = WasmCompiler::new();

@@ -1,11 +1,13 @@
 //! Web 仪表板模块
 //! 提供实时性能监控 Web 界面
-use crate::monitor::performance_monitor::{MetricType, MetricValue};
-use crate::monitor::data_store::{DataStore, ExportFormat, QueryCondition};
-use crate::monitor::alerts::{AlertSystem, AlertInstance};
-use std::collections::HashMap;
 
-use std::time::{Duration, Instant};
+use crate::monitor::alerts::<AlertInstance, AlertSystem>;
+use crate::monitor::data_store::<DataStore, ExportFormat, QueryCondition>;
+use crate::monitor::performance_monitor::<MetricType, MetricValue>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use std::time::<Duration, Instant, SystemTime>;
+
 /// Web 仪表板配置
 #[derive(Debug, Clone)]
 pub struct DashboardConfig {
@@ -677,8 +679,6 @@ pub struct Dataset {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_dashboard_creation() {
         let data_store: _ = Arc::new(Mutex::new(DataStore::with_default_config()));

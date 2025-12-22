@@ -7,14 +7,15 @@
 //! - 阈值优先级管理
 //! - 智能阈值建议
 //! - 阈值历史追踪
-use crate::performance_regression::{RegressionSeverity};
-use serde::{Deserialize, Serialize};
+
+use crate::performance_regression::<RegressionSeverity>;
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::<SystemTime, UNIX_EPOCH>;
 use thiserror::Error;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// 阈值管理错误
 #[derive(Error, Debug)]
 pub enum ThresholdError {

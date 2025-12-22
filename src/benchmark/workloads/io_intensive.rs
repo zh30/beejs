@@ -4,10 +4,13 @@
 //! - 文件读写操作
 //! - 网络请求处理
 //! - 数据库操作模拟
-use serde::{Deserialize, Serialize};
+
+use std::time::Duration;
+
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use super::{WorkloadResult, ResourceUsage, BenchmarkError, BenchmarkResult as Result};
+use std::time::<Duration, Instant>;
+use super::<WorkloadResult, ResourceUsage, BenchmarkError, BenchmarkResult as Result>;
 /// I/O 密集型工作负载
 #[derive(Debug)]
 pub struct IOWorkload {
@@ -152,7 +155,7 @@ fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[tokio::test]
     async fn test_workload_execution() {
         let workload: _ = IOWorkload::new();

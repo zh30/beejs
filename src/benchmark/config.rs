@@ -5,12 +5,11 @@
 //! - 基准测试参数
 //! - 工作负载配置文件
 //! - 运行时对比配置
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::time::Duration;
-use super::{Runtime, MetricType};
-use std::collections::{BTreeMap};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+use super::<MetricType, Runtime>;
+
 /// 基准测试配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkConfig {

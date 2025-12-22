@@ -2,12 +2,12 @@
 //!
 //! This module provides tools to generate visualizations of performance data,
 //! including charts, graphs, and HTML reports.
-use crate::performance_analyzer::{PerformanceReport};
-use crate::analysis::bottleneck_detector::{Bottleneck, BottleneckSeverity};
-use crate::analysis::optimizer::OptimizationSuggestion;
-use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::Write;
+
+use crate::analysis::bottleneck_detector::<Bottleneck, BottleneckSeverity>;
+use crate::performance_analyzer::PerformanceReport;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+
 /// Chart types for visualization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChartType {
@@ -512,8 +512,6 @@ impl Default for PerformanceVisualizer {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_visualizer_creation() {
         let visualizer: _ = PerformanceVisualizer::new();

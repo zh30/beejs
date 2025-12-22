@@ -2,10 +2,11 @@
 //!
 //! This module provides tools to analyze historical performance data,
 //! identify trends, and predict future performance.
-use crate::performance_analyzer::PerformanceReport;
-use serde::{Deserialize, Serialize};
-use std::collections::VecDeque;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::time::<Duration, SystemTime, UNIX_EPOCH>;
+
 /// A historical performance data point
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceDataPoint {
@@ -380,8 +381,6 @@ impl Default for TrendAnalyzer {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_trend_analyzer_creation() {
         let analyzer: _ = TrendAnalyzer::new();

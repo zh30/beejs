@@ -8,7 +8,7 @@
 //! - 实时数据获取测试
 //! - 配置管理测试
 
-use beejs::monitor::performance_monitor::{
+use beejs::monitor::performance_monitor{
     PerformanceMonitor, MetricType, MetricValue,
     MonitorConfig, ThresholdConfig
 };
@@ -19,8 +19,8 @@ use std::time::Duration;
 mod tests {
     use super::*;
     use serial_test::serial;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 测试 1: PerformanceMonitor 创建和初始化
     #[test]

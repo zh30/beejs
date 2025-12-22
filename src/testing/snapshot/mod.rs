@@ -10,7 +10,7 @@ pub mod snapshot_manager;
 pub mod snapshot_renderer;
 pub use snapshot_manager::*;
 pub use snapshot_renderer::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
 /// Snapshot metadata
 #[derive(Debug, Clone, PartialEq)]
 pub struct SnapshotMetadata {

@@ -2,10 +2,11 @@
 //!
 //! 提供高性能的WASM模块加载和执行能力
 //! 使用Wasmtime运行时实现真正的WebAssembly执行
-use anyhow::{anyhow, Context, Result};
-use std::time::{Duration, Instant};
-use wasmtime::*;
-use std::collections::{HashMap, BTreeMap};
+
+use anyhow::<Context, Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 #[derive(Debug, Clone)]
 pub struct WasmModule {
     pub name: String,

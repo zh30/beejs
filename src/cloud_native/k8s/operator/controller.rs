@@ -1,23 +1,27 @@
 //! Kubernetes Operator Controller
 //! Implements the reconciliation loop for BeejsCluster and BeejsWorkload
-use kube::api::{ListParams, Patch, PatchParams, DeleteParams};
+
+use std::sync::Arc;
+use std::time::Duration;
+
+use kube::api::<ListParams, Patch, PatchParams, DeleteParams>;
 use kube::core::object::HasStatus;
 use kube::runtime::controller::Action;
-use kube::runtime::events::{Event, EventType, Recorder, Reporter};
-use kube::{Client, Api, Resource, ResourceExt};
-use k8s_openapi::api::apps::v1::{StatefulSet, StatefulSetSpec};
-use k8s_openapi::api::core::v1::{Service, ServiceSpec, ServicePort, ConfigMap, Secret, PodSpec, Container, ContainerPort, EnvVar, EnvVarSource, ObjectFieldSelector, ResourceRequirements, VolumeMount, Volume, ConfigMapVolumeSource, PersistentVolumeClaim, PersistentVolumeClaimSpec, ObjectReference};
+use kube::runtime::events::<Event, EventType, Recorder, Reporter>;
+use kube::<Client, Api, Resource, ResourceExt>;
+use k8s_openapi::api::apps::v1::<StatefulSet, StatefulSetSpec>;
+use k8s_openapi::api::core::v1::<Service, ServiceSpec, ServicePort, ConfigMap, Secret, PodSpec, Container, ContainerPort, EnvVar, EnvVarSource, ObjectFieldSelector, ResourceRequirements, VolumeMount, Volume, ConfigMapVolumeSource, PersistentVolumeClaim, PersistentVolumeClaimSpec, ObjectReference>;
 use k8s_openapi::apimachinery::pkg::api::resource::Quantity;
 use k8s_openapi::ByteString;
-use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, LabelSelector, LabelSelectorRequirement};
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::<ObjectMeta, LabelSelector, LabelSelectorRequirement>;
 use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 use std::collections::BTreeMap;
 use tokio::time::Duration;
-use tracing::{info, warn, error, debug};
-use super::super::crd::{
+use tracing::<info, warn, error, debug>;
+use super::super::crd::<
     BeejsCluster, BeejsClusterSpec, BeejsWorkload, BeejsWorkloadSpec, ClusterPhase,
     Condition as BeejsCondition, ConditionStatus, ConditionType, WorkloadPhase,
-};
+>;
 /// Cluster controller for managing BeejsCluster resources
 pub struct ClusterController {
     /// Kubernetes client
@@ -598,7 +602,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_error_type() {
         // Test error conversion - just verify the error type exists

@@ -2,11 +2,11 @@
 //!
 //! This module generates actionable optimization suggestions based on
 //! performance analysis and bottleneck detection results.
-use crate::analysis::bottleneck_detector::{
+use crate::analysis::bottleneck_detector::<
     Bottleneck, BottleneckType, BottleneckDetector, BottleneckSeverity
-};
+>;
 use crate::performance_analyzer::PerformanceReport;
-use serde::{Deserialize, Serialize};
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
 /// Optimization priority levels
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -453,7 +453,7 @@ impl Default for PerformanceOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_optimizer_creation() {
         let optimizer: _ = PerformanceOptimizer::new();

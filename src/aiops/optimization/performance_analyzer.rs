@@ -2,8 +2,11 @@
 //!
 //! 这个模块提供了性能指标分析功能，能够分析各种性能指标
 //! 并生成优化建议。
+
+use std::time::SystemTime;
+
 use std::collections::HashMap;
-use std::time::{Duration, SystemTime};
+use std::time::<Duration, SystemTime>;
 /// 性能指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PerformanceMetricType {
@@ -402,7 +405,7 @@ impl Default for PerformanceAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_performance_analyzer_creation() {
         let analyzer: _ = PerformanceAnalyzer::new();

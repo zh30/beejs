@@ -1,11 +1,12 @@
 //! 数据采集器模块
 //! 负责收集函数调用、内存分配等性能数据
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use uuid::Uuid;
-use super::storage::{
+
+use std::collections::<BTreeMap, HashMap>;
+use std::time::Duration;
+
+pub use storage::<
     PerformanceEvent, PerformanceEventType, RingBuffer, SamplingStrategy, SamplingConfig,
-};
+>;
 /// 函数调用跟踪句柄
 #[derive(Debug, Clone)]
 pub struct FunctionTraceHandle {
@@ -265,8 +266,6 @@ impl FunctionTracker {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_function_tracker_creation() {
         let tracker: _ = FunctionTracker::with_default_config();

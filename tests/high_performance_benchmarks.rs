@@ -10,8 +10,8 @@
 //! - I/O operations throughput
 //! - JIT compilation efficiency
 
-use std::time::{Duration, Instant};
-use std::sync::{Arc, Mutex};
+use std::time{Duration, Instant};
+use std::sync{Arc, Mutex};
 use std::thread;
 use std::collections::HashMap;
 use tokio::runtime::Runtime;
@@ -423,8 +423,8 @@ pub struct BenchmarkSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_high_performance_benchmarks() {

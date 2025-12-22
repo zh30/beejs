@@ -1,10 +1,10 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 75 Phase 2: Watch Expression Evaluation Tests
 //!
 //! Tests for the watch expression evaluation functionality in the debugger.
 //! This phase integrates V8 context for actual expression evaluation.
 
-use beejs::debugger::{
+use beejs::debugger{
     DebuggerEngine, DebugConfig, DebugState,
 };
 use beejs::runtime_lite::RuntimeLite;
@@ -14,8 +14,8 @@ mod tests {
     // V8 isolates are thread-bound, so we need to run tests sequentially
     use serial_test::serial;
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     // =========================================
     // Watch Expression Evaluation Tests

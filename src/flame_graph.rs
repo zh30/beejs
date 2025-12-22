@@ -1,8 +1,9 @@
 //! 火焰图分析模块
 //! 用于可视化代码执行路径和热点分析
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+
 /// 火焰图结构体
 pub struct FlameGraph {
     root: FrameNode,
@@ -285,8 +286,6 @@ impl FlameGraph {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_flame_graph_creation() {
         let flame_graph: _ = FlameGraph::new();

@@ -4,21 +4,21 @@ pub mod hpa;
 pub mod metrics;
 pub mod scaler;
 /// Re-export HPA types
-pub use hpa::{
+pub use hpa::<
     HPAController, Metrics, MetricsCollector, ScaleAction, ScaleEvent, Error as HPAError,
-};
+>;
 /// Re-export metrics types
-pub use metrics::{
+pub use metrics::<
     MetricsClient, PodMetricsSummary, Error as MetricsError,
-};
+>;
 /// Re-export scaler types
-pub use scaler::{
+pub use scaler::<
     Scaler, ScalingResult, ResourceType, ScalePolicyType, Error as ScalerError,
-};
+>;
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_module_structure() {
         // Verify that the module structure is correct

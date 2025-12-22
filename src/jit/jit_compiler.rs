@@ -1,12 +1,11 @@
 //! JIT 编译器核心引擎
 //! Stage 92 Phase 4: 多层编译架构统一管理
-use std::collections::HashMap;
 
-use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
-use crate::jit::hot_path_tracker_v2::HotPathTrackerV2;
-use crate::jit::inline_strategy::InlineStrategy;
-use crate::jit::optimization::{V8OptimizationConfig, OptimizationFlag};
+use crate::jit::optimization::<OptimizationFlag, V8OptimizationConfig>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// 编译层级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CompilationTier {
@@ -290,8 +289,6 @@ impl JitCompiler {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_jit_compiler_creation() {
         let config: _ = JitCompilerConfig::default();

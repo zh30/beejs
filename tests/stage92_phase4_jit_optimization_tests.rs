@@ -6,8 +6,8 @@
 //! - 动态重编译
 //! - 自适应优化
 
-use std::time::{Duration, Instant};
-use std::sync::{Arc, Mutex};
+use std::time{Duration, Instant};
+use std::sync{Arc, Mutex};
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -163,7 +163,7 @@ mod adaptive_optimization_tests {
     /// 验证 HotPathTrackerV2 的自适应阈值正确集成到 JIT 编译器
     #[test]
     fn test_stage93_dynamic_threshold_adjustment() {
-        use crate::jit::{
+        use crate::jit{
             jit_compiler::{JitCompiler, JitCompilerConfig, CompilationRequest, CompilationTier},
             hot_path_tracker_v2::HotPathTrackerV2,
         };
@@ -209,8 +209,8 @@ mod adaptive_optimization_tests {
 #[cfg(test)]
 mod stage93_inline_optimization_tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 测试智能阈值调整
     /// 验证内联策略能够根据运行时反馈动态调整参数

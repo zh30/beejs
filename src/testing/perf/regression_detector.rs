@@ -1,9 +1,9 @@
 //! Performance Regression Detector
 //! Detects performance regressions by comparing with historical data
-use super::*;
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::time::<Duration, Instant, SystemTime>;
+
 /// Historical performance data
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct HistoricalData {
@@ -188,8 +188,6 @@ impl RegressionDetector {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_regression_detection_new_benchmark() {
         let config: _ = RegressionConfig::default();

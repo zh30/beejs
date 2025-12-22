@@ -2,11 +2,14 @@
 //! Stage 86 Phase 3 - 插件市场平台实现
 //!
 //! 提供插件搜索、发现、评分、评论和管理的完整功能
-use std::collections::{HashMap, HashSet, BTreeMap};
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use anyhow::{Result, Context};
-use crate::ecosystem::types::*;
+
+use anyhow::<Context, Result>;
+use chrono::<DateTime, Utc>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap, HashSet>;
+use std::hash::<Hash, Hasher>;
+use std::sync::<Arc, Mutex, Ordering>;
+
 /// 插件市场主引擎
 #[derive(Debug, Clone)]
 pub struct PluginMarketplace {
@@ -470,8 +473,6 @@ impl PluginMarketplace {
     }
     /// 生成缓存键
     fn generate_cache_key(&self, query: &SearchQuery) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
 
         let mut hasher = DefaultHasher::new();
         query.query.hash(&mut hasher);

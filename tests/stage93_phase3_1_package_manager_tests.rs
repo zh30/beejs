@@ -6,9 +6,9 @@
 use beejs::ecosystem_lite::*;
 use std::fs;
 use std::path::PathBuf;
-use tempfile::{TempDir};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use tempfile{TempDir};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 /// Test 1: Package Manager Configuration
 #[test]

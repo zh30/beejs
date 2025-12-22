@@ -1,13 +1,12 @@
 //! V8 快照优化管理器
 //! 实现 < 1ms 的快照加载时间
 //! Stage 27.1: V8 引擎深度优化
-use crate::v8_snapshot::V8SnapshotManager;
-use anyhow::{anyhow, Result};
-use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
 
-use std::time::{Duration, Instant};
+use anyhow::<Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+use std::time::<Duration, Instant, SystemTime>;
+
 /// V8 快照优化管理器
 /// Stage 27.1: 实现 < 1ms 快照加载
 pub struct V8SnapshotOptimizedManager {
@@ -285,8 +284,6 @@ pub struct SnapshotCacheStats {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_l1_cache() {
         let manager: _ = V8SnapshotOptimizedManager::new().unwrap();

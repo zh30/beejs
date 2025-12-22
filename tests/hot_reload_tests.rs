@@ -1,10 +1,10 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! Hot Reload Tests for Beejs Runtime
 
-use beejs::watcher::{FileChangeType, HotReloader, WatcherConfig, WatcherConfigBuilder};
+use beejs::watcher{FileChangeType, HotReloader, WatcherConfig, WatcherConfigBuilder};
 use std::path::Path;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 /// Test 1: Verify watcher configuration defaults
 #[test]

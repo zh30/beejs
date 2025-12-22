@@ -1,9 +1,10 @@
 //! Test Timeout Management
 //! Handles test execution timeouts and cancellation
 
-use std::time::{Duration, Instant};
-use crossbeam::channel::{unbounded, Receiver, Sender};
-use rayon::prelude::*;
+use crossbeam::channel::::<Receiver, Sender, unbounded>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// Timeout configuration for tests
 #[derive(Debug, Clone)]
 pub struct TimeoutConfig {
@@ -186,8 +187,6 @@ impl Drop for TestTimeoutGuard {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_timeout_creation() {
         let timeout: _ = TestTimeout::default();

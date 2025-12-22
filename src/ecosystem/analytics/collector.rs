@@ -1,10 +1,12 @@
 //! 分析数据收集器
 //! 提供使用统计和性能基准功能
-use std::collections::{HashMap, VecDeque};
-use serde::{Serialize, Deserialize};
-use chrono::{DateTime, Utc, Duration};
-use tokio::sync::RwLock;
-use crate::ecosystem::types::*;
+
+use chrono::<DateTime, Duration, Utc>;
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant>;
+
 /// 使用事件
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UsageEvent {
@@ -417,8 +419,6 @@ impl Default for AnalyticsCollector {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_track_usage() {
         let collector: _ = AnalyticsCollector::new_with_defaults();

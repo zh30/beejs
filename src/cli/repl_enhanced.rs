@@ -7,15 +7,13 @@
 //! - Arrow key history navigation using rustyline
 //! - Enhanced commands: .inspect, .time, .type, .await, .save
 //! - Multi-line editing with smart indentation
-use crate::RuntimeLite;
-use crate::cli::repl_completer::{ReplCompleter, CompletionCandidate};
-use crate::cli::repl_highlighter::{ReplHighlighter, HighlightTheme};
-use rustyline::{Editor, Result};
-use rustyline::error::ReadlineError;
-use std::collections::VecDeque;
-use std::io::Write;
-use std::time::Instant;
-use rusty_v8 as v8;
+
+use crate::cli::repl_completer::<CompletionCandidate, ReplCompleter>;
+use crate::cli::repl_highlighter::<HighlightTheme, ReplHighlighter>;
+use rustyline::<Editor, Result>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// Enhanced REPL configuration
 #[derive(Debug, Clone)]
 pub struct EnhancedReplConfig {
@@ -508,8 +506,6 @@ impl EnhancedReplStats {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_enhanced_repl_creation() {
         let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false).unwrap()));

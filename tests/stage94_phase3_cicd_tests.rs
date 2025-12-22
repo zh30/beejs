@@ -4,18 +4,18 @@
 #[cfg(test)]
 mod cicd_integration_tests {
     // Import CI/CD types directly from the module
-    use beejs::cloud_native::cicd::gitops::{
+    use beejs::cloud_native::cicd::gitops{
         GitOpsManager, ArgoCDApplication, FluxHelmRelease, GitOpsSyncPolicy,
         GitOpsConfig, Error as GitOpsError,
     };
-    use beejs::cloud_native::cicd::pipeline::{
+    use beejs::cloud_native::cicd::pipeline{
         PipelineManager, GitHubActionsWorkflow, GitLabCIPipeline, JenkinsPipeline,
         PipelineStage, PipelineStatus, PipelineEvent, PipelineConfig,
         PipelineCache, PipelineArtifact, PipelineSecret, Error as PipelineError,
     };
-    use beejs::cloud_native::cicd::deployment::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+    use beejs::cloud_native::cicd::deployment{
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
         DeploymentStrategy, BlueGreenDeployment, CanaryDeployment, RollingDeployment,
         DeploymentConfig, DeploymentStatus, Error as DeploymentError,
     };

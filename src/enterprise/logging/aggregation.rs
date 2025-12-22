@@ -1,16 +1,14 @@
 //! Log Aggregation System for Beejs
 //! 实现结构化日志记录和聚合功能
-use anyhow::{Result, Context};
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs::{File, OpenOptions};
-use std::io::Write;
-use std::path::Path;
 
-use tokio::sync::mpsc;
-use tracing::{info, warn, error, debug};
-use uuid::Uuid;
+use anyhow::<Context, Result>;
+use chrono::<DateTime, Utc>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::fs::<File, OpenOptions>;
+use std::sync::<Arc, Mutex>;
+use tracing::<debug, error, info, warn>;
+
 /// Log level
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum LogLevel {
@@ -323,8 +321,6 @@ pub fn init_logger(config: LogAggregatorConfig) -> Result<Arc<LogAggregator>> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_log_entry_creation() {
         let entry: _ = LogEntry::new(

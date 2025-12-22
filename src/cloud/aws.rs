@@ -2,9 +2,9 @@
 //! Stage 39.0: 多云平台适配层
 //!
 //! 该模块提供 AWS 云平台支持，包括 Lambda、ECS、EKS、EC2 等服务
+
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use super::{CloudAdapter, DeploymentResult, FunctionConfig, Metrics};
+use super::<CloudAdapter, DeploymentResult, FunctionConfig, Metrics>;
 /// AWS 适配器
 pub struct AwsAdapter {
     region: String,
@@ -274,7 +274,7 @@ impl CloudAdapter for AwsAdapter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     /// 测试创建 AWS 适配器
     #[tokio::test]
     async fn test_aws_adapter_creation() {

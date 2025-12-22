@@ -3,12 +3,10 @@
 //! the overhead of creating new contexts for each execution.
 //!
 //! Stage 64: Performance optimization - Reduce V8 context creation overhead
-use crate::runtime_lite::RuntimeLite;
-use anyhow::Result;
-use rusty_v8 as v8;
-use std::collections::VecDeque;
 
-use std::time::{Duration, Instant};
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// Statistics for context pool performance monitoring
 #[derive(Debug, Clone)]
 pub struct ContextPoolStats {
@@ -338,8 +336,6 @@ impl Default for V8ContextPool {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_context_pool_creation() {
         let pool: _ = V8ContextPool::default();

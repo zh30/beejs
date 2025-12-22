@@ -1,10 +1,12 @@
 //! Horizontal Pod Autoscaler (HPA) Implementation
 //! Provides automatic scaling for workloads based on metrics
-use kube::Api;
-use std::collections::HashMap;
-use tokio::time::{Duration, Instant};
-use tracing::{info, warn, debug, error};
-use super::super::crd::HPAConfig;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use std::time::<Duration, Instant>;
+use tokio::time::<Duration, Instant>;
+use tracing::<debug, error, info, warn>;
+
 /// HPA Controller for managing automatic scaling
 pub struct HPAController {
     /// Kubernetes client
@@ -301,8 +303,6 @@ pub enum Error {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_scale_action_creation() {
         let action: _ = ScaleAction {

@@ -1,9 +1,8 @@
 //! Timer API implementation for Web standard
 //! Provides setTimeout, setInterval, clearTimeout, clearInterval
-use anyhow::Result;
-use once_cell::sync::Lazy;
-use rusty_v8 as v8;
-use std::collections::HashMap;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, Ordering>;
 
 /// Global timer ID counter
 static TIMER_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -170,8 +169,6 @@ fn queue_microtask_callback(
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_timer_id_generation() {
         let id1: _ = next_timer_id();

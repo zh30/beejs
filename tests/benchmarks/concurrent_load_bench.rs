@@ -4,7 +4,7 @@
 //! 包括多线程执行、锁竞争、线程池效率和上下文切换等关键场景。
 
 use beejs::runtime_lite::Runtime;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 
 /// 多线程执行基准测试
 #[cfg(test)]

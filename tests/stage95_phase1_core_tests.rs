@@ -4,13 +4,13 @@
 
 #[cfg(test)]
 mod tests {
-    use beejs::aiops::core::{
+    use beejs::aiops::core{
         AIOpsEngine, AIOpsConfig, ModelManager, ModelType, DataCollector,
         MetricType, AIOpsError, Result
     };
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_aiops_engine_creation() {

@@ -1,4 +1,6 @@
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;
+
 // 动作捕捉系统
 /// 动作捕捉配置
 #[derive(Debug, Clone)]

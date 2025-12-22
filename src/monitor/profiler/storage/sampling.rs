@@ -1,6 +1,9 @@
 //! 智能采样策略模块
 //! 动态调整采样率以平衡准确性和性能
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::time::<Duration, Instant, SystemTime>;
+
 /// 性能事件类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PerformanceEventType {
@@ -223,8 +226,6 @@ impl SamplingStrategy {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_sampling_strategy_creation() {
         let strategy: _ = SamplingStrategy::with_default_config();

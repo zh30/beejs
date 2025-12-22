@@ -1,7 +1,8 @@
 //! Plugin system core
 //! Supports both Rust and JavaScript plugins with sandboxing
-use anyhow::Result;
-use std::collections::HashMap;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
 
 /// Plugin metadata
 #[derive(Debug, Clone)]
@@ -229,8 +230,6 @@ impl PluginManager {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     struct TestRustPlugin {
         metadata: PluginMetadata,
     }

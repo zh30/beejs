@@ -2,9 +2,13 @@
 //!
 //! 这个模块提供了基于 AI 的自适应负载均衡功能，能够根据实时负载情况
 //! 智能分配请求，确保系统性能和稳定性。
-use serde::{Deserialize, Serialize};
+
+use std::sync::Ordering;
+use std::time::<Instant, SystemTime>;
+
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
-use tokio::time::{Duration, Instant};
+use tokio::time::<Duration, Instant>;
 /// 请求结构
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Request {
@@ -659,7 +663,7 @@ pub struct LoadBalancerStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[tokio::test]
     async fn test_add_backend() {
         let mut lb = LoadBalancer::new_with_defaults();

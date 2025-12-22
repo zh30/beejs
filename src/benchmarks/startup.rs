@@ -6,10 +6,11 @@
 //! - 热启动时间测试
 //! - V8 初始化时间测试
 //! - Runtime 初始化时间测试
-use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
-use std::time::{Duration, Instant};
+
+use std::collections::<HashMap, BTreeMap>;
+
+use crate::benchmarks::<BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig>;
 use rusty_v8::Isolate;
-use std::collections::{HashMap, BTreeMap};
 /// 启动时间基准测试套件
 pub struct StartupBenchmark;
 impl StartupBenchmark {

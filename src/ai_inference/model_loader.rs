@@ -1,10 +1,13 @@
 //! AI 模型加载器
 //! 支持多种 AI 模型格式的加载和转换
+
+use std::collections::HashSet;
+
 use super::ai_inference_engine::AIModel;
-use anyhow::{Result, Context};
+use anyhow::<Result, Context>;
 use std::collections::HashMap;
 use std::path::Path;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// 模型格式类型
 #[derive(Debug, Clone)]
 pub enum ModelFormat {

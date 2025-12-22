@@ -4,13 +4,14 @@ pub mod controller;
 pub mod reconciler;
 pub mod lifecycle;
 // Re-export types for convenience
-pub use controller::{ClusterController, Error as ControllerError};
-pub use reconciler::{ReconcileResult, ClusterDiff, ClusterState, WorkloadDiff, WorkloadState};
-pub use lifecycle::{ClusterLifecycle, WorkloadLifecycle, LifecycleError};
+
+use controller::<ClusterController, Error as ControllerError>;
+use lifecycle::<ClusterLifecycle, LifecycleError, WorkloadLifecycle>;
+use reconciler::<ClusterDiff, ClusterState, ReconcileResult, WorkloadDiff, WorkloadState>;
+use std::collections::<BTreeMap, HashMap>;
+
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_module_structure() {
         // Verify that the module structure is correct

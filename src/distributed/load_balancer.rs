@@ -1,9 +1,11 @@
 //! Stage 29.2: 分布式负载均衡模块
 //! 提供一致性哈希、智能路由、流量熔断等功能
-use tracing::{debug, info, warn};
-use std::collections::{HashMap, BTreeMap};
-use std::hash::{Hash, Hasher};
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap, HashSet>;
+use std::hash::<Hash, Hasher>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering, RwLock>;
+use tracing::<debug, info, warn>;
+
 // ============================================================================
 // 一致性哈希 (Consistent Hashing)
 // ============================================================================
@@ -43,7 +45,6 @@ impl ConsistentHashRing {
     }
     /// 计算哈希值 (xxhash 风格)
     fn hash(&self, key: &str) -> u64 {
-        use std::collections::hash_map::DefaultHasher;
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
         hasher.finish()
@@ -307,7 +308,6 @@ impl IntelligentRouter {
         if nodes.is_empty() {
             return None;
         }
-        use std::time::SystemTime;
         let seed: _ = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
@@ -682,7 +682,6 @@ impl LoadBalancer {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[test]
     fn test_consistent_hash_basic() {
         let config: _ = HashRingConfig::default();

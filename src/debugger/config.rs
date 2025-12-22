@@ -1,4 +1,6 @@
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;
+
 /// Debugger Configuration
 ///
 /// Configuration settings for the debugger engine.

@@ -1,11 +1,9 @@
 //! Fetch API implementation for Web standard
 //! Provides fetch(), Request, Response, Headers API
-use anyhow::Result;
-use reqwest;
-use rusty_v8 as v8;
-use std::collections::HashMap;
 
-use tokio::runtime::Runtime;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// Fetch API configuration
 #[derive(Debug, Clone)]
 pub struct FetchConfig {
@@ -320,8 +318,6 @@ fn headers_constructor_callback(
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_http_method_from_string() {
         let method: HttpMethod = "GET".to_string().into();

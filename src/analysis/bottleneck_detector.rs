@@ -3,9 +3,11 @@
 //! This module provides algorithms to detect performance bottlenecks
 //! in JavaScript/TypeScript execution, identifying slow operations,
 //! memory leaks, and other performance issues.
-use crate::performance_analyzer::{ExecutionMetrics, PerformanceReport};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use crate::performance_analyzer::<ExecutionMetrics, PerformanceReport>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+
 /// Types of performance bottlenecks
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BottleneckType {
@@ -238,8 +240,6 @@ impl Default for BottleneckDetector {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_bottleneck_detector_creation() {
         let detector: _ = BottleneckDetector::new();

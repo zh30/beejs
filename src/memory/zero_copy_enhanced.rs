@@ -2,13 +2,13 @@
 //!
 //! 实现 DMA 直接内存访问、内存映射优化、智能内存预取和垃圾回收优化
 //! 目标：实现 80% 内存使用减少，支持 1000-5000x 性能提升
-use std::ptr::NonNull;
-use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
-use anyhow::{Result, anyhow};
-use libc::{c_void, posix_memalign, mmap, munmap, madvise, MADV_WILLNEED, MADV_SEQUENTIAL, MADV_DONTNEED};
-use memmap2::{Mmap, MmapOptions};
-use crate::memory::GLOBAL_MEMORY_STATS;
+
+use anyhow::<Result, anyhow>;
+use libc::<MADV_DONTNEED, MADV_SEQUENTIAL, MADV_WILLNEED, c_void, madvise, mmap, munmap, posix_memalign>;
+use memmap2::<Mmap, MmapOptions>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering, RwLock>;
+
 /// DMA 直接内存访问配置
 #[derive(Debug, Clone)]
 pub struct DmaConfig {
@@ -258,7 +258,6 @@ impl EnhancedZeroCopy {
             }
             AccessPattern::Random => {
                 // 随机访问：预取随机页面
-                use rand::Rng;
                 let mut rng = rand::thread_rng();
                 for _ in 0..self.prefetch_config.prefetch_depth {
                     let offset: _ = rng.gen_range(0..size.saturating_sub(self.prefetch_config.window_size));
@@ -328,8 +327,6 @@ impl EnhancedZeroCopy {
     }
     /// 创建内存映射
     fn create_memory_mapping(&self, path: &str, size: usize) -> Result<Arc<Mmap>> {
-        use std::fs::OpenOptions;
-        use std::os::unix::io::AsRawFd;
         let file: _ = OpenOptions::new()
             .read(true)
             .write(true)
@@ -392,8 +389,6 @@ impl PrefetchStatsSnapshot {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_enhanced_zero_copy_creation() {
         let zc: _ = EnhancedZeroCopy::default();

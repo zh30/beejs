@@ -299,7 +299,9 @@ impl SimdEngine {
     }
     #[cfg(target_arch = "x86_64")]
     fn vector_add_f32_avx2(&self, a: &[f32], b: &[f32], result: &mut Vec<f32>) {
-        use std::arch::x86_64::*;
+
+use std::sync::Ordering;
+
         let len: _ = a.len().min(b.len());
         result.reserve(len);
         let chunks: _ = len / 8;
@@ -341,7 +343,6 @@ impl SimdEngine {
     }
     #[cfg(target_arch = "x86_64")]
     fn vector_mul_f32_avx2(&self, a: &[f32], b: &[f32], result: &mut Vec<f32>) {
-        use std::arch::x86_64::*;
         let len: _ = a.len().min(b.len());
         result.reserve(len);
         let chunks: _ = len / 8;
@@ -378,7 +379,6 @@ impl SimdEngine {
     }
     #[cfg(target_arch = "x86_64")]
     fn dot_product_f32_avx2(&self, a: &[f32], b: &[f32]) -> f32 {
-        use std::arch::x86_64::*;
         let len: _ = a.len().min(b.len());
         let chunks: _ = len / 8;
         let remainder: _ = len % 8;
@@ -420,7 +420,6 @@ impl SimdEngine {
     }
     #[cfg(target_arch = "x86_64")]
     fn vector_sum_f32_avx2(&self, data: &[f32]) -> f32 {
-        use std::arch::x86_64::*;
         let len: _ = data.len();
         let chunks: _ = len / 8;
         let remainder: _ = len % 8;
@@ -458,7 +457,6 @@ impl SimdEngine {
     }
     #[cfg(target_arch = "x86_64")]
     fn vector_sqrt_f32_avx2(&self, data: &[f32]) -> Vec<f32> {
-        use std::arch::x86_64::*;
         let len: _ = data.len();
         let mut result = Vec::with_capacity(len);
         let chunks: _ = len / 8;
@@ -512,7 +510,6 @@ impl SimdEngine {
     }
     #[cfg(target_arch = "x86_64")]
     fn fma_f32_avx2(&self, a: &[f32], b: &[f32], c: &[f32]) -> Vec<f32> {
-        use std::arch::x86_64::*;
         let len: _ = a.len().min(b.len()).min(c.len());
         let mut result = Vec::with_capacity(len);
         let chunks: _ = len / 8;
@@ -725,7 +722,6 @@ impl SimdEngine {
     }
     #[cfg(target_arch = "x86_64")]
     fn simd_process_chunk_avx512(&self, chunk: &[f32]) -> Vec<f32> {
-        use std::arch::x86_64::*;
         let len: _ = chunk.len();
         let mut result = Vec::with_capacity(len);
         let chunks: _ = len / 16;
@@ -749,7 +745,6 @@ impl SimdEngine {
     }
     #[cfg(target_arch = "x86_64")]
     fn simd_process_chunk_avx2(&self, chunk: &[f32]) -> Vec<f32> {
-        use std::arch::x86_64::*;
         let len: _ = chunk.len();
         let mut result = Vec::with_capacity(len);
         let chunks: _ = len / 8;
@@ -772,7 +767,6 @@ impl SimdEngine {
     }
     #[cfg(target_arch = "x86_64")]
     fn simd_process_chunk_sse4(&self, chunk: &[f32]) -> Vec<f32> {
-        use std::arch::x86_64::*;
         let len: _ = chunk.len();
         let mut result = Vec::with_capacity(len);
         let chunks: _ = len / 4;
@@ -818,7 +812,7 @@ impl Default for SimdEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_feature_detection() {
         let features: _ = detect_cpu_features();

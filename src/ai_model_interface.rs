@@ -1,8 +1,9 @@
 //! AI模型统一接口
 //! 提供标准化的AI模型调用和管理接口
-use std::collections::HashMap;
 
-use std::time::{Duration, Instant};
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// AI模型类型
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
@@ -525,8 +526,6 @@ pub fn create_image_classification_model(model_id: &str) -> AiModel {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_model_manager_creation() {
         let manager: _ = AiModelManager::new();

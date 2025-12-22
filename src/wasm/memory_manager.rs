@@ -2,12 +2,13 @@
 //!
 //! 提供高性能的 WebAssembly 内存管理，包括零拷贝内存共享、内存池预分配、
 //! V8 与 WASM 内存映射等功能
-use anyhow::{Result, Context, anyhow};
 
-use std::collections::HashMap;
-use std::alloc::{GlobalAlloc, Layout, System};
-use wasmtime::{Memory, Store};
-use wasmtime_wasi::WasiCtx;
+use anyhow::<Context, Result, anyhow>;
+use std::alloc::<GlobalAlloc, Layout, System>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+use wasmtime::<Memory, Store>;
+
 /// 内存块结构体
 #[derive(Debug, Clone)]
 pub struct MemoryBlock {
@@ -318,8 +319,6 @@ impl Drop for WasmMemoryManager {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_manager_creation() {
         let manager: _ = WasmMemoryManager::new(1024 * 1024);

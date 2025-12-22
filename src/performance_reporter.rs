@@ -1,9 +1,9 @@
 //! 性能对比报告生成器
 //! 负责收集Beejs性能数据，与Bun进行对比，生成详细的性能报告
+
 use crate::Runtime;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// 性能指标枚举
 #[derive(Debug, Clone)]
 pub enum PerformanceMetric {

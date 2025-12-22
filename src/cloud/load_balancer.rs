@@ -7,7 +7,10 @@
 //! - 智能扩缩容决策
 //! - 多区域流量分配
 //! - 成本优化策略
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::time::<Duration, Instant, SystemTime>;
+
 /// 服务端点
 #[derive(Debug, Clone)]
 pub struct ServiceEndpoint {
@@ -443,8 +446,6 @@ impl MLLoadBalancer {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     /// 测试创建智能负载均衡器
     #[test]
     fn test_ml_load_balancer_creation() {

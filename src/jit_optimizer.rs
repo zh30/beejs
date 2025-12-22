@@ -1,6 +1,12 @@
-use std::collections::HashMap;
 
-use std::time::{Duration, Instant};
+
+use chrono::<DateTime, Utc>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::hash::<Hash, Hasher>;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant, SystemTime>;
+
 /// JIT编译阈值配置
 #[derive(Debug, Clone)]
 pub struct JITThresholds {
@@ -302,8 +308,6 @@ impl JITOptimizer {
     /// 记录代码执行（Stage 25.2 新增）
     pub fn record_execution(&self, code: &str, execution_time: Duration) {
         // 使用代码的简单哈希作为键
-        use std::hash::{Hash, Hasher};
-        use std::collections::hash_map::DefaultHasher;
         let mut hasher = DefaultHasher::new();
         code.hash(&mut hasher);
         let code_hash: _ = format!("{:x}", hasher.finish());
@@ -313,7 +317,6 @@ impl JITOptimizer {
     pub fn should_compile(&self, code: &str, complexity: CodeComplexity) -> JITDecision {
         // 使用代码的简单哈希作为键
 
-        use std::collections::hash_map::DefaultHasher;
         let mut hasher = DefaultHasher::new();
         code.hash(&mut hasher);
         let code_hash: _ = format!("{:x}", hasher.finish());
@@ -393,7 +396,6 @@ pub struct CompileStats {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[test]
     fn test_jit_optimizer_creation() {
         let optimizer: _ = JITOptimizer::new_default();
@@ -481,10 +483,6 @@ mod tests {
 // ============================================================================
 // Stage 90 Phase 5.1: AI 驱动 JIT 优化器扩展
 // ============================================================================
-use std::collections::BTreeMap;
-use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
-use chrono::{DateTime, Utc};
 /// AI 驱动的 JIT 优化器扩展
 pub struct AIDrivenJITExtension {
     /// 代码执行模式分析器
@@ -920,9 +918,6 @@ pub struct OptimizationSummary {
 }
 #[cfg(test)]
 mod ai_jit_tests {
-    use super::*;
-    use chrono::Utc;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_ai_driven_jit_extension() {
         let ai_jit: _ = AIDrivenJITExtension::new();

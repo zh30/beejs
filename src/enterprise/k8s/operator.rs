@@ -1,7 +1,12 @@
 //! Enterprise Kubernetes Operator
 //! Implements a production-ready Kubernetes operator for Beejs
+
+use std::collections::HashMap;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::Duration;
+
 use tokio::sync::RwLock;
-use tracing::{info, warn, error, debug};
+use tracing::<info, warn, error, debug>;
 /// BeejsCluster custom resource definition
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -244,7 +249,7 @@ impl Operator {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[tokio::test]
     async fn test_operator_creation() {
         let config: _ = OperatorConfig {

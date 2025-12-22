@@ -1,8 +1,12 @@
 //! 智能任务分配引擎
 //! 提供团队协作优化功能，包括任务分配、工作负载平衡、代码所有权分析等
+
+use std::collections::HashSet;
+use std::sync::<Arc, Mutex, RwLock>;
+
 use std::collections::HashMap;
 use tokio::sync::RwLock;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// 任务结构
 #[derive(Debug, Clone)]
 pub struct Task {

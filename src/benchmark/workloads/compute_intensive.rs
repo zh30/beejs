@@ -4,10 +4,12 @@
 //! - 数值计算 (Fibonacci, 素数计算)
 //! - 数组操作 (排序, 搜索)
 //! - 算法实现 (动态规划, 递归)
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use super::{WorkloadResult, ResourceUsage, BenchmarkError, BenchmarkResult as Result};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::time::<Duration, Instant>;
+use super::<BenchmarkError, BenchmarkResult as Result, ResourceUsage, WorkloadResult>;
+
 /// 计算密集型工作负载
 #[derive(Debug)]
 pub struct ComputeWorkload {
@@ -140,7 +142,6 @@ impl ComputeWorkload {
     }
     /// 数组排序
     fn sort_array(size: usize) -> Vec<i32> {
-        use rand::Rng;
         let mut rng = rand::thread_rng();
         let mut arr: Vec<i32> = (0..size)
             .map(|_| rng.gen_range(0..1000000))
@@ -206,7 +207,6 @@ impl ComputeWorkload {
     }
     /// 计算圆周率 (蒙特卡洛方法)
     fn calculate_pi(samples: usize) -> f64 {
-        use rand::Rng;
         let mut rng = rand::thread_rng();
         let mut inside_circle = 0;
         for _ in 0..samples {
@@ -220,7 +220,6 @@ impl ComputeWorkload {
     }
     /// 哈希表基准测试
     fn hash_table_benchmark(size: usize) -> usize {
-        use std::collections::HashMap;
         let mut map = HashMap::with_capacity(size);
         let mut count = 0;
         for i in 0..size {
@@ -285,8 +284,6 @@ fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_fibonacci_calculation() {
         let result: _ = ComputeWorkload::fibonacci(10);

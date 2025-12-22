@@ -2,11 +2,13 @@
 //!
 //! 提供高性能的 JavaScript 与 WebAssembly 之间的互操作功能，
 //! 包括零拷贝参数传递、批量调用优化、智能缓存等功能
-use anyhow::{Result, Context, anyhow};
-use wasmtime::{Instance, Store, Func, Val};
 
-use std::collections::HashMap;
-use std::time::{Instant, Duration};
+use anyhow::<Context, Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+use std::time::<Duration, Instant>;
+use wasmtime::<Func, Instance, Store, Val>;
+
 /// JavaScript 值枚举
 #[derive(Debug, Clone)]
 pub enum JsValue {
@@ -556,8 +558,6 @@ impl std::fmt::Display for CallStatsSnapshot {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_interop_creation() {
         let interop: _ = JsWasmInterop::new();

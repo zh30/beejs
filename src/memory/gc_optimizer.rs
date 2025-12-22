@@ -3,8 +3,9 @@
 //! Stage 90 Phase 2.2: 实现增量垃圾回收和自适应 GC 调优
 //! 目标：低延迟 GC 模式，高吞吐量模式，避免停顿
 
-use std::time::{Duration, Instant};
-use crate::memory::GLOBAL_MEMORY_STATS;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering>;
+
 /// GC 配置
 #[derive(Debug, Clone)]
 pub struct GCConfig {
@@ -347,8 +348,6 @@ impl Drop for IncrementalGC {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_incremental_gc_creation() {
         let config: _ = GCConfig::default();

@@ -1,7 +1,9 @@
 //! Stage 21.2: Lazy Loading Module
 //! Provides lazy initialization for expensive components to reduce startup time
 //! Only initializes modules when they're actually used
-use once_cell::sync::Lazy;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
 
 /// Lazy loading statistics
 #[derive(Debug, Clone, Default)]
@@ -119,8 +121,6 @@ pub fn reset_stats() {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_lazy_loader_creation() {
         let loader: _ = LazyLoader::new();

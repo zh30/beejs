@@ -1,6 +1,10 @@
 //! 延迟初始化 Web系统
 //! 实现 API 的延迟加载、按需初始化等启动优化功能
 
+use std::collections::<HashMap, HashSet>;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant>;
+
 // use crate::web_api::WebApiRegistry;
 /// Web API 延迟加载器
 pub struct LazyWebAPI {

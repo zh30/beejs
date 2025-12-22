@@ -14,10 +14,10 @@ pub use pnpm::*;
 pub use lockfile::*;
 pub use registry::*;
 pub use auth::*;
-use serde::{Deserialize, Serialize};
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// 包管理器类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PackageManagerType {

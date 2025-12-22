@@ -1,6 +1,9 @@
 //! GPU 加速模块
 //! 提供高性能的 GPU 计算能力
-use anyhow::{Result};
+
+use anyhow::Result;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// GPU 设备信息
 #[derive(Debug, Clone)]
 pub struct GPUDevice {

@@ -1,7 +1,9 @@
 //! LLM 推理优化引擎
 //! 提供高性能的大语言模型推理能力，包括 KV Cache 优化、并行推理和内存管理
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// LLM 配置
 #[derive(Debug, Clone)]
 pub struct LlmConfig {
@@ -277,9 +279,6 @@ fn string_to_tokens(s: &str) -> Vec<u32> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::Runtime;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_llm_engine_creation() {
         // 为测试提供默认参数

@@ -8,7 +8,7 @@ use beejs::benchmarks::BenchmarkFramework;
 use std::path::PathBuf;
 use std::process::Command;
 use std::fs;
-use tokio::time::{Duration, Instant};
+use tokio::time{Duration, Instant};
 
 #[tokio::test]
 async fn test_nodejs_performance_comparison() {

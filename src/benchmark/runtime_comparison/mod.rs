@@ -1,11 +1,12 @@
 //! 运行时对比模块
 //!
 //! 提供与 Bun、Node.js 等运行时的性能对比功能
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::process::Command;
-use super::{Runtime, BenchmarkResult, BenchmarkError, BenchmarkResult as Result};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::time::<Duration, Instant>;
+use super::<BenchmarkError, BenchmarkResult, BenchmarkResult as Result, Runtime>;
+
 /// 运行时检测器
 #[derive(Debug)]
 pub struct RuntimeDetector {
@@ -431,8 +432,6 @@ fn get_command_version(command: &str) -> Option<String> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_runtime_detection() {
         let detector: _ = RuntimeDetector::new();

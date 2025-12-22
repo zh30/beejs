@@ -1,9 +1,11 @@
 //! Enterprise Security Manager
 //! Provides security policy enforcement, RBAC, and audit logging
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use anyhow::{Result, anyhow};
-use tokio::sync::RwLock;
+
+use anyhow::<Result, anyhow>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// User role definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UserRole {
@@ -295,8 +297,6 @@ impl Default for SecurityManager {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_security_manager_creation() {
         let manager: _ = SecurityManager::new();

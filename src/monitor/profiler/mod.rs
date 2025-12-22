@@ -1,22 +1,24 @@
 //! 性能分析器增强模块
 //! Stage 76: 企业级性能分析系统
 //! 提供函数跟踪、热点分析、性能报告等高级功能
-use std::time::Duration;
+
+use analyzer::<CallStackAnalyzer, Hotspot, HotspotAnalyzer, StackFrame>;
+use analyzer::hotspot::<MemoryStats, TimeStats>;
+use collector::<FunctionStats, FunctionTraceHandle, FunctionTracker, TrackerStats>;
+use report::<Difficulty, OptimizationRecommendation, PerformanceSummary, Priority, RecommendationType>;
+use std::collections::<BTreeMap, HashMap>;
+use std::time::<Instant, SystemTime>;
+// use storage::<PerformanceEvent, PerformanceEventType, RingBuffer, SamplingConfig, SamplingStrategy>;
+
 pub mod collector;
 pub mod analyzer;
 pub mod storage;
 pub mod report;
 // pub mod cli_integration; // TODO: 实现 CLI 集成
-pub use collector::{FunctionTracker, FunctionTraceHandle, FunctionStats, TrackerStats};
-pub use analyzer::{CallStackAnalyzer, HotspotAnalyzer, StackFrame, Hotspot};
-pub use storage::{RingBuffer, SamplingStrategy, SamplingConfig, PerformanceEvent, PerformanceEventType};
-pub use report::{PerformanceSummary, OptimizationRecommendation};
 // 重新导出分析器类型
-pub use analyzer::stack_analyzer::{
+pub use analyzer::analyzer::<
     CallStackAnalysis, Bottleneck, BottleneckType, RecursionInfo, DepthStats,
-};
-pub use analyzer::hotspot::{TimeStats, MemoryStats};
-pub use report::{RecommendationType, Priority, Difficulty};
+>;
 /// 高级性能分析器配置
 #[derive(Debug, Clone)]
 pub struct AdvancedProfilerConfig {
@@ -273,7 +275,6 @@ impl AdvancedProfiler {
         if self.config.report_config.generate_html {
             let html: _ = summary.to_html();
             if let Some(ref output_dir) = self.config.report_config.output_dir {
-                use std::fs;
                 let filename: _ = format!("{}/performance_report_{}.html", output_dir, chrono::Utc::now().timestamp());
                 fs::write(&filename, &html).map_err(|e| format!("Failed to write HTML report: {}", e))?;
                 output.push_str(&format!("\nHTML 报告已保存到: {}\n", filename));
@@ -341,8 +342,6 @@ impl RealtimeSnapshot {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_advanced_profiler_creation() {
         let profiler: _ = AdvancedProfiler::with_default_config();

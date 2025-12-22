@@ -1,6 +1,9 @@
 //! Stage 93 智能预取系统
 //! 基于 AI 的网络数据预取优化，预测性加载减少延迟
 
+use std::collections::<HashMap, VecDeque>;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant>;
 
 /// 访问模式类型
 #[derive(Debug, Clone, PartialEq)]

@@ -1,4 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 81 自动性能优化测试套件
 //! 测试 AI 驱动的性能分析、热点检测和自动优化功能
 
@@ -7,8 +7,8 @@ mod tests {
     use std::path::Path;
     use std::sync::Arc;
     use tokio::runtime::Runtime;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     // 模拟自动性能优化器的结构
     pub struct MockAutoOptimizer {

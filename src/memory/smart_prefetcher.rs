@@ -2,12 +2,13 @@
 //!
 //! 实现基于 AI 的预测性内存预取，根据访问模式自动预测并预取数据
 //! 支持顺序访问、随机访问、循环访问等多种模式
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use std::ptr::NonNull;
-use tokio::sync::{RwLock, Mutex};
-use anyhow::{Result, anyhow};
-use crate::memory::zero_copy_enhanced::{AccessPattern, EnhancedZeroCopy};
+
+use anyhow::<Result, anyhow>;
+use crate::memory::zero_copy_enhanced::<AccessPattern, EnhancedZeroCopy>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock>;
+use tokio::sync::<Mutex, RwLock>;
+
 /// 访问历史条目
 #[derive(Debug, Clone)]
 pub struct AccessHistoryEntry {
@@ -175,7 +176,6 @@ impl PatternRecognizer {
             .sum::<f64>() / addresses.len() as f64;
         let std_dev: _ = variance.sqrt();
         // 生成基于正态分布的预测地址
-        use rand::Rng;
         let mut rng = rand::thread_rng();
         let prediction: _ = mean + rng.gen_range(-std_dev..std_dev);
         Some(prediction as usize)
@@ -381,8 +381,6 @@ impl SmartPrefetchStatsSnapshot {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_pattern_recognizer() {
         let mut recognizer = PatternRecognizer::new();

@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
-    use std::time::{Duration, Instant};
+    use std::time{Duration, Instant};
     use tokio::sync::Mutex;
 
     /// 测试 Python 与 JavaScript 的互操作性

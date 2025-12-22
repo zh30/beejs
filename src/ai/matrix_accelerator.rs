@@ -237,7 +237,9 @@ impl MatrixAccelerator {
     fn simd512_vector_dot(&self, a: &[f32], b: &[f32]) -> f32 {
         #[cfg(target_arch = "x86_64")]
         if is_x86_feature_detected!("avx512f") {
-            use std::arch::x86_64::*;
+
+use std::sync::Ordering;
+
             let mut sum = _mm512_setzero_ps();
             let len: _ = a.len() / 16;
             for i in 0..len {
@@ -255,7 +257,6 @@ impl MatrixAccelerator {
     fn simd256_vector_dot(&self, a: &[f32], b: &[f32]) -> f32 {
         #[cfg(target_arch = "x86_64")]
         if is_x86_feature_detected!("avx2") {
-            use std::arch::x86_64::*;
             let mut sum = _mm256_setzero_ps();
             let len: _ = a.len() / 8;
             for i in 0..len {
@@ -276,8 +277,7 @@ impl MatrixAccelerator {
     fn simd128_vector_dot(&self, a: &[f32], b: &[f32]) -> f32 {
         #[cfg(target_arch = "x86_64")]
         if is_x86_feature_detected!("sse4.2") {
-            use std::arch::x86_64::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
             let mut sum = _mm_setzero_ps();
             let len: _ = a.len() / 4;
             for i in 0..len {

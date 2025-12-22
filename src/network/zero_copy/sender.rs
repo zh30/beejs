@@ -4,10 +4,10 @@
 //!
 //! 该模块提供了高性能的零拷贝数据传输功能，通过 sendfile 和 splice 系统调用
 //! 实现文件到网络套接字的零拷贝传输，最小化数据在内核空间和用户空间之间的拷贝。
-use std::fs::File;
-use std::time::{Duration, Instant};
-use crate::network::sendfile::SendFile;
-use crate::network::splice::Splice;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// 零拷贝发送方向
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ZeroCopyDirection {
@@ -314,10 +314,6 @@ impl Default for ZeroCopySender {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::io::Cursor;
-use std::collections::{HashMap, BTreeMap};
-use std::sync::{Arc, Mutex, RwLock};
     /// 测试创建零拷贝发送器
     #[test]
     fn test_zero_copy_sender_creation() {

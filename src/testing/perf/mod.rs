@@ -9,9 +9,10 @@
 pub mod benchmark;
 pub mod regression_detector;
 pub mod perf_analyzer;
-pub use benchmark::*;
-pub use regression_detector::*;
-pub use perf_analyzer::*;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::time::<Duration, Instant>;
+
 /// Performance test result
 #[derive(Debug, Clone)]
 pub struct PerfTestResult {
@@ -363,8 +364,6 @@ impl PerfTestRunner {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_perf_statistics_from_runs() {
         let runs: _ = vec![

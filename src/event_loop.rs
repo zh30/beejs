@@ -1,10 +1,10 @@
 //! V8 事件循环实现
 //! 为 Beejs 提供异步 JavaScript 执行支持
-use rusty_v8 as v8;
 
-// use std::task::{Context, Poll}; // 未使用的导入
-use std::time::{Duration, Instant};
-use tokio::time::sleep;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
+// use std::task::<Context, Poll>; // 未使用的导入
 /// 事件循环状态
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(dead_code)]
@@ -249,8 +249,6 @@ impl V8EventLoop {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     /// 测试事件循环创建
     #[test]
     fn test_event_loop_creation() {

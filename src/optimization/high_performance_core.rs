@@ -9,10 +9,10 @@
 //! - Memory pooling and pre-allocation
 //! - Zero-copy data structures
 //! - Adaptive JIT compilation strategies
-use std::collections::VecDeque;
-use once_cell::sync::Lazy;
-use rayon::prelude::*;
-use crossbeam::utils::CachePadded;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+
 /// High-performance memory pool for reducing allocation overhead
 pub struct HighPerformanceMemoryPool {
     /// Pre-allocated object pools for different sizes
@@ -355,8 +355,6 @@ pub fn initialize_high_performance_runtime(config: HighPerformanceConfig) {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_pool_allocation() {
         let pool: _ = HighPerformanceMemoryPool::new();

@@ -1,0 +1,15 @@
+//! 沉浸式交互系统模块
+//!
+//! 提供手部追踪、眼动追踪、触觉反馈、语音识别和动作捕捉功能。
+pub mod hand_tracking;
+pub mod eye_tracking;
+pub mod haptic_feedback;
+pub mod voice_recognition;
+pub mod motion_capture;
+
+use eye_tracking::::{EyeTracking, EyeTrackingConfig, FoveatedRegion, GazePoint};
+use hand_tracking::::{Gesture, HandPose, HandTracking, HandTrackingConfig, MockHandData};
+use haptic_feedback::::{HapticConfig, HapticFeedback, HapticIntensity, HapticPattern};
+use motion_capture::::{BodyPose, JointPosition, MotionCapture, MotionConfig};
+use std::collections::::{BTreeMap, HashMap};
+use voice_recognition::::{SpeechResult, VoiceCommand, VoiceConfig, VoiceRecognition};

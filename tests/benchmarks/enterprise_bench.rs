@@ -5,7 +5,7 @@
 
 use beejs::runtime_lite::Runtime;
 use beejs::performance_analyzer::PerformanceAnalyzer;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 use tokio::time::sleep;
 
 /// 多租户隔离基准测试

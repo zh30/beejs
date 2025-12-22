@@ -1,6 +1,6 @@
-use std::time::{Duration, Instant}, SystemTime, UNIX_EPOCH;
+use std::time{Duration, Instant}, SystemTime, UNIX_EPOCH;
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time{SystemTime, UNIX_EPOCH};
 /// Memory statistics tracking
 #[derive(Debug, Clone)]
 pub struct MemoryStats {
@@ -246,8 +246,8 @@ impl PerformanceComparison {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     #[test]
     fn test_benchmark_runner_creation() {

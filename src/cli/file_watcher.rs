@@ -1,11 +1,10 @@
 //! File Watcher Module
 //! Stage 36.0 - 实现文件监控功能
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 
-use std::time::{Duration, SystemTime};
-use tokio::sync::mpsc;
-use tokio::time::interval;
+use std::collections::<BTreeMap, HashMap>;
+use std::path::<Path, PathBuf>;
+use std::sync::<Arc, Mutex>;
+
 /// File change event
 #[derive(Debug, Clone)]
 pub enum FileEvent {
@@ -230,10 +229,6 @@ pub async fn create_file_watcher(
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use tempfile::tempdir;
-    use tokio::time::sleep;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_file_watcher_basic() {
         let temp_dir: _ = tempdir().expect("Failed to create temp dir");

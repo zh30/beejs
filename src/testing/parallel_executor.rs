@@ -1,9 +1,10 @@
 //! Parallel Test Executor
 //! Executes tests concurrently using thread pools
-use crate::testing::test_context::{TestSuite, TestCase, TestResult};
 
-use std::time::{Duration, Instant};
-use rayon::prelude::*;
+use crate::testing::test_context::::<TestCase, TestResult, TestSuite>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// Parallel execution configuration
 #[derive(Debug, Clone)]
 pub struct ParallelConfig {
@@ -134,8 +135,6 @@ impl Default for ThreadPoolConfig {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_parallel_executor_creation() {
         let config: _ = ParallelConfig::default();

@@ -2,7 +2,7 @@
 //!
 //! 测试 DMA、内存映射、智能预取和 GC 优化功能
 
-use beejs::memory::{
+use beejs::memory{
     EnhancedZeroCopy,
     SmartPrefetcher,
     EnhancedGcOptimizer,
@@ -16,7 +16,7 @@ use beejs::memory::{
     Phase2MemoryConfig,
 };
 use std::ptr::NonNull;
-use tokio::time::{Duration, Instant};
+use tokio::time{Duration, Instant};
 
 /// 测试增强零拷贝系统
 #[tokio::test]
@@ -190,8 +190,8 @@ async fn test_memory_mapping() {
 
     // 创建测试文件
     use std::io::Write;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
     let mut file = std::fs::File::create(test_file).unwrap();
     file.write_all(&vec![0u8; size]).unwrap();
 

@@ -1,13 +1,13 @@
 //! Stage 29.3: 分布式任务调度测试套件
 //! 测试任务分发、优先级队列、结果聚合等功能
 
-use beejs::distributed::task_scheduler::{
+use beejs::distributed::task_scheduler{
     TaskScheduler, TaskDistributor, ResultAggregator,
     SchedulerConfig, DistributorConfig, AggregatorConfig,
     TaskType, TaskStatus, Task, TaskResult, SchedulerNodeInfo,
 };
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 
 // ============================================================================
 // 调度统计信息
@@ -470,8 +470,8 @@ mod result_aggregator_tests {
 
 mod integration_tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 测试端到端任务调度流程
     #[test]

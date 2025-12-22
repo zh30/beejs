@@ -7,11 +7,14 @@
 //! - 自适应扩缩容策略
 //! - 负载预测
 //! - 成本优化
-use std::collections::HashMap;
-use tokio::sync::{RwLock, mpsc};
-use tokio::time::{interval, Duration};
-use crate::cloud::{CloudAdapter, CloudConfig, CloudManager};
-use std::collections::{BTreeMap};
+
+use crate::cloud::<CloudAdapter, CloudConfig, CloudManager>;
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, SystemTime>;
+use tokio::sync::<RwLock, mpsc>;
+use tokio::time::<Duration, interval>;
+
 /// 扩缩容策略
 #[derive(Debug, Clone)]
 pub enum ScalingStrategy {

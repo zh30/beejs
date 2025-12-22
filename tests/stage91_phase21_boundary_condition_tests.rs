@@ -2,9 +2,9 @@
 //! 验证 Beejs 运行时在极端边界条件下的稳定性和正确性
 
 use beejs::RuntimeLite;
-use std::time::{Duration, Instant};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::time{Duration, Instant};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 /// 测试超大数值操作
 #[tokio::test]

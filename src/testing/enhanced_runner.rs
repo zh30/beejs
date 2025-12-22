@@ -1,12 +1,13 @@
 //! Enhanced Test Runner
 //! Provides advanced test execution features including parallel execution,
 //! timeout control, test filtering, and retry mechanisms
-use crate::testing::test_context::{TestSuite, TestCase, TestResult};
-use crate::testing::parallel_executor::{ParallelExecutor, ParallelConfig};
-use crate::testing::test_timeout::{TestTimeout, TimeoutConfig};
-use std::time::{Duration, Instant};
 
-use std::collections::HashMap;
+use crate::testing::parallel_executor::::<ParallelConfig, ParallelExecutor>;
+use crate::testing::test_context::::<TestCase, TestResult, TestSuite>;
+use crate::testing::test_timeout::::<TestTimeout, TimeoutConfig>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// Enhanced test runner configuration
 #[derive(Debug, Clone)]
 pub struct EnhancedRunnerConfig {
@@ -106,8 +107,6 @@ impl TestSorter {
             }
             TestSorter::Random => {
                 // Fisher-Yates shuffle
-                use rand::seq::SliceRandom;
-                use rand::thread_rng;
                 tests.shuffle(&mut thread_rng());
             }
         }
@@ -359,8 +358,6 @@ impl EnhancedRunner {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_enhanced_runner_creation() {
         let config: _ = EnhancedRunnerConfig::default();

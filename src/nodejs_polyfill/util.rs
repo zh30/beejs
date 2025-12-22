@@ -1,6 +1,6 @@
 //! util polyfill
 use rusty_v8 as v8;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
 pub fn register(scope: &mut v8::HandleScope, global: &v8::Local<v8::Object>) {
     let util_key: _ = v8::String::new(scope, "util").unwrap();
     let util_obj: _ = v8::Object::new(scope);

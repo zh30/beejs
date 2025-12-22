@@ -1,9 +1,11 @@
 //! AI 自动性能优化器
 //! 提供实时性能分析、热点检测和自动优化功能
-use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, Ordering, RwLock>;
+use std::time::<Duration, Instant, SystemTime, UNIX_EPOCH>;
+
 /// 性能分析数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProfileData {
@@ -455,8 +457,6 @@ impl OptimizationValidator {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_auto_optimizer_creation() {
         let optimizer: _ = AutoOptimizer::new();

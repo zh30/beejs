@@ -6,9 +6,10 @@ pub mod edge_computing;
 pub mod state_sync;
 pub mod asset_interop;
 pub mod decentralized_auth;
-pub use metaverse_network::{MetaverseNetwork, NetworkConfig, NetworkNode, NodeRole};
-pub use edge_computing::{EdgeComputing, EdgeConfig, EdgeTask, EdgeResult, ComputeType};
-pub use state_sync::{StateSync, SyncConfig, SyncMode, StateChange, ConflictResolution};
-pub use asset_interop::{AssetInterop, AssetFormat, Asset, AssetTransform};
-pub use decentralized_auth::{DecentralizedAuth, AuthConfig, Identity, Credential};
-use std::collections::{HashMap, BTreeMap};
+
+use asset_interop::<Asset, AssetFormat, AssetInterop, AssetTransform>;
+use decentralized_auth::<AuthConfig, Credential, DecentralizedAuth, Identity>;
+use edge_computing::<ComputeType, EdgeComputing, EdgeConfig, EdgeResult, EdgeTask>;
+use metaverse_network::<MetaverseNetwork, NetworkConfig, NetworkNode, NodeRole>;
+use state_sync::<ConflictResolution, StateChange, StateSync, SyncConfig, SyncMode>;
+use std::collections::<BTreeMap, HashMap>;

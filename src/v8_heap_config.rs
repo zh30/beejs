@@ -245,7 +245,7 @@ impl Default for V8ConfigManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_heap_presets() {
         let minimal: _ = V8HeapPreset::Minimal.config();

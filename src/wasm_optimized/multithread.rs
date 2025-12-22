@@ -2,11 +2,13 @@
 //!
 //! 实现 WebAssembly Threads 支持，支持 SharedArrayBuffer 和 Atomics
 //! 实现线性性能扩展 (8 线程 7x+ 性能提升)
-use tracing::{debug, info};
-use wasmtime::Engine;
-use anyhow::{Result, Context};
-use rayon::prelude::*;
-use std::collections::{HashMap, BTreeMap};
+
+use anyhow::<Context, Result>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use std::time::<Duration, Instant>;
+use tracing::<debug, info>;
+
 /// 多线程执行结果
 #[derive(Debug, Clone)]
 pub struct MultithreadExecutionResult {

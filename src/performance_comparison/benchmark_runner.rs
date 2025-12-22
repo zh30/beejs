@@ -5,14 +5,12 @@
 //! - Beejs、Node.js、Bun 等多个运行时
 //! - 并行测试执行
 //! - 测试结果收集
-use crate::performance_comparison::{BenchmarkTestCase, PerformanceComparisonResult};
-use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
-use anyhow::{Result, Context};
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::process::Command;
-use std::time::{Duration, Instant};
-use std::collections::{BTreeMap};
+
+use anyhow::<Context, Result>;
+use crate::benchmarks::<BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType>;
+use crate::performance_comparison::<BenchmarkTestCase, PerformanceComparisonResult>;
+use std::collections::BTreeMap;
+
 /// 运行时配置
 #[derive(Debug, Clone)]
 pub struct RuntimeConfig {

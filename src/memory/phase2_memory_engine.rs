@@ -1,10 +1,11 @@
 //! Stage 92 Phase 2: 极致内存优化集成引擎
 //!
 //! 整合 DMA、内存映射、智能预取和 GC 优化，实现极致内存性能
-use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
-use anyhow::{Result, anyhow};
-use crate::memory::{
+
+use anyhow::<Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+
     EnhancedZeroCopy,
     SmartPrefetcher,
     EnhancedGcOptimizer,
@@ -314,8 +315,6 @@ impl Phase2EfficiencyMetrics {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_phase2_memory_engine_creation() {
         let engine: _ = Phase2MemoryEngine::default();

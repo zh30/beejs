@@ -5,7 +5,7 @@
 //! - ConnectionPool: 网络连接池
 //! - NetworkIoStatistics: 网络 I/O 统计
 
-use beejs::{
+use beejs{
     NetworkBufferPool, NetworkIoStatistics,
 };
 
@@ -14,11 +14,11 @@ use beejs::network::statistics::StatisticsConfig;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Read, Write};
-    use std::net::{TcpListener, TcpStream};
+    use std::io{Read, Write};
+    use std::net{TcpListener, TcpStream};
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     // ==================== 缓冲区池测试 ====================
 

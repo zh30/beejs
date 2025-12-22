@@ -6,12 +6,15 @@
 //! Stage 69 Phase 2: V8 Engine Deep Optimization
 //! Stage 89 Phase 1: V8 API 兼容性修复
 //! Stage 96 Phase 1: V8 API 兼容性完善
-use std::collections::{HashMap, BTreeMap};
+
+use flags::<V8ConfigManager, V8EngineFlags>;
+use std::collections::<BTreeMap, HashMap>;
+
 pub mod flags;
 pub mod compatibility;
 pub mod api_adapter;
-pub use flags::{V8EngineFlags, V8ConfigManager};
-pub use compatibility::{
+
+pub use compatibility::<
     V8CompatibilityChecker,
     V8APIStatus,
     DeprecatedAPI,
@@ -24,8 +27,8 @@ pub use compatibility::{
     MigrationStep,
     AutoFixResult,
     VerificationReport,
-};
-pub use api_adapter::{
+>;
+pub use api_adapter::<
     V8APIAdapter,
     AdapterConfig,
     AdapterItem,
@@ -36,4 +39,4 @@ pub use api_adapter::{
     ImpactLevel,
     AdaptationStats,
     AdaptationReport,
-};
+>;

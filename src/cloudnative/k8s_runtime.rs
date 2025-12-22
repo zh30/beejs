@@ -1,9 +1,12 @@
 //! Kubernetes Runtime Integration
 //! Provides native Kubernetes support for Beejs runtime
-use tokio::sync::RwLock;
-use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use anyhow::<Result, anyhow>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant>;
+
 /// Kubernetes client wrapper
 #[derive(Debug)]
 pub struct K8sClient {
@@ -314,8 +317,6 @@ impl K8sClientInterface for MockK8sClient {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_k8s_client_creation() {
         let config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());

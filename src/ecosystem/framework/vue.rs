@@ -3,9 +3,9 @@
 //!
 //! 提供 Vue 3 应用完整支持，包括模板编译、响应式系统、SFC 解析等
 use super::*;
-use serde::{Deserialize, Serialize};
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// Vue 运行时
 #[derive(Debug)]
 pub struct VueRuntime {

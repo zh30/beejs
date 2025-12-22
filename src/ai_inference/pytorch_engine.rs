@@ -1,14 +1,17 @@
 //! PyTorch TorchScript 推理引擎实现
 //! 为 Beejs 提供原生 PyTorch 支持，支持 TorchScript 模型推理
-use crate::ai_inference::engine_interface::{
+
+use std::collections::HashMap;
+use std::sync::<Arc, Mutex, RwLock>;
+
+use crate::ai_inference::engine_interface::<
     InferenceEngine, EngineFactory, ModelFormat, EngineType, InferenceOptions,
     ModelHandle, InferenceResult, EngineStats, ModelInfo, TensorInfo
-};
+>;
 use crate::ai_inference::tensor_ops::Tensor;
-use anyhow::{Result};
+use anyhow::<Result>;
 
 use tokio::sync::RwLock;
-use std::time::{Duration, Instant};
 use async_trait::async_trait;
 /// PyTorch TorchScript 推理引擎
 #[derive(Debug)]
@@ -397,7 +400,7 @@ impl TorchEngineFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[tokio::test]
     async fn test_torch_engine_creation() {
         let engine: _ = TorchEngine::new(

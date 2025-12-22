@@ -6,20 +6,19 @@ pub mod compliance_manager;
 pub mod k8s;
 pub mod tenancy;
 pub mod monitoring;
-pub use security_manager::*;
-pub use compliance_manager::*;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 // Re-export Stage 96 Phase 2 types
-pub use k8s::operator::{
     BeejsCluster, BeejsClusterSpec, BeejsClusterStatus, ClusterPhase,
     Condition, ResourceRequirements, NetworkingConfig, ServiceType,
     IngressConfig, Operator, OperatorConfig, OperatorEvent,
 };
-pub use tenancy::manager::{
     TenantId, Tenant, TenantStatus, ResourceQuota, SecurityContext,
     NetworkPolicy, RbacRole, Permission, ResourceLimits, ExecutionContext,
     TenancyManager, ResourceUsage, TenantUpdates,
 };
-pub use monitoring::metrics::{
     Metric, ClusterMetrics, TenantMetrics, SystemMetrics, Alert,
     AlertSeverity, AlertCondition, ComparisonOperator, AlertEvent,
     AlertStatus, MonitoringConfig, MonitoringManager,
@@ -92,8 +91,6 @@ pub struct EnterpriseAuditResult {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_enterprise_manager() {
         let manager: _ = EnterpriseManager::new();

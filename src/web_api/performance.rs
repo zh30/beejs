@@ -1,5 +1,8 @@
 //! Performance API implementation for Web standard
 //! Provides performance.now(), performance.mark(), performance.measure()
+
+use std::time::SystemTime;
+
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::time::Instant;
@@ -26,7 +29,7 @@ fn performance_time_origin_callback(
     mut rv: v8::ReturnValue,
 ) {
     // Return Unix timestamp in milliseconds when the runtime started
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use std::time::<SystemTime, UNIX_EPOCH>;
     let start: _ = get_start_time();
     let now: _ = Instant::now();
     let system_now: _ = SystemTime::now()
@@ -158,7 +161,7 @@ pub fn setup_performance_api(
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_start_time_initialization() {
         let start: _ = get_start_time();

@@ -1,7 +1,7 @@
 use beejs::Runtime;
 use std::time::Instant;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 #[test]
 fn test_isolate_pool_optimization() {

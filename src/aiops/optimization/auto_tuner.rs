@@ -2,8 +2,8 @@
 //!
 //! 这个模块提供了自动性能调优功能，能够根据优化计划
 //! 自动应用优化设置并监控效果。
+
 use std::collections::HashMap;
-use std::time::{Duration, SystemTime};
 use super::{
     performance_analyzer::{
         PerformanceAnalyzer,
@@ -293,7 +293,7 @@ impl Default for AutoTuner {
 mod tests {
     use super::*;
     use crate::aiops::optimization::performance_analyzer::{
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
         PerformanceMetric, PerformanceMetricType,
     };
     fn create_test_metrics() -> PerformanceMetrics {

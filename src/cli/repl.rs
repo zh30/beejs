@@ -1,9 +1,10 @@
 //! REPL (Read-Eval-Print Loop) Module
 //! Stage 36.0 - 实现交互式 REPL 功能
-use std::collections::VecDeque;
-use std::io::{self, Write};
-use std::time::Instant;
-use crate::RuntimeLite;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::io::<Write, self>;
+use std::sync::<Arc, Mutex>;
+
 /// REPL configuration
 #[derive(Debug, Clone)]
 pub struct ReplConfig {
@@ -288,9 +289,6 @@ impl ReplStats {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::RuntimeLite;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_repl_basic_execution() {
         let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false).expect("Failed to create runtime")));

@@ -1,23 +1,25 @@
 //! Custom Resource Definitions for Kubernetes
 //! Defines BeejsCluster and BeejsWorkload CRDs
-use serde::{Deserialize, Serialize};
-use schemars::JsonSchema;
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+
 mod beejs_cluster;
 mod beejs_workload;
-pub use beejs_cluster::{
+pub use beejs_cluster::<
     Affinity, BeejsCluster, BeejsClusterSpec, DistributedConfig, MonitoringConfig,
     PodAffinity, PodAntiAffinity, PreferredSchedulingTerm, ResourceRequirements,
     SecurityConfig, SecurityContext, ServiceDiscoveryConfig, ServiceMonitorConfig,
     Toleration,
-};
-pub use beejs_workload::{
+>;
+pub use beejs_workload::<
     BeejsWorkload, BeejsWorkloadSpec, BufferConfig, CustomMetric, ExecutionConfig,
     ExecutionMode, HPAConfig, IOConfig, IngressBackend, IngressConfig, IngressHost,
     IngressPath, IngressTLS, InputSource, NetworkingConfig, NetworkPolicyConfig,
     NetworkPolicyIPBlock, NetworkPolicyPeer, NetworkPolicyPort, NetworkPolicyRule,
     OutputDestination, PersistenceConfig, RetryConfig, ScalePolicy, ServiceConfig,
     ServicePort,
-};
+>;
 /// Status phases for BeejsCluster
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -91,8 +93,6 @@ pub struct Condition {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_cluster_phases() {
         assert_eq!(ClusterPhase::Pending.as_str(), "Pending");

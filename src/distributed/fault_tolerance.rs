@@ -2,15 +2,15 @@
 //! 实现智能故障检测、自动恢复和容错机制
 //!
 //! Stage 29.6: 故障检测与恢复 - 提供企业级容错能力
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use tracing::{debug, info, warn};
-use tokio::sync::RwLock;
-use tokio::time::{interval, sleep};
-use super::health_monitor::HealthMonitor;
-use super::task_executor::TaskExecutor;
-use super::node_manager::NodeManager;
-use super::task_scheduler::{TaskScheduler, Task};
+
+use crate::distributed::service_discovery::<DiscoveryConfig, ServiceDiscovery>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant, SystemTime>;
+use super::task_scheduler::<Task, TaskScheduler>;
+use tokio::time::<interval, sleep>;
+use tracing::<debug, info, warn>;
+
 /// 故障检测配置
 #[derive(Debug, Clone)]
 pub struct FaultDetectionConfig {
@@ -396,10 +396,6 @@ pub struct FaultStatistics {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::distributed::service_discovery::{ServiceDiscovery, DiscoveryConfig};
-    use crate::distributed::node_manager::NodeManager;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_fault_detection() {
         let config: _ = DiscoveryConfig {

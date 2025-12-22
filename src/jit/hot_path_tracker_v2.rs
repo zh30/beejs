@@ -6,8 +6,11 @@
 //! - History window for trend analysis
 //! - Predictive hot path marking
 //! - Complexity-aware detection
-use std::collections::{HashMap, VecDeque};
-use std::time::{Duration, Instant};
+
+use std::collections::BTreeMap;
+use std::sync::<Ordering, RwLock>;
+use std::time::<Duration, Instant, SystemTime>;
+
 /// Execution event for history tracking
 #[derive(Debug, Clone)]
 pub struct ExecutionEvent {
@@ -329,8 +332,6 @@ pub struct TrackerStatsSummary {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{BTreeMap};
     #[test]
     fn test_tracker_creation() {
         let tracker: _ = HotPathTrackerV2::new();

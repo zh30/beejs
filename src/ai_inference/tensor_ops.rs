@@ -1,7 +1,9 @@
 //! 张量操作模块
 //! 提供高性能的张量计算和操作
-use anyhow::{Result};
-use std::fmt;
+
+use anyhow::Result;
+use std::collections::<BTreeMap, HashMap>;
+
 /// 张量结构体
 #[derive(Debug, Clone)]
 pub struct Tensor {
@@ -256,8 +258,6 @@ impl TensorOps {
     }
     /// 创建随机张量
     pub fn random(shape: Vec<usize>) -> Result<Tensor> {
-        use rand::Rng;
-use std::collections::{HashMap, BTreeMap};
         let size: usize = shape.iter().product();
         let mut rng = rand::thread_rng();
         let data: Vec<f32> = (0..size).map(|_| rng.gen::<f32>()).collect();

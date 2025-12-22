@@ -1,10 +1,11 @@
 //! 零拷贝数据传输优化模块
 //! 通过引用传递和内存映射实现高性能数据传输
-use crate::lock_free_temp::{LockFreeBufferPool, AtomicStats, LockFreeCounter};
 
-use std::marker::PhantomData;
-use tokio::io::{AsyncSeekExt, AsyncWriteExt};
-use tokio::fs::File;
+use crate::lock_free_temp::<AtomicStats, LockFreeBufferPool, LockFreeCounter>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+use tokio::io::<AsyncSeekExt, AsyncWriteExt>;
+
 /// 零拷贝缓冲区
 /// 包装一个字节切片，允许零拷贝传递
 #[derive(Debug, Clone)]
@@ -100,7 +101,6 @@ impl ZeroCopyFileReader {
     }
     /// 读取文件到零拷贝缓冲区
     pub async fn read_to_buffer(&mut self) -> Result<ZeroCopyBuffer, std::io::Error> {
-        use tokio::io::AsyncReadExt;
         let metadata: _ = self.file.metadata().await?;
         let size: _ = metadata.len() as usize;
         let mut buffer = vec![0u8; size];
@@ -109,7 +109,6 @@ impl ZeroCopyFileReader {
     }
     /// 读取文件的部分内容到零拷贝缓冲区
     pub async fn read_partial(&mut self, offset: u64, length: usize) -> Result<ZeroCopyBuffer, std::io::Error> {
-        use tokio::io::AsyncReadExt;
         self.file.seek(std::io::SeekFrom::Start(offset)).await?;
         let mut buffer = vec![0u8; length];
         self.file.read_exact(&mut buffer).await?;
@@ -147,7 +146,6 @@ impl ZeroCopyFileWriter {
 }
 /// 零拷贝内存映射文件
 #[cfg(unix)]
-use tokio::fs::OpenOptions;
 // Removed unused imports: AsRawFd, RawFd
 #[cfg(unix)]
 #[allow(dead_code)]
@@ -362,10 +360,6 @@ impl<T> ZeroCopyRingBuffer<T> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use tempfile::TempDir;
-    use std::fs;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_zero_copy_buffer() {
         let data: _ = vec![1, 2, 3, 4, 5];

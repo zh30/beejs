@@ -1,11 +1,12 @@
 //! 节点管理器模块
 //! 管理集群节点的注册、状态跟踪和元数据
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
-use tokio::time::interval;
-use tracing::{info, warn};
-use super::service_discovery::{ServiceDiscovery, NodeInfo};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant, SystemTime>;
+use super::service_discovery::<NodeInfo, ServiceDiscovery>;
+use tracing::<info, warn>;
+
 /// 节点状态枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NodeStatus {
@@ -345,9 +346,6 @@ fn determine_health_status(
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::distributed::service_discovery::DiscoveryConfig;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_node_registration() {
         let config: _ = DiscoveryConfig {

@@ -1,9 +1,11 @@
 //! Beejs Test Runner
 //! 高性能测试运行器，支持 Jest 风格的测试
 #[allow(unused_imports)]
-use anyhow::{anyhow, Result};
-use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+
+use anyhow::<Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::path::<Path, PathBuf>;
+
 /// Test status
 #[derive(Debug, Clone, PartialEq)]
 pub enum TestStatus {
@@ -206,12 +208,7 @@ impl TestStats {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::io::Write;
-    use tempfile::NamedTempFile;
     // Import the V8 requirement macro
-    use crate::require_v8;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_runner_creation() {
         require_v8!();

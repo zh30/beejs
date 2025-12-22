@@ -7,8 +7,10 @@
 //! - 流式推理延迟测试
 //! - 批处理推理吞吐量测试
 //! - GPU 加速性能测试
-use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
-use std::time::{Duration, Instant};
+
+use crate::benchmarks::<BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType>;
+use std::collections::<BTreeMap, HashMap>;
+
 /// AI 推理性能基准测试套件
 pub struct AIInferenceBenchmark;
 impl AIInferenceBenchmark {
@@ -331,8 +333,6 @@ impl AIInferenceBenchmark {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_ai_inference_benchmark_creation() {
         let benchmark: _ = AIInferenceBenchmark::new();

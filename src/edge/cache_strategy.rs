@@ -1,9 +1,11 @@
 //! Edge Caching Strategy
 //! Multi-layer intelligent caching for optimal performance
-use std::collections::HashMap;
-use tokio::sync::RwLock;
-use tokio::time::{Duration, Instant};
-use anyhow::Result;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant, SystemTime>;
+use tokio::time::<Duration, Instant>;
+
 /// Multi-layer edge cache
 #[derive(Debug)]
 pub struct EdgeCache {
@@ -367,8 +369,6 @@ impl CachePredictor {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_edge_cache_creation() {
         let cache: _ = EdgeCache::new("test-cache", 100);

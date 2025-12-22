@@ -238,19 +238,23 @@ pub struct Metrics {
 }
 /// 云平台统一接口
 pub mod cloud_manager {
+
+use std::collections::HashMap;
+use std::time::Duration;
+
     pub use super::Metrics;
 }
 /// 负载均衡器
-pub use crate::cloud::load_balancer::{
+pub use crate::cloud::load_balancer::<
     MLLoadBalancer, ServiceEndpoint, LoadBalanceAlgorithm,
     MLLoadBalancerConfig, LoadBalancerStats,
-};
+>;
 /// 分布式缓存
-pub use crate::cloud::distributed_cache::{
+pub use crate::cloud::distributed_cache::<
     DistributedCache, CacheEntry, CacheNode, CacheStrategy,
     CacheConfig, CacheStats, ConsistencyLevel,
-};
+>;
 /// AWS 适配器
-pub use crate::cloud::aws::{AwsAdapter, AwsCredentials};
+pub use crate::cloud::aws::<AwsAdapter, AwsCredentials>;
 /// Cloudflare 适配器
 pub use crate::cloud::cloudflare::CloudflareAdapter;

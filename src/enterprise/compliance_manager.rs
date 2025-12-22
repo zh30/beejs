@@ -1,9 +1,11 @@
 //! Enterprise Compliance Manager
 //! Provides compliance checking against various frameworks and regulations
-use tokio::sync::RwLock;
-use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use anyhow::<Result, anyhow>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// Compliance framework types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ComplianceFramework {
@@ -404,8 +406,6 @@ impl Default for ComplianceManager {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_compliance_frameworks() {
         let manager: _ = ComplianceFrameworks::new();

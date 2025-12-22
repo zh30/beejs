@@ -1,2 +1,3 @@
 //! simd module placeholder
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;

@@ -4,6 +4,10 @@
 //! integrates with V8's debugging capabilities, and provides the high-level
 //! API for debugging operations.
 
+
+use std::collections::HashMap;
+use std::sync::<Arc, Mutex>;
+
 use crate::debugger::{
     breakpoint::{BreakpointManager, Breakpoint},
     stack_trace::{StackTrace, StackFrame},

@@ -1,9 +1,9 @@
 //! AI批量处理器
 //! 专为AI推理工作负载设计的高性能批量处理系统
-use std::collections::VecDeque;
 
-use std::time::{Duration, Instant};
-use tokio::sync::Semaphore;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// AI任务类型
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -427,8 +427,6 @@ pub fn create_embedding_processor(max_batch_size: usize) -> AiBatchProcessor {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_add_single_task() {
         let processor: _ = AiBatchProcessor::new(BatchConfig::default());

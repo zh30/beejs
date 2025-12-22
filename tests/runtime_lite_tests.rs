@@ -1,4 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! RuntimeLite 核心模块测试
 //! 测试驱动的开发 - Stage 60: 测试基础设施
 //!
@@ -16,8 +16,8 @@ mod tests {
     // 串行执行测试以避免 V8 线程安全问题
     use serial_test::serial;
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 测试 1: RuntimeLite 创建和初始化
     #[test]

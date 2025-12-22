@@ -1,7 +1,9 @@
 //! 神经网络模型实现
-use super::layers::{Layer, DenseLayer, ActivationLayer, ActivationType};
-use super::tensor::{Tensor, DType};
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;
+use super::layers::<ActivationLayer, ActivationType, DenseLayer, Layer>;
+use super::tensor::<DType, Tensor>;
+
 /// 模型配置
 #[derive(Debug, Clone)]
 pub struct ModelConfig {

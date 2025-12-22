@@ -1,3 +1,5 @@
 //! Debug Adapter Module
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;
+
 pub mod protocol;

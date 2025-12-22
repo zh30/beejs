@@ -1,8 +1,11 @@
 //! 性能自适应优化器 - Stage 78 Phase 4
 //!
 //! 提供动态优化策略、自动调优和机器学习驱动的性能优化能力
-use std::time::{Duration, Instant};
-use std::collections::{HashMap, BTreeMap};
+
+use std::time::Instant;
+
+use std::time::<Duration, Instant>;
+use std::collections::<HashMap, BTreeMap>;
 /// 代码特征
 #[derive(Debug, Clone)]
 pub struct CodeFeatures {

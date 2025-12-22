@@ -1,10 +1,10 @@
 //! 模型缓存系统
 //! 提供高效的 AI 模型缓存和管理
-use super::ai_inference_engine::AIModel;
-use anyhow::{Result};
-use std::collections::HashMap;
-use tokio::sync::RwLock;
-use std::time::{Duration, Instant};
+
+use anyhow::Result;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, Ordering, RwLock>;
+
 /// 缓存策略
 #[derive(Debug, Clone)]
 pub enum CacheStrategy {
@@ -126,8 +126,6 @@ impl ModelCache {
     }
     /// 预加载模型
     pub async fn preload(&self, model_ids: &[String]) -> Result<()> {
-        use crate::ai_inference::ModelLoader;
-use std::collections::{HashMap, BTreeMap};
         let loader: _ = ModelLoader::new();
         for model_id in model_ids {
             // 检查是否已缓存

@@ -1,4 +1,6 @@
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;
+
 // 眼动追踪系统
 /// 眼动追踪配置
 #[derive(Debug, Clone)]

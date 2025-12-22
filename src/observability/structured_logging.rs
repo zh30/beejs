@@ -2,18 +2,14 @@
 //!
 //! This module provides structured logging capabilities with JSON formatting,
 //! correlation IDs, and context-aware logging for better observability.
-use anyhow::Result;
-use serde_json::{json, Value};
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
-use tokio::sync::RwLock;
-use tracing::{Event, Level, Subscriber};
-use tracing_subscriber::fmt::format::Writer;
-use tracing_subscriber::fmt::{FormatEvent, FormatFields};
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::{EnvFilter, Registry};
+
+use serde_json::<Value, json>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use tracing::<Event, Level, Subscriber>;
+use tracing_subscriber::<EnvFilter, Registry>;
+use tracing_subscriber::fmt::<FormatEvent, FormatFields>;
+
 /// Structured logger with JSON formatting and context support
 pub struct StructuredLogger {
     /// Log level filter
@@ -294,8 +290,6 @@ impl<'a> PerformanceLogger<'a> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_structured_logger_creation() {
         let logger: _ = StructuredLogger::new(Level::INFO, "beejs".to_string());

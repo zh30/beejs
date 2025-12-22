@@ -3,16 +3,15 @@
 pub mod smart_allocator;
 pub mod adaptive_gc;
 pub mod pattern_analyzer;
-pub use smart_allocator::{
+
+use std::collections::<BTreeMap, HashMap>;
+
     SmartMemoryAllocator, AllocationPattern, AllocationStrategy,
     MemoryPool, PoolConfig, AllocationMetrics,
 };
-pub use adaptive_gc::{
     AdaptiveGCController, GCStrategy, GCTuning, GCEvent,
     GCStatistics, HeapMetrics,
 };
-pub use pattern_analyzer::{
-use std::collections::{HashMap, BTreeMap};
     MemoryPatternAnalyzer, PatternDetection, AllocationTrend,
     MemoryProfile, OptimizationRecommendation,
 };

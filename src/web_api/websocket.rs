@@ -1,12 +1,11 @@
 //! WebSocket API implementation for Web standard
 //! Provides real WebSocket client with network connectivity
-use anyhow::Result;
-use rusty_v8 as v8;
-use std::collections::HashMap;
-use tokio::runtime::Runtime;
-use tokio::sync::mpsc;
-use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
-use futures_util::{StreamExt, SinkExt};
+
+use futures_util::<SinkExt, StreamExt>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, Ordering>;
+use tokio_tungstenite::::<connect_async, tungstenite::protocol::Message>;
+
 /// WebSocket ready state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReadyState {
@@ -133,8 +132,6 @@ impl WebSocketManager {
                                     *state = ReadyState::Closing;
                                 }
                                 let close_frame: _ = if let Some(c) = code {
-                                    use tokio_tungstenite::tungstenite::protocol::CloseFrame;
-                                    use std::borrow::Cow;
                                     Some(CloseFrame {
                                         code: c.into(),
                                         reason: Cow::Owned(reason.unwrap_or_default()),
@@ -218,7 +215,6 @@ impl WebSocketManager {
     }
 }
 // Global WebSocket manager instance
-use once_cell::sync::Lazy;
 pub static WS_MANAGER: Lazy<WebSocketManager> = Lazy::new(|| WebSocketManager::new());
 /// Setup WebSocket API in V8 context
 pub fn setup_websocket_api(
@@ -542,8 +538,6 @@ fn websocket_update_ready_state_callback(
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_ready_state_constants() {
         assert_eq!(ReadyState::Connecting as u8, 0);

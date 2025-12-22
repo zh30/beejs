@@ -2,16 +2,16 @@
 //!
 //! 测试异常检测、趋势分析和故障预测功能
 
-use beejs::aiops::prediction::{
+use beejs::aiops::prediction{
     AnomalyDetector, StatisticalAnomalyDetector, AnomalyDetectorConfig,
     TrendAnalyzer, LinearTrendAnalyzer, TrendAnalyzerConfig,
     FailurePredictor, MLFailurePredictor, FailurePredictorConfig,
     AnomalyType, TrendDirection, ConfidenceLevel, FailureType,
 };
-use beejs::core::data_collector::{Metric, MetricType};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use beejs::core::data_collector{Metric, MetricType};
+use std::time{Duration, SystemTime, UNIX_EPOCH};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 /// 创建测试指标数据
 fn create_test_metrics(values: Vec<f64>, metric_type: MetricType) -> Vec<Metric> {

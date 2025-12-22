@@ -1,10 +1,11 @@
 //! 自适应垃圾回收控制器 - Stage 90 Phase 5.2
 //! 基于内存使用模式的自适应垃圾回收
-use std::collections::HashMap;
-use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
-use chrono::{DateTime, Utc};
-use std::time::{Duration, Instant};
+
+use chrono::<DateTime, Utc>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, Ordering, RwLock>;
+
 /// GC 策略
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GCStrategy {
@@ -242,8 +243,6 @@ impl AdaptiveGCController {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_adaptive_gc() {
         let gc: _ = AdaptiveGCController::new();

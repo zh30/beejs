@@ -5,8 +5,10 @@
 //! JIT compilation, memory management, and garbage collection.
 //!
 //! Stage 69 Phase 2: V8 Engine Deep Optimization
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+
 /// V8 Engine Flags Configuration
 /// Provides high-performance V8 engine configuration options
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -230,8 +232,6 @@ impl Default for V8ConfigManager {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_high_performance_config() {
         let flags: _ = V8EngineFlags::high_performance();

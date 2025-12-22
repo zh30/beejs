@@ -302,7 +302,7 @@ impl Server {
     }
 }
 // 核心运行时
-use anyhow::{Result, anyhow};
+use anyhow::{Result, Error};
 /// Global flag to track V8 initialization state
 static V8_INITIALIZED: std::sync::OnceLock<std::sync::atomic::AtomicBool> = std::sync::OnceLock::new();
 /// Initialize V8 engine (idempotent - safe to call multiple times)

@@ -5,9 +5,11 @@
 //!
 //! 该模块实现了一个适配层，允许旧版本的 V8 API 在新版本上运行，
 //! 并提供自动迁移和兼容性检查功能。
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use tokio::sync::RwLock;
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// API 适配器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdapterConfig {
@@ -517,8 +519,6 @@ impl Default for V8APIAdapter {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_v8_api_adapter_creation() {
         let adapter: _ = V8APIAdapter::new_with_default_config();

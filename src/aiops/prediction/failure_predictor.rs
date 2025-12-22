@@ -2,15 +2,15 @@
 //!
 //! Predicts potential failures by combining anomaly detection and trend analysis.
 //! Provides early warning signals for system failures.
-use crate::core::data_collector::{Metric, MetricType};
-use crate::core::error::{AIOpsError, Result};
-use crate::prediction::{
+
+use crate::core::data_collector::::<Metric, MetricType>;
+use crate::core::error::::<AIOpsError, Result>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+
     AnomalyDetector, StatisticalAnomalyDetector, AnomalyDetectorConfig,
     TrendAnalyzer, LinearTrendAnalyzer, TrendAnalyzerConfig,
 };
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
 /// Confidence level for predictions
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ConfidenceLevel {
@@ -392,9 +392,6 @@ impl FailurePredictor for MLFailurePredictor {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::time::Duration;
-use std::collections::{HashMap, BTreeMap};
     fn create_test_metric(value: f64, timestamp_secs: u64, metric_type: MetricType) -> Metric {
         Metric {
             metric_type,

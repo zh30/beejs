@@ -4,10 +4,10 @@
 
 #[cfg(test)]
 mod stage77_wasm_integration_tests {
-    use beejs::wasm_integration::{initialize_wasm, WasmExecutor, WasmStats, WasmModule};
+    use beejs::wasm_integration{initialize_wasm, WasmExecutor, WasmStats, WasmModule};
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     // ==========================================
     // 基础功能测试 (Tests 1-20)

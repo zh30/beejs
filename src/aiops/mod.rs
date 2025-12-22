@@ -20,7 +20,9 @@ pub mod adaptation;
 // pub mod auto_tuning;
 // pub mod full_workflow;
 // 重新导出主要类型 (已实现)
-pub use prediction_engine::{
+
+use std::collections::<BTreeMap, HashMap>;
+
     PredictionEngine,
     Prediction,
     MetricType,
@@ -28,7 +30,6 @@ pub use prediction_engine::{
     TrendReport,
     TrendDirection,
 };
-pub use anomaly_detection::{
     AnomalyDetector,
     Anomaly,
     AnomalyType,
@@ -37,7 +38,6 @@ pub use anomaly_detection::{
     BaselineCalculator,
     Baseline,
 };
-pub use root_cause_analysis::{
     RootCauseAnalyzer,
     Incident,
     IncidentType,
@@ -47,43 +47,36 @@ pub use root_cause_analysis::{
     ChangeImpactAnalysis,
 };
 // Stage 95: 新增导出
-pub use core::{
     AIOpsEngine,
     AIOpsError,
     Result,
     ModelManager,
     DataCollector,
 };
-pub use prediction::{
     AnomalyDetector as NewAnomalyDetector,
     TrendAnalyzer,
     FailurePredictor,
 };
-pub use optimization::{
     PerformanceAnalyzer,
     AutoTuner as NewAutoTuner,
     Optimizer,
 };
-pub use allocation::{
     ResourceOptimizer,
     LoadBalancer,
     Scheduler,
 };
-pub use adaptation::{
     ArchitectureAdapter,
     ConfigManager,
     TopologyOptimizer,
 };
 // 其他模块将在后续阶段实现
 /*
-pub use knowledge_graph::{
     KnowledgeGraph,
     Entity,
     EntityType,
     Relationship,
     InferenceEngine,
 };
-pub use alert_aggregation::{
     AlertAggregator,
     Alert,
     AlertSeverity,
@@ -91,13 +84,11 @@ pub use alert_aggregation::{
     SuppressionRule,
     AlertPriority,
 };
-pub use alert_routing::{
     AlertRouter,
     RoutingResult,
     RoutingRules,
     NotificationChannel,
 };
-pub use auto_remediation::{
     AutoRemediationEngine,
     RemediationResult,
     Playbook,
@@ -105,12 +96,10 @@ pub use auto_remediation::{
     ChangeRequest,
     ApprovalResult,
 };
-pub use remediation_validation::{
     RemediationValidator,
     ValidationResult,
     RecoveryStatus,
 };
-pub use capacity_planning::{
     CapacityPlanner,
     ResourceForecast,
     ResourceType,
@@ -119,7 +108,6 @@ pub use capacity_planning::{
     HistoricalUsage,
     UsageMetrics,
 };
-pub use auto_tuning::{
     AutoTuner,
     OptimizationTarget,
     OptimizationType,
@@ -127,8 +115,6 @@ pub use auto_tuning::{
     Tuning,
     ApplyResult,
 };
-pub use full_workflow::{
-use std::collections::{HashMap, BTreeMap};
     FullAIOpsWorkflow,
     WorkflowConfig,
     WorkflowResult,

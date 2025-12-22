@@ -1,7 +1,7 @@
 //! 计算图优化器实现
 use super::model::Model;
 use super::tensor::Tensor;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
 /// 优化级别
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OptimizationLevel {

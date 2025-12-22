@@ -2,9 +2,9 @@
 //!
 //! This module implements an intelligent cache that combines LRU (Least Recently Used)
 //! and LFU (Least Frequently Used) strategies with adaptive weight adjustment.
-use super::CacheKey;
-use std::collections::{BTreeMap, HashMap, VecDeque};
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap, HashSet, VecDeque>;
+
 /// L2 Cache entry with access tracking
 #[derive(Debug, Clone)]
 struct L2Entry {
@@ -299,7 +299,6 @@ impl Default for L2SmartCache {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_l2_basic_operations() {

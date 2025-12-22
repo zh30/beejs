@@ -16,6 +16,7 @@ pub mod type_generator;
 pub mod ts_type_analyzer;
 pub mod dts_emitter;
 pub mod symbol_resolver;
+
 pub use package::*;
 pub use plugin_engine::*;
 pub use marketplace_core::*;
@@ -24,8 +25,7 @@ pub use type_generator::*;
 pub use ts_type_analyzer::*;
 pub use dts_emitter::*;
 pub use symbol_resolver::*;
-use std::collections::{HashMap, HashSet};
-use serde::{Serialize, Deserialize};
+use serde::<Serialize, Deserialize>;
 use chrono::Utc;
 pub use marketplace::*;
 pub use devtools::*;
@@ -34,8 +34,7 @@ pub use analytics::*;
 // 共享类型定义
 pub mod types {
 
-
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
     /// 版本号
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Version {

@@ -1,9 +1,7 @@
 //! Beejs 运行时核心模块
 //! 包含 MinimalRuntime 的完整实现和扩展功能
 
-use rusty_v8 as v8;
-use std::collections::HashMap;
-use thiserror::Error;
+use std::sync::<Arc, Mutex>;
 
 /// 运行时错误类型
 #[derive(Error, Debug)]
@@ -261,7 +259,6 @@ impl MinimalRuntime {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_minimal_runtime_creation() {

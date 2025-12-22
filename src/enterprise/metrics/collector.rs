@@ -1,9 +1,12 @@
 //! 实时指标收集器
 //! 收集 Beejs 运行时的各种性能指标，支持 Prometheus 导出
-use anyhow::{Result, Context};
-use serde::{Deserialize, Serialize};
-use std::time::{Duration, SystemTime};
-use tracing::{info, warn, error, debug};
+
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex, Ordering>;
+
+use anyhow::<Result, Context>;
+use serde::<Deserialize, Serialize>;
+use tracing::<info, warn, error, debug>;
 use uuid::Uuid;
 /// Tenant ID type
 pub type TenantId = String;
@@ -158,7 +161,6 @@ pub struct MetricsSnapshot {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[test]
     fn test_metrics_collector_creation() {
         let collector: _ = MetricsCollector::new();
@@ -529,8 +531,7 @@ fn action_to_string(action: &AlertAction) -> &'static str {
 }
 #[cfg(test)]
 mod enterprise_tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[tokio::test]
     async fn test_enterprise_metrics_collector() {
         let mut collector = EnterpriseMetricsCollector::new();

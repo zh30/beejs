@@ -2,7 +2,7 @@
 //! Stage 48: 创建全面的性能测试框架
 
 use anyhow::Result;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 
 /// 基准测试结果
 #[derive(Debug, Clone)]
@@ -297,8 +297,8 @@ pub async fn run_full_benchmark_suite() -> Result<Vec<BenchmarkResult>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_compute_intensive_benchmark() {

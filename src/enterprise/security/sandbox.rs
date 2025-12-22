@@ -1,12 +1,14 @@
 //! Runtime Security Sandbox
 //! 实现运行时安全沙箱和资源隔离
-use anyhow::{Result, Context};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::process::{Command, Stdio};
 
-use tracing::{info, warn, error, debug};
+use anyhow::<Context, Result>;
+use libc::<SIGTERM, kill>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::process::<Command, Stdio>;
+use std::sync::<Arc, Mutex>;
+use tracing::<debug, error, info, warn>;
+
 /// Sandbox configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SandboxConfig {
@@ -176,7 +178,6 @@ impl SecuritySandbox {
         // Set directory permissions (read/write/execute for owner only)
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
             std::fs::set_permissions(&work_dir, std::fs::Permissions::from_mode(0o700))
                 .context("Failed to set sandbox directory permissions")?;
         }
@@ -237,7 +238,6 @@ impl SecuritySandbox {
         if let Some(execution) = active.remove(sandbox_id) {
             #[cfg(unix)]
             {
-                use libc::{kill, SIGTERM};
                 unsafe { kill(execution.pid as i32, SIGTERM) };
             }
             #[cfg(windows)]
@@ -256,8 +256,6 @@ impl SecuritySandbox {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_sandbox_creation() {
         let config: _ = SandboxConfig {

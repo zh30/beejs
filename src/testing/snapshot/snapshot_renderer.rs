@@ -1,6 +1,5 @@
 //! Snapshot Renderer
 //! Pretty-prints snapshots and generates diff views
-use super::*;
 use std::fmt;
 /// Snapshot pretty printer
 pub struct SnapshotPrettyPrinter {
@@ -182,8 +181,7 @@ impl SnapshotRenderer {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_pretty_print_json() {
         let config: _ = SnapshotConfig::default();

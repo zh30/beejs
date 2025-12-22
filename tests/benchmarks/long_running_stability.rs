@@ -5,7 +5,7 @@
 
 use beejs::runtime_lite::Runtime;
 use beejs::performance_analyzer::PerformanceAnalyzer;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 
 /// 内存泄漏检测测试
 #[cfg(test)]

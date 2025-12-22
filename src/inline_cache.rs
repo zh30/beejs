@@ -1,7 +1,8 @@
-use std::collections::HashMap;
-use std::string::String;
-use std::time::{Duration, Instant};
-use std::cmp::Reverse;
+
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// 使用更快、抗碰撞的哈希算法（FNV-1a变种）
 /// 比标准DefaultHasher快约30%，碰撞率更低
 pub fn fast_hash(input: &str) -> u64 {
@@ -460,7 +461,6 @@ pub struct CacheUsageReport {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[test]
     fn test_cache_creation() {
         let cache: _ = InlineCache::new();
@@ -1026,8 +1026,6 @@ pub struct PolymorphicCacheReport {
 }
 #[cfg(test)]
 mod polymorphic_tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_polymorphic_cache_creation() {
         let cache: _ = PolymorphicInlineCache::new(1000);

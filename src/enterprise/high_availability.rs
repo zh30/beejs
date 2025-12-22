@@ -1,12 +1,13 @@
 //! High Availability and Disaster Recovery System
 //! 实现高可用性和灾难恢复功能
-use anyhow::{Result, Context};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
-use std::time::{Duration, SystemTime};
-use tokio::time::{sleep, Instant};
-use tracing::{info, warn, error, debug};
+use anyhow::<Context, Result>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use tokio::time::<Instant, sleep>;
+use tracing::<debug, error, info, warn>;
+
 /// HA configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HAConfig {
@@ -496,8 +497,6 @@ impl HAManager {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_ha_manager_creation() {
         let config: _ = HAConfig {

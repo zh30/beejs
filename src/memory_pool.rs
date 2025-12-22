@@ -1,6 +1,8 @@
-use std::collections::VecDeque;
 
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// 智能内存池 - 管理V8对象的生命周期以减少内存分配开销
 /// 通过预分配和复用对象来减少GC压力和内存碎片
 pub struct SmartMemoryPool {
@@ -300,8 +302,6 @@ impl PooledV8String {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_pool_creation() {
         let pool: _ = SmartMemoryPool::new(PoolConfig::default());

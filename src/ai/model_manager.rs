@@ -1,7 +1,9 @@
 //! 多模型管理系统
 //! 实现多模型并行和动态切换系统，包括模型注册、智能路由和负载均衡
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, Ordering, RwLock>;
+
 /// 模型管理器配置
 #[derive(Debug, Clone)]
 pub struct ManagerConfig {
@@ -359,9 +361,6 @@ impl ModelManager {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::Runtime;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_model_registry_creation() {
         let config: _ = ModelRegistryConfig {

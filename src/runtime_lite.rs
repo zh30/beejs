@@ -1,19 +1,22 @@
 //! Lightweight Runtime implementation for fast startup
 //! This module provides a minimal runtime that only initializes essential components
 //! for simple scripts, dramatically reducing startup time.
-use crate::memory_pool::{PoolConfig, SmartMemoryPool};
-use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipeline};
-use crate::inline_cache::{CacheKey, CacheEntry};
-use crate::v8_context_pool::{V8ContextPool, ContextPoolStats};
+
+use std::collections::HashSet;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+
+use crate::memory_pool::<PoolConfig, SmartMemoryPool>;
+use crate::jit::optimization::<JITOptimizer, HotPathOptimizer, OptimizationPipeline>;
+use crate::inline_cache::<CacheKey, CacheEntry>;
+use crate::v8_context_pool::<V8ContextPool, ContextPoolStats>;
 use crate::v8_engine::flags::V8EngineFlags;
 use crate::runtime_lite::cache::MultiLevelCache;
-use crate::wasm::{WasmModuleCache, WasmModuleLoader, WasmModule};
+use crate::wasm::<WasmModuleCache, WasmModuleLoader, WasmModule>;
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::cell::OnceCell;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::path::<Path, PathBuf>;
 /// Script cache entry tuple
 type ScriptCacheEntry = (v8::Global<v8::Script>, String, Instant);
 /// Lightweight Runtime - minimal V8 runtime for fast startup
@@ -1107,7 +1110,7 @@ impl RuntimeLite {
     /// Execute a JavaScript file
     pub fn execute_file(&self, file_path: &std::path::Path) -> Result<String> {
         use std::fs;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
         let code: _ = fs::read_to_string(file_path)
             .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
         self.execute_code(&code)

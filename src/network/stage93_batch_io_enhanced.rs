@@ -1,11 +1,11 @@
 //! Stage 93 批量 I/O 增强版
 //! 智能批处理算法，动态调整策略，最大化网络吞吐量
-use super::{NetworkConfig, NetworkStats};
-use tokio::sync::{RwLock, mpsc};
-use std::collections::{VecDeque, BTreeMap};
-use std::time::{Duration, Instant};
-use std::cmp::Reverse;
-use std::collections::{HashMap};
+
+use std::collections::<BTreeMap, HashMap, VecDeque>;
+use std::sync::<Arc, Mutex, Ordering, RwLock>;
+use super::<NetworkConfig, NetworkStats>;
+use tokio::sync::<RwLock, mpsc>;
+
 /// 智能批处理配置
 #[derive(Debug, Clone)]
 pub struct Stage93BatchConfig {

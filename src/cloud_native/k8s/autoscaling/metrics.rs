@@ -2,7 +2,7 @@
 //! Gathers resource usage metrics from Kubernetes
 use kube::api::ListParams;
 use std::collections::HashMap;
-use tracing::{debug, warn};
+use tracing::<debug, warn>;
 use super::super::crd::CustomMetric;
 /// Metrics client for collecting pod and resource metrics
 pub struct MetricsClient {
@@ -155,7 +155,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_parse_cpu_usage() {
         assert_eq!(parse_cpu_usage("100m"), Some(100.0));

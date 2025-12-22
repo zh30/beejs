@@ -6,9 +6,11 @@
 //! - 性能分析集成
 //! - 源代码映射支持
 //! - 远程调试协议
-use std::collections::HashMap;
 
-use serde::{Serialize, Deserialize};
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 // =========================================
 // Part 1: 高级断点功能
 // =========================================
@@ -852,8 +854,6 @@ impl EnhancedDebugger {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_conditional_breakpoint() {
         let mut bp = ConditionalBreakpoint::new(

@@ -11,11 +11,11 @@ pub mod io_intensive;
 pub mod memory_intensive;
 pub mod concurrent;
 pub mod ai_workload;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use super::{BenchmarkResult, BenchmarkError, BenchmarkResult as Result};
-use std::collections::{BTreeMap};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+use super::<BenchmarkError, BenchmarkResult, BenchmarkResult as Result>;
+
 /// 工作负载类型
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum WorkloadType {

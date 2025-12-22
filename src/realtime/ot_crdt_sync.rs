@@ -1,8 +1,8 @@
 //! OT/CRDT 同步算法
 use anyhow::Result;
 use tracing::info;
-use serde::{Serialize, Deserialize};
-use std::collections::{HashMap, BTreeMap};
+use serde::<Serialize, Deserialize>;
+use std::collections::<HashMap, BTreeMap>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BaseOperation {
     Insert { id: String, position: usize, text: String },

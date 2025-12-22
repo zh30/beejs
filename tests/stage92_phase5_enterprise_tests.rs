@@ -1,12 +1,12 @@
 //! Stage 92 Phase 5: Enterprise Features Integration Tests
 //! 测试企业级功能的集成
 
-use anyhow::{Result, Context};
+use anyhow{Result, Context};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
-use tokio::time::{sleep, timeout};
+use std::time{Duration, SystemTime};
+use tokio::time{sleep, timeout};
 
 use super::super::enterprise::k8s_operator::*;
 use super::super::enterprise::metrics::prometheus::*;
@@ -18,8 +18,8 @@ use super::super::enterprise::high_availability::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// Test Kubernetes Operator functionality
     #[tokio::test]

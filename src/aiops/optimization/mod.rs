@@ -6,13 +6,14 @@ pub mod performance_analyzer;
 pub mod auto_tuner;
 pub mod optimizer;
 // 重新导出主要类型
-pub use performance_analyzer::{
+
+use std::collections::<BTreeMap, HashMap>;
+
     PerformanceAnalyzer,
     PerformanceMetrics,
     PerformanceMetric,
     PerformanceMetricType,
 };
-pub use auto_tuner::{
     AutoTuner,
     OptimizationPlan,
     OptimizationSuggestion,
@@ -21,7 +22,5 @@ pub use auto_tuner::{
     OptimizationFeedback,
     OptimizationResult,
 };
-pub use optimizer::{
-use std::collections::{HashMap, BTreeMap};
     Optimizer,
 };

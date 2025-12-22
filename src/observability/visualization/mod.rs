@@ -26,7 +26,7 @@ pub mod charts;
 pub mod graphs;
 pub use charts::*;
 pub use graphs::*;
-use serde::{Deserialize, Serialize};
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
 /// Base visualization trait
 pub trait Visualizable {
@@ -326,7 +326,7 @@ impl Default for ResponsiveConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_visualization_config_default() {
         let config: _ = VisualizationConfig::default();

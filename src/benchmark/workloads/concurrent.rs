@@ -1,10 +1,13 @@
 //! 并发型工作负载
 //!
 //! 实现并发任务的性能测试
-use serde::{Deserialize, Serialize};
+
+use std::time::Duration;
+
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use super::{WorkloadResult, ResourceUsage, BenchmarkError, BenchmarkResult as Result};
+use std::time::<Duration, Instant>;
+use super::<WorkloadResult, ResourceUsage, BenchmarkError, BenchmarkResult as Result>;
 /// 并发型工作负载
 #[derive(Debug)]
 pub struct ConcurrentWorkload {
@@ -91,7 +94,7 @@ fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[tokio::test]
     async fn test_workload_execution() {
         let workload: _ = ConcurrentWorkload::new();

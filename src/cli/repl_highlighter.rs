@@ -350,7 +350,7 @@ impl Default for ReplHighlighter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_highlighter_creation() {
         let highlighter: _ = ReplHighlighter::new();

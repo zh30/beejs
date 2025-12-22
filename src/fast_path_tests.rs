@@ -4,7 +4,7 @@
 mod tests {
     #[allow(unused_imports)]
 use crate::runtime_lite::RuntimeLite;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_fast_path_constant_execution() {
         // Test constant execution through fast path

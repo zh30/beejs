@@ -1,4 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 76 Phase 3: CLI 集成测试
 //! 测试 Profile 子命令、交互式性能查看器、报告导出功能
 
@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 mod tests {
     use std::path::PathBuf;
     use clap::Parser;
-    use beejs::cli::commands::{CliApp, SubCommand, ProfileCommand};
+    use beejs::cli::commands{CliApp, SubCommand, ProfileCommand};
 
     /// 测试场景：Profile 命令参数解析
     mod profile_command_parsing {
@@ -137,8 +137,8 @@ mod tests {
     /// 测试场景：边界条件
     mod profile_edge_cases {
         use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
         #[test]
         fn test_profile_with_zero_sampling_rate() {

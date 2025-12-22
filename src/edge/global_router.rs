@@ -1,10 +1,13 @@
 //! Global Distribution Router
 //! Intelligent routing across global edge locations
-use super::cdn_provider::{CdnEndpoint, EndpointStatus, CdnProviderType};
-use std::collections::HashMap;
-use tokio::sync::RwLock;
-use anyhow::{Result, Context};
-use tokio::time::{Duration, Instant};
+
+use anyhow::<Context, Result>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, Ordering, RwLock>;
+use std::time::<Duration, Instant>;
+use super::cdn_provider::::<CdnEndpoint, CdnProviderType, EndpointStatus>;
+use tokio::time::<Duration, Instant>;
+
 /// Global Router for edge distribution
 #[derive(Debug)]
 pub struct GlobalRouter {
@@ -456,8 +459,6 @@ impl GeoDns {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_global_router_initialization() {
         let router: _ = GlobalRouter::new();

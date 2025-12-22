@@ -8,17 +8,18 @@
 //! - Intelligent process selection based on workload
 //! - Automatic process lifecycle management
 //! - Support for both simple and complex script execution
-use anyhow::{Context, Result};
-use std::collections::HashMap;
-use std::process::{Command, Stdio};
 
-use std::time::{Duration, Instant};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{UnixStream, UnixListener};
-use num_cpus;
+use anyhow::<Context, Result>;
+use crate::<OptimizeMode, Runtime>;
+use std::collections::<BTreeMap, HashMap>;
+use std::hash::<Hash, Hasher>;
+use std::process::<Command, Stdio>;
+use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering>;
+use tokio::io::<AsyncReadExt, AsyncWriteExt>;
+use tokio::net::<UnixListener, UnixStream>;
+
 // Import Runtime for worker execution
 #[allow(unused_imports)]
-use crate::{Runtime, OptimizeMode};
 const DEFAULT_POOL_SIZE: usize = 4;
 const MAX_POOL_SIZE: usize = 16;
 const SOCKET_PATH_PREFIX: &str = "/tmp/beejs-pool-";
@@ -501,8 +502,6 @@ impl ProcessPool {
         // Apply load balancing: randomly select from top 3 workers to avoid always picking the same one
         let top_k: _ = std::cmp::min(3, worker_candidates.len());
         let selected_index: _ = if top_k > 1 {
-            use std::collections::hash_map::DefaultHasher;
-            use std::hash::{Hash, Hasher};
             let mut hasher = DefaultHasher::new();
             std::time::Instant::now().hash(&mut hasher);
             (hasher.finish() as usize) % top_k
@@ -806,8 +805,6 @@ pub async fn worker_main(worker_id: u32, socket_path: String) -> Result<()> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     #[ignore] // Disabled due to async spawn complexity in test environment
     async fn test_process_pool_performance() {

@@ -1,11 +1,12 @@
 //! Intelligent Auto-Scaling System
 //! 实现基于指标的智能扩缩容系统，支持多种扩缩容策略
-use anyhow::{Result, Context};
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::time::{Duration, SystemTime};
-use tracing::{info, warn, error, debug};
-use uuid::Uuid;
+
+use anyhow::<Context, Result>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use tracing::<debug, error, info, warn>;
+
 /// Cluster identifier
 pub type ClusterId = String;
 /// Scaling action type
@@ -364,8 +365,6 @@ pub fn default_scaling_policy() -> ScalingPolicy {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_calculate_metric_score() {
         let metrics_client: _ = MetricsClient::new("http://localhost:9090");

@@ -3,7 +3,7 @@
 //!
 //! 实现 `beejs init` 命令，用于快速初始化项目
 use std::fs;
-use std::io::{self, Write};
+use std::io::<self, Write>;
 use std::path::Path;
 use super::output_formatter::OutputFormatter;
 /// 项目模板类型
@@ -566,7 +566,7 @@ pub fn interactive_init(formatter: &OutputFormatter) -> anyhow::Result<InitConfi
 mod tests {
     use super::*;
     use tempfile::TempDir;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_project_template_from_str() {
         assert_eq!(

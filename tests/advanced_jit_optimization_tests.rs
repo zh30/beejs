@@ -2,7 +2,7 @@
 //! 测试逃逸分析、循环展开、内存布局优化等深度优化技术
 
 use beejs::Runtime;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 
 /// V8 编译标志配置
 #[derive(Debug, Clone)]
@@ -325,8 +325,8 @@ mod tests {
 
     // Import the V8 requirement macro
     use beejs::is_v8_available;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     // V8 availability check macro
     macro_rules! require_v8 {

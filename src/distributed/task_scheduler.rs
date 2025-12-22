@@ -1,8 +1,11 @@
 //! 分布式任务调度模块
 //! 提供任务分发、优先级队列、结果聚合等功能
-use std::collections::{BinaryHeap, HashMap};
+
+use std::collections::HashMap;
+use std::sync::Ordering;
+
+use std::collections::<BinaryHeap, HashMap>;
 use std::cmp::Reverse;
-use std::time::{Duration, Instant};
 /// 任务类型枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TaskType {
@@ -307,7 +310,7 @@ impl TaskDistributor {
             }
             "random" => {
                 use rand::Rng;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
                 let mut rng = rand::thread_rng();
                 if compatible_nodes.is_empty() {
                     None

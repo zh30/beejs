@@ -7,9 +7,12 @@
 //! - 垃圾回收性能测试
 //! - CPU 使用率测试
 //! - 系统资源监控
-use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
-use std::time::Duration;
-use std::alloc::{GlobalAlloc, Layout, System};
+
+use crate::benchmarks::<BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType>;
+use std::alloc::<GlobalAlloc, Layout, System>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// 内存和资源基准测试套件
 pub struct MemoryResourceBenchmark;
 impl MemoryResourceBenchmark {
@@ -88,7 +91,6 @@ impl MemoryResourceBenchmark {
             || {
                 // 模拟内存池操作
 
-                use std::thread;
                 let pool_size: _ = 100;
                 let pool: _ = Arc::new(Mutex::new(Vec::with_capacity(pool_size)));
                 let mut handles = vec![];
@@ -213,7 +215,6 @@ impl MemoryResourceBenchmark {
             MetricType::OperationsPerSecond,
             || {
                 // CPU 密集型计算
-                use std::thread;
                 let num_threads: _ = num_cpus::get();
                 let results: _ = Arc::new(Mutex::new(Vec::new()));
                 let mut handles = vec![];
@@ -254,7 +255,6 @@ impl MemoryResourceBenchmark {
             "multicore_parallel_performance",
             MetricType::ExecutionTime,
             || {
-                use rayon::prelude::*;
                 // 使用 Rayon 进行并行计算
                 let result: u64 = (0..1_000_000)
                     .into_par_iter()
@@ -388,8 +388,6 @@ impl MemoryResourceBenchmark {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_resource_benchmark_creation() {
         let benchmark: _ = MemoryResourceBenchmark::new();

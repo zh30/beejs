@@ -1,11 +1,13 @@
 //! 极致性能 WASM 执行器
 //!
 //! 实现 95%+ 原生性能的 WASM 执行引擎，支持热路径优化和动态优化
-use std::collections::HashMap;
-use tracing::{debug, info};
-use wasmtime::{Engine, Module, Instance, Store, Memory};
-use anyhow::{Result, Context};
-use std::collections::{BTreeMap};
+
+use anyhow::<Context, Result>;
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex>;
+use tracing::<debug, info>;
+use wasmtime::<Engine, Instance, Memory, Module, Store>;
+
 /// WASM 执行结果
 #[derive(Debug, Clone)]
 pub struct WasmExecutionResult {

@@ -9,7 +9,8 @@
 pub mod test_runner;
 pub mod threshold;
 pub mod report_generator;
-pub use test_runner::{AutomatedTestRunner, TestSuiteResults, TestType, TestPlanConfig};
-pub use threshold::{ThresholdManager, ThresholdConfig};
-pub use report_generator::{ReportGenerator, ReportFormat, ReportOutput, ReportType};
-use std::collections::{HashMap, BTreeMap};
+
+use report_generator::<ReportFormat, ReportGenerator, ReportOutput, ReportType>;
+use std::collections::<BTreeMap, HashMap>;
+use test_runner::<AutomatedTestRunner, TestPlanConfig, TestSuiteResults, TestType>;
+use threshold::<ThresholdConfig, ThresholdManager>;

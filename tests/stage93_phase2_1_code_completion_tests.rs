@@ -1,7 +1,7 @@
 //! Stage 93 Phase 2.1: 智能代码补全测试
 //! 测试 AI 辅助编码功能的增强版代码补全
 
-use beejs::ai::{
+use beejs::ai{
     AICodeGenerator, CodeContext, CodeCompletion, Language, ProjectInfo,
     PerformanceAwareConfig, MockAiModel
 };
@@ -87,9 +87,9 @@ async fn test_performance_aware_completion() {
         prefer_performance: true,
     };
 
-    use beejs::ai::code_generator::{ContextCache, CodeDatabase};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+    use beejs::ai::code_generator{ContextCache, CodeDatabase};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
     let model: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(MockAiModel::new(50, 0.95)))))))));
     let generator: _ = AICodeGenerator::new_with_performance_aware(
         model,

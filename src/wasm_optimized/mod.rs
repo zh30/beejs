@@ -9,4 +9,4 @@ pub mod zero_copy_loader;
 pub mod cache_manager;
 // 重新导出主要类型
 pub use cache_manager::WasmCacheManager;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;

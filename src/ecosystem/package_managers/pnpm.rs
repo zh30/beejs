@@ -2,10 +2,13 @@
 //! Stage 91 Phase 3.1.3 - pnpm 兼容性实现
 //!
 //! 支持 pnpm 的硬链接/符号链接存储机制
+
+use std::collections::HashMap;
+
 use super::*;
 use std::path::PathBuf;
 use tokio;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
 /// pnpm 兼容性管理器
 #[derive(Debug)]
 pub struct PnpmCompatibility {

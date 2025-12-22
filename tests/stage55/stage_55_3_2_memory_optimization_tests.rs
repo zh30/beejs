@@ -11,7 +11,7 @@
 //! compared to standard allocation strategies.
 
 use beejs::memory::*;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 
 #[cfg(test)]
 mod memory_optimization_tests {

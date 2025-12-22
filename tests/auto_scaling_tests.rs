@@ -1,4 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! Tests for intelligent auto-scaling functionality in the process pool
 //!
 //! These tests verify that the process pool can automatically scale up and down
@@ -7,9 +7,9 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 #[cfg(test)]
 mod auto_scaling_tests {
     use std::sync::Arc;
-    use beejs::process_pool::{ProcessPool, ProcessPoolConfig};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+    use beejs::process_pool{ProcessPool, ProcessPoolConfig};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_auto_scaling_config() {

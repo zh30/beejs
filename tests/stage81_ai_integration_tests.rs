@@ -1,14 +1,14 @@
 //! Stage 81 AI 增强平台集成测试
 //! 测试 AI 代码生成、智能调试、自动性能优化和预测性扩展功能
 
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use beejs::ai::code_generator::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+    use beejs::ai::code_generator{
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
         AICodeGenerator, CodeContext, Language, ProjectInfo,
     };
 

@@ -2,10 +2,13 @@
 //!
 //! This module provides optimized memory mapping for large files and
 //! efficient memory access patterns for zero-copy I/O operations.
-use std::path::{Path, PathBuf};
-use anyhow::{Result, anyhow};
-use memmap2::{Mmap, MmapOptions};
-use tokio::fs::File;
+
+use anyhow::<Result, anyhow>;
+use memmap2::<Mmap, MmapOptions>;
+use std::collections::<BTreeMap, HashMap>;
+use std::path::<Path, PathBuf>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+
 /// Memory mapping options
 #[derive(Debug, Clone, Copy)]
 pub struct MapOptions {
@@ -65,7 +68,6 @@ struct MappingCache {
 }
 impl MappingCache {
     fn new(capacity: usize) -> Self {
-        use std::num::NonZeroUsize;
         Self {
             cache: lru::LruCache::new(NonZeroUsize::new(capacity.max(1)).unwrap()),
             stats: Arc::new(Mutex::new(AtomicUsize::new(0))),
@@ -261,10 +263,6 @@ impl MappedFile {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use tempfile::NamedTempFile;
-    use std::io::Write;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_map_file() {
         let mapper: _ = MemoryMapper::new(16).unwrap();

@@ -13,14 +13,16 @@ pub mod workloads;
 pub mod regression;
 pub mod monitoring;
 pub mod utils;
-pub use engine::{BenchmarkEngine, BenchmarkRun};
-pub use config::{BenchmarkConfig, TestSuite, WorkloadProfile, RuntimeComparison};
-pub use result::{BenchmarkResult, Statistics, PerformanceMetrics};
-pub use runtime_comparison::{RuntimeDetector, ProcessLauncher, ComparisonReport};
-pub use workloads::{WorkloadExecutor, WorkloadType, ComputeWorkload, IOWorkload, MemoryWorkload, ConcurrentWorkload, AIWorkload};
-pub use regression::{RegressionDetector, PerformanceHistory, RegressionReport};
-pub use monitoring::{RealTimeMonitor, PerformanceDashboard, MetricsCollector};
-use std::collections::{HashMap, BTreeMap};
+
+use config::<BenchmarkConfig, RuntimeComparison, TestSuite, WorkloadProfile>;
+use engine::<BenchmarkEngine, BenchmarkRun>;
+use monitoring::<MetricsCollector, PerformanceDashboard, RealTimeMonitor>;
+use regression::<PerformanceHistory, RegressionDetector, RegressionReport>;
+use result::<BenchmarkResult, PerformanceMetrics, Statistics>;
+use runtime_comparison::<ComparisonReport, ProcessLauncher, RuntimeDetector>;
+use std::collections::<BTreeMap, HashMap>;
+use workloads::<AIWorkload, ComputeWorkload, ConcurrentWorkload, IOWorkload, MemoryWorkload, WorkloadExecutor, WorkloadType>;
+
 /// 运行时类型枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Runtime {

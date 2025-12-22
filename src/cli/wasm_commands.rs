@@ -2,11 +2,11 @@
 //! Stage 77 Phase 3 - WebAssembly CLI 集成
 //!
 //! 提供完整的 WebAssembly 模块管理、性能分析和执行功能
-use clap::{Parser, Subcommand, ValueEnum};
-use std::path::PathBuf;
-use std::time::Duration;
-use serde::{Serialize, Deserialize};
-use std::collections::{HashMap, BTreeMap};
+
+use clap::<Parser, Subcommand, ValueEnum>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+
 /// WebAssembly CLI 子命令
 #[derive(Subcommand, Debug)]
 pub enum WasmSubCommand {

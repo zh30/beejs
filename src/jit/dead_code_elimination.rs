@@ -1,8 +1,12 @@
 //! Stage 30.1: 死代码消除优化引擎
 //!
 //! 实现编译时静态分析和消除无用代码的优化技术
-use std::collections::{HashMap, HashSet};
-use std::time::{Duration, Instant};
+
+use std::collections::HashMap;
+use std::time::Instant;
+
+use std::collections::<HashMap, HashSet>;
+use std::time::<Duration, Instant>;
 /// 死代码消除决策
 #[derive(Debug, Clone, PartialEq)]
 pub struct DeadCodeEliminationDecision {
@@ -384,7 +388,7 @@ impl Default for DeadCodeEliminationOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
     #[test]
     fn test_unused_variable_detection() {
         let optimizer: _ = DeadCodeEliminationOptimizer::new();

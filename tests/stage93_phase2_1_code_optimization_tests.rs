@@ -1,7 +1,7 @@
 //! Stage 93 Phase 2.1.2: 自动代码优化建议系统测试
 //! 测试 AI 驱动的代码优化建议功能
 
-use beejs::ai::{
+use beejs::ai{
     code_optimizer::{
         CodeOptimizer, CodeOptimizationRequest, OptimizationSuggestion,
         CodeAnalyzer, RefactorEngine, BottleneckDetector, OptimizationApplier,
@@ -13,8 +13,8 @@ use beejs::ai::{
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 /// 测试 AI 性能分析器
 #[tokio::test]

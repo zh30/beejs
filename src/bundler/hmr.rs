@@ -1,6 +1,8 @@
 //! Hot Module Replacement (HMR) module
-use anyhow::Result;
-use std::collections::HashMap;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 pub struct HMRManager {
     watchers: HashMap<String, Box<dyn Fn() + Send + Sync>>,
 }
@@ -22,8 +24,6 @@ impl HMRManager {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_hmr_manager() {
         let mut manager = HMRManager::new();

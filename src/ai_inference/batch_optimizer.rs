@@ -1,10 +1,13 @@
 //! ONNX 批处理优化器
 //! 智能批处理算法，动态调整批处理大小，优化推理性能
-use crate::ai_inference::engine_interface::{InferenceResult, ModelHandle};use crate::ai_inference::tensor_ops::Tensor;
+
+use std::collections::HashMap;
+use std::sync::<Arc, Mutex, RwLock>;
+
+use crate::ai_inference::engine_interface::<InferenceResult, ModelHandle>;use crate::ai_inference::tensor_ops::Tensor;
 use anyhow::Result;
 
 use tokio::sync::RwLock;
-use std::time::{Duration, Instant};
 // serde imports removed - unused
 /// 批处理优化策略
 #[derive(Debug, Clone, PartialEq)]
@@ -394,7 +397,7 @@ impl PerformanceMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[tokio::test]
     async fn test_batch_processor_fixed() -> Result<()> {
         let processor: _ = BatchProcessor::new(BatchStrategy::Fixed(4));

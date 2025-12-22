@@ -1,10 +1,12 @@
 //! Python Runtime Integration
 //! Provides seamless integration between Beejs and Python
-use tokio::sync::RwLock;
-use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize};
-use pyo3::{Python, PyObject, PyResult, types::PyDict};
-use pyo3::prelude::*;
+
+use anyhow::<Result, anyhow>;
+use pyo3::::<PyObject, PyResult, Python, types::PyDict>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// Python GIL (Global Interpreter Lock) manager
 #[derive(Debug)]
 pub struct PythonGIL {
@@ -158,8 +160,6 @@ fn bee_execute(script: &str) -> PyResult<String> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_python_basic_execution() {
         let bee_api: _ = Arc::new(Mutex::new(BeeAPI {)),

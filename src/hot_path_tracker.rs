@@ -1,6 +1,10 @@
-use crate::code_analyzer::{CodeAnalyzer, CodeComplexity};
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
+
+
+use crate::code_analyzer::<CodeAnalyzer, CodeComplexity>;
+use std::collections::<BTreeMap, HashMap>;
+use std::hash::<Hash, Hasher>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+
 /// 热路径代码信息
 #[derive(Debug, Clone)]
 pub struct HotPathInfo {
@@ -230,8 +234,6 @@ impl HotPathTracker {
     }
     /// 生成代码ID
     fn generate_code_id(&self, code: &str, file_path: Option<&str>) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
         let mut hasher = DefaultHasher::new();
         // 如果有文件路径，使用路径作为ID
         if let Some(path) = file_path {
@@ -270,8 +272,6 @@ impl HotPathTracker {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_hot_path_identification() {
         let tracker: _ = HotPathTracker::new_default();

@@ -2,8 +2,8 @@
 //! Comprehensive test suite for enhanced testing framework
 
 use beejs::testing::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 /// Test enhanced runner basic functionality
 #[test]

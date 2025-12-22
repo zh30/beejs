@@ -39,7 +39,7 @@ impl PluginLoader {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_plugin_loader_creation() {
         let loader: _ = PluginLoader::new();

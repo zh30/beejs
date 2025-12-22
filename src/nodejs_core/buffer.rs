@@ -2,7 +2,7 @@
 //! 高性能二进制数据处理
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
 /// 设置Buffer API
 pub fn setup_buffer_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,

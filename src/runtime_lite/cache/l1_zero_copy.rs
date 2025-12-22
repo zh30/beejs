@@ -2,8 +2,9 @@
 //!
 //! This module provides the fastest cache level using Arc<[u8]> for zero-copy
 //! data sharing and pre-allocated buffer pools for minimal allocation overhead.
-use super::CacheKey;
-use std::collections::HashMap;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
 
 /// Zero-copy script buffer using Arc for safe sharing
 #[derive(Debug, Clone)]
@@ -158,8 +159,6 @@ impl Default for L1ZeroCopyCache {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_l1_basic_operations() {
         let cache: _ = L1ZeroCopyCache::new();

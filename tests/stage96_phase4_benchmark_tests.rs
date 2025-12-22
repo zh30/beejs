@@ -5,7 +5,7 @@
 
 use beejs::runtime_lite::Runtime;
 use beejs::performance_analyzer::PerformanceAnalyzer;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 use tokio::time::sleep;
 
 /// AI 工作负载基准测试
@@ -549,8 +549,8 @@ mod benchmark_helpers {
 #[cfg(test)]
 mod integration_benchmark_tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 综合性能基准测试
     #[tokio::test]

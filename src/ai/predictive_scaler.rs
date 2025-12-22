@@ -1,9 +1,11 @@
 //! AI 预测性扩展器
 //! 提供基于机器学习的资源预测、自动扩展和智能调度功能
-use std::collections::HashMap;
-use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
-use chrono::{DateTime, Utc, Duration};
+
+use chrono::<DateTime, Duration, Utc>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, RwLock>;
+
 /// 时间序列指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metrics {
@@ -525,8 +527,6 @@ impl AnomalyDetector {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_predictive_scaler_creation() {
         let scaler: _ = PredictiveScaler::new();

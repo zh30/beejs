@@ -2,11 +2,12 @@
 //!
 //! Analyzes time series data to detect trends, calculate trend strength,
 //! and predict future values.
-use crate::core::data_collector::{Metric, MetricType};
-use crate::core::error::{AIOpsError, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
+
+use crate::core::data_collector::::<Metric, MetricType>;
+use crate::core::error::::<AIOpsError, Result>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+
 /// Trend direction
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TrendDirection {
@@ -315,9 +316,6 @@ impl TrendAnalyzer for LinearTrendAnalyzer {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::time::Duration;
-use std::collections::{HashMap, BTreeMap};
     fn create_test_metric(value: f64, timestamp_secs: u64) -> Metric {
         Metric {
             metric_type: MetricType::CpuUsage,

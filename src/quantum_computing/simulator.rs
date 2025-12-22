@@ -197,7 +197,7 @@ impl QuantumSimulator {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_simulator_initial_state() {
         let sim: _ = QuantumSimulator::new(2);

@@ -298,7 +298,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_layer_minimization_strategy() {
         let strategy: _ = LayerMinimizationStrategy;

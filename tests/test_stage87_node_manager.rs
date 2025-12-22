@@ -5,8 +5,8 @@
 mod tests {
     use beejs::edge::node_manager::*;
     use std::time::SystemTime;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_node_registration() {

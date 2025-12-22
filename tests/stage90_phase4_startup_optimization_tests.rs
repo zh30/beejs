@@ -1,17 +1,17 @@
 //! Stage 90 Phase 4: 启动时间优化测试套件
 //! 测试延迟初始化、预编译缓存等启动优化功能
 
-use beejs::startup::lazy_init::{LazyWebAPI, LazyInitializer, OnDemandLoader};
-use beejs::startup::precompiled_cache::{OptimizedSnapshot, CacheStrategy, OptimizedPrecompiledCache};
+use beejs::startup::lazy_init{LazyWebAPI, LazyInitializer, OnDemandLoader};
+use beejs::startup::precompiled_cache{OptimizedSnapshot, CacheStrategy, OptimizedPrecompiledCache};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 use tokio::time::sleep;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 测试延迟初始化系统
     #[tokio::test]

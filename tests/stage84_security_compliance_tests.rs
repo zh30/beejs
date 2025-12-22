@@ -5,14 +5,14 @@
 #[cfg(test)]
 mod stage84_security_tests {
     use std::sync::Arc;
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use std::time{SystemTime, UNIX_EPOCH};
 
     // 注意：在实际实现之前，这些测试会失败
     // 这是 TDD（测试驱动开发）的正常流程
 
     #[tokio::test]
     async fn test_mfa_authentication() {
-        use beejs::security::authentication::{AuthenticationService, Credentials};
+        use beejs::security::authentication{AuthenticationService, Credentials};
 
         let auth_service: _ = AuthenticationService::new();
 
@@ -43,7 +43,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_jwt_token_generation() {
-        use beejs::security::authentication::{AuthenticationService, Credentials, User};
+        use beejs::security::authentication{AuthenticationService, Credentials, User};
 
         let auth_service: _ = AuthenticationService::new();
         let token_manager: _ = auth_service.token_manager.clone();
@@ -69,7 +69,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_token_expiration() {
-        use beejs::security::authentication::{AuthenticationService, Credentials};
+        use beejs::security::authentication{AuthenticationService, Credentials};
 
         let auth_service: _ = AuthenticationService::new();
         let token_manager: _ = auth_service.token_manager.clone();
@@ -101,7 +101,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_role_assignment() {
-        use beejs::security::authorization::{AuthorizationService, Role, UserId};
+        use beejs::security::authorization{AuthorizationService, Role, UserId};
 
         let auth_service: _ = AuthorizationService::new();
 
@@ -119,7 +119,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_permission_check() {
-        use beejs::security::authorization::{AuthorizationService, Role, UserId, Action};
+        use beejs::security::authorization{AuthorizationService, Role, UserId, Action};
 
         let auth_service: _ = AuthorizationService::new();
 
@@ -136,7 +136,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_data_encryption() {
-        use beejs::security::encryption::{EncryptionEngine, CryptoKey};
+        use beejs::security::encryption{EncryptionEngine, CryptoKey};
 
         let encryption_engine: _ = EncryptionEngine::new();
 
@@ -152,7 +152,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_key_rotation() {
-        use beejs::security::encryption::{EncryptionEngine, KeyManager};
+        use beejs::security::encryption{EncryptionEngine, KeyManager};
 
         let key_manager: _ = KeyManager::new();
 
@@ -186,7 +186,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_tls_handshake() {
-        use beejs::security::tls::{TlsConfig, TlsVersion, CipherSuite};
+        use beejs::security::tls{TlsConfig, TlsVersion, CipherSuite};
 
         let tls_config: _ = TlsConfig::new();
 
@@ -197,7 +197,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_certificate_validation() {
-        use beejs::security::tls::{TlsConfig, CertificateManager};
+        use beejs::security::tls{TlsConfig, CertificateManager};
 
         let cert_manager: _ = CertificateManager::new();
 
@@ -207,7 +207,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_gdpr_compliance() {
-        use beejs::security::compliance::{GdprComplianceChecker, GdprComplianceResult};
+        use beejs::security::compliance{GdprComplianceChecker, GdprComplianceResult};
 
         let checker: _ = GdprComplianceChecker::new();
         let result: _ = checker.check();
@@ -220,7 +220,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_soc2_compliance() {
-        use beejs::security::compliance::{Soc2ComplianceChecker, Soc2ComplianceResult};
+        use beejs::security::compliance{Soc2ComplianceChecker, Soc2ComplianceResult};
 
         let checker: _ = Soc2ComplianceChecker::new();
         let result: _ = checker.check();
@@ -244,7 +244,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_risk_scoring() {
-        use beejs::security::risk_assessment::{RiskAssessor, RiskLevel};
+        use beejs::security::risk_assessment{RiskAssessor, RiskLevel};
 
         let assessor: _ = RiskAssessor::new();
         let score: _ = assessor.assess();
@@ -283,7 +283,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_audit_logging() {
-        use beejs::security::audit::{AuditLogger, AuditLogEntry};
+        use beejs::security::audit{AuditLogger, AuditLogEntry};
         use std::collections::HashMap;
 
         let mut logger = AuditLogger::new();
@@ -305,7 +305,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_log_integrity() {
-        use beejs::security::audit::{AuditLogger, AuditLogEntry};
+        use beejs::security::audit{AuditLogger, AuditLogEntry};
         use std::collections::HashMap;
 
         let logger: _ = AuditLogger::new();
@@ -317,7 +317,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_log_search() {
-        use beejs::security::audit::{AuditLogger, AuditLogEntry};
+        use beejs::security::audit{AuditLogger, AuditLogEntry};
         use std::collections::HashMap;
 
         let mut logger = AuditLogger::new();
@@ -352,7 +352,7 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_auto_remediation() {
-        use beejs::security::incident_response::{AutoRemediator, Incident, IncidentType, IncidentSeverity};
+        use beejs::security::incident_response{AutoRemediator, Incident, IncidentType, IncidentSeverity};
 
         let remediator: _ = AutoRemediator::new();
         let incident: _ = Incident {
@@ -371,9 +371,9 @@ mod stage84_security_tests {
 
     #[tokio::test]
     async fn test_escalation() {
-        use beejs::security::incident_response::{EscalationManager, Incident, IncidentType, IncidentSeverity};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+        use beejs::security::incident_response{EscalationManager, Incident, IncidentType, IncidentSeverity};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
         let escalation_manager: _ = EscalationManager::new();
         let incident: _ = Incident {

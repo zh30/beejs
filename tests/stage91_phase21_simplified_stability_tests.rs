@@ -3,9 +3,9 @@
 //! 避免 V8 Isolate 并发访问问题
 
 use beejs::RuntimeLite;
-use std::time::{Duration, Instant};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::time{Duration, Instant};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 /// 测试基本错误处理
 #[test]

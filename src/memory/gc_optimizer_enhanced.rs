@@ -5,9 +5,12 @@
 //! - 自适应 GC 调优
 //! - 分代 GC 优化
 //! - 增量 GC 和并行 GC
-use std::time::{Duration, Instant};
-use tokio::sync::{RwLock, Mutex};
-use anyhow::{Result, anyhow};
+
+use anyhow::<Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock>;
+use tokio::sync::<Mutex, RwLock>;
+
 /// GC 配置
 #[derive(Debug, Clone)]
 pub struct GcConfig {
@@ -489,8 +492,6 @@ impl GcMetricsSnapshot {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_gc_optimizer_creation() {
         let optimizer: _ = EnhancedGcOptimizer::default();

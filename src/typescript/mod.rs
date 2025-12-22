@@ -2,10 +2,11 @@
 //!
 //! 提供 TypeScript 代码的编译、转译和执行支持。
 pub mod compiler;
-pub use compiler::{
+
+pub use compiler::<
     TypeScriptCompiler, TypeScriptCompilerConfig, TypeScriptTarget, TypeScriptModule,
     CompilationOutput, TypeScriptError, ErrorSeverity,
-};
+>;
 /// 快速编译 TypeScript 源代码
 pub fn compile_typescript(source: &str, file_name: &str) -> Result<CompilationOutput, String> {
     let config: _ = TypeScriptCompilerConfig::default();

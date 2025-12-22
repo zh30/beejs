@@ -4,7 +4,7 @@
 //! 实现 `beejs doctor` 命令，诊断开发环境问题
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::<Path, PathBuf>;
 use std::process::Command;
 use std::time::Instant;
 use super::output_formatter::OutputFormatter;
@@ -414,7 +414,7 @@ impl DoctorCommand {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_check_status_icon() {
         assert_eq!(CheckStatus::Pass.icon(), "✓");

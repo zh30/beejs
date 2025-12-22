@@ -124,8 +124,6 @@ impl HtmlCoverageWriter {
 }
 impl CoverageWriter for HtmlCoverageWriter {
     fn write(&self, report: &CoverageReport) -> Result<(), CoverageError> {
-        use std::fs;
-        use std::io::Write;
         let output_dir: _ = &self.config.output_directory;
         fs::create_dir_all(output_dir)?;
         // Write index.html
@@ -203,7 +201,6 @@ impl JsonCoverageWriter {
 }
 impl CoverageWriter for JsonCoverageWriter {
     fn write(&self, report: &CoverageReport) -> Result<(), CoverageError> {
-        use std::fs;
         let output_path: _ = format!("{}/coverage.json", self.config.output_directory));
         let content: _ = serde_json::to_string_pretty(report)?;
         fs::write(output_path, content)?;
@@ -221,8 +218,6 @@ impl TextCoverageWriter {
 }
 impl CoverageWriter for TextCoverageWriter {
     fn write(&self, report: &CoverageReport) -> Result<(), CoverageError> {
-        use std::fs;
-        use std::io::Write;
         let output_path: _ = format!("{}/coverage.txt", self.config.output_directory));
         let mut file = fs::File::create(&output_path)?;
         writeln!(file, "Code Coverage Report")?;
@@ -287,7 +282,7 @@ impl From<serde_json::Error> for CoverageError {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_coverage_stats_default() {
         let stats: _ = CoverageStats::default();

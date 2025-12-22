@@ -3,11 +3,11 @@
 //!
 //! 支持 package-lock.json、yarn.lock、pnpm-lock.yaml
 use super::*;
-use serde::{Deserialize, Serialize};
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// Lockfile 类型
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LockfileType {

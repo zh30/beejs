@@ -481,8 +481,11 @@ pub enum Error {
 }
 #[cfg(test)]
 mod tests {
+
+use std::collections::HashMap;
+
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_blue_green_deployment() {
         let deployment: _ = BlueGreenDeployment::new(

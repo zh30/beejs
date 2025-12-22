@@ -1,7 +1,8 @@
 //! Coverage Tracker
 //! Tracks code coverage during test execution
-use super::*;
-use std::collections::HashMap;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
 
 /// Coverage tracking configuration
 #[derive(Debug, Clone)]
@@ -336,8 +337,6 @@ pub fn get_global_tracker() -> Option<Arc<CoverageTracker>> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_line_coverage() {
         let mut line_coverage = LineCoverage::new(10);

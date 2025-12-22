@@ -7,12 +7,12 @@
 //! - 错误追踪
 //! - 性能追踪
 
-use beejs::observability::{JaegerTracer, JaegerSpan};
+use beejs::observability{JaegerTracer, JaegerSpan};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::time::{sleep, Instant};
+use tokio::time{sleep, Instant};
 
 #[tokio::test]
 async fn test_jaeger_tracer_creation() {
@@ -389,8 +389,8 @@ async fn test_long_operation_tracing() {
 #[tokio::test]
 async fn test_high_concurrency_tracing() {
     use std::sync::Arc;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     let addr: SocketAddr = "127.0.0.1:6831".parse().unwrap();
     let tracer: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(JaegerTracer::new(addr)))))))).unwrap());

@@ -1,9 +1,9 @@
 //! Test Discoverer - Fixed version
 //! Finds and loads test files
-use std::path::{Path, PathBuf};
-use std::fs;
-use crate::testing::test_context::TestSuite;
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::path::<Path, PathBuf>;
+
 /// Test file patterns
 const TEST_FILE_PATTERNS: &[&str] = &[
     "*.test.js",

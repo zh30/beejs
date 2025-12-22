@@ -1,11 +1,12 @@
 //! Prometheus 指标导出器 - Stage 91 Phase 2.2
 //! 提供 Prometheus 兼容的指标导出功能
-use crate::monitoring::ai_monitor::{PerformanceMetrics, MetricType, RealtimePerformanceMonitor};
-use crate::monitoring::intelligent_analyzer::{AnalysisReport, AnomalyDetection};
-use crate::memory::GLOBAL_MEMORY_STATS;
-use std::collections::HashMap;
-use tokio::sync::RwLock;
-use chrono::{DateTime, Utc};
+
+use chrono::<DateTime, Utc>;
+use crate::monitoring::ai_monitor::::<MetricType, PerformanceMetrics, RealtimePerformanceMonitor>;
+use crate::monitoring::intelligent_analyzer::::<AnalysisReport, AnomalyDetection>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// Prometheus 指标导出器
 pub struct PrometheusExporter {
     /// 关联的性能监控器
@@ -198,9 +199,6 @@ pub enum PrometheusMetricType {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::monitoring::ai_monitor::RealtimePerformanceMonitor;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_prometheus_exporter_creation() {
         let monitor: _ = Arc::new(Mutex::new(RealtimePerformanceMonitor::new()),;

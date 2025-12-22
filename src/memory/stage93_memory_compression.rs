@@ -1,11 +1,14 @@
 //! Stage 93 Phase 1.2: 内存压缩
 //! 实现智能内存压缩，减少内存占用
 //! 目标: 内存使用减少 15%+, 压缩速度 100MB/s+
-use std::time::{Duration, Instant};
-use tokio::sync::{RwLock, Mutex};
-use serde::{Serialize, Deserialize};
-use anyhow::{Result, anyhow};
-use lru::LruCache;
+
+use anyhow::<Result, anyhow>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::hash::<Hash, Hasher>;
+use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock>;
+use tokio::sync::<Mutex, RwLock>;
+
 /// Stage 93 内存压缩配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stage93CompressionConfig {
@@ -283,8 +286,6 @@ impl Stage93MemoryCompressor {
     /// 计算缓存键
     fn calculate_cache_key(&self, data: &[u8]) -> usize {
         // 简单的哈希函数
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
         let mut hasher = DefaultHasher::new();
         data.hash(&hasher);
         hasher.finish() as usize
@@ -346,8 +347,6 @@ pub struct Stage93CompressionReport {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_stage93_compressor_creation() {
         let config: _ = Stage93CompressionConfig::default();

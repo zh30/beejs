@@ -3,10 +3,12 @@
 //! sendfile 是一个零拷贝系统调用，可以在内核空间直接将文件内容传输到
 //! 网络套接字，避免用户空间和内核空间之间的数据拷贝，显著提升大文件
 //! 传输性能。
-use std::fs::File;
-use std::io::{self, Write};
-use std::os::unix::io::{AsRawFd, RawFd};
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::io::<Write, self>;
+use std::os::unix::io::<AsRawFd, RawFd>;
+use std::sync::<Arc, Mutex>;
+
 /// sendfile 零拷贝文件传输器
 ///
 /// 该结构体封装了 sendfile 系统调用，提供高性能的大文件传输功能。
@@ -146,7 +148,6 @@ impl SendFile {
         // 使用 libc::sendfile 系统调用
         #[cfg(unix)]
         {
-            use libc::off_t;
             let mut offset: off_t = self.current_pos as off_t;
             let result: _ = unsafe {
                 libc::sendfile(out_fd, self.fd, 0, &mut offset, std::ptr::null_mut(), 0)
@@ -223,9 +224,6 @@ impl SendFile {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::io::Cursor;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_sendfile_zero_copy_file_transfer() {
         // 创建测试文件

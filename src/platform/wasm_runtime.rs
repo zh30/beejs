@@ -1,10 +1,12 @@
 //! WebAssembly Runtime
 //! Provides WebAssembly (WASM) support for cross-platform execution
-use tokio::sync::RwLock;
-use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize};
-use wasmtime::{Engine, Module, Instance, Store, TypedFunc};
-use wasmtime_wasi::WasiCtx;
+
+use anyhow::<Result, anyhow>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use wasmtime::<Engine, Instance, Module, Store, TypedFunc>;
+
 /// WebAssembly runtime engine
 #[derive(Debug)]
 pub struct WASMRuntime {
@@ -52,7 +54,6 @@ pub struct WASMCompilationResult {
 pub struct JS2WASMCompiler {
     engine: Arc<Engine>,
 }
-use std::collections::HashMap;
 impl WASMRuntime {
     /// Create a new WASM runtime
     pub fn new(bee_api: Arc<dyn BeeWasmAPI>) -> Result<Self> {
@@ -203,8 +204,6 @@ fn generate_minimal_wasm() -> Vec<u8> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     struct MockBeeWasmAPI;
     impl BeeWasmAPI for MockBeeWasmAPI {
         fn console_log(&self, message: &str) -> Result<()> {

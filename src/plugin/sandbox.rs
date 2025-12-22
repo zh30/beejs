@@ -46,7 +46,7 @@ impl PluginSandbox {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_sandbox_creation() {
         let sandbox: _ = PluginSandbox::new(true);

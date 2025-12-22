@@ -89,7 +89,7 @@ impl SimdVectorizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_simd_vectorizer_creation() {
         let vectorizer: _ = SimdVectorizer::new(SimdInstructionSet::AVX2);

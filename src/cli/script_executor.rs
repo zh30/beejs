@@ -346,7 +346,7 @@ pub mod args {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_file_type_detection() {
         assert_eq!(detect_file_type(&PathBuf::from("test.js")), FileType::JavaScript);

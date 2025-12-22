@@ -1,5 +1,8 @@
 //! REPL Tab Auto-completion Module
 //! Stage 91 Phase 4.2 - Enhanced REPL
+
+use std::sync::Arc;
+
 use rustyline::Result;
 use std::collections::HashMap;
 use rusty_v8 as v8;
@@ -249,7 +252,7 @@ impl Default for ReplCompleter {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_completer_creation() {
         let completer: _ = ReplCompleter::new();

@@ -7,10 +7,11 @@
 //! - 缓存过期和清理机制
 //! - 基于访问频率的优化
 //! - 预热机制
-// use serde::{Deserialize, Serialize};  // Unused import
-use std::collections::{HashMap, VecDeque};
+// use serde::<Deserialize, Serialize>;  // Unused import
 
-use std::time::{Duration, Instant};
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex>;
+
 /// 缓存条目
 #[derive(Debug, Clone)]
 pub struct CacheEntry<T> {
@@ -402,8 +403,6 @@ pub fn create_persistent_cache<T>(max_size: usize) -> SmartCache<T> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{BTreeMap};
     #[test]
     fn test_cache_creation() {
         let cache: _ = SmartCache::<String>::with_default_config();

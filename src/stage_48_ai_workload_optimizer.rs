@@ -6,10 +6,11 @@
 //! 3. GPU 加速集成 - 支持 WebGPU/Compute Shader
 //! 4. 动态批处理 - 批量处理多个推理请求
 //! 5. 内存预分配 - 避免运行时内存分配开销
-use anyhow::{Result, bail};
-use std::collections::HashMap;
 
-use std::time::{Duration, Instant};
+use anyhow::<Result, bail>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// AI 工作负载类型
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AIWorkloadType {
@@ -488,8 +489,6 @@ impl AIWorkloadOptimizer {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_matrix_multiplication() {
         let optimizer: _ = AIWorkloadOptimizer::new(AIWorkloadOptimizerConfig::default());

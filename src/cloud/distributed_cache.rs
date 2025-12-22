@@ -7,9 +7,10 @@
 //! - 缓存预热器
 //! - 缓存一致性协议
 //! - 布隆过滤器
-use std::collections::{HashMap, VecDeque};
 
-use std::time::{Duration, Instant};
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex>;
+
 /// 缓存条目
 #[derive(Debug, Clone)]
 pub struct CacheEntry<T> {
@@ -500,8 +501,6 @@ impl<T: Clone> Default for DistributedCache<T> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{BTreeMap};
     /// 测试创建分布式缓存
     #[test]
     fn test_distributed_cache_creation() {

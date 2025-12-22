@@ -1,17 +1,17 @@
 //! Stage 29.4: 分布式任务执行引擎测试套件
 //! 测试任务执行、监控和容错功能
 
-use beejs::distributed::{
+use beejs::distributed{
     TaskExecutor, ExecutorConfig, ExecutorWorker, WorkerStatus, WorkerConfig, ExecutionError,
     FaultHandler, FaultConfig, RetryPolicy, FaultAction,
     ExecutionMonitor, MonitorConfig, AlertType,
     ResourceTracker, ResourceConfig, CheckpointManager, RecoveryManager, RecoveryConfig,
     Task, TaskType, TaskStatus,
 };
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 // ============================================================================
 // 任务执行器 (TaskExecutor) 测试

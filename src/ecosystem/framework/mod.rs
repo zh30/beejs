@@ -10,9 +10,9 @@ pub use react::*;
 pub use vue::*;
 pub use angular::*;
 pub use ssr::*;
-use serde::{Deserialize, Serialize};
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// 框架类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FrameworkType {

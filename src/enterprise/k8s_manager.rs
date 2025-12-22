@@ -1,7 +1,10 @@
 //! Kubernetes 集群管理器
 //! 实现 Beejs 集群的 Kubernetes 部署、管理和运维功能
-use anyhow::{Result, Context};
-use serde::{Deserialize, Serialize};
+
+use std::time::SystemTime;
+
+use anyhow::<Result, Context>;
+use serde::<Deserialize, Serialize>;
 /// 集群配置结构体
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClusterConfig {
@@ -212,7 +215,7 @@ impl K8sManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[tokio::test]
     async fn test_create_k8s_manager() {
         let manager: _ = K8sManager::new("test-namespace".to_string());

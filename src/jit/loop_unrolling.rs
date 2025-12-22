@@ -1,8 +1,12 @@
 //! Stage 30.1: 循环展开优化引擎
 //!
 //! 实现自动循环展开，提升执行效率的优化技术
-use std::collections::{HashMap, VecDeque};
-use std::time::{Duration, Instant};
+
+use std::collections::HashMap;
+use std::time::Instant;
+
+use std::collections::<HashMap, VecDeque>;
+use std::time::<Duration, Instant>;
 /// 循环展开决策
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoopUnrollingDecision {
@@ -393,7 +397,7 @@ impl Default for LoopUnrollingOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
     #[test]
     fn test_simple_for_loop_analysis() {
         let optimizer: _ = LoopUnrollingOptimizer::new();

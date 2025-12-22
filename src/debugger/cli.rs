@@ -2,11 +2,11 @@
 //!
 //! Provides a command-line interface for debugging JavaScript/TypeScript code
 //! with support for breakpoints, stepping, and variable inspection.
-use anyhow::Result;
-use std::io::{self, Write};
 
-use crate::debugger::DebuggerEngine;
-use crate::RuntimeLite;
+use std::collections::<BTreeMap, HashMap>;
+use std::io::<Write, self>;
+use std::sync::<Arc, Mutex>;
+
 /// Interactive debug command
 #[derive(Debug, Clone)]
 pub enum DebugCliCommand {
@@ -285,8 +285,6 @@ impl DebugConsole {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_parse_continue_command() {
         let console: _ = DebugConsole::new(

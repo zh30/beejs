@@ -1,11 +1,11 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 80 包管理器测试套件
 //! Phase 1 - 包管理器核心功能测试
 
 use std::sync::Arc;
-use std::collections::{HashMap, HashSet};
+use std::collections{HashMap, HashSet};
 use chrono::Utc;
-use serde::{Serialize, Deserialize};
+use serde{Serialize, Deserialize};
 
 #[cfg(test)]
 mod tests {
@@ -148,8 +148,8 @@ mod tests {
 
         // 测试序列化/反序列化
         use bincode;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
         let serialized: _ = bincode::serialize(&package_id).unwrap();
         let deserialized: PackageId = bincode::deserialize(&serialized).unwrap();
         assert_eq!(package_id, deserialized);

@@ -1,5 +1,9 @@
 //! 包缓存管理器
 //! 实现多级缓存系统
+
+use std::collections::HashSet;
+use std::sync::<Arc, Mutex, RwLock>;
+
 use std::collections::HashMap;
 
 use tokio::sync::RwLock;
@@ -296,18 +300,15 @@ impl L3DistributedCache {
 }
 /// 序列化包
 fn serialize_package(package: &Package) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    use bincode;
     Ok(bincode::serialize(package)?)
 }
 /// 反序列化包
 fn deserialize_package(data: &[u8]) -> Result<Package, Box<dyn std::error::Error>> {
-    use bincode;
     Ok(bincode::deserialize(data)?)
 }
 /// 序列化包 ID
 fn serialize_package_id(id: &PackageId) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    use bincode;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     Ok(bincode::serialize(id)?)
 }
 /// 创建模拟包

@@ -1,11 +1,9 @@
 //! Stage 89 Phase 2: 优雅降级管理器
 //! 提供功能降级策略和自动恢复机制
-use std::collections::HashMap;
-use std::fmt;
-use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
-use crate::error::BeejsError;
-use std::collections::{BTreeMap};
+
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// 功能标识枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Feature {

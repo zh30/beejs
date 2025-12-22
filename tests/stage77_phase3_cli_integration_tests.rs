@@ -1,11 +1,11 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 /// Stage 77 Phase 3: CLI Integration Tests
 /// Tests WebAssembly CLI commands and runtime integration
 
 #[cfg(test)]
 mod stage77_phase3_cli_integration_tests {
     use clap::Parser;
-    use beejs::cli::wasm_commands::{
+    use beejs::cli::wasm_commands{
         WasmSubCommand, WasmLoadCommand, WasmListCommand, WasmExecuteCommand,
         WasmBenchmarkCommand, WasmProfileCommand, WasmAnalyzeCommand,
         WasmCacheCommand, WasmCacheAction, WasmListFormat, WasmOutputFormat,
@@ -363,8 +363,8 @@ mod stage77_phase3_cli_integration_tests {
         println!("🚀 测试 20: RuntimeLite 自定义 V8 配置下的 WASM 集成");
 
         use beejs::v8_engine::flags::V8EngineFlags;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
         let config: _ = V8EngineFlags::high_performance();
         let runtime: _ = RuntimeLite::new_with_config(false, config).unwrap();

@@ -3,9 +3,9 @@
 //!
 //! 提供 Angular 应用完整支持，包括 Ivy 渲染器、Zone.js 集成等
 use super::*;
-use serde::{Deserialize, Serialize};
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// Angular 运行时
 #[derive(Debug)]
 pub struct AngularRuntime {

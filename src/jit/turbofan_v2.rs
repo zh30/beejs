@@ -1,5 +1,8 @@
 //! TurboFan v2 - Advanced JIT compiler
 //! Next-generation optimization engine
+
+use std::time::Instant;
+
 use anyhow::Result;
 /// Optimization level
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -161,7 +164,7 @@ impl TurboFanV2 {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_turbofan_v2_creation() {
         let optimizer: _ = TurboFanV2::new(OptimizationLevel::Aggressive);

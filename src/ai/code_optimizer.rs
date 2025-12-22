@@ -1,14 +1,15 @@
 //! AI 代码优化器
 //! 提供 AI 驱动的代码优化建议、性能分析和自动优化功能
 //! Stage 93 Phase 2.1.2: 自动代码优化建议系统
-use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
-use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
-use crate::ai::code_generator::{Language, CodeContext};
-use crate::ai::auto_optimizer::{AutoOptimizer, Optimization, Bottleneck};
-use crate::ai::ai_performance_engine::{AiPerformanceEngine, PerformanceMetrics};
-use std::collections::{BTreeMap};
+
+use crate::ai::ai_performance_engine::::<AiPerformanceEngine, PerformanceMetrics>;
+use crate::ai::auto_optimizer::::<AutoOptimizer, Bottleneck, Optimization>;
+use crate::ai::code_generator::::<CodeContext, Language>;
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<SystemTime, UNIX_EPOCH>;
+
 /// 代码优化请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeOptimizationRequest {

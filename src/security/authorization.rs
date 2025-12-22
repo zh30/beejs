@@ -1,10 +1,11 @@
 //! 权限控制系统
 //!
 //! 实现基于角色的访问控制 (RBAC) 和权限检查
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
-use std::collections::{BTreeMap};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex>;
+
 /// 权限控制错误
 #[derive(Error, Debug)]
 pub enum AuthzError {

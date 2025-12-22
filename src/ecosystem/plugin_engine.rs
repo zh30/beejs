@@ -1,11 +1,11 @@
 //! Beejs Plugin Engine - Stage 86
 //! 高性能、安全的插件引擎核心实现
-use std::collections::HashMap;
-use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
-use serde_json::Value;
-use std::future::Future;
-use anyhow::Result;
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicBool, Mutex, Ordering, RwLock>;
+use std::time::<Duration, Instant>;
+
 // ============================================================================
 // 核心类型定义
 // ============================================================================
@@ -667,8 +667,6 @@ impl Default for PluginEngine {
 // ============================================================================
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_plugin_engine_new() {
         let engine: _ = PluginEngine::new();

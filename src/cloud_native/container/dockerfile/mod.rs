@@ -3,16 +3,16 @@
 pub mod multi_stage;
 pub mod optimization;
 // Re-export types for convenience
-pub use multi_stage::{
+pub use multi_stage::<
     MultiStageBuilder, BuilderStage, RuntimeStage, Optimization,
     BaseImageOptimization, LayerCachingOptimization, SecurityHardeningOptimization,
     MultiArchOptimization, Error as MultiStageError,
-};
-pub use optimization::{
+>;
+pub use optimization::<
     Optimizer, OptimizationStrategy, OptimizationSuggestion, ImpactLevel,
     LayerMinimizationStrategy, BaseImageOptimizationStrategy, CacheOptimizationStrategy,
     SecurityHardeningStrategy, SizeOptimizationStrategy, Error as OptimizationError,
-};
+>;
 /// Unified error type
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -24,7 +24,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_module_structure() {
         // Verify that the module structure is correct

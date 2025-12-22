@@ -8,10 +8,12 @@ pub mod performance_monitor;
 pub mod high_performance_core;
 pub mod zero_copy_io;
 pub mod v8_engine_optimizer;
-pub use adaptive_optimizer::{AdaptiveOptimizer, OptimizationPolicy, PerformanceHistory, CodeFeatures, OptimizationHints};
-pub use performance_monitor::{PerformanceMonitor, MetricsCollector, OptimizationStats};
+
+use adaptive_optimizer::<AdaptiveOptimizer, CodeFeatures, OptimizationHints, OptimizationPolicy, PerformanceHistory>;
+use performance_monitor::<MetricsCollector, OptimizationStats, PerformanceMonitor>;
+use std::collections::<BTreeMap, HashMap>;
+
 // Stage 97: Ultra-High-Performance 优化模块
-pub use high_performance_core::{
     HighPerformanceMemoryPool,
     LockFreeConcurrentExecutor,
     ExecutionTask,
@@ -24,7 +26,6 @@ pub use high_performance_core::{
     CONCURRENT_EXECUTOR,
     ADAPTIVE_JIT,
 };
-pub use zero_copy_io::{
     ZeroCopyFileReader,
     ZeroCopyBuffer,
     ZeroCopyNetworkIO,
@@ -34,7 +35,6 @@ pub use zero_copy_io::{
     initialize_zero_copy_io,
     ZERO_COPY_MONITOR,
 };
-pub use v8_engine_optimizer::{
     V8EngineOptimizer,
     MemoryLayoutOptimizer,
     InlineCacheOptimizer,
@@ -44,8 +44,6 @@ pub use v8_engine_optimizer::{
     initialize_v8_engine,
     V8_OPTIMIZER,
 };
-use std::collections::{HashMap, BTreeMap};
-use tokio::runtime::Runtime;
 /// Ultra-high-performance runtime configuration
 #[derive(Debug, Clone)]
 pub struct UltraPerformanceConfig {

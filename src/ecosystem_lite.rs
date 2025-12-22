@@ -2,10 +2,10 @@
 //! Stage 91 Phase 3 - 生态系统集成
 //!
 //! 自包含的生态系统集成模块，不依赖可能有问题的其他模块
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::collections::{BTreeMap};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+
 /// 包管理器类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PackageManagerType {

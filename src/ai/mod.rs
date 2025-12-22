@@ -19,40 +19,32 @@ pub mod ai_performance_engine;
 pub mod performance_predictor;
 pub mod intelligent_scheduler;
 // Re-export 公共 API
-pub use matrix_accelerator::{Matrix, MatrixAccelerator, MatrixPair, OptimizedMatrix, MatrixAcceleratorStats};
-pub use tensor_optimizer::{Tensor, TensorShape, TensorData, TensorOptimizer, Gradients, TensorShard};
-pub use code_generator::{
+
+use matrix_accelerator::<Matrix, MatrixAccelerator, MatrixAcceleratorStats, MatrixPair, OptimizedMatrix>;
+use std::collections::<BTreeMap, HashMap>;
+use tensor_optimizer::<Gradients, Tensor, TensorData, TensorOptimizer, TensorShape, TensorShard>;
+
     AICodeGenerator, CodeContext, CodeCompletion, CompletionItem, GeneratedCode,
     Language, TestType, TestFramework, ProjectInfo, CodeSuggestion, TestFile,
     RefactorSuggestion, MockAiModel, AiModel, CompletionKind,
     PerformanceImpact, PerformanceAwareConfig, PatternAnalyzer, CommonPattern,
     LanguageHints, PatternHint
 };
-pub use smart_debugger::{
     SmartDebugger, ErrorInfo, StackFrame, Diagnosis, RootCause, FixSuggestion,
     BreakpointSuggestion, DebugPath
 };
-pub use auto_optimizer::{
     AutoOptimizer, ProfileData, FunctionCall, Hotspot, Bottleneck,
     Optimization, OptimizationReport, MemoryOptimization, ParallelizationSuggestion
 };
-pub use predictive_scaler::{
     PredictiveScaler, Metrics, TimeFrame, ResourcePrediction, TrendAnalysis,
     ScalingStrategy, ScalingAction, ScalingResult, Task, Schedule
 };
-pub use code_optimizer::{
     CodeOptimizer, CodeOptimizationRequest, OptimizationSuggestion, CodeAnalyzer,
     RefactorEngine, BottleneckDetector, OptimizationApplier, OptimizationResult,
     CodePattern, PerformanceMetric, CodeAnalysis, DetectedBottleneck, RefactorSuggestion,
     RefactorStep, MonitoringSuggestion, OptimizationLevel, PatternSeverity
 };
-pub use ai_performance_engine::{
     AiPerformanceEngine, AiPerformanceEngineConfig, PerformanceMetrics,
     PerformancePrediction, OptimizationSuggestion, OptimizationType
 };
-pub use performance_predictor::PerformancePredictor;
-pub use intelligent_scheduler::IntelligentScheduler;
 // Re-export HardwareFeatures from wasm::simd_engine for AI operations
-pub use crate::wasm::simd_engine::HardwareFeatures as AiHardwareFeatures;
-use std::time::Duration;
-use std::collections::{HashMap, BTreeMap};

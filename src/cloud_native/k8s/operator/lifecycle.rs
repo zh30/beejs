@@ -1,8 +1,10 @@
 //! Lifecycle management for cluster and workload resources
 //! Handles state transitions and lifecycle events
-use tracing::{info, warn, error, debug};
-use super::super::crd::{ClusterPhase, WorkloadPhase, Condition, ConditionStatus, ConditionType};
-use std::time::SystemTime;
+
+use std::collections::<BTreeMap, HashMap>;
+use super::super::crd::<ClusterPhase, Condition, ConditionStatus, ConditionType, WorkloadPhase>;
+use tracing::<debug, error, info, warn>;
+
 /// Cluster lifecycle manager
 pub struct ClusterLifecycle {
     /// Maximum failure count before giving up
@@ -231,8 +233,6 @@ pub enum LifecycleError {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_cluster_lifecycle_initialization() {
         let mut lifecycle = ClusterLifecycle::new(3);

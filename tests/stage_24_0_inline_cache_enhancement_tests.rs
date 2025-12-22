@@ -3,12 +3,12 @@
 
 #[cfg(test)]
 mod tests {
-    use beejs::inline_cache::{
+    use beejs::inline_cache{
         CacheType, InlineCache
     };
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// ========== 操作符缓存测试 ==========
 

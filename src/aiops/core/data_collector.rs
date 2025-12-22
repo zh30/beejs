@@ -1,11 +1,16 @@
 //! Data Collector
 //!
 //! Collects system metrics and performance data for AI analysis.
-use crate::core::error::{AIOpsError, Result};
-use serde::{Deserialize, Serialize};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use std::collections::HashMap;
+use std::sync::<Arc, Mutex>;
+use std::time::<Duration, SystemTime>;
+
+use crate::core::error::<AIOpsError, Result>;
+use serde::<Deserialize, Serialize>;
+use std::time::<Duration, SystemTime, UNIX_EPOCH>;
 use tokio::time;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
 /// Metric types for monitoring
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MetricType {

@@ -1,8 +1,8 @@
 //! 权限控制和审计日志
 use anyhow::Result;
 use tracing::info;
-use serde::{Serialize, Deserialize};
-use std::collections::{HashMap, BTreeMap};
+use serde::<Serialize, Deserialize>;
+use std::collections::<HashMap, BTreeMap>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Permission {
     Read,

@@ -5,12 +5,11 @@
 //! - 统计分析计算
 //! - 性能指标计算
 //! - 结果对比和可视化
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use super::{Runtime, MetricType};
-use bytes::Bytes;
-use std::collections::{BTreeMap};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+use super::<MetricType, Runtime>;
+
 /// 基准测试结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkResult {

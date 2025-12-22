@@ -5,7 +5,7 @@
 #[cfg(test)]
 mod stage85_aiops_tests {
     use std::sync::Arc;
-    use std::time::{SystemTime, UNIX_EPOCH, Duration};
+    use std::time{SystemTime, UNIX_EPOCH, Duration};
     use tokio::time::sleep;
 
     // 注意：在实际实现之前，这些测试会失败
@@ -17,8 +17,8 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_anomaly_detection() {
-        use beejs::aiops::prediction_engine::{PredictionEngine, AnomalyDetector};
-        use beejs::aiops::anomaly_detection::{Anomaly, AnomalyType};
+        use beejs::aiops::prediction_engine{PredictionEngine, AnomalyDetector};
+        use beejs::aiops::anomaly_detection{Anomaly, AnomalyType};
 
         let detector: _ = AnomalyDetector::new();
 
@@ -38,7 +38,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_failure_prediction() {
-        use beejs::aiops::prediction_engine::{PredictionEngine, Prediction, MetricType};
+        use beejs::aiops::prediction_engine{PredictionEngine, Prediction, MetricType};
 
         let engine: _ = PredictionEngine::new();
 
@@ -75,7 +75,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_trend_analysis() {
-        use beejs::aiops::prediction_engine::{PredictionEngine, TrendAnalysis, TrendDirection};
+        use beejs::aiops::prediction_engine{PredictionEngine, TrendAnalysis, TrendDirection};
 
         let engine: _ = PredictionEngine::new();
 
@@ -96,7 +96,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_baseline_calculation() {
-        use beejs::aiops::anomaly_detection::{BaselineCalculator, Baseline};
+        use beejs::aiops::anomaly_detection{BaselineCalculator, Baseline};
 
         let calculator: _ = BaselineCalculator::new();
 
@@ -114,8 +114,8 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_causal_analysis() {
-        use beejs::aiops::root_cause_analysis::{RootCauseAnalyzer, Incident, IncidentType};
-        use beejs::aiops::knowledge_graph::{CausalGraph, Causality};
+        use beejs::aiops::root_cause_analysis{RootCauseAnalyzer, Incident, IncidentType};
+        use beejs::aiops::knowledge_graph{CausalGraph, Causality};
 
         let analyzer: _ = RootCauseAnalyzer::new();
 
@@ -139,7 +139,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_change_impact_analysis() {
-        use beejs::aiops::root_cause_analysis::{RootCauseAnalyzer, Change, ChangeType};
+        use beejs::aiops::root_cause_analysis{RootCauseAnalyzer, Change, ChangeType};
 
         let analyzer: _ = RootCauseAnalyzer::new();
 
@@ -160,7 +160,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_knowledge_graph_construction() {
-        use beejs::aiops::knowledge_graph::{KnowledgeGraph, Entity, Relationship, EntityType};
+        use beejs::aiops::knowledge_graph{KnowledgeGraph, Entity, Relationship, EntityType};
 
         let graph: _ = KnowledgeGraph::new();
 
@@ -199,7 +199,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_relationship_inference() {
-        use beejs::aiops::knowledge_graph::{KnowledgeGraph, InferenceEngine};
+        use beejs::aiops::knowledge_graph{KnowledgeGraph, InferenceEngine};
 
         let graph: _ = KnowledgeGraph::new();
         let inference_engine: _ = InferenceEngine::new(Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(graph)))))))));
@@ -219,7 +219,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_alert_deduplication() {
-        use beejs::aiops::alert_aggregation::{AlertAggregator, Alert, AlertSeverity};
+        use beejs::aiops::alert_aggregation{AlertAggregator, Alert, AlertSeverity};
 
         let aggregator: _ = AlertAggregator::new();
 
@@ -254,7 +254,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_alert_aggregation() {
-        use beejs::aiops::alert_aggregation::{AlertAggregator, Alert, AggregationStrategy};
+        use beejs::aiops::alert_aggregation{AlertAggregator, Alert, AggregationStrategy};
 
         let aggregator: _ = AlertAggregator::new();
 
@@ -275,7 +275,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_alert_suppression() {
-        use beejs::aiops::alert_aggregation::{AlertAggregator, Alert, SuppressionRule};
+        use beejs::aiops::alert_aggregation{AlertAggregator, Alert, SuppressionRule};
 
         let aggregator: _ = AlertAggregator::new();
 
@@ -295,7 +295,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_alert_priority_calculation() {
-        use beejs::aiops::alert_aggregation::{AlertAggregator, Alert, AlertPriority};
+        use beejs::aiops::alert_aggregation{AlertAggregator, Alert, AlertPriority};
 
         let aggregator: _ = AlertAggregator::new();
 
@@ -326,7 +326,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_auto_remediation() {
-        use beejs::aiops::auto_remediation::{AutoRemediationEngine, Incident, IncidentType};
+        use beejs::aiops::auto_remediation{AutoRemediationEngine, Incident, IncidentType};
 
         let remediation_engine: _ = AutoRemediationEngine::new();
 
@@ -350,7 +350,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_playbook_execution() {
-        use beejs::aiops::auto_remediation::{AutoRemediationEngine, Playbook, PlaybookStep};
+        use beejs::aiops::auto_remediation{AutoRemediationEngine, Playbook, PlaybookStep};
 
         let remediation_engine: _ = AutoRemediationEngine::new();
 
@@ -386,7 +386,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_approval_workflow() {
-        use beejs::aiops::auto_remediation::{AutoRemediationEngine, ChangeRequest, ChangeType};
+        use beejs::aiops::auto_remediation{AutoRemediationEngine, ChangeRequest, ChangeType};
 
         let remediation_engine: _ = AutoRemediationEngine::new();
 
@@ -409,7 +409,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_fix_validation() {
-        use beejs::aiops::remediation_validation::{RemediationValidator, ValidationResult};
+        use beejs::aiops::remediation_validation{RemediationValidator, ValidationResult};
 
         let validator: _ = RemediationValidator::new();
 
@@ -430,7 +430,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_resource_prediction() {
-        use beejs::aiops::capacity_planning::{CapacityPlanner, ResourceForecast, ResourceType};
+        use beejs::aiops::capacity_planning{CapacityPlanner, ResourceForecast, ResourceType};
 
         let planner: _ = CapacityPlanner::new();
 
@@ -454,7 +454,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_scaling_recommendation() {
-        use beejs::aiops::capacity_planning::{CapacityPlanner, ScalingRecommendation, ScalingAction};
+        use beejs::aiops::capacity_planning{CapacityPlanner, ScalingRecommendation, ScalingAction};
 
         let planner: _ = CapacityPlanner::new();
 
@@ -478,7 +478,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_parameter_optimization() {
-        use beejs::aiops::auto_tuning::{AutoTuner, OptimizationTarget, OptimizationType};
+        use beejs::aiops::auto_tuning{AutoTuner, OptimizationTarget, OptimizationType};
 
         let tuner: _ = AutoTuner::new();
 
@@ -505,7 +505,7 @@ mod stage85_aiops_tests {
 
     #[tokio::test]
     async fn test_full_aiops_workflow() {
-        use beejs::aiops::full_workflow::{FullAIOpsWorkflow, WorkflowConfig};
+        use beejs::aiops::full_workflow{FullAIOpsWorkflow, WorkflowConfig};
 
         let workflow: _ = FullAIOpsWorkflow::new(WorkflowConfig::default());
 
@@ -525,8 +525,8 @@ mod stage85_aiops_tests {
     #[tokio::test]
     async fn test_prediction_performance() {
         use beejs::aiops::prediction_engine::PredictionEngine;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
         let engine: _ = PredictionEngine::new();
 

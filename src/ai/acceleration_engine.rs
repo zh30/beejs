@@ -1,9 +1,9 @@
 //! 推理加速引擎
 //! 实现硬件加速和并行推理引擎，包括 GPU 加速、流水线并行和动态批处理
-use std::collections::{VecDeque, HashMap};
 
-use std::time::{Duration, Instant};
-use crate::Runtime;
+use std::collections::<BTreeMap, HashMap, VecDeque>;
+use std::sync::<Arc, Mutex, Ordering>;
+
 /// 加速配置
 #[derive(Debug, Clone)]
 pub struct AccelerationConfig {
@@ -350,8 +350,6 @@ fn avg_duration(current_avg: Duration, new_value: Duration, count: u64) -> Durat
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{BTreeMap};
     #[test]
     fn test_acceleration_engine_creation() {
         let runtime: _ = Arc::new(Mutex::new(Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false)),;

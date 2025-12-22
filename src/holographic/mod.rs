@@ -6,11 +6,13 @@ pub mod wavefront_propagator;
 pub mod hologram_generator;
 pub mod volume_capture;
 pub mod holographic_storage;
-pub use wavefront_propagator::{WavefrontPropagator, PropagationMethod};
-pub use hologram_generator::{HologramGenerator, GeneratorConfig, HologramType, HologramEncoding};
-pub use volume_capture::{VolumeCapture, CaptureConfig, ColorFormat};
-pub use holographic_storage::{HolographicStorage, StorageConfig, CompressionMode};
-use std::collections::{HashMap, BTreeMap};
+
+use hologram_generator::<GeneratorConfig, HologramEncoding, HologramGenerator, HologramType>;
+use holographic_storage::<CompressionMode, HolographicStorage, StorageConfig>;
+use std::collections::<BTreeMap, HashMap>;
+use volume_capture::<CaptureConfig, ColorFormat, VolumeCapture>;
+use wavefront_propagator::<PropagationMethod, WavefrontPropagator>;
+
 /// 复数类型
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Complex {

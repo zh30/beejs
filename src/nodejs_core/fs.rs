@@ -2,7 +2,7 @@
 //! 文件系统操作
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
 /// 设置fs API
 pub fn setup_fs_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,

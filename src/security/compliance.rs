@@ -1,10 +1,10 @@
 //! 合规性检查模块
 //!
 //! 提供 GDPR、SOC 2 等合规性检查功能
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use thiserror::Error;
-use std::collections::{BTreeMap};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+
 /// 合规性错误
 #[derive(Error, Debug)]
 pub enum ComplianceError {

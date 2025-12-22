@@ -1,15 +1,13 @@
 //! Jaeger Tracing Integration for Beejs
 //! 实现与 Jaeger 分布式追踪系统的集成
-use anyhow::{Result, Context};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::net::SocketAddr;
 
-use std::time::{Duration, SystemTime, Instant};
-use tokio::time::sleep;
-use tracing::{info, warn, debug, error};
-use udp::UdpSocket;
-use uuid::Uuid;
+use anyhow::<Context, Result>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use std::time::<Duration, Instant, SystemTime>;
+use tracing::<debug, error, info, warn>;
+
 /// Jaeger collector configuration
 #[derive(Debug, Clone)]
 pub struct JaegerConfig {
@@ -372,8 +370,6 @@ fn generate_span_id() -> String {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_jaeger_tracer_creation() {
         let config: _ = JaegerConfig {

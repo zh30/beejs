@@ -1,11 +1,14 @@
 //! Stage 93 Phase 1.2: 自适应垃圾回收策略
 //! 在 Stage 92 基础上，进一步优化 GC 性能和暂停时间
 //! 目标: GC 暂停时间减少 30%+, 吞吐量提升 20%+
-use std::time::{Duration, Instant};
-use tokio::sync::{RwLock, Mutex};
-use serde::{Serialize, Deserialize};
-use anyhow::{Result, anyhow};
-use crate::memory_optimizer::adaptive_gc::{AdaptiveGCController, GCStrategy};
+
+use anyhow::<Result, anyhow>;
+use crate::memory_optimizer::adaptive_gc::::<AdaptiveGCController, GCStrategy>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering, RwLock>;
+use tokio::sync::<Mutex, RwLock>;
+
 /// Stage 93 自适应 GC 配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stage93GCConfig {
@@ -422,8 +425,6 @@ pub struct Stage93GCReport {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_stage93_gc_creation() {
         let base: _ = AdaptiveGCController::new();

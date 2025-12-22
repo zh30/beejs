@@ -1,11 +1,11 @@
 //! 动态批处理优化器 - 简化版
 //! Stage 35.0 候选特性 - 动态调整批次大小以优化推理性能
-use super::{AIInferenceEngine, InferenceResult};
-use super::tensor_ops::Tensor;
-use anyhow::{Result};
-use std::collections::VecDeque;
-use std::time::{Duration, Instant};
-use tokio::sync::Mutex;
+
+use anyhow::Result;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use super::<AIInferenceEngine, InferenceResult>;
+
 /// 动态批处理配置
 #[derive(Debug, Clone)]
 pub struct DynamicBatchConfig {
@@ -195,9 +195,6 @@ impl DynamicBatchProcessor {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use tokio::time::sleep;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_dynamic_batch_processor_creation() {
         let config: _ = DynamicBatchConfig::default();

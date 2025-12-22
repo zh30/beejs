@@ -1,6 +1,6 @@
 //! 深度性能优化模块
 //! 实现逃逸分析、循环展开、函数内联等高级优化技术
-use std::time::{Duration, Instant};
+
 /// 深度优化配置
 #[derive(Debug, Clone)]
 pub struct DeepOptimizationConfig {
@@ -588,7 +588,7 @@ impl OptimizationResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_deep_optimizer_creation() {
         let optimizer: _ = DeepOptimizer::new_default();

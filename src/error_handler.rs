@@ -1,5 +1,8 @@
 
-use std::time::Instant;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// 错误处理统计
 #[derive(Debug, Clone, Default)]
 pub struct ErrorStats {
@@ -57,8 +60,6 @@ impl ErrorHandler {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_error_handler_creation() {
         let handler: _ = ErrorHandler::new(true);

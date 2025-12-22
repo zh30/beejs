@@ -4,14 +4,14 @@
 
 #[cfg(test)]
 mod stage78_threads_tests {
-    use beejs::wasm::threads_manager::{
+    use beejs::wasm::threads_manager{
         WasmThreadsManager, WasmThreadHandle, SharedMemoryRegion,
         WasmMutex, WasmAtomic, ThreadPoolConfig, ThreadStats,
     };
     use std::sync::Arc;
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     // ==========================================
     // 线程池管理测试 (Tests 1-5)

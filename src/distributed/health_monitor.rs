@@ -1,11 +1,14 @@
 //! 健康监控模块
 //! 实现节点健康检查、状态监控和故障检测
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
-use tokio::time::{interval, sleep};
-use tracing::{info, warn};
-use super::node_manager::{NodeManager, NodeStatus, HealthStatus};
+
+use crate::distributed::service_discovery::<DiscoveryConfig, NodeInfo, ServiceDiscovery>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant, SystemTime>;
+use super::node_manager::<HealthStatus, NodeManager, NodeStatus>;
+use tokio::time::<interval, sleep>;
+use tracing::<info, warn>;
+
 /// 健康检查配置
 #[derive(Debug, Clone)]
 pub struct HealthCheckConfig {
@@ -307,10 +310,6 @@ pub struct HealthStatistics {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::distributed::service_discovery::{ServiceDiscovery, NodeInfo, DiscoveryConfig};
-    use crate::distributed::node_manager::NodeManager;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_health_check() {
         let config: _ = DiscoveryConfig {

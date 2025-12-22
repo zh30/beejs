@@ -5,8 +5,8 @@
 //! and startup time across different configuration profiles.
 
 use beejs::runtime_lite::RuntimeLite;
-use beejs::v8_engine::flags::{V8EngineFlags, V8ConfigManager};
-use std::time::{Duration, Instant};
+use beejs::v8_engine::flags{V8EngineFlags, V8ConfigManager};
+use std::time{Duration, Instant};
 
 /// Test high-performance V8 configuration
 #[cfg(test)]
@@ -225,8 +225,8 @@ mod startup_time_tests {
 #[cfg(test)]
 mod v8_flags_validation_tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     #[test]
     fn test_high_performance_flags_valid() {

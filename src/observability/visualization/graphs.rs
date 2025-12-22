@@ -5,10 +5,11 @@
 //! - DependencyGraph: Module dependency and import relationships
 //! - TraceGraph: Request flow and distributed tracing visualization
 //! - NetworkGraph: Network topology and connectivity visualization
-use super::*;
-use anyhow::{Result, Context, anyhow};
-use std::collections::{HashMap, HashSet, VecDeque};
-use tracing::{debug, warn, error};
+
+use anyhow::<Context, Result, anyhow>;
+use std::collections::BTreeMap;
+use tracing::<debug, error, warn>;
+
 /// Graph node with metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphNode {
@@ -707,8 +708,6 @@ impl Default for TopologyGraphBuilder {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{BTreeMap};
     #[test]
     fn test_topology_graph_builder() {
         let mut builder = TopologyGraphBuilder::new();

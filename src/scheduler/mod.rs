@@ -3,15 +3,14 @@
 pub mod ai_scheduler;
 pub mod load_balancer;
 pub mod resource_predictor;
-pub use ai_scheduler::{
+
+use std::collections::<BTreeMap, HashMap>;
+
     IntelligentTaskScheduler, Task, TaskPriority, SchedulingStrategy,
     TaskExecution, SchedulerMetrics,
 };
-pub use load_balancer::{
     LoadBalancer, BalancingStrategy, WorkerLoad, BalancingDecision,
 };
-pub use resource_predictor::{
-use std::collections::{HashMap, BTreeMap};
     ResourcePredictor, ResourceMetrics, PredictionResult,
     UtilizationForecast,
 };

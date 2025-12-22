@@ -1,4 +1,6 @@
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;
+
 // 触觉反馈系统
 /// 触觉强度
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

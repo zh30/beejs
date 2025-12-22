@@ -2,9 +2,10 @@
 //!
 //! This module provides a Rust implementation of the Debug Adapter Protocol
 //! for integrating Beejs with VS Code and other IDEs.
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::collections::{BTreeMap};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+
 /// DAP Message types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]

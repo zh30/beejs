@@ -305,8 +305,11 @@ pub enum Error {
 }
 #[cfg(test)]
 mod tests {
+
+use std::collections::HashMap;
+
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_argocd_application_creation() {
         let app: _ = ArgoCDApplication::new(

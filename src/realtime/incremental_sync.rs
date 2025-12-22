@@ -2,10 +2,15 @@
 //!
 //! 实现高效的变更检测、压缩传输和同步状态管理
 //! 目标：90%+ 传输压缩率
-use std::time::{SystemTime, UNIX_EPOCH};
-use anyhow::{Result, Context};
-use tracing::{debug, info};
-use serde::{Serialize, Deserialize};
+
+use anyhow::<Context, Result>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::hash::<Hash, Hasher>;
+use std::sync::<Arc, Mutex>;
+use std::time::<SystemTime, UNIX_EPOCH>;
+use tracing::<debug, info>;
+
 /// 文档变更类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Change {
@@ -132,9 +137,6 @@ impl IncrementalSync {
     /// 计算文档校验和
     fn compute_checksum(&self, document: &Document) -> Result<String> {
         // 简化实现：使用简单的哈希
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-use std::collections::{HashMap, BTreeMap};
         let mut hasher = DefaultHasher::new();
         document.content.hash(&mut hasher);
         document.version.hash(&mut hasher);

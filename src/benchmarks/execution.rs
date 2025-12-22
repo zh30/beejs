@@ -7,8 +7,9 @@
 //! - 对象操作性能测试
 //! - 数组操作性能测试
 //! - 循环性能测试
-use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
-use std::time::Duration;
+
+use crate::benchmarks::<BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType>;
+
 /// 执行速度基准测试套件
 pub struct ExecutionBenchmark;
 impl ExecutionBenchmark {
@@ -303,8 +304,6 @@ fn factorial(n: u64) -> u64 {
         _ => n * factorial(n - 1),
     }
 }
-use std::collections::HashMap;
-use std::collections::BTreeMap;
 /// 执行速度优化建议
 pub struct ExecutionOptimizationSuggestions {
     pub suggestions: Vec<String>,

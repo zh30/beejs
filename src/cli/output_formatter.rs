@@ -2,8 +2,10 @@
 //! Stage 91 Phase 4.1 - 开发者体验提升
 //!
 //! 提供彩色终端输出、进度条、表格格式化等功能
-use std::io::{self, Write};
-use std::time::Duration;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::io::<Write, self>;
+
 /// ANSI 颜色代码
 pub mod colors {
     pub const RESET: &str = "\x1b[0m";
@@ -324,8 +326,6 @@ mod atty {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_format_size() {
         assert_eq!(OutputFormatter::format_size(512), "512 B");

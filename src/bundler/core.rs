@@ -1,8 +1,9 @@
 //! High-performance bundler core
 //! Designed to exceed esbuild performance (100MB/s+)
-use anyhow::Result;
-use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+
+use std::collections::BTreeMap;
+use std::path::<Path, PathBuf>;
+use std::sync::<Arc, Mutex>;
 
 /// Module type
 #[derive(Debug, Clone, PartialEq)]
@@ -305,8 +306,6 @@ impl Bundler {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{BTreeMap};
     #[test]
     fn test_bundler_creation() {
         let options: _ = BuildOptions {

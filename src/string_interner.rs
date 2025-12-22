@@ -1,6 +1,8 @@
 //! Stage 12.2: 字符串Interning优化模块
 //! 通过字符串池化减少内存分配和比较开销
-use std::collections::HashMap;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, RwLock>;
 
 /// 字符串符号 - 唯一标识一个interned字符串
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -176,7 +178,6 @@ impl Default for GlobalInterner {
     }
 }
 // 全局Interner实例
-use once_cell::sync::Lazy;
 pub static GLOBAL_INTERNER: Lazy<GlobalInterner> = Lazy::new(|| GlobalInterner::new());
 /// 便捷函数：intern字符串
 pub fn intern(s: &str) -> Symbol {
@@ -192,8 +193,6 @@ pub fn interner_stats() -> InternerStats {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_string_interner_creation() {
         let interner: _ = StringInterner::new();

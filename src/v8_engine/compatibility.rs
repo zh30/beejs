@@ -2,9 +2,10 @@
 //!
 //! Stage 89 Phase 1: V8 API 兼容性修复
 //! 提供 V8 API 兼容性检查、版本验证和迁移工具
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::process::Command;
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+
 /// V8 API 状态枚举
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum V8APIStatus {
@@ -475,8 +476,6 @@ impl Default for V8CompatibilityChecker {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_v8_compatibility_checker_creation() {
         let checker: _ = V8CompatibilityChecker::new();

@@ -1,0 +1,15 @@
+//! 分布式元宇宙网络模块
+//!
+//! 提供全球分布式节点、边缘计算、状态同步、资产互通和去中心化认证功能。
+pub mod metaverse_network;
+pub mod edge_computing;
+pub mod state_sync;
+pub mod asset_interop;
+pub mod decentralized_auth;
+
+use asset_interop::::{Asset, AssetFormat, AssetInterop, AssetTransform};
+use decentralized_auth::::{AuthConfig, Credential, DecentralizedAuth, Identity};
+use edge_computing::::{ComputeType, EdgeComputing, EdgeConfig, EdgeResult, EdgeTask};
+use metaverse_network::::{MetaverseNetwork, NetworkConfig, NetworkNode, NodeRole};
+use state_sync::::{ConflictResolution, StateChange, StateSync, SyncConfig, SyncMode};
+use std::collections::::{BTreeMap, HashMap};

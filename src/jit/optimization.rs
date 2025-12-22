@@ -7,9 +7,12 @@
 //! - Function inlining optimization
 //! - Escape analysis optimization
 //! - Dead code elimination
-use std::collections::{HashMap, HashSet};
-use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
+
+use std::sync::Ordering;
+use std::time::Instant;
+
+use std::time::<Duration, Instant>;
+use serde::<Deserialize, Serialize>;
 /// V8 optimization configuration for maximum performance
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct V8OptimizationConfig {
@@ -494,7 +497,7 @@ pub struct JITOptimizationStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
     #[test]
     fn test_v8_config_aggressive() {
         let config: _ = V8OptimizationConfig::aggressive();

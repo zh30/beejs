@@ -1,16 +1,16 @@
 //! Stage 93 Phase 1.2: 内存优化器综合集成
 //! 整合所有内存优化组件，提供统一的内存管理接口
-use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
-use anyhow::{Result, anyhow};
-use serde::{Serialize, Deserialize};
-use crate::memory::zero_copy_enhanced::{EnhancedZeroCopy, DmaConfig, MmapConfig, PrefetchConfig};
-use crate::memory::stage93_zero_copy_optimizer::{Stage93ZeroCopyOptimizer, Stage93OptimizerConfig};
-use crate::memory::stage93_adaptive_gc::{Stage93AdaptiveGC, Stage93GCConfig};
-use crate::memory::stage93_optimized_allocator::{Stage93OptimizedAllocator, Stage93AllocatorConfig};
-use crate::memory::stage93_memory_compression::{Stage93MemoryCompressor, Stage93CompressionConfig};
-use crate::memory_optimizer::smart_allocator::SmartMemoryAllocator;
-use crate::memory_optimizer::adaptive_gc::AdaptiveGCController;
+
+use anyhow::<Result, anyhow>;
+use crate::memory::stage93_adaptive_gc::::<Stage93AdaptiveGC, Stage93GCConfig>;
+use crate::memory::stage93_memory_compression::::<Stage93CompressionConfig, Stage93MemoryCompressor>;
+use crate::memory::stage93_optimized_allocator::::<Stage93AllocatorConfig, Stage93OptimizedAllocator>;
+use crate::memory::stage93_zero_copy_optimizer::::<Stage93OptimizerConfig, Stage93ZeroCopyOptimizer>;
+use crate::memory::zero_copy_enhanced::::<DmaConfig, EnhancedZeroCopy, MmapConfig, PrefetchConfig>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// Stage 93 内存优化器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stage93MemoryOptimizerConfig {
@@ -286,8 +286,6 @@ pub struct OptimizationSummary {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_memory_optimizer_creation() {
         let config: _ = Stage93MemoryOptimizerConfig::default();

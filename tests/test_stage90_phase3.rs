@@ -4,12 +4,12 @@
 
 use std::sync::Arc;
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 use tokio::runtime::Runtime;
 
-use crate::lock_free::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use crate::lock_free{
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
     LockFreeCounter, LockFreeQueue, LockFreeTaskScheduler, ShardedLock,
     LockFreeBufferPool, AtomicStats
 };

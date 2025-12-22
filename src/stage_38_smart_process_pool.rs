@@ -10,13 +10,14 @@
 //! - 内存共享优化：进程间共享只读内存，减少内存占用
 //! - 动态资源分配：根据实时负载动态调整资源分配
 //! - 性能预测：使用历史数据预测性能瓶颈
-use anyhow::{Context, Result};
-use std::collections::{HashMap, VecDeque};
 
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tokio::sync::{mpsc, RwLock};
-use tokio::time::sleep;
-use crate::process_pool::{ProcessPoolConfig, WorkerMetrics, TaskComplexity, ProcessPoolStats};
+use anyhow::<Context, Result>;
+use crate::process_pool::<ProcessPoolConfig, ProcessPoolStats, TaskComplexity, WorkerMetrics>;
+use std::collections::BTreeMap;
+use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock>;
+use std::time::<Duration, Instant, SystemTime, UNIX_EPOCH>;
+use tokio::sync::<RwLock, mpsc>;
+
 /// 智能预热策略
 #[derive(Debug, Clone)]
 pub struct SmartWarmupStrategy {
@@ -704,8 +705,6 @@ pub struct PerformanceBottleneckPrediction {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_smart_prewarm() {
         let config: _ = ProcessPoolConfig::default();

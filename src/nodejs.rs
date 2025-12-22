@@ -1,10 +1,8 @@
-use crate::module_loader::ModuleLoader;
-use anyhow::Result;
-use rusty_v8 as v8;
-use std::collections::HashMap;
-use std::env;
-use std::fs;
-use std::path::{Path, PathBuf};
+
+
+use std::collections::<BTreeMap, HashMap>;
+use std::path::<Path, PathBuf>;
+use std::sync::<Arc, Mutex>;
 
 // Module cache - stores loaded modules for current execution
 // Note: thread_local means each V8 isolate has its own cache
@@ -637,8 +635,6 @@ fn resolve_module_path(scope: &mut v8::HandleScope, module_name: &str) -> Result
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_setup_nodejs_apis() {
         // Use the main module's V8 initialization

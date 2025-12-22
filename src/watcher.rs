@@ -2,11 +2,12 @@
 //!
 //! This module provides file watching and hot reload capabilities for development.
 //! It monitors JavaScript/TypeScript files for changes and automatically re-executes them.
-use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime};
-use notify::RecursiveMode;
-use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
-use tokio::sync::mpsc;
+
+use notify_debouncer_mini::<DebouncedEventKind, new_debouncer>;
+use std::collections::<BTreeMap, HashMap>;
+use std::path::<Path, PathBuf>;
+use std::sync::<Arc, AtomicBool, Mutex, Ordering>;
+
 /// File change event types
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FileChangeType {
@@ -350,8 +351,6 @@ impl WatcherConfigBuilder {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_watcher_config_default() {
         let config: _ = WatcherConfig::default();

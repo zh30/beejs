@@ -2,13 +2,12 @@
 //!
 //! This module provides a comprehensive metrics system for monitoring
 //! runtime performance, resource usage, and business metrics.
-use anyhow::Result;
-use prometheus::core::Collector;
-use prometheus::{Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Registry, Opts};
-use std::collections::VecDeque;
-use std::time::{Duration};
-use tokio::sync::RwLock;
-use tracing::debug;
+
+use prometheus::<Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Opts, Registry>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::Duration;
+
 /// Custom metrics system that manages all runtime metrics
 pub struct CustomMetrics {
     /// Runtime performance metrics
@@ -390,8 +389,6 @@ impl BusinessMetrics {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_custom_metrics_creation() {
         let metrics: _ = CustomMetrics::new();

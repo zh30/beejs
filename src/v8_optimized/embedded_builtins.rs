@@ -1,10 +1,13 @@
 //! V8 嵌入式内置函数实现
 //! 提供 20+ 个高频操作的 Rust 实现，提升执行性能
 //! Stage 27.1: V8 引擎深度优化
+
+use std::collections::BTreeSet;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+
 use crate::string_interner::StringInterner;
-use anyhow::{anyhow, Result};
+use anyhow::<anyhow, Result>;
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
 /// 嵌入式内置函数管理器
 /// 管理所有高频操作的 Rust 实现
 pub struct EmbeddedBuiltinsManager {
@@ -311,7 +314,6 @@ fn builtin_base64_encode(args: &[String]) -> Result<String> {
     if args.is_empty() {
         return Err(anyhow!("base64_encode requires 1 argument"));
     }
-    use base64::{Engine as _, engine::general_purpose};
     Ok(general_purpose::STANDARD.encode(&args[0]))
 }
 /// Base64 解码
@@ -319,7 +321,6 @@ fn builtin_base64_decode(args: &[String]) -> Result<String> {
     if args.is_empty() {
         return Err(anyhow!("base64_decode requires 1 argument"));
     }
-    use base64::{Engine as _, engine::general_purpose};
     let decoded: _ = general_purpose::STANDARD.decode(&args[0])?;
     Ok(String::from_utf8(decoded)?)
 }
@@ -389,7 +390,7 @@ fn builtin_buffer_length(args: &[String]) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_builtin_registration() {
         let manager: _ = EmbeddedBuiltinsManager::new();

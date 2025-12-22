@@ -7,13 +7,14 @@
 //! - 依赖解析和版本管理
 //! - 包下载和缓存
 //! - node_modules 结构管理
-use anyhow::{anyhow, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs;
+
+use anyhow::<Result, anyhow>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::path::<Path, PathBuf>;
+use tempfile::<NamedTempFile, TempDir>;
+
 #[allow(unused_imports)]
-use std::io::Write;
-use std::path::{Path, PathBuf};
 /// Package manager configuration
 #[derive(Debug, Clone)]
 pub struct PackageManagerConfig {
@@ -238,9 +239,6 @@ impl PackageManager {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use tempfile::{NamedTempFile, TempDir};
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_package_manager_creation() {
         let temp_dir: _ = TempDir::new().unwrap();

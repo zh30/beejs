@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use std::env;
-    use std::time::{Duration, Instant};
+    use std::time{Duration, Instant};
 
     /// 获取当前操作系统信息
     fn get_platform_info() -> (String, String) {

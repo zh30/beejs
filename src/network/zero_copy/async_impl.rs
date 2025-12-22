@@ -4,21 +4,19 @@
 //!
 //! 该模块提供异步零拷贝 I/O 操作，基于 io_uring 和 Tokio 实现高性能的
 //! 异步数据传输，最小化系统调用和上下文切换开销。
-use std::collections::HashMap;
-use std::io::{self, Seek, SeekFrom};
-use tokio::io::AsyncWriteExt;
-use std::os::unix::io::{AsRawFd, RawFd};
-use std::pin::Pin;
 
-use std::time::{Duration, Instant};
-use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
-use tokio::sync::{Mutex as TokioMutex, Semaphore};
-use super::super::sendfile::SendFile;
-use super::super::splice::Splice;
-use super::{
+use std::collections::<BTreeMap, HashMap>;
+use std::io::<Seek, SeekFrom, self>;
+use std::os::unix::io::<AsRawFd, RawFd>;
+use std::sync::<Arc, Mutex, Ordering>;
+use tokio::io::<AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf>;
+use tokio::net::<TcpListener, TcpStream>;
+use tokio::sync::<Mutex as TokioMutex, Semaphore>;
+
+pub use super::<
     ZeroCopyConfig, ZeroCopyError, ZeroCopyMonitor, ZeroCopyMetrics,
     ZeroCopyDirection,
-};
+>;
 /// 异步零拷贝传输任务
 #[derive(Debug, Clone)]
 struct AsyncZeroCopyTask {
@@ -418,10 +416,6 @@ impl Default for AsyncZeroCopy {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio::net::{TcpListener, TcpStream};
-use std::collections::{HashMap, BTreeMap};
     /// 测试异步零拷贝创建
     #[tokio::test]
     async fn test_async_zero_copy_creation() {

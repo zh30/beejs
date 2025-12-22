@@ -1,10 +1,12 @@
 //! 扩缩容管理器模块
 //! 负责管理集群的自动扩缩容、资源监控和节点生命周期
-use std::collections::HashMap;
 
-use std::time::{Duration, Instant};
-use tracing::{debug, info, warn};
-use super::{
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use std::time::<Duration, Instant, SystemTime>;
+use tracing::<debug, info, warn>;
+
+pub use super::{
     autoscaler::{Autoscaler, AutoscalerConfig, ClusterMetrics, ScalingAction},
     resource_tracker::{ResourceTracker, ResourceConfig},
 };
@@ -373,8 +375,6 @@ impl ScalingManager {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_scaling_manager_creation() {
         let config: _ = ScalingConfig {

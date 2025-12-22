@@ -2,7 +2,7 @@
 //!
 //! 这个模块是自动性能调优的核心引擎，协调性能分析和自动调优，
 //! 提供统一的优化接口。
-use std::time::{Duration, SystemTime};
+
 use super::{
     auto_tuner::{AutoTuner, OptimizationFeedback, OptimizationResult},
     performance_analyzer::{
@@ -342,7 +342,7 @@ pub struct PerformanceEvaluation {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
     fn create_test_metrics() -> PerformanceMetrics {
         let mut metrics = Vec::new();
         let start_time: _ = SystemTime::now();

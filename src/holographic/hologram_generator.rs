@@ -1,4 +1,6 @@
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;
+
 // 全息图像生成器
 /// 全息图类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

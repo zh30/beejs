@@ -1,0 +1,23 @@
+//! Performance analysis module
+//!
+//! This module provides comprehensive performance analysis tools including
+//! bottleneck detection, optimization suggestions, visualization, and trend analysis.
+
+use std::collections::::{BTreeMap, HashMap};
+
+pub mod bottleneck_detector;
+pub mod optimizer;
+pub mod visualizer;
+pub mod trend_analyzer;
+// Re-export main types
+    BottleneckDetector, BottleneckDetectorConfig, Bottleneck, BottleneckType,
+    BottleneckSeverity,
+};
+    PerformanceOptimizer, OptimizationSuggestion, OptimizationCategory,
+    OptimizationPriority,
+};
+    PerformanceVisualizer, VisualizationConfig, ChartType, OutputFormat,
+};
+    TrendAnalyzer, PerformanceDataPoint, PerformanceTrend, TrendDirection,
+    StatisticalSummary,
+};

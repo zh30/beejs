@@ -6,10 +6,10 @@
 //! - 性能报告生成
 //! - 性能指标统计
 
-use beejs::performance_analyzer::{PerformanceAnalyzer, ExecutionMetrics, PerformanceReport};
+use beejs::performance_analyzer{PerformanceAnalyzer, ExecutionMetrics, PerformanceReport};
 use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 #[test]
 fn test_performance_analyzer_creation() {

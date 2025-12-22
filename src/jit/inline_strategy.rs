@@ -11,6 +11,9 @@
 //!   * 自适应配置 - 根据系统特征动态调整配置
 //!   * 热路径优先 - 对热点代码采用更激进的内联策略
 //!   * 性能预测 - 预测内联对性能的影响
+
+use std::time::SystemTime;
+
 use std::collections::HashMap;
 use std::time::Instant;
 /// Function information for inlining decisions
@@ -468,7 +471,7 @@ pub enum SystemProfile {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     fn make_function(name: &str, size: usize, calls: u64) -> FunctionInfo {
         FunctionInfo {
             id: name.to_string(),

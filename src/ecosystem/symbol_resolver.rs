@@ -2,9 +2,9 @@
 //! Stage 91 Phase 3.2.1 - 符号解析和引用解决
 //!
 //! 解析和跟踪代码中的符号引用，解决跨文件依赖
+
 use super::*;
-use std::collections::{HashMap, HashSet};
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// 符号解析器
 #[derive(Debug)]
 pub struct SymbolResolver {

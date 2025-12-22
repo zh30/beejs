@@ -1,12 +1,12 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! Test Stage 59: CLI Debugger Integration
 //!
 //! This test suite verifies the CLI debug command functionality
 
 use std::process::Command;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 #[test]
 fn test_debug_command_exists() {

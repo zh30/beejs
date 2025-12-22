@@ -10,7 +10,9 @@ pub mod l3_mmap;
 pub mod prefetcher;
 // TODO: Remove unused export: pub use prefetcher::PatternAnalyzer;
 
-use tokio::sync::Mutex;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// Cache key type - uses FNV-1a hash for fast lookups
 pub type CacheKey = u64;
 /// Cache statistics
@@ -181,8 +183,6 @@ impl Default for MultiLevelCache {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_basic_cache_operations() {
         let cache: _ = MultiLevelCache::new();

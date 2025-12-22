@@ -2,12 +2,15 @@
 //!
 //! This module provides HTTP server functionality to expose Prometheus metrics.
 //! The exporter runs an HTTP server that serves metrics in Prometheus format.
-use anyhow::{Context, Result};
-use prometheus::{Registry, TextEncoder};
-use std::net::SocketAddr;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, TcpStream};
-use tracing::{error, info};
+
+use anyhow::<Context, Result>;
+use prometheus::<Counter, Opts, Registry, TextEncoder>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use tokio::io::<AsyncReadExt, AsyncWriteExt>;
+use tokio::net::<TcpListener, TcpStream>;
+use tracing::<error, info>;
+
 /// Prometheus metrics exporter
 pub struct PrometheusExporter {
     /// Prometheus registry containing all metrics
@@ -181,9 +184,6 @@ async fn serve_not_found(stream: &mut TcpStream) -> Result<()> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use prometheus::{Counter, Opts};
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_prometheus_exporter_creation() {
         let exporter: _ = PrometheusExporter::new();

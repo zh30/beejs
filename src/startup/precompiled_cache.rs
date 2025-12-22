@@ -1,13 +1,13 @@
 //! 优化预编译缓存系统
 //! 实现快照优化、智能缓存管理、缓存压缩等启动优化功能
-// use crate::code_cache::{BytecodeCache, CacheConfig};  // Temporarily disabled
-use anyhow::{anyhow, Context, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tokio::sync::RwLock as AsyncRwLock;
+// use crate::code_cache::<BytecodeCache, CacheConfig>;  // Temporarily disabled
+
+use anyhow::<Context, Result, anyhow>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant, SystemTime, UNIX_EPOCH>;
+
 /// 缓存策略
 #[derive(Debug, Clone)]
 pub enum CacheStrategy {
@@ -486,8 +486,6 @@ impl Drop for OptimizedPrecompiledCache {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_optimized_cache_creation() {
         let cache: _ = OptimizedPrecompiledCache::new(CacheStrategy::Lru {

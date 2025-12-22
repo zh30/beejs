@@ -3,11 +3,11 @@
 use std::collections::HashMap;
 use kube::Api;
 use tracing::info;
-use super::types::{
+use super::types::<
     VirtualService, VirtualServiceSpec, HttpRoute, HttpRouteDestination,
     Destination, PortSelector, HttpMatchRequest, StringMatch,
     HttpFaultInjection, Delay, Abort, Percent,
-};
+>;
 /// Traffic manager for Istio
 pub struct TrafficManager {
     /// Kubernetes client
@@ -295,7 +295,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_traffic_split_creation() {
         let split: _ = TrafficSplit {

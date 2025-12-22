@@ -111,7 +111,7 @@ impl CodeAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_simple_code_analysis() {
         let code: _ = "const x = 1; console.log(x);";

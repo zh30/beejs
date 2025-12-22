@@ -2,12 +2,12 @@
 //! Stage 91 Phase 3.2.1 - 类型定义自动生成
 //!
 //! 从 JavaScript 代码自动生成 TypeScript 类型定义
+
 use super::*;
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use serde::<Deserialize, Serialize>;
 use std::path::PathBuf;
 use tokio;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// 类型生成器
 #[derive(Debug)]
 pub struct TypeDefinitionGenerator {

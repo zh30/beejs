@@ -1,9 +1,9 @@
 //! 分布式追踪系统
 //! 提供链路追踪、上下文传播和Span管理功能
+
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
-use std::time::{Duration, SystemTime};
 /// 分布式追踪器
 #[derive(Debug, Clone)]
 pub struct DistributedTracer {
@@ -248,7 +248,7 @@ fn generate_span_id() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_tracer_creation() {
         let tracer: _ = DistributedTracer::new("beejs-service".to_string());

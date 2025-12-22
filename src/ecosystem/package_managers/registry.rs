@@ -2,10 +2,13 @@
 //! Stage 91 Phase 3.1 - npm 注册表访问
 //!
 //! 处理包的查询、下载和验证
+
+use std::collections::HashMap;
+
 use super::*;
-use serde::{Deserialize, Serialize};
+use serde::<Deserialize, Serialize>;
 use std::time::Duration;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
 /// 注册表客户端
 #[derive(Debug)]
 pub struct RegistryClient {

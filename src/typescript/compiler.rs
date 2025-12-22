@@ -1,8 +1,9 @@
 //! TypeScript 编译器实现
 //! 将 TypeScript 代码转译为 JavaScript
-use anyhow::{Result, bail};
-use std::collections::HashMap;
-use std::path::Path;
+
+use anyhow::<Result, bail>;
+use std::collections::<BTreeMap, HashMap>;
+
 /// TypeScript 编译器配置
 #[derive(Debug, Clone)]
 pub struct TypeScriptCompilerConfig {
@@ -1317,8 +1318,6 @@ pub struct CompilationOutput {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_lexical_analysis() {
         let compiler: _ = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());

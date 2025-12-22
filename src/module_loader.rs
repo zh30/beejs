@@ -1,8 +1,9 @@
-use anyhow::{anyhow, Result};
-use serde_json;
-use std::collections::HashMap;
-use std::fs;
-use std::path::{Path, PathBuf};
+
+
+use anyhow::<Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::path::<Path, PathBuf>;
+use std::sync::<Arc, Mutex>;
 
 /// Module loader for handling require() and module system
 #[derive(Debug, Clone)]
@@ -274,9 +275,6 @@ impl ModuleLoader {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use tempfile::TempDir;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_module_loader_creation() {
         let temp_dir: _ = TempDir::new().unwrap();

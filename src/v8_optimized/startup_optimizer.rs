@@ -1,10 +1,11 @@
 //! V8 启动优化器
 //! 实现 < 2ms 的启动时间
 //! Stage 27.1: V8 引擎深度优化
-use crate::v8_optimized::embedded_builtins::EmbeddedBuiltinsManager;
-use crate::v8_optimized::snapshot_manager::V8SnapshotOptimizedManager;
-use anyhow::{anyhow, Result};
-use std::time::{Duration, Instant};
+
+use anyhow::<Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// V8 启动优化器
 /// Stage 27.1: 实现 < 2ms 启动时间
 pub struct V8StartupOptimizer {
@@ -194,8 +195,6 @@ pub struct StartupBenchmarkResult {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_startup_time() {
         let optimizer: _ = V8StartupOptimizer::new().unwrap();

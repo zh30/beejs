@@ -1,8 +1,8 @@
-use std::path::{Path, PathBuf};
-use std::fs;
-use std::env;
-use anyhow::{Result, anyhow};
-use rusty_v8 as v8;
+
+use anyhow::<Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::path::<Path, PathBuf>;
+
 /// Node.js compatibility module for V8
 /// Provides fs, path, process and other Node.js core modules
 /// Set up all Node.js compatibility globals
@@ -292,8 +292,6 @@ fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_setup_nodejs_apis() {
         // Initialize V8

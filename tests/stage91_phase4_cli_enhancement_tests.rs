@@ -569,8 +569,8 @@ console.log(greeting.message);
 #[cfg(test)]
 mod performance_tests {
     use std::time::Instant;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 测试格式化函数性能
     #[test]

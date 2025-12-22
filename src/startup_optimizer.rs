@@ -1,10 +1,10 @@
 // 启动优化器
 // 优化运行时启动性能，减少首次执行开销
-use std::collections::HashMap;
 
-use std::time::{SystemTime, Duration};
-use crate::RuntimeLite;
-use rusty_v8 as v8;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use std::time::<Duration, SystemTime>;
+
 /// 内存预分配器
 pub struct MemoryPreallocator {
     /// 预分配大小（字节）
@@ -162,8 +162,6 @@ struct PrecompiledFunction {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_preallocator_creation() {
         let preallocator: _ = MemoryPreallocator::new(1024);

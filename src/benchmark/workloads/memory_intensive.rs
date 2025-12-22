@@ -1,10 +1,12 @@
 //! 内存密集型工作负载
 //!
 //! 实现内存密集型任务的性能测试
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
-use super::{WorkloadResult, ResourceUsage, BenchmarkError, BenchmarkResult as Result};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::time::<Duration, Instant>;
+use super::<BenchmarkError, BenchmarkResult as Result, ResourceUsage, WorkloadResult>;
+
 /// 内存密集型工作负载
 #[derive(Debug)]
 pub struct MemoryWorkload {
@@ -131,8 +133,6 @@ fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_workload_execution() {
         let workload: _ = MemoryWorkload::new();

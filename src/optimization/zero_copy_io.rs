@@ -8,11 +8,13 @@
 //! - Lock-free network I/O with io_uring
 //! - Scatter-gather I/O operations
 //! - Memory-mapped buffers for inter-process communication
-use std::io::{self, Read, Write};
-use std::fs::File;
-use std::os::unix::io::{AsRawFd, RawFd};
-use memmap2::{Mmap, MmapOptions};
-use crossbeam::utils::CachePadded;
+
+use memmap2::<Mmap, MmapOptions>;
+use std::collections::<BTreeMap, HashMap>;
+use std::io::<Read, Write, self>;
+use std::os::unix::io::<AsRawFd, RawFd>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+
 /// Zero-copy file reader using memory mapping
 pub struct ZeroCopyFileReader {
     /// Memory-mapped file
@@ -370,8 +372,6 @@ pub fn initialize_zero_copy_io(buffer_pool_size: usize) {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_zero_copy_buffer() {
         let mut buffer = ZeroCopyBuffer::with_capacity(1024);

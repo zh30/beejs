@@ -20,8 +20,8 @@ pub struct ComparisonResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 模拟的Bun性能数据（实际运行时会从Bun获取真实数据）
     fn get_mock_bun_benchmarks() -> Vec<ComparisonResult> {

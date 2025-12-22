@@ -2,12 +2,11 @@
 //!
 //! Stage 90 Phase 2.1: 实现高效的零拷贝内存管理
 //! 支持小、中、大对象的分层内存池管理
-use std::alloc::{GlobalAlloc, Layout, System};
-use std::collections::VecDeque;
-use std::ptr::NonNull;
 
-use std::time::{Duration, Instant};
-use crate::memory::GLOBAL_MEMORY_STATS;
+use std::alloc::<GlobalAlloc, Layout, System>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+
 /// 内存块
 #[derive(Debug)]
 pub struct MemoryBlock {
@@ -370,8 +369,6 @@ impl PoolStats {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_memory_pool_creation() {
         let pool: _ = OptimizedMemoryPool::default();

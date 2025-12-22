@@ -1,11 +1,12 @@
 //! AI 性能引擎
 //! 基于机器学习的智能性能优化系统
 //! 提供性能预测、自动调优和自适应调度功能
-use std::collections::{HashMap, VecDeque};
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
+
+use std::time::<Duration, Instant>;
 use tokio::sync::RwLock as AsyncRwLock;
-use serde::{Deserialize, Serialize};
+use serde::<Deserialize, Serialize>;
 use crate::ai::tensor_optimizer::TensorOptimizer;
 use crate::ai::performance_predictor::PerformancePredictor;
 /// 性能指标
@@ -329,8 +330,7 @@ impl AiPerformanceEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{BTreeMap};
-use std::sync::{Arc, Mutex, RwLock};
+use std::collections::<BTreeMap>;
     #[tokio::test]
     async fn test_record_and_predict() {
         let config: _ = AiPerformanceEngineConfig::default();

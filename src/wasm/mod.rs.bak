@@ -1,0 +1,22 @@
+//! WASM 子模块
+//!
+//! 提供 WebAssembly 相关功能的实现
+pub mod module_cache;
+pub mod module_loader;
+pub mod simd_engine;
+pub mod threads_manager;
+// 暂时注释掉有编译问题的模块
+// pub mod js_interop;
+// pub mod memory_manager;
+// pub mod compiler;
+// pub mod high_performance_cache;
+
+use module_cache::::{CacheStats, WasmModuleCache};
+use module_loader::::{LoaderStats, WasmModule, WasmModuleLoader};
+
+    SimdEngine, HardwareFeatures, SimdCapability, VectorOperation,
+    VectorWidth, SimdStats, detect_cpu_features,
+};
+    WasmThreadsManager, WasmThreadHandle, SharedMemoryRegion,
+    WasmMutex, WasmAtomic, ThreadPoolConfig, ThreadStats,
+};

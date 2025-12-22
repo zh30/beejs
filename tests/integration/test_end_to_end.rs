@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
-    use std::time::{Duration, Instant};
+    use std::time{Duration, Instant};
     use tokio::sync::Mutex;
 
     /// 测试完整的 JavaScript 执行工作流

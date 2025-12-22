@@ -1,11 +1,13 @@
 //! Beejs CLI - Stage 56.2
 //! High-performance JavaScript/TypeScript runtime with Bun-compatible CLI
-use anyhow::{Context, Result};
-use clap::Parser;
-use std::time::Instant;
-use beejs::cli::commands::{CliApp, SubCommand};
-use beejs::cli::{ExecutionContext, ExecutorConfig, ScriptExecutor, FileType, shebang};
-use beejs::RuntimeLite;
+
+use anyhow::<Context, Result>;
+use beejs::cli::::<ExecutionContext, ExecutorConfig, FileType, ScriptExecutor, shebang>;
+use beejs::cli::commands::::<CliApp, SubCommand>;
+use beejs::cli::init_command::::<InitCommand as InitExecutor, InitConfig, ProjectTemplate>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 // use beejs::debugger::DebugSession;  // Temporarily disabled - V8 API compatibility issues
 /// Temporary debug command structure
 #[derive(Debug, Clone)]
@@ -605,7 +607,6 @@ fn run_debug(
 }
 /// Run init command - create new project
 fn run_init(cmd: beejs::cli::commands::InitCommand, verbose: bool) -> Result<()> {
-    use beejs::cli::init_command::{InitCommand as InitExecutor, InitConfig, ProjectTemplate};
     let template: _ = ProjectTemplate::from_str(&format!("{:?}", cmd.template).to_lowercase())
         .unwrap_or(ProjectTemplate::Basic);
     let config: _ = InitConfig {
@@ -628,15 +629,12 @@ fn run_init(cmd: beejs::cli::commands::InitCommand, verbose: bool) -> Result<()>
 }
 /// Run info command - show system information
 fn run_info(_cmd: beejs::cli::commands::InfoCommandArgs, verbose: bool) -> Result<()> {
-    use beejs::cli::info_command::InfoCommand;
     let info_cmd: _ = InfoCommand::new(verbose);
     info_cmd.execute()?;
     Ok(())
 }
 /// Run doctor command - diagnose environment
 fn run_doctor(_cmd: beejs::cli::commands::DoctorCommandArgs, verbose: bool) -> Result<()> {
-    use beejs::cli::doctor_command::DoctorCommand;
-use std::collections::{HashMap, BTreeMap};
     let mut doctor = DoctorCommand::new(verbose);
     doctor.execute()?;
     Ok(())

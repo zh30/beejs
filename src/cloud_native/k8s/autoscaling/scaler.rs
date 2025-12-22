@@ -1,8 +1,8 @@
 //! Scaler for applying scale actions to Kubernetes resources
 //! Implements the actual scaling logic for Deployments and StatefulSets
 use kube::Api;
-use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
-use tracing::{info, warn, error};
+use k8s_openapi::api::apps::v1::<Deployment, StatefulSet>;
+use tracing::<info, warn, error>;
 use super::super::crd::ScalePolicy;
 /// Scaler for managing resource scaling
 pub struct Scaler {
@@ -284,7 +284,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_scaling_result() {
         let result: _ = ScalingResult {

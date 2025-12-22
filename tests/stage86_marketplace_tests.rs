@@ -6,8 +6,8 @@ mod tests {
     use super::*;
     use chrono::Utc;
     use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 测试插件市场初始化
     #[tokio::test]

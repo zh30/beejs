@@ -1,12 +1,13 @@
 //! Network Optimizer
 //! Optimizes network performance for edge computing
-use tokio::sync::RwLock;
-use tokio::time::{Duration, Instant};
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use crate::edge::{NodeId, RouteOptimizer};
-use std::collections::{BTreeMap};
+
+use crate::edge::<NodeId, RouteOptimizer>;
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant, SystemTime>;
+use tokio::time::<Duration, Instant>;
+
 /// Network optimizer
 #[derive(Debug)]
 pub struct NetworkOptimizer {

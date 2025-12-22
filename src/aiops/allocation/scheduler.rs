@@ -2,10 +2,15 @@
 //!
 //! 这个模块提供了基于 AI 的任务调度功能，能够根据任务优先级、资源需求
 //! 和系统状态智能决定任务调度顺序和分配策略。
-use serde::{Deserialize, Serialize};
-use std::collections::{BinaryHeap, HashMap};
+
+use std::collections::HashMap;
+use std::sync::Ordering;
+use std::time::<Duration, Instant>;
+
+use serde::<Deserialize, Serialize>;
+use std::collections::<BinaryHeap, HashMap>;
 use std::cmp::Reverse;
-use tokio::time::{Duration, Instant};
+use tokio::time::<Duration, Instant>;
 /// 任务优先级
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum TaskPriority {
@@ -561,7 +566,7 @@ pub struct SchedulerStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
     #[tokio::test]
     async fn test_add_task() {
         let mut scheduler = Scheduler::new_with_defaults();

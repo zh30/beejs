@@ -1,13 +1,13 @@
 //! Stage 93 Phase 1.2: 优化内存分配器
 //! 在 Stage 92 智能分配器基础上，进一步优化分配性能
 //! 目标: 分配性能提升 40%+, 内存利用率提升 20%+
-use std::alloc::{GlobalAlloc, Layout};
-use std::ptr::NonNull;
-use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
-use crossbeam::utils::CachePadded;
-use crate::memory_optimizer::smart_allocator::{SmartMemoryAllocator, PoolConfig};
+
+use crate::memory_optimizer::smart_allocator::::<PoolConfig, SmartMemoryAllocator>;
+use serde::<Deserialize, Serialize>;
+use std::alloc::<GlobalAlloc, Layout>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering, RwLock>;
+
 /// Stage 93 分配器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stage93AllocatorConfig {
@@ -400,9 +400,6 @@ pub struct Stage93AllocatorReport {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::memory_optimizer::smart_allocator::SmartMemoryAllocator;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_stage93_allocator_creation() {
         let base: _ = SmartMemoryAllocator::new();

@@ -7,16 +7,15 @@
 //! 3. 预编译模块缓存 - 缓存 Wasmtime 模块实例
 //! 4. 细粒度锁优化 - 减少锁竞争
 //! 5. 批量操作优化 - 减少系统调用
-use anyhow::{Result, Context, anyhow};
-use std::collections::HashMap;
-use std::sync::{
+
+use anyhow::<Context, Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, Ordering, RwLock>;
+use std::time::<Duration, Instant>;
+use tokio::io::<AsyncReadExt, AsyncWriteExt>;
+
     Arc, RwLock, Mutex, atomic::{AtomicU64, Ordering},
 };
-use std::time::{Instant, Duration};
-use std::path::PathBuf;
-use tokio::fs;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use blake3::Hasher;
 /// 高性能缓存条目 (零拷贝设计)
 #[derive(Debug)]
 struct HighPerfCacheEntry {
@@ -364,9 +363,6 @@ impl HighPerformanceWasmCache {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::time::Duration;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_high_performance_cache_creation() {
         let cache: _ = HighPerformanceWasmCache::new().unwrap();

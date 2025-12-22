@@ -1,5 +1,9 @@
 //! 统一的 AI 推理引擎接口
 //! 支持多种 AI 框架和模型格式的通用接口
+
+use std::collections::HashMap;
+use std::sync::<Arc, Mutex, RwLock>;
+
 use crate::ai_inference::Tensor;
 use anyhow::Result;
 use tokio::sync::RwLock;
@@ -275,7 +279,7 @@ impl InferenceEngineExt for Box<dyn InferenceEngine> {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     /// 测试引擎管理器的基本功能
     #[tokio::test]
     async fn test_engine_manager_basic() {

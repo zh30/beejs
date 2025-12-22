@@ -2,8 +2,10 @@
 //! Provides cross-platform runtime support for mobile and WebAssembly
 pub mod mobile_runtime;
 pub mod wasm_runtime;
-pub use mobile_runtime::*;
-pub use wasm_runtime::*;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// Unified cross-platform runtime
 #[derive(Debug)]
 pub struct CrossPlatformRuntime {
@@ -77,8 +79,6 @@ impl CrossPlatformRuntime {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     struct MockBeeWasmAPI;
     impl BeeWasmAPI for MockBeeWasmAPI {
         fn console_log(&self, _message: &str) -> Result<(), anyhow::Error> {

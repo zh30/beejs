@@ -5,13 +5,17 @@
 //! - 文件操作
 //! - 系统信息收集
 //! - 数据处理
-use serde::{Deserialize, Serialize};
+
+use std::sync::Ordering;
+use std::time::<Duration, SystemTime>;
+
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::<Duration, SystemTime, UNIX_EPOCH>;
 /// 格式化持续时间
 pub fn format_duration(duration: &Duration) -> String {
     let nanos: _ = duration.subsec_nanos();
@@ -388,7 +392,7 @@ pub fn check_dir_writable(path: &PathBuf) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_format_duration() {
         assert_eq!(format_duration(&Duration::from_millis(500)), "500ms");

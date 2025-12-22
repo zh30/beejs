@@ -9,7 +9,7 @@
 
 #[cfg(test)]
 mod tests {
-    use beejs::benchmarks::{
+    use beejs::benchmarks{
         BenchmarkFramework, BenchmarkConfig, MetricType, BenchmarkResult,
         startup::{StartupBenchmark, StartupOptimizationSuggestions},
         execution::{ExecutionBenchmark, ExecutionOptimizationSuggestions},
@@ -17,8 +17,8 @@ mod tests {
         concurrent::{ConcurrentBenchmark, ConcurrentOptimizationSuggestions},
     };
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 测试基准测试框架基本功能
     #[test]

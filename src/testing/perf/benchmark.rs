@@ -1,6 +1,8 @@
 //! Performance Benchmark
 //! Provides high-level benchmarking interface
-use super::*;
+
+use std::time::Duration;
+
 use std::collections::HashMap;
 /// Benchmark result
 #[derive(Debug, Clone)]
@@ -225,8 +227,7 @@ impl BuiltinBenchmarks {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_benchmark_runner() {
         let config: _ = BenchmarkConfig::default();

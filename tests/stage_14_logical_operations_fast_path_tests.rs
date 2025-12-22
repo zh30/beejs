@@ -1,12 +1,12 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 14: 逻辑运算符快路径优化测试
 //! Tests for logical operations fast path optimization (&&, ||, !, ??, ?.)
 
 #[cfg(test)]
 mod logical_operations_fast_path_tests {
     use beejs::Runtime;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     #[test]
     fn test_logical_not_true() {

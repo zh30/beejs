@@ -9,7 +9,12 @@
 //! - Inline cache optimization
 //! - Hot path identification and optimization
 //! - Garbage collection tuning for minimal pause times
-use rusty_v8::{Isolate, HandleScope, Local, Value, Object, Function};
+
+use std::collections::HashMap;
+use std::sync::<Arc, Mutex, Ordering>;
+use std::time::SystemTime;
+
+use rusty_v8::<Isolate, HandleScope, Local, Value, Object, Function>;
 
 use once_cell::sync::Lazy;
 use crossbeam::utils::CachePadded;
@@ -430,7 +435,7 @@ pub fn initialize_v8_engine() {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_memory_layout_optimization() {
         let optimizer: _ = MemoryLayoutOptimizer::new();

@@ -1,11 +1,11 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 75: Watch Variables Tests
 //!
 //! Tests for the watch variable functionality in the debugger.
 //! Watch expressions allow developers to monitor variable values
 //! during debugging sessions.
 
-use beejs::debugger::{
+use beejs::debugger{
     DebuggerEngine, DebugConfig, DebugState,
 };
 
@@ -257,8 +257,8 @@ mod tests {
     #[test]
     fn test_watch_expression_complex_value() {
         use beejs::debugger::watch::WatchExpression;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
         let mut watch = WatchExpression::new("obj.property");
         watch.last_value = Some("{\"key\": \"value\"}".to_string());

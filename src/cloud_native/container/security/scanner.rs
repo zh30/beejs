@@ -1,5 +1,8 @@
 //! Container security scanner
 //! Scans container images for vulnerabilities and compliance issues
+
+use std::time::SystemTime;
+
 use std::collections::HashMap;
 use std::path::Path;
 use tracing::info;
@@ -477,7 +480,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_vulnerability_severity_ordering() {
         assert!(VulnerabilitySeverity::Critical > VulnerabilitySeverity::High);

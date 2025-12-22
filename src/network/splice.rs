@@ -6,9 +6,11 @@
 //! - 文件到网络套接字的传输
 //! - 网络套接字到文件的传输
 //! - 减少内存拷贝和上下文切换
-use std::io;
-use std::os::unix::io::{AsRawFd, RawFd};
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::os::unix::io::<AsRawFd, RawFd>;
+use std::sync::<Arc, Mutex>;
+
 /// splice 零拷贝数据传输器
 ///
 /// 该结构体封装了 splice 系统调用，提供高性能的数据传输功能。
@@ -221,8 +223,6 @@ enum SpliceDirection {
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_splice_zero_copy_pipe_transfer() {
         // 创建测试管道

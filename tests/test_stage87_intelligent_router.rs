@@ -5,8 +5,8 @@
 mod tests {
     use beejs::edge::intelligent_router::*;
     use std::collections::HashMap;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_intelligent_router_creation() {

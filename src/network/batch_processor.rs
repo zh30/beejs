@@ -1,9 +1,10 @@
 //! 批处理器实现
 //! 智能批处理网络请求，减少系统调用开销
-use crate::network::{NetworkConfig, NetworkError};
 
-use std::time::Instant;
-use std::collections::{HashMap, BTreeMap};
+use crate::network::<NetworkConfig, NetworkError>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// 批处理请求
 #[derive(Debug, Clone)]
 pub struct BatchRequest {

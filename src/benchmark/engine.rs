@@ -5,17 +5,18 @@
 //! - 并行测试执行
 //! - 实时性能监控
 //! - 结果收集和分析
-use crate::benchmark::{
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use std::time::<Duration, Instant>;
+use tokio::sync::<Mutex, Semaphore>;
+use tokio::task::::<JoinHandle, spawn_blocking>;
+use tracing::<debug, error, info, instrument, warn>;
+
     BenchmarkConfig, BenchmarkTest, TestSuite, WorkloadProfile, RuntimeComparison,
     BenchmarkResult, BenchmarkResultSet, EnvironmentInfo, Statistics,
     Runtime, MetricType, BenchmarkError, BenchmarkResult as Result,
 };
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::time::{Duration, Instant};
-use tokio::sync::{Mutex, Semaphore};
-use tokio::task::{JoinHandle, spawn_blocking};
-use tracing::{info, warn, error, debug, instrument};
 /// 基准测试引擎
 #[derive(Debug)]
 pub struct BenchmarkEngine {
@@ -360,9 +361,6 @@ impl BenchmarkRun {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::time::Duration;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_benchmark_engine_creation() {
         let config: _ = BenchmarkConfig::default();

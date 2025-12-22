@@ -1,7 +1,9 @@
 //! 模型缓存系统
 //! 实现智能的模型加载和缓存机制，包括分层缓存、压缩存储和智能预取
-use std::collections::HashMap;
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// 模型缓存配置
 #[derive(Debug, Clone)]
 pub struct ModelCacheConfig {
@@ -400,8 +402,6 @@ impl ModelCache {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_cache_creation() {
         let config: _ = ModelCacheConfig {

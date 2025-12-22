@@ -162,7 +162,7 @@ impl Default for WatchManager {
 #[cfg(test)]
 mod unit_tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_watch_expression_creation() {
         let watch: _ = WatchExpression::new("x + 1");

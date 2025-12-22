@@ -1,7 +1,10 @@
-use std::path::{Path, PathBuf};
+
+use std::sync::Arc;
+
+use std::path::<Path, PathBuf>;
 use std::fs;
 use std::env;
-use anyhow::{Result, anyhow};
+use anyhow::<Result, anyhow>;
 use rusty_v8 as v8;
 use crate::module_loader::ModuleLoader;
 /// Node.js compatibility module for V8
@@ -353,7 +356,7 @@ fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>, module_loa
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_setup_nodejs_apis() {
         // Initialize V8

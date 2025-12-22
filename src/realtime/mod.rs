@@ -8,6 +8,6 @@ pub mod incremental_sync;
 pub mod end_to_end_encrypt;
 pub mod permission_audit;
 // 重新导出主要类型
-pub use ot_crdt_sync::{OperationTransformer, CRDTList};
-pub use permission_audit::PermissionAudit;
-use std::collections::{HashMap, BTreeMap};
+
+use ot_crdt_sync::<CRDTList, OperationTransformer>;
+use std::collections::<BTreeMap, HashMap>;

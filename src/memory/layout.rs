@@ -79,7 +79,7 @@ impl MemoryLayoutOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_memory_layout_optimizer() {
         let optimizer: _ = MemoryLayoutOptimizer::new();

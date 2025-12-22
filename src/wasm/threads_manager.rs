@@ -1,13 +1,10 @@
 //! WebAssembly Threads 多线程管理器
 //!
 //! 提供 WebAssembly 线程池管理、共享内存和同步原语支持
-use std::collections::HashMap;
-use std::sync::{
-    atomic::{AtomicBool, AtomicI32, AtomicU64, Ordering},
-    Arc, Mutex, MutexGuard, RwLock,
-};
-use std::thread::{self, JoinHandle};
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicBool, AtomicI32, AtomicU64, Mutex, MutexGuard, Ordering, RwLock>;
+use std::thread::<JoinHandle, self>;
 // ============================================================================
 // 线程池配置
 // ============================================================================
@@ -397,8 +394,6 @@ impl Default for WasmThreadsManager {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_manager_creation() {
         let manager: _ = WasmThreadsManager::new(ThreadPoolConfig::default());

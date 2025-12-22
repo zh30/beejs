@@ -6,10 +6,12 @@
 //! - 异步任务性能测试
 //! - 锁竞争性能测试
 //! - 工作窃取性能测试
-use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
-use std::time::Duration;
-use tokio::task::{self, JoinHandle};
-use std::collections::{HashMap, BTreeMap};
+
+use crate::benchmarks::<BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+use tokio::task::<JoinHandle, self>;
+
 /// 并发性能基准测试套件
 pub struct ConcurrentBenchmark;
 impl ConcurrentBenchmark {

@@ -5,17 +5,22 @@
 //! - ConcurrentRuntimePool: 线程本地Runtime池（绕过V8线程限制）
 //! - WorkStealingScheduler: 工作窃取调度器（负载均衡）
 //! - BatchExecutor: 批量执行处理器（高层API）
+
+use std::collections::HashMap;
+use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering>;
+use std::time::<Duration, Instant, SystemTime>;
+
 use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::time::{Duration, Instant};
+use std::time::<Duration, Instant>;
 use tokio::sync::Mutex;
 use tokio::time::timeout;
 use crate::Runtime;
 use crate::lock_free_temp::LockFreeCounter;
 // 内存共享模块
-use crate::shared_memory::{SharedMemoryManager, SharedMemoryConfig};
-use crate::shared_object_cache::{SharedObjectCache, SharedObjectCacheConfig};
-use crate::memory_mapped_file::{MemoryMappedFileManager, MemoryMappedFileConfig};
+use crate::shared_memory::<SharedMemoryManager, SharedMemoryConfig>;
+use crate::shared_object_cache::<SharedObjectCache, SharedObjectCacheConfig>;
+use crate::memory_mapped_file::<MemoryMappedFileManager, MemoryMappedFileConfig>;
 /// 并发执行配置
 #[derive(Debug, Clone)]
 pub struct ConcurrentConfig {
@@ -1125,7 +1130,6 @@ impl WorkStealingScheduler {
 }
 #[cfg(test)]
 mod work_stealing_tests {
-    use super::*;
     // Removed unused import: std::time::Duration
     #[tokio::test]
     async fn test_work_stealing_scheduler_creation() {
@@ -1401,7 +1405,6 @@ impl ConcurrentRuntimePool {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[tokio::test]
     async fn test_concurrent_runtime_pool_basic() {
         // 在测试环境中跳过如果 V8 不可用
@@ -1588,8 +1591,7 @@ impl BatchExecutor {
 }
 #[cfg(test)]
 mod batch_executor_tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[tokio::test]
     async fn test_batch_executor_creation() {
         // 在测试环境中跳过如果 V8 不可用

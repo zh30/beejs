@@ -1,13 +1,13 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 /// Stage 78 Phase 1: SIMD/Threads 深度优化测试套件
 ///
 /// 测试 SIMD 加速引擎、硬件特性检测、向量化操作等核心功能
 
 #[cfg(test)]
 mod stage78_simd_tests {
-    use beejs::wasm::simd_engine::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+    use beejs::wasm::simd_engine{
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
         SimdEngine, HardwareFeatures, SimdCapability, VectorOperation,
         detect_cpu_features, SimdStats, VectorWidth,
     };

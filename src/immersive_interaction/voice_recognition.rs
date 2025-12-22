@@ -1,6 +1,6 @@
 //! 语音识别系统
 use std::collections::HashMap;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// 语音配置
 #[derive(Debug, Clone)]
 pub struct VoiceConfig {

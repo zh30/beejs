@@ -5,7 +5,7 @@
 
 use beejs::runtime_lite::Runtime;
 use beejs::performance_analyzer::PerformanceAnalyzer;
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 
 /// 完整调试流程端到端测试
 #[cfg(test)]
@@ -1415,8 +1415,8 @@ mod performance_monitoring_tests {
 #[cfg(test)]
 mod integration_tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 测试综合端到端场景
     #[tokio::test]

@@ -9,7 +9,7 @@
 //! - 缓存统计测试
 //! - 预热机制测试
 
-use beejs::smart_cache::{
+use beejs::smart_cache{
     SmartCache, CacheConfig,
     create_smart_cache, create_high_performance_cache, create_persistent_cache,
     AccessPattern
@@ -21,8 +21,8 @@ use std::time::Duration;
 mod tests {
     use super::*;
     use serial_test::serial;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 测试 1: 缓存创建和基本操作
     #[test]

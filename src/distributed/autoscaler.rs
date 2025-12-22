@@ -1,8 +1,10 @@
 //! 自动扩缩容器模块
 //! 负责根据集群负载自动调整节点数量
-use tracing::{debug, info};
-use std::collections::VecDeque;
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::time::<Duration, Instant, SystemTime>;
+use tracing::<debug, info>;
+
 /// 集群指标
 #[derive(Debug, Clone)]
 pub struct ClusterMetrics {
@@ -333,8 +335,6 @@ impl Default for AutoscalerStats {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_autoscaler_creation() {
         let config: _ = AutoscalerConfig {

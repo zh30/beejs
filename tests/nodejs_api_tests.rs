@@ -1,9 +1,9 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 use beejs::Runtime;
 use std::io::Write;
-use tempfile::{NamedTempFile, TempDir};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use tempfile{NamedTempFile, TempDir};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 #[test]
 fn test_process_argv() {

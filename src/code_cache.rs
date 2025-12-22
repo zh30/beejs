@@ -1,8 +1,10 @@
-use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
-use std::hash::{Hash, Hasher};
 
-use std::time::{Duration, Instant};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::hash::<Hash, Hasher>;
+use std::sync::<Arc, Mutex>;
+use std::time::<Duration, Instant, SystemTime>;
+
 /// 字节码缓存条目
 #[derive(Debug, Clone)]
 pub struct CacheEntry {
@@ -199,8 +201,6 @@ impl BytecodeCache {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_cache_basic_operations() {
         let cache: _ = BytecodeCache::new(CacheConfig::default());

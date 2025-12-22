@@ -1,10 +1,11 @@
 //! Beejs 高级调试器
 //! Stage 80 Phase 3 - 开发者工具链
 //! 支持多线程调试、实时变量监控、断点管理
-use std::collections::HashMap;
 
-use std::time::{Duration, Instant};
-use uuid::Uuid;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant>;
+
 /// 线程 ID
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ThreadId(pub u64);
@@ -227,8 +228,6 @@ impl Default for Debugger {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_breakpoint_management() {
         let debugger: _ = Debugger::new();

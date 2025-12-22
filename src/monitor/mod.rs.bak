@@ -1,0 +1,35 @@
+//! 监控面板模块
+//!
+//! 提供完整的性能监控、数据存储、告警系统和 Web 仪表板功能
+
+use std::collections::::{BTreeMap, HashMap};
+
+/// 性能监控器
+pub mod performance_monitor;
+/// 数据存储
+pub mod data_store;
+/// 告警系统
+pub mod alerts;
+/// Web 仪表板
+pub mod dashboard;
+/// 性能分析器（Stage 76 新增）
+pub mod profiler;
+// 重新导出主要类型
+    MetricType, MetricValue, AggregatedMetric, ThresholdConfig, MonitorConfig,
+    PerformanceMonitor, CollectionStats, ThresholdViolation, ThresholdSeverity,
+};
+    DataStore, DataStoreConfig, DataPoint, QueryCondition, ExportFormat,
+    CompressedData, QueryIndex, DataStoreStats,
+};
+    AlertRule, AlertCondition, AlertSeverity, AlertInstance, AlertData,
+    AlertStatus, NotificationChannel, NotificationType, NotificationMessage,
+    AlertStats, AlertSystem, AlertSystemConfig, SilenceRule, NotificationResult,
+};
+    DashboardConfig, ChartConfig, ChartType, DashboardLayout, LayoutConfig,
+    BreakpointConfig, WebDashboard, ConnectionStats, DashboardData, ApiResponse,
+    ExportConfig, ChartData, Dataset,
+};
+    AdvancedProfiler, AdvancedProfilerConfig, PerformanceSummary,
+    FunctionTracker, FunctionStats, CallStackAnalyzer, HotspotAnalyzer,
+    RealtimeSnapshot, ReportConfig,
+};

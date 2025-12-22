@@ -1,12 +1,13 @@
 //! Distributed Coordinator
 //! Coordinates distributed consensus and task execution across edge nodes
-use tokio::sync::RwLock;
-use tokio::time::{Duration, Instant};
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use crate::edge::{NodeId, EdgeNode, Task};
-use std::collections::{BTreeMap};
+
+use crate::edge::<EdgeNode, NodeId, Task>;
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant, SystemTime>;
+use tokio::time::<Duration, Instant>;
+
 /// Distributed coordinator
 #[derive(Debug)]
 pub struct DistributedCoordinator {

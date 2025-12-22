@@ -1,12 +1,12 @@
 //! GitOps Engine for Configuration Management
 //! 实现基于 Git 的配置管理和自动化部署工作流
-use anyhow::{Result, Context};
-use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::path::Path;
-use std::time::SystemTime;
-use tracing::{info, warn, error, debug};
-use uuid::Uuid;
+
+use anyhow::<Context, Result>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use tracing::<debug, error, info, warn>;
+
 /// Repository URL
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RepositoryUrl(pub String);
@@ -450,8 +450,6 @@ pub fn default_sync_policies() -> Vec<SyncPolicy> {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_git_client_creation() {
         let client: _ = GitClient::new(

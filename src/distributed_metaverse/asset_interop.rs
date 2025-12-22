@@ -1,4 +1,6 @@
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;
+
 // 跨平台资产互通系统
 /// 资产格式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

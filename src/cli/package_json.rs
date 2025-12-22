@@ -2,8 +2,8 @@
 //! Stage 36.0 - 实现 package.json 解析和脚本执行
 use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
+use std::path::<Path, PathBuf>;
+use serde::<Deserialize, Serialize>;
 /// Package.json structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackageJson {
@@ -268,7 +268,7 @@ impl ScriptExecutor {
 mod tests {
     use super::*;
     use tempfile::tempdir;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_package_json_load() {
         let temp_dir: _ = tempdir().expect("Failed to create temp dir");

@@ -3,7 +3,7 @@
 
 #[cfg(test)]
 mod onnx_tests {
-    use beejs::ai_inference::engine_interface::{
+    use beejs::ai_inference::engine_interface{
         InferenceEngine, EngineFactory, EngineManager, ModelFormat, EngineType,
         InferenceOptions, ModelHandle, Tensor, InferenceResult, EngineStats
     };

@@ -1,9 +1,12 @@
 //! WASM 模块加载器
 //!
 //! 负责高效加载、验证和实例化 WebAssembly 模块
-use wasmtime::{Engine, Module, Instance, Store, Linker, Config};
-use anyhow::{Result, Context, anyhow};
-use std::time::Instant;
+
+use anyhow::<Context, Result, anyhow>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+use wasmtime::<Config, Engine, Instance, Linker, Module, Store>;
+
 /// WebAssembly 模块结构体
 ///
 /// 封装已加载的 WASM 模块及其元数据
@@ -200,7 +203,6 @@ impl WasmModuleLoader {
     /// # 返回值
     /// * `Result<String>` - 模块 ID
     fn generate_module_id(&self, wasm_bytes: &[u8]) -> Result<String> {
-        use blake3::Hasher;
         let mut hasher = Hasher::new();
         hasher.update(wasm_bytes);
         let hash: _ = hasher.finalize();
@@ -248,8 +250,6 @@ impl std::fmt::Display for LoaderStats {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_loader_creation() {
         let loader: _ = WasmModuleLoader::new();

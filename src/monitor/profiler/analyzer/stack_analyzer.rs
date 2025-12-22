@@ -1,7 +1,9 @@
 //! 调用栈分析模块
 //! 分析函数调用栈，识别热点路径和性能瓶颈
-use std::collections::{HashMap, VecDeque};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+use std::collections::BTreeMap;
+use std::time::<Duration, Instant, SystemTime, UNIX_EPOCH>;
+
 /// 调用栈帧
 #[derive(Debug, Clone)]
 pub struct StackFrame {
@@ -387,8 +389,6 @@ impl CallStackAnalyzer {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{BTreeMap};
     #[test]
     fn test_call_stack_analyzer_creation() {
         let analyzer: _ = CallStackAnalyzer::new(100);

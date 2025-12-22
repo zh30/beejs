@@ -1,14 +1,14 @@
 //! Stage 55: 性能基准测试套件测试
 //! 测试 Beejs 的性能基准测试功能
 
-use beejs::benchmarks::{BenchmarkFramework, MetricType, BenchmarkConfig};
+use beejs::benchmarks{BenchmarkFramework, MetricType, BenchmarkConfig};
 use std::time::Duration;
 
 #[cfg(test)]
 mod stage_55_performance_benchmark_tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// 测试基准测试框架创建
     #[test]

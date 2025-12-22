@@ -2,9 +2,12 @@
 //!
 //! 这个模块提供了基于 AI 的智能资源分配和优化功能，能够分析工作负载、
 //! 预测资源需求并优化资源分配策略。
-use serde::{Deserialize, Serialize};
+
+use std::time::Instant;
+
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
-use tokio::time::{Duration, Instant};
+use tokio::time::<Duration, Instant>;
 /// 资源类型枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ResourceType {
@@ -452,7 +455,7 @@ pub struct OptimizationStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[tokio::test]
     async fn test_allocate_resources_basic() {
         let optimizer: _ = ResourceOptimizer::new_with_defaults();

@@ -10,16 +10,16 @@
 // - 大模型推理延迟降低 50%
 // - 内存使用效率提升 30%
 
-use beejs::{
+use beejs{
     AiBatchProcessor, AiTaskType, BatchConfig, ModelMemoryConfig, create_llm_memory_pool
 };
-use std::time::{Duration, Instant};
+use std::time{Duration, Instant};
 
 #[cfg(test)]
 mod stage_26_1_tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// Test 1: AI Memory Prefetch Optimization
     /// Verifies that model weights are prefetched and cached efficiently

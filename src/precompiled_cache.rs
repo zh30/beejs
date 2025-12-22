@@ -1,13 +1,14 @@
 //! 预编译模块缓存系统
 //! 预编译常用 Node.js 模块并缓存字节码，提升执行速度
-use crate::code_cache::{BytecodeCache, CacheConfig};
-use anyhow::{anyhow, Context, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs;
-use std::path::PathBuf;
 
-use std::time::{Duration, Instant};
+use anyhow::<Context, Result, anyhow>;
+use crate::code_cache::<BytecodeCache, CacheConfig>;
+use serde::<Deserialize, Serialize>;
+use std::collections::<BTreeMap, HashMap>;
+use std::hash::<Hash, Hasher>;
+use std::sync::<Arc, Mutex>;
+use std::time::<Duration, Instant, SystemTime>;
+
 /// 预编译模块缓存统计
 #[derive(Debug, Clone, Default)]
 pub struct PrecompiledCacheStats {
@@ -191,8 +192,6 @@ impl PrecompiledModuleCache {
     }
     /// 计算源码哈希
     fn calculate_source_hash(&self, source: &str) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
         let mut hasher = DefaultHasher::new();
         source.hash(&mut hasher);
         format!("{:x}", hasher.finish())
@@ -413,8 +412,6 @@ impl PrecompiledModuleCache {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_cache_creation() {
         let cache: _ = PrecompiledModuleCache::new();

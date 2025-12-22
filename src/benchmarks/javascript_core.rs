@@ -7,9 +7,11 @@
 //! - TypeScript 编译性能测试
 //! - 模块加载性能测试
 //! - 并发执行性能测试
-use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
-use rusty_v8 as v8;
-use std::time::{Duration, Instant};
+
+use crate::benchmarks::<BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
+
 /// JavaScript 核心基准测试套件
 pub struct JavaScriptCoreBenchmark;
 impl JavaScriptCoreBenchmark {
@@ -166,8 +168,6 @@ impl JavaScriptCoreBenchmark {
             MetricType::ExecutionTime,
             || {
                 // 模拟模块加载
-                use std::fs;
-                use std::path::PathBuf;
                 let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
                 path.push("tests");
                 path.push("test_modules");
@@ -198,7 +198,6 @@ impl JavaScriptCoreBenchmark {
             MetricType::ExecutionTime,
             || {
 
-                use std::thread;
                 let num_threads: _ = 10;
                 let results: _ = Arc::new(Mutex::new(Vec::new()));
                 let mut handles = vec![];
@@ -247,8 +246,6 @@ impl JavaScriptCoreBenchmark {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_javascript_core_benchmark_creation() {
         // Ensure V8 is initialized before running the benchmark

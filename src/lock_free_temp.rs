@@ -1,6 +1,9 @@
 //! 临时 lock_free 模块
 //! 为兼容性提供临时定义，避免编译错误
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<AtomicUsize, Ordering>;
+
 /// 临时 LockFreeCounter 定义
 #[derive(Debug, Default)]
 #[allow(dead_code)]

@@ -1,13 +1,16 @@
 //! Prometheus Metrics Integration for Beejs
 //! 实现 Prometheus 指标收集和导出功能
-use anyhow::{Result, Context};
-use prometheus::{
+
+use std::time::Instant;
+
+use anyhow::<Result, Context>;
+use prometheus::<
     Counter, CounterVec, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec,
     IntCounter, IntCounterVec, IntGauge, IntGaugeVec, LinearBuckets, Opts,
     Registry, TextEncoder,
-};
-use tokio::time::{Duration, Instant};
-use tracing::{info, warn, debug};
+>;
+use tokio::time::<Duration, Instant>;
+use tracing::<info, warn, debug>;
 /// Prometheus metrics configuration
 #[derive(Debug, Clone)]
 pub struct PrometheusConfig {
@@ -621,7 +624,7 @@ impl ClusterMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_prometheus_manager_creation() {
         let config: _ = PrometheusConfig {

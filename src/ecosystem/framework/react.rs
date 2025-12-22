@@ -3,10 +3,10 @@
 //!
 //! 提供 React 应用完整支持，包括 JSX 转换、组件渲染、水合等
 use super::*;
-use serde::{Deserialize, Serialize};
+use serde::<Deserialize, Serialize>;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::collections::{BTreeMap};
+use std::collections::<BTreeMap>;
 /// React 运行时
 #[derive(Debug)]
 pub struct ReactRuntime {

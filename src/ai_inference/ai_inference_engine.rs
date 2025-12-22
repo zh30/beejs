@@ -1,6 +1,11 @@
 //! AI 推理引擎核心实现
 //! 提供高性能的 AI 模型推理能力
-use anyhow::{Context, Result};
+
+use std::collections::HashMap;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, Instant>;
+
+use anyhow::<Context, Result>;
 /// AI 推理引擎主结构
 #[derive(Debug)]
 pub struct AIInferenceEngine {

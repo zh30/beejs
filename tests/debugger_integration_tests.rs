@@ -1,10 +1,10 @@
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! Debugger Module Integration Tests
 //!
 //! Tests for the beejs debugger functionality
 //! Stage 58: Debugger Integration
 
-use beejs::debugger::{
+use beejs::debugger{
     DebuggerEngine, BreakpointManager, Breakpoint, StackFrame, StackTrace,
     VariableInspector, DebugConfig, DebugState, DebugEvent,
     StepType, SourceLocation, SimpleEventListener,
@@ -15,8 +15,8 @@ use beejs::debugger::{
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
     /// Test 1: BreakpointManager creation
     #[test]

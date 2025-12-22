@@ -1,7 +1,11 @@
 //! 锁竞争减少优化模块
 //! 使用无锁数据结构和原子操作减少并发场景下的锁竞争
-use crossbeam::utils::CachePadded;
-use tokio::sync::{Mutex, RwLock};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicBool, AtomicUsize, Mutex, Ordering, RwLock>;
+use std::time::<Duration, Instant>;
+use tokio::sync::<Mutex, RwLock>;
+
 /// 无锁计数器 - 使用原子操作实现高性能计数
 #[derive(Debug, Default)]
 #[allow(dead_code)]
@@ -358,9 +362,6 @@ impl AtomicStats {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::thread;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_lock_free_counter() {
         let counter: _ = LockFreeCounter::new(0);

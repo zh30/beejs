@@ -6,11 +6,13 @@ pub mod xr_runtime;
 pub mod ray_tracer;
 pub mod multiuser_renderer;
 pub mod spatial_audio;
-pub use xr_runtime::{XRRuntime, XRConfig, XRMode};
-pub use ray_tracer::{RayTracer, RayTracerConfig, BounceLimit};
-pub use multiuser_renderer::{MultiuserRenderer, UserAvatar, AvatarConfig, SyncMode as MultiuserSyncMode};
-pub use spatial_audio::{SpatialAudioSystem, AudioSource, AudioConfig, HRTFProfile};
-use std::collections::{HashMap, BTreeMap};
+
+use multiuser_renderer::<AvatarConfig, MultiuserRenderer, SyncMode as MultiuserSyncMode, UserAvatar>;
+use ray_tracer::<BounceLimit, RayTracer, RayTracerConfig>;
+use spatial_audio::<AudioConfig, AudioSource, HRTFProfile, SpatialAudioSystem>;
+use std::collections::<BTreeMap, HashMap>;
+use xr_runtime::<XRConfig, XRMode, XRRuntime>;
+
 /// XR 平台类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum XRPlatform {

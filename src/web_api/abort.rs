@@ -1,7 +1,7 @@
 //! AbortController API implementation
 use anyhow::Result;
 use rusty_v8 as v8;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
 pub fn setup_abort_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,

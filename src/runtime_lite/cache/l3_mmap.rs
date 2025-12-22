@@ -2,12 +2,12 @@
 //!
 //! This module provides L3 cache using memory mapping for efficient handling
 //! of large script files and infrequently accessed cold data.
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{Read, Write};
-use std::path::PathBuf;
 
-use std::time::{Duration, Instant};
+use std::collections::<BTreeMap, HashMap>;
+use std::hash::<Hash, Hasher>;
+use std::io::<Read, Write>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// L3 Cache entry for memory-mapped files
 #[derive(Debug, Clone)]
 struct L3Entry {
@@ -196,8 +196,6 @@ impl L3MmapCache {
     }
     /// Hash a string key
     fn hash_key(&self, key: &str) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
         let mut hasher = DefaultHasher::new();
         key.hash(&mut hasher);
         format!("{:x}", hasher.finish())
@@ -218,8 +216,6 @@ impl Default for L3MmapCache {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_l3_basic_operations() {
         let cache: _ = L3MmapCache::new();

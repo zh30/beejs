@@ -3,6 +3,7 @@
 //! Provides remote debugging capabilities via WebSocket
 pub mod server;
 pub mod client;
-pub use server::{DebugServer, SessionManager, WebSocketHandler, DebugProtocol, SessionId};
-pub use client::{ConnectionManager, EventDispatcher, StateSync, DebugEvent, DebugState, StackFrameInfo};
-use std::collections::{HashMap, BTreeMap};
+
+use client::<ConnectionManager, DebugEvent, DebugState, EventDispatcher, StackFrameInfo, StateSync>;
+use server::<DebugProtocol, DebugServer, SessionId, SessionManager, WebSocketHandler>;
+use std::collections::<BTreeMap, HashMap>;

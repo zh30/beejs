@@ -7,10 +7,12 @@
 //! - HeatMap: Density and intensity visualization
 //! - ScatterPlot: Correlation and distribution analysis
 //! - AreaChart: Cumulative and range data
-use super::*;
-use anyhow::{Result, Context, anyhow};
+
+use std::collections::HashMap;
+
+use anyhow::<Result, Context, anyhow>;
 use tokio::sync::RwLock;
-use tracing::{debug, warn, error};
+use tracing::<debug, warn, error>;
 /// Line Chart - For time series and continuous data
 pub struct LineChart {
     config: VisualizationConfig,
@@ -898,8 +900,7 @@ impl Default for PieChartBuilder {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_line_chart_builder() {
         let mut builder = LineChartBuilder::new();

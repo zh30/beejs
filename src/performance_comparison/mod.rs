@@ -8,14 +8,14 @@
 pub mod benchmark_runner;
 pub mod result_collector;
 pub mod comparison_report;
-pub use benchmark_runner::{BenchmarkRunner, RuntimeConfig, TestCase};
-pub use result_collector::{ResultCollector, ComparisonResult, BenchmarkComparison};
-pub use comparison_report::{ReportGenerator, ReportFormat, ReportConfig};
+
+use benchmark_runner::<BenchmarkRunner, RuntimeConfig, TestCase>;
+use comparison_report::<ReportConfig, ReportFormat, ReportGenerator>;
+use result_collector::<BenchmarkComparison, ComparisonResult, ResultCollector>;
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+
 // use crate::benchmarks;  // Unused import
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
-use std::collections::{BTreeMap};
 /// 性能对比结果
 #[derive(Debug, Clone)]
 pub struct PerformanceComparisonResult {

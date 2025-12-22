@@ -4,8 +4,8 @@
 /// including lazy initialization and deferred loading of non-core features.
 use beejs::Runtime;
 use std::time::Instant;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync{Arc, Mutex, RwLock};
+use std::collections{HashMap, BTreeMap};
 
 /// Test that basic runtime creation is fast (< 100ms target)
 #[test]

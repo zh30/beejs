@@ -1,5 +1,9 @@
 //! Distributed tracing for Service Mesh
 //! Provides simplified tracing implementation for distributed tracing
+
+use std::sync::Ordering;
+use std::time::<Duration, Instant>;
+
 use std::collections::HashMap;
 /// Global span ID counter
 static SPAN_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -430,7 +434,7 @@ pub struct MetricsReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<HashMap, BTreeMap>;
     #[test]
     fn test_span_record() {
         let record: _ = SpanRecord {

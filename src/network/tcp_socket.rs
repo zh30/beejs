@@ -5,11 +5,12 @@
 //! - TCP_CORK/TCP_NODELAY 优化
 //! - 零拷贝发送缓冲区
 //! - 写时复制 (copy-on-write)
-use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
 
-use std::time::Duration;
-use std::collections::{HashMap, BTreeMap};
+use std::collections::<BTreeMap, HashMap>;
+use std::io::<Read, Write>;
+use std::net::<TcpListener, TcpStream>;
+use std::sync::<Arc, Mutex>;
+
 /// 零拷贝 TCP 套接字
 ///
 /// 该结构体封装了标准库的 TcpStream，并添加了零拷贝优化功能。

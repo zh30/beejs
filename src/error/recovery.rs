@@ -1,10 +1,10 @@
 //! Stage 89 Phase 2: 自动恢复机制
 //! 提供智能错误恢复、重试策略和自动修复能力
-use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
-use rand::Rng;
-use super::types::{BeejsError, ErrorContext};
-use std::collections::{HashMap, BTreeMap};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+use super::types::::<BeejsError, ErrorContext>;
+
 /// 重试策略
 #[derive(Debug, Clone)]
 pub struct RetryPolicy {

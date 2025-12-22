@@ -1,12 +1,13 @@
 //! 智能故障预测引擎
 //!
 //! 该模块基于历史数据和实时指标，利用机器学习算法预测潜在的系统故障。
-use std::collections::HashMap;
-use std::time::{SystemTime, Duration};
-use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
-use crate::aiops::anomaly_detection::{AnomalyDetector, Anomaly, BaselineCalculator};
-use std::collections::{BTreeMap};
+
+use crate::aiops::anomaly_detection::::<Anomaly, AnomalyDetector, BaselineCalculator>;
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex, RwLock>;
+use std::time::<Duration, SystemTime>;
+
 /// 系统指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MetricType {

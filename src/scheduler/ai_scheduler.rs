@@ -1,7 +1,10 @@
 //! AI 驱动智能任务调度器 - Stage 90 Phase 5.3
-use std::collections::{HashMap, VecDeque};
-use tokio::sync::{RwLock, Mutex};
-use serde::{Serialize, Deserialize};
+
+use serde::<Deserialize, Serialize>;
+use std::collections::BTreeMap;
+use std::sync::<Arc, Mutex, RwLock>;
+use tokio::sync::<Mutex, RwLock>;
+
 /// 任务
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -231,8 +234,6 @@ fn current_timestamp() -> u64 {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_intelligent_task_scheduler() {
         let scheduler: _ = IntelligentTaskScheduler::new();

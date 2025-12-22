@@ -1,8 +1,8 @@
 //! EventTarget and Event API implementation for Web standard
 //! Provides addEventListener, removeEventListener, dispatchEvent
-use anyhow::Result;
-use rusty_v8 as v8;
-use std::collections::HashMap;
+
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex>;
 
 /// Event type enum
 #[derive(Debug, Clone)]
@@ -126,8 +126,6 @@ fn event_target_constructor_callback(
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_event_creation() {
         let event: _ = Event::new("click".to_string());

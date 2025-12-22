@@ -1,8 +1,9 @@
 //! AI内存预分配系统
 //! 专为AI推理工作负载设计的高效内存管理系统
-use std::collections::HashMap;
 
-use std::time::{Duration, Instant};
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, Mutex, RwLock>;
+
 /// 内存块
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -446,9 +447,6 @@ pub fn create_general_ai_memory_pool() -> AiMemoryPool {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
-use std::sync::{Arc, Mutex, RwLock};
     #[test]
     fn test_memory_block_creation() {
         let block: _ = MemoryBlock {

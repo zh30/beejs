@@ -1,7 +1,10 @@
 //! 张量 (Tensor) 实现
 //!
 //! 支持多维数组运算
-use std::ops::{Add, Mul};
+
+use std::collections::<BTreeMap, HashMap>;
+use std::ops::<Add, Mul>;
+
 /// 数据类型
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DType {
@@ -250,8 +253,6 @@ impl Tensor {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_tensor_zeros() {
         let t: _ = Tensor::zeros(&[2, 3]);

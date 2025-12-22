@@ -2,10 +2,13 @@
 //!
 //! This module provides zero-copy memory transfers using DMA (Direct Memory Access)
 //! to bypass CPU and achieve maximum I/O performance for AI workloads.
-use std::ptr::NonNull;
-use anyhow::{Result, anyhow};
-use libc::{c_void, posix_memalign};
-use memmap2::{Mmap, MmapOptions};
+
+use anyhow::<Result, anyhow>;
+use libc::<c_void, posix_memalign>;
+use memmap2::<Mmap, MmapOptions>;
+use std::collections::<BTreeMap, HashMap>;
+use std::sync::<Arc, AtomicUsize, Mutex, Ordering>;
+
 /// DMA buffer for zero-copy memory operations
 #[derive(Debug)]
 pub struct DmaBuffer {
@@ -234,8 +237,6 @@ impl Drop for DmaBuffer {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_allocate_small_buffer() {
         let engine: _ = DmaEngine::new().unwrap();
