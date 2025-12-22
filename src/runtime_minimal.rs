@@ -23,8 +23,50 @@ impl MinimalRuntime {
         Ok(Self { isolate })
     }
 
-    /// Execute JavaScript code and return the result as a string
+    /// Transpile TypeScript to JavaScript by removing type annotations
+    fn transpile_typescript_to_js(code: &str) -> Result<String> {
+        let mut js_code = code.to_string();
+
+        // Remove block comments (/* */)
+        let block_comment_pattern = regex::Regex::new(r"/\*.*?\*/").unwrap();
+        js_code = block_comment_pattern.replace_all(&js_code, "").to_string();
+
+        // Remove single-line comments
+        let single_line_pattern = regex::Regex::new(r"//.*?$").unwrap();
+        js_code = single_line_pattern.replace_all(&js_code, "").to_string();
+
+        // Remove interface definitions (entire lines with 'interface')
+        let interface_pattern = regex::Regex::new(r"(?m)^interface\s+\w+.*?$").unwrap();
+        js_code = interface_pattern.replace_all(&js_code, "").to_string();
+
+        // Remove type annotations from function parameters: name: type
+        let param_pattern = regex::Regex::new(r":\s*[^,)={]+").unwrap();
+        js_code = param_pattern.replace_all(&js_code, "").to_string();
+
+        // Remove return type annotations: -> type
+        let return_pattern = regex::Regex::new(r"->\s*[^;{]+").unwrap();
+        js_code = return_pattern.replace_all(&js_code, "").to_string();
+
+        // Remove variable type annotations
+        let var_pattern = regex::Regex::new(r"let\s+(\w+):\s*[^;=]+").unwrap();
+        js_code = var_pattern.replace_all(&js_code, "let $1").to_string();
+
+        let const_pattern = regex::Regex::new(r"const\s+(\w+):\s*[^;=]+").unwrap();
+        js_code = const_pattern.replace_all(&js_code, "const $1").to_string();
+
+        Ok(js_code)
+    }
+
+    /// Execute JavaScript or TypeScript code and return the result as a string
     pub fn execute_code(&mut self, code: &str) -> Result<String> {
+        // Transpile TypeScript to JavaScript if TypeScript features are detected
+        let js_code = if code.contains("function ") && code.contains(": ") {
+            // If code contains both "function" and type annotations ":", it's likely TypeScript
+            Self::transpile_typescript_to_js(code)?
+        } else {
+            code.to_string()
+        };
+
         // Create a handle scope for this execution
         let scope = &mut v8::HandleScope::new(&mut self.isolate);
 
@@ -38,8 +80,8 @@ impl MinimalRuntime {
         // Set up Web APIs
         Self::setup_web_apis(scope, &context)?;
 
-        // Create a string from the input code
-        let code = v8::String::new(scope, code)
+        // Create a string from the transpiled code
+        let code = v8::String::new(scope, &js_code)
             .ok_or_else(|| anyhow::anyhow!("Failed to create V8 string from code"))?;
 
         // Use TryCatch for proper error handling
@@ -136,13 +178,40 @@ impl MinimalRuntime {
         // Set up global Date object (use V8 built-in)
         // V8 already provides Date by default
 
-        // Set up global setTimeout (simplified - just executes immediately)
-        let set_timeout_fn = v8::Function::new(scope, |_scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, _rv: v8::ReturnValue| {
-            // For now, just execute immediately (simplified implementation)
-            if args.length() > 0 {
+        // Set up global setTimeout with timer tracking
+        let set_timeout_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
                 let callback = args.get(0);
-                // In a full implementation, this would store the callback and execute it after delay
-                println!("setTimeout called (simplified implementation)");
+
+                if !callback.is_function() {
+                    let error = v8::String::new(scope, "setTimeout: callback must be a function").unwrap();
+                    let error_obj = v8::Exception::type_error(scope, error);
+                    scope.throw_exception(error_obj.into());
+                    return;
+                }
+
+                let delay = if args.length() >= 2 {
+                    args.get(1).to_integer(scope)
+                        .map(|i| i.value().max(0) as u64)
+                        .unwrap_or(0)
+                } else {
+                    0
+                };
+
+                // For synchronous execution (delay = 0), execute immediately
+                if delay == 0 {
+                    let callback_func = v8::Local::<v8::Function>::try_from(callback).unwrap();
+                    let undefined = v8::undefined(scope);
+                    let _: _ = callback_func.call(scope, undefined.into(), &[]);
+                } else {
+                    // For non-zero delays, we can't truly implement async in synchronous V8
+                    // This is a limitation - real implementation needs event loop integration
+                    eprintln!("⚠️ setTimeout with delay {}ms - async timers require event loop integration", delay);
+                }
+
+                // Return timer ID (for compatibility)
+                let timer_id_val = v8::Number::new(scope, 1.0);
+                retval.set(timer_id_val.into());
             }
         }).ok_or_else(|| anyhow::anyhow!("Failed to create setTimeout function"))?;
         let set_timeout_key = v8::String::new(scope, "setTimeout").unwrap().into();
