@@ -5,6 +5,7 @@
 use crate::network::{ConnectionPool, NetworkStats};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use rusty_v8 as v8;
 
 /// 设置所有零拷贝网络 I/O API
 pub fn setup_network_apis(

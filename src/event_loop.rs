@@ -4,6 +4,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use rusty_v8 as v8;
 
 // use std::task::::{Context, Poll}; // 未使用的导入
 /// 事件循环状态

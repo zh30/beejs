@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Instant};
 use std::collections::{HashMap};
 use thiserror::Error;
+use rusty_v8 as v8;
 
 /// 运行时错误类型
 #[derive(Error, Debug)]

@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+use rusty_v8 as v8;
 
 mod typescript;
 mod nodejs_v8;

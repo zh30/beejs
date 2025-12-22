@@ -7,6 +7,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use rusty_v8 as v8;
 
 /// Statistics for context pool performance monitoring
 #[derive(Debug, Clone)]

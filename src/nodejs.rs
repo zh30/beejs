@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::fs::File;
+use rusty_v8 as v8;
 
 // Module cache - stores loaded modules for current execution
 // Note: thread_local means each V8 isolate has its own cache

@@ -4,6 +4,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
+use rusty_v8 as v8;
 
 /// 内存预分配器
 pub struct MemoryPreallocator {
