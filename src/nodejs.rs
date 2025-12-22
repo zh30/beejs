@@ -3,6 +3,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::fs::File;
 
 // Module cache - stores loaded modules for current execution
 // Note: thread_local means each V8 isolate has its own cache

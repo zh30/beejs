@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
 
 /// 性能指标
 #[derive(Debug, Clone, Serialize, Deserialize)]

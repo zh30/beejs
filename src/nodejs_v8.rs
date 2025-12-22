@@ -357,6 +357,7 @@ fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>, module_loa
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::fs::File;
     #[test]
     fn test_setup_nodejs_apis() {
         // Initialize V8

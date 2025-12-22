@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
 
 /// LLM 配置
 #[derive(Debug, Clone)]

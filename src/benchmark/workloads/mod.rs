@@ -14,6 +14,8 @@ pub mod ai_workload;
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+
+use std::time::Duration;
 use super::{BenchmarkError, BenchmarkResult, BenchmarkResult as Result};
 
 /// 工作负载类型

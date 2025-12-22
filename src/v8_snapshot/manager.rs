@@ -357,6 +357,7 @@ mod tests {
     #[test]
     fn test_load_nonexistent_snapshot() {
 use std::collections::{HashMap, BTreeMap};
+use std::fs::File;
         let dir: _ = tempdir().unwrap();
         let base_dir: _ = dir.path();
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());

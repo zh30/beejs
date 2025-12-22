@@ -3,6 +3,7 @@
 
 use anyhow::Result;
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
 
 /// GPU 设备信息
 #[derive(Debug, Clone)]

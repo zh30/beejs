@@ -7,6 +7,7 @@ use crate::testing::test_context::{TestCase, TestResult, TestSuite};
 use crate::testing::test_timeout::{TestTimeout, TimeoutConfig};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// Enhanced test runner configuration
 #[derive(Debug, Clone)]

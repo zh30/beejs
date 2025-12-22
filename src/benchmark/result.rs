@@ -8,6 +8,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+
+use std::time::Duration;
 use super::{MetricType, Runtime};
 
 /// 基准测试结果

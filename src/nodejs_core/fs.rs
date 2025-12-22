@@ -3,6 +3,7 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};
+use std::fs::File;
 /// 设置fs API
 pub fn setup_fs_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,

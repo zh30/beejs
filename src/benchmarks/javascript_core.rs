@@ -11,6 +11,7 @@
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// JavaScript 核心基准测试套件
 pub struct JavaScriptCoreBenchmark;

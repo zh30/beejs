@@ -11,6 +11,8 @@ use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, Me
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+
+use std::time::Duration;
 use tokio::task::{JoinHandle, self};
 
 /// 并发性能基准测试套件

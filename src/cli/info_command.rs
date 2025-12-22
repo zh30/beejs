@@ -353,6 +353,7 @@ impl InfoCommand {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::fs::File;
 use anyhow::{Result, Error};
     #[test]
     fn test_system_info_collect() {

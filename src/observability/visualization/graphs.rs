@@ -8,6 +8,7 @@
 
 use anyhow::{Context, Result, anyhow};
 use std::collections::BTreeMap;
+use serde::{Serialize, Deserialize};
 use tracing::{debug, error, warn};
 
 /// Graph node with metadata

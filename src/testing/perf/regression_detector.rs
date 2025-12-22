@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant, SystemTime};
+use serde::{Serialize, Deserialize};
 
 /// Historical performance data
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

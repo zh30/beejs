@@ -9,6 +9,8 @@
 //! - 循环性能测试
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
+use std::time::Duration;
+use std::collections::{HashMap};
 
 /// 执行速度基准测试套件
 pub struct ExecutionBenchmark;

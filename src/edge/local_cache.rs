@@ -6,6 +6,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::{Duration, SystemTime};
+use std::fs::File;
 
 /// Cached script information
 #[derive(Debug, Clone, Serialize, Deserialize)]

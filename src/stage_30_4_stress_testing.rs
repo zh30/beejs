@@ -4,6 +4,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool};
+use std::time::Duration;
 
 /// 压力测试配置
 #[derive(Debug, Clone)]

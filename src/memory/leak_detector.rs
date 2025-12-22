@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 use std::sync::atomic::{Arc, Mutex, RwLock};
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 /// 内存泄漏检测器 - 实时监控和自动报告内存泄漏
 /// 通过对象生命周期追踪和访问模式分析，实现零内存泄漏保障

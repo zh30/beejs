@@ -4,6 +4,7 @@
 use crate::testing::test_context::{TestCase, TestResult, TestSuite};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// Test runner configuration
 #[derive(Debug, Clone)]

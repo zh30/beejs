@@ -15,6 +15,7 @@ pub mod batch_processor;
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 pub use sender::{
     ZeroCopySender, ZeroCopySenderConfig, ZeroCopySenderStats,

@@ -7,6 +7,7 @@ use crate::analysis::bottleneck_detector::{Bottleneck, BottleneckSeverity};
 use crate::performance_analyzer::PerformanceReport;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use std::fs::File;
 
 /// Chart types for visualization
 #[derive(Debug, Clone, Serialize, Deserialize)]

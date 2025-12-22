@@ -4,6 +4,8 @@
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+
+use std::time::Duration;
 use super::{AIInferenceEngine, InferenceResult};
 
 /// 动态批处理配置

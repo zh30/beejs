@@ -7,6 +7,7 @@
 use super::*;
 use std::path::PathBuf;
 use std::collections::{BTreeMap, HashMap};
+use std::fs::File;
 use tokio;
 /// pnpm 兼容性管理器
 #[derive(Debug)]

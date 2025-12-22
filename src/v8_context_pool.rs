@@ -6,6 +6,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// Statistics for context pool performance monitoring
 #[derive(Debug, Clone)]

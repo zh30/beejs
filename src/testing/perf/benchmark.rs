@@ -152,6 +152,7 @@ impl BenchmarkRunner {
     pub fn save_results(&self, results: &[BenchmarkResult], file_path: &str) -> Result<(), Box<dyn std::error::Error>> {
         use std::io::Write;
 use std::collections::{BTreeMap, HashMap};
+use std::fs::File;
         let mut file = std::fs::File::create(file_path)?;
         writeln!(file, "Benchmark Results")?;
         writeln!(file, "=================")?;

@@ -3,6 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use std::time::Duration;
 
 /// 火焰图结构体
 pub struct FlameGraph {

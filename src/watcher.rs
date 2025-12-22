@@ -8,6 +8,9 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool, Ordering};
+
+use std::time::Duration;
+use std::fs::File;
 use anyhow::{Result, Error};
 
 /// File change event types

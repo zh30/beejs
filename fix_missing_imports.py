@@ -1,85 +1,88 @@
 #!/usr/bin/env python3
-"""
-批量修复缺失的导入语句
-"""
+"""Fix missing imports in Beejs source files"""
 
 import os
 import re
-from pathlib import Path
 
-def fix_missing_imports(file_path):
-    """修复单个文件的缺失导入"""
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
+# Files missing tracing import
+tracing_files = [
+    "src/ai_inference/pytorch_engine.rs",
+    "src/enterprise/k8s_manager.rs",
+    "src/enterprise/container_manager.rs",
+    "src/enterprise/logging/log_aggregator.rs",
+    "src/observability/metrics.rs",  # Already fixed
+    "src/ai/ai_performance_engine.rs",
+    "src/cloud/auto_scaling.rs",
+]
 
-        original_content = content
+# Files missing serde import
+serde_files = [
+    "src/enterprise/tenancy/manager.rs",
+    "src/enterprise/k8s/operator.rs",
+    "src/enterprise/monitoring/metrics.rs",
+    "src/observability/visualization/graphs.rs",
+    "src/testing/assertions.rs",
+    "src/testing/snapshot/mod.rs",
+    "src/testing/perf/regression_detector.rs",
+]
 
-        # 检查是否使用了 Arc 或 Mutex 但没有导入
-        has_arc_usage = 'Arc<' in content or 'Arc::' in content
-        has_mutex_usage = 'Mutex<' in content or 'Mutex::' in content
+def fix_tracing_import(filepath):
+    """Add tracing import if missing"""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
 
-        if has_arc_usage or has_mutex_usage:
-            # 检查是否已经有 std::sync 导入
-            has_std_sync_import = 'use std::sync::' in content
+    # Find the last use statement before the first struct/impl
+    insert_idx = 0
+    for i, line in enumerate(lines):
+        if line.startswith('use '):
+            insert_idx = i + 1
 
-            if has_std_sync_import:
-                # 更新现有的 std::sync 导入
-                content = re.sub(
-                    r'use std::sync::\{([^}]+)\};',
-                    lambda m: add_missing_sync_types(m.group(1)),
-                    content
-                )
-            else:
-                # 在合适位置添加 std::sync 导入
-                # 找到最后一个 use 语句的位置
-                use_statements = list(re.finditer(r'^use .+;$', content, re.MULTILINE))
-                if use_statements:
-                    last_use_end = use_statements[-1].end()
-                    # 在最后一个 use 语句后插入
-                    imports_to_add = []
-                    if has_arc_usage and 'Arc' not in content:
-                        imports_to_add.append('Arc')
-                    if has_mutex_usage and 'Mutex' not in content:
-                        imports_to_add.append('Mutex')
-
-                    if imports_to_add:
-                        new_import = f"use std::sync::{', '.join(imports_to_add)};\n"
-                        content = content[:last_use_end] + '\n' + new_import + content[last_use_end:]
-
-        if content != original_content:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-            print(f"Fixed: {file_path}")
-            return True
+    # Check if already has tracing import
+    if any('use tracing::' in line for line in lines[:insert_idx]):
+        print(f"  {filepath} already has tracing import")
         return False
 
-    except Exception as e:
-        print(f"Error processing {file_path}: {e}")
+    # Add tracing import
+    lines.insert(insert_idx, "use tracing::{debug, info, warn, error};\n")
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.writelines(lines)
+    print(f"  Fixed tracing import in {filepath}")
+    return True
+
+def fix_serde_import(filepath):
+    """Add serde import if missing"""
+    with open(filepath, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    # Check if already has serde import
+    if 'use serde::' in content:
+        print(f"  {filepath} already has serde import")
         return False
 
-def add_missing_sync_types(existing_types):
-    """添加缺失的同步类型到现有的导入中"""
-    types = [t.strip() for t in existing_types.split(',')]
-    if 'Arc' not in types:
-        types.append('Arc')
-    if 'Mutex' not in types:
-        types.append('Mutex')
-    return f"use std::sync::{{{', '.join(types)}}};"
+    # Find position to insert (after other std:: imports)
+    match = re.search(r'(use std::[^;]+;\n)+', content)
+    if match:
+        insert_pos = match.end()
+        new_content = content[:insert_pos] + "use serde::{Serialize, Deserialize};\n" + content[insert_pos:]
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        print(f"  Fixed serde import in {filepath}")
+        return True
 
-def main():
-    """主函数"""
-    src_dir = Path('/Users/henry/code/beejs/src')
+    return False
 
-    # 查找所有 Rust 文件
-    rust_files = list(src_dir.rglob('*.rs'))
+print("Fixing missing tracing imports...")
+for filepath in tracing_files:
+    if os.path.exists(filepath):
+        fix_tracing_import(filepath)
+    else:
+        print(f"  File not found: {filepath}")
 
-    fixed_count = 0
-    for file_path in rust_files:
-        if fix_missing_imports(file_path):
-            fixed_count += 1
+print("\nFixing missing serde imports...")
+for filepath in serde_files:
+    if os.path.exists(filepath):
+        fix_serde_import(filepath)
+    else:
+        print(f"  File not found: {filepath}")
 
-    print(f"\nFixed {fixed_count} files")
-
-if __name__ == '__main__':
-    main()
+print("\nDone!")

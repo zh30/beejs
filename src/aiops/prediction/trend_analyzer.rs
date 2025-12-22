@@ -7,6 +7,7 @@ use crate::core::data_collector::::{Metric, MetricType};
 use crate::core::error::::{AIOpsError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use std::time::Duration;
 
 /// Trend direction
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

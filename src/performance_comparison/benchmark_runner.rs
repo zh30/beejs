@@ -10,6 +10,7 @@ use anyhow::{Context, Result};
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use crate::performance_comparison::{BenchmarkTestCase, PerformanceComparisonResult};
 use std::collections::BTreeMap;
+use std::time::Duration;
 
 /// 运行时配置
 #[derive(Debug, Clone)]

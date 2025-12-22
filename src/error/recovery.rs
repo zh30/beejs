@@ -3,6 +3,8 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
+
+use std::time::Duration;
 use super::types::::{BeejsError, ErrorContext};
 
 /// 重试策略

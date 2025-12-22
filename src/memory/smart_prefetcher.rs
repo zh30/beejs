@@ -7,6 +7,9 @@ use anyhow::{Result, anyhow};
 use crate::memory::zero_copy_enhanced::{AccessPattern, EnhancedZeroCopy};
 use std::sync::atomic::{AtomicBool};
 use std::sync::atomic::Ordering;
+use std::time::Duration;
+use std::collections::{HashMap};
+use std::ptr::NonNull;
 
 /// 访问历史条目
 #[derive(Debug, Clone)]

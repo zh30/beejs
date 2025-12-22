@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::{Arc, Mutex, atomic::Ordering};
+use std::time::Duration;
 
 /// 加速配置
 #[derive(Debug, Clone)]

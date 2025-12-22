@@ -15,6 +15,7 @@ use std::io::{Read, Write, self};
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+use std::fs::File;
 
 /// Zero-copy file reader using memory mapping
 pub struct ZeroCopyFileReader {

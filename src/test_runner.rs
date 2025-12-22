@@ -5,6 +5,7 @@
 use anyhow::{Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 /// Test status
 #[derive(Debug, Clone, PartialEq)]

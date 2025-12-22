@@ -350,4 +350,5 @@ mod tests {
         assert_eq!(span1.span_id.len(), 16);
     }
 }
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap};use std::time::Duration;
+use std::time::{SystemTime};

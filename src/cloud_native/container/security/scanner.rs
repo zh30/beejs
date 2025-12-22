@@ -5,6 +5,7 @@ use std::time::SystemTime;
 
 use std::path::Path;
 use std::collections::{BTreeMap, HashMap};
+use std::fs::File;
 use tracing::info;
 /// Security scanner for container images
 pub struct SecurityScanner {

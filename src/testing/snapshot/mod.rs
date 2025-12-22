@@ -11,6 +11,7 @@ pub mod snapshot_renderer;
 pub use snapshot_manager::*;
 pub use snapshot_renderer::*;
 use std::collections::{HashMap, BTreeMap};
+use serde::{Serialize, Deserialize};
 /// Snapshot metadata
 #[derive(Debug, Clone, PartialEq)]
 pub struct SnapshotMetadata {

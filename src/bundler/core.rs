@@ -4,6 +4,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::{Instant};
 
 /// Module type
 #[derive(Debug, Clone, PartialEq)]

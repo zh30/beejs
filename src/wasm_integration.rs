@@ -6,6 +6,7 @@
 use anyhow::{Context, Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct WasmModule {

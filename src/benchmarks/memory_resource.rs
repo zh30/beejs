@@ -12,6 +12,7 @@ use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, Me
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// 内存和资源基准测试套件
 pub struct MemoryResourceBenchmark;

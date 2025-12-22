@@ -228,6 +228,7 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
 use std::collections::{BTreeMap, HashMap};
+use std::fs::File;
     #[test]
     fn test_snapshot_manager_new() {
         let temp_dir: _ = tempfile::tempdir().unwrap();

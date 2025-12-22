@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
 
 /// 模型缓存配置
 #[derive(Debug, Clone)]

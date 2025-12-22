@@ -3,6 +3,7 @@
 
 use std::time::{Instant, Duration};
 use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Mutex};
 
 use crate::ai_inference::{engine_interface::{InferenceResult, ModelHandle}, tensor_ops::Tensor};
 use anyhow::Result;

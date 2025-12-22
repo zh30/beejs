@@ -4,6 +4,7 @@
 //! and LFU (Least Frequently Used) strategies with adaptive weight adjustment.
 
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::time::Duration;
 
 /// L2 Cache entry with access tracking
 #[derive(Debug, Clone)]

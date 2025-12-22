@@ -5,6 +5,7 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
 
 /// Service mesh type
 #[derive(Debug, Clone, Serialize, Deserialize)]

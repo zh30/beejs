@@ -4,6 +4,8 @@
 //! based on frequency, timing, and dependency relationships.
 
 use std::sync::atomic::Ordering;
+use std::time::Duration;
+use std::collections::{HashMap};
 
 /// Access pattern for a script
 #[derive(Debug, Clone)]

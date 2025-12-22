@@ -8,6 +8,7 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+use std::time::{Instant};
 use wasmtime::{Memory, Store};
 
 /// 内存块结构体

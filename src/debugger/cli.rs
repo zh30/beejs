@@ -6,6 +6,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Write, self};
 use std::sync::{Arc, Mutex};
+use std::fs::File;
 use anyhow::{Result, Error};
 
 /// Interactive debug command

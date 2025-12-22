@@ -216,6 +216,7 @@ impl K8sManager {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use tracing::{debug, info, warn, error};
     #[tokio::test]
     async fn test_create_k8s_manager() {
         let manager: _ = K8sManager::new("test-namespace".to_string());

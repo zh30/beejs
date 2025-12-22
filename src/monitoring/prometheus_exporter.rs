@@ -6,6 +6,7 @@ use crate::monitoring::ai_monitor::::{MetricType, PerformanceMetrics, RealtimePe
 use crate::monitoring::intelligent_analyzer::::{AnalysisReport, AnomalyDetection};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
 
 /// Prometheus 指标导出器
 pub struct PrometheusExporter {

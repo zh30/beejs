@@ -331,6 +331,8 @@ impl AiPerformanceEngine {
 mod tests {
     use super::*;
 use std::collections::{BTreeMap};
+use std::sync::{Arc, Mutex};
+use tracing::{debug, info, warn, error};
     #[tokio::test]
     async fn test_record_and_predict() {
         let config: _ = AiPerformanceEngineConfig::default();

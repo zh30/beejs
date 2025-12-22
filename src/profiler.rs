@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, atomic::Ordering};
+use std::time::Duration;
 
 /// 性能分析器
 pub struct Profiler {

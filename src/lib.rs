@@ -1,3 +1,6 @@
+use std::collections::{HashMap};
+use std::sync::{Arc, Mutex};
+use std::sync::atomic::{Ordering};
 //! Beejs: 高性能 JavaScript/TypeScript 运行时
 //!
 //! Stage 92: 企业级性能突破与 AI 原生优化

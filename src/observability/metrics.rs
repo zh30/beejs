@@ -7,6 +7,7 @@ use prometheus::{Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Opts, 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
+use tracing::{debug, info, warn, error};
 
 /// Custom metrics system that manages all runtime metrics
 pub struct CustomMetrics {

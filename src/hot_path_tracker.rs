@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 /// 热路径代码信息
 #[derive(Debug, Clone)]

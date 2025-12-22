@@ -16,6 +16,7 @@ use crate::process_pool::{ProcessPoolConfig, ProcessPoolStats, TaskComplexity, W
 use std::sync::atomic::{AtomicBool};
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::collections::{HashMap, VecDeque};
 
 /// 智能预热策略
 #[derive(Debug, Clone)]

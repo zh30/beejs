@@ -9,6 +9,8 @@ use memmap2::{Mmap, MmapOptions};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+use std::fs::File;
+use std::ptr::NonNull;
 
 /// DMA buffer for zero-copy memory operations
 #[derive(Debug)]

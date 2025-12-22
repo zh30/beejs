@@ -5,6 +5,7 @@
 use anyhow::{Context, Result};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
+use std::time::{Instant};
 use tracing::{debug, info};
 use wasmtime::{Engine, Instance, Memory, Module, Store};
 

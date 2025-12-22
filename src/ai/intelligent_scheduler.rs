@@ -5,6 +5,9 @@
 
 use serde::{Deserialize, Serialize};
 use crate::ai::ai_performance_engine::{PerformanceMetrics, AiPerformanceEngine, AiPerformanceEngineConfig};
+use std::time::Duration;
+use std::collections::{VecDeque};
+use std::sync::{Arc, Mutex};
 /// 任务
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {

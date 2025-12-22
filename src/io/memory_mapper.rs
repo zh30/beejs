@@ -9,6 +9,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+use std::fs::File;
 
 /// Memory mapping options
 #[derive(Debug, Clone, Copy)]

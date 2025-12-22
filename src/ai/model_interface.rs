@@ -4,6 +4,7 @@
 
 use std::time::Instant;
 use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc};
 /// AI 模型接口特征
 pub trait AIModelInterface: Send + Sync {
     /// 加载模型

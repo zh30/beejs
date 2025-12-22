@@ -9,6 +9,7 @@
 //! - Shebang detection
 use std::path::PathBuf;
 use std::collections::{BTreeMap, HashMap};
+use std::fs::File;
 /// File type enumeration for script detection
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileType {

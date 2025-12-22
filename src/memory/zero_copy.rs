@@ -7,6 +7,8 @@ use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::Ordering;
+use std::time::Duration;
+use std::ptr::NonNull;
 
 /// 内存块
 #[derive(Debug)]

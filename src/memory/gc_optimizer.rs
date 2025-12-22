@@ -7,6 +7,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicBool};
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 /// GC 配置
 #[derive(Debug, Clone)]

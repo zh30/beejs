@@ -2,6 +2,8 @@
 //! 包含 MinimalRuntime 的完整实现和扩展功能
 
 use std::sync::{Arc, Mutex};
+use std::time::{Instant};
+use std::collections::{HashMap};
 use thiserror::Error;
 
 /// 运行时错误类型

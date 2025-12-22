@@ -6,6 +6,7 @@
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
+use std::fs::File;
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{EnvFilter, Registry};
 use tracing_subscriber::fmt::{FormatEvent, FormatFields};

@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Instant;
+use std::fs::File;
 
 use tracing::{debug, info, warn};
 use wasmtime::{Config, Engine, Module};

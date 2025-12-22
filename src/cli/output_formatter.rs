@@ -5,6 +5,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Write, self};
+use std::time::Duration;
 
 /// ANSI 颜色代码
 pub mod colors {

@@ -10,6 +10,7 @@
 use anyhow::{Result, bail};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// AI 工作负载类型
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -9,6 +9,7 @@
 use anyhow::{Result, anyhow};
 use std::sync::atomic::{AtomicBool};
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 /// GC 配置
 #[derive(Debug, Clone)]

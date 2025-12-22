@@ -4,6 +4,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Write, self};
 use std::sync::{Arc, Mutex};
+use std::time::{Instant};
 use anyhow::{Result, Error};
 
 /// REPL configuration

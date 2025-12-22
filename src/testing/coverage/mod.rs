@@ -283,6 +283,7 @@ impl From<serde_json::Error> for CoverageError {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::fs::File;
     #[test]
     fn test_coverage_stats_default() {
         let stats: _ = CoverageStats::default();

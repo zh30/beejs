@@ -309,6 +309,8 @@ impl TaskDistributor {
             "random" => {
                 use rand::Rng;
 use std::collections::{BTreeMap};
+
+use std::time::Duration;
                 let mut rng = rand::thread_rng();
                 if compatible_nodes.is_empty() {
                     None

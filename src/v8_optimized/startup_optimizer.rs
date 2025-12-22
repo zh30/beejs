@@ -5,6 +5,7 @@
 use anyhow::{Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 /// V8 启动优化器
 /// Stage 27.1: 实现 < 2ms 启动时间
