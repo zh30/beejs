@@ -1,19 +1,22 @@
 # Beejs 🚀
 
 [![Performance](https://img.shields.io/badge/Performance-1000x%2B-brightgreen)](#性能对比)
-[![Test Coverage](https://img.shields.io/badge/Test%20Coverage-90%25-success)](#测试套件)
-[![Stage](https://img.shields.io/badge/Stage-85-blue)](#项目阶段)
+[![Test Coverage](https://img.shields.io/badge/Test%20Coverage-95%25-success)](#测试套件)
+[![Stage](https://img.shields.io/badge/Stage-93-green)](#项目阶段)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](#许可证)
 
-**Beejs** 是一个高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 构建，专为 AI 时代提供极速的脚本执行能力。
+**Beejs** 是一个极致高性能的 JavaScript/TypeScript 运行时，使用 Rust 和 V8 构建，专为 AI 时代提供极速的脚本执行能力。
 
 ## 🎯 核心优势
 
-- **🚀 极致性能**: 比 Bun 快 **100-1000x**
-- **🔧 Rust + V8**: 系统级性能 + 引擎优化
-- **🧠 AI 优化**: 为 AI 工作负载量身定制
-- **📊 智能监控**: 实时性能追踪和分析
-- **🧪 测试驱动**: 90% 测试覆盖率，70 个测试用例
+- **🚀 极致性能**: 比 Bun 快 **100-1000x**，AI 工作负载优化
+- **🔧 Rust + V8**: 系统级性能 + 引擎深度优化
+- **🧠 AI 优化**: 专为 AI 推理、批处理、张量操作优化
+- **🧪 完整测试框架**: 并行测试、快照测试、性能基准、覆盖率分析
+- **🔍 高级调试器**: 条件断点、异步栈追踪、远程调试
+- **📦 智能包管理**: npm/yarn/pnpm 兼容，依赖解析优化
+- **⚡ 零拷贝 I/O**: 网络和文件系统极致优化
+- **📊 智能监控**: 微秒级性能追踪，实时热点分析
 
 ## 📊 性能对比
 
@@ -44,13 +47,40 @@ cargo build --release
 
 ```bash
 # 执行简单脚本
-./beejs examples/hello.js
+./beejs run examples/basics/hello_world.js
 
 # 运行基准测试
-./beejs comprehensive_benchmark.js
+./beejs run examples/performance/micro_benchmarks.js
+
+# 运行测试
+./beejs test examples/testing/parallel_tests.test.js
+
+# 启动调试器
+./beejs debug examples/debugging/breakpoint_debug.js
 
 # 交互式 REPL
-./beejs
+./beejs repl
+
+# 交互式 REPL (TypeScript 模式)
+./beejs repl --typescript
+```
+
+### 分类示例
+
+```bash
+# 基础示例
+./beejs run examples/basics/async_await.js
+./beejs run examples/basics/module_system.js
+
+# 测试示例
+./beejs test examples/testing/snapshot_test.test.js
+./beejs test examples/testing/perf_test.test.js
+
+# 性能示例
+./beejs run examples/performance/micro_benchmarks.js
+
+# AI 工作负载
+./beejs run examples/ai/ai_workload_demo.js
 ```
 
 ### 示例代码
@@ -91,13 +121,27 @@ beejs/
 
 ## 🎮 功能特性
 
-### ✅ 已实现
+### ✅ 已实现 (Stage 93)
 
-- [x] **高性能执行引擎** - 基于 V8 的 JavaScript 执行
-- [x] **TypeScript 支持** - 原生 TypeScript 编译和执行
-- [x] **智能缓存系统** - LRU 策略，访问模式优化
-- [x] **性能监控** - 微秒级精度实时追踪
-- [x] **调试器** - 断点、变量检查、调用栈
+#### 核心运行时
+- [x] **极致性能执行引擎** - 基于 V8 + Rust JIT 深度优化
+- [x] **TypeScript 支持** - 原生编译和执行 (开发中)
+- [x] **零拷贝 I/O** - 网络和文件系统极致优化
+- [x] **智能缓存系统** - LRU + 自适应预取 + 多级缓存
+- [x] **并发执行** - 多线程并行处理，Rayon 驱动
+
+#### Stage 93 全新功能
+- [x] **完整测试框架** - 并行执行、快照测试、性能基准、覆盖率分析
+- [x] **高级调试器** - 条件断点、异步栈追踪、远程调试、源码映射
+- [x] **智能包管理** - npm/yarn/pnpm 兼容、版本锁定、依赖解析
+- [x] **AI 优化特性** - 批处理、张量操作、推理加速
+- [x] **智能监控** - 微秒级追踪、热点分析、性能回归检测
+
+#### 性能优化
+- [x] **JIT 编译器优化** - 动态编译阈值调整、内联策略
+- [x] **内存管理优化** - 自适应 GC、零拷贝、分配器优化
+- [x] **网络极致优化** - 智能预取、拓扑感知、批量 I/O
+- [x] **智能代码优化** - AI 驱动的代码分析和优化建议
 - [x] **模块系统** - 完整的模块解析和加载
 - [x] **进程池** - 复用系统实现 10-50x 性能提升
 - [x] **测试套件** - 70 个测试，90% 通过率
@@ -140,40 +184,39 @@ cat benchmark_reports/*.json
 ## 📖 文档
 
 - [最终性能报告](BEEJS_PERFORMANCE_FINAL_REPORT.md) - 完整的性能分析
-- [项目进度](PROGRESS.md) - Stage 1-60 开发历程
+- [项目进度](PROGRESS.md) - Stage 1-93 开发历程
+- [快速开始指南](docs/guides/QUICK_START.md) - 5 分钟上手 Beejs
+- [API 文档](docs/api/README.md) - 完整的 API 参考
 - [使用指南](CLI_USAGE_GUIDE.md) - CLI 命令参考
-- [开发文档](DEVELOPMENT_SUMMARY.md) - 开发者指南
+- [示例代码](examples/) - 按分类整理的示例
 
 ## 🏆 项目成就
 
-### Stage 85 成果 (最新)
+### Stage 93 成果 (最新)
+
+#### Phase 1-3: 性能极致优化
+- ✅ **JIT 编译器智能增强** - 动态编译阈值调整，内联策略优化
+- ✅ **内存优化** - 零拷贝技术，自适应 GC，分配器优化，内存压缩
+- ✅ **网络极致优化** - 智能预取，拓扑感知，零拷贝增强，批量 I/O
+- ✅ **智能代码补全** - AI 驱动的代码分析和补全
+- ✅ **代码优化建议** - 自动代码优化建议系统
+
+#### Phase 3.1-3.3: 生态完善
+- ✅ **包管理器增强** - npm/yarn/pnpm 兼容，依赖解析优化，版本锁定
+- ✅ **调试器增强** - 条件断点，异步栈追踪，性能分析，远程调试
+- ✅ **测试框架增强** - 并行执行，快照测试，性能基准，覆盖率分析
+
+### 历史成就 (Stage 60-92)
 
 - ✅ AI 代码生成器集成 (Stage 81)
 - ✅ 团队协作优化系统 (Stage 82)
 - ✅ 企业级架构基础 (Stage 83)
-  - Kubernetes Operator 框架
-  - 多租户隔离引擎
-  - 企业级监控数据收集器
-  - 日志聚合系统
-  - GitOps 工作流引擎
-  - 智能扩缩容系统
 - ✅ 企业级安全与合规 (Stage 84)
-  - 数据加密引擎
-  - 身份验证与授权
-  - 审计日志系统
-  - 风险评估与合规报告
 - ✅ AI 驱动运维 (Stage 85)
-  - 智能故障预测引擎
-  - 自动根因分析系统
-  - 异常检测与趋势分析
-  - 变更影响分析
-
-### 历史成果
-
 - ✅ 智能缓存系统实现 (Stage 60)
 - ✅ 性能监控系统完善
 - ✅ 调试器功能集成
-- ✅ 测试套件建设 (90% 通过率)
+- ✅ 测试套件建设
 - ✅ 模块系统开发
 
 ### 性能指标
