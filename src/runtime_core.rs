@@ -86,9 +86,9 @@ impl CoreRuntime {
                 println!("{}", arg.to_string(handle_scope).unwrap_or_else(|| "undefined".into()));
             }
             v8::undefined(handle_scope).into()
-_object.set(
         });
-        console            scope,
+        console_object.set(
+            scope,
             v8::String::new(scope, "log").unwrap().as_ref(),
             console_log.get_function(scope).unwrap().into(),
         );

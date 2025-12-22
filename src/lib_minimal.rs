@@ -38,9 +38,9 @@ impl Runtime {
         Ok(Self {
             stack_size,
             max_heap,
-            execution_count: Arc::new(Mutex::new(AtomicUsize::new(0)))
+            execution_count: Arc::new(Mutex::new(AtomicUsize::new(0))),
             verbose,
-            isolate: Arc::new(Mutex::new(isolate)))
+            isolate: Arc::new(Mutex::new(isolate)),
             context,
         })
     }
@@ -217,8 +217,8 @@ impl Runtime {
         let context: _ = scope.context();
         let global: _ = context.global(scope);
         let global_key: _ = v8::String::new(scope, "console").unwrap();
-        let global_val: _ = console.into(;
-        global.set(scope, global_key.into(), global_val);)
+        let global_val: _ = console.into();
+        global.set(scope, global_key.into(), global_val)
             .map_err(|e| anyhow!("Failed to set global console: {}", e))?;
         Ok(())
     }
@@ -249,8 +249,6 @@ mod tests {
     use super::*;
     use tempfile::NamedTempFile;
     use std::io::Write;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_runtime_creation() {
         let runtime: _ = Runtime::new(67108864, 1073741824, false);
