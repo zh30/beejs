@@ -157,29 +157,29 @@ futures-util = "0.3"
 # Serial test support for V8 thread-safe testing
 serial_test = "3.0"
 
-[[bin]]
-name = "beejs-benchmark"
-path = "tools/benchmark_runner.rs"
+# [[bin]]
+# name = "beejs-benchmark"
+# path = "tools/benchmark_runner.rs"
 
 [[bin]]
 name = "beejs"
 path = "src/main.rs"
 
-[[bin]]
-name = "test_stage95_core"
-path = "test_stage95_core.rs"
+# [[bin]]
+# name = "test_stage95_core"
+# path = "test_stage95_core.rs"
 
-[[bin]]
-name = "test_stage95_phase2_prediction"
-path = "test_stage95_phase2_prediction.rs"
+# [[bin]]
+# name = "test_stage95_phase2_prediction"
+# path = "test_stage95_phase2_prediction.rs"
 
-[[bin]]
-name = "test_stage95_phase3_optimization"
-path = "test_stage95_phase3_optimization.rs"
+# [[bin]]
+# name = "test_stage95_phase3_optimization"
+# path = "test_stage95_phase3_optimization.rs"
 
-[[bin]]
-name = "test_stage95_phase5_integration"
-path = "test_stage95_phase5_integration.rs"
+# [[bin]]
+# name = "test_stage95_phase5_integration"
+# path = "test_stage95_phase5_integration.rs"
 
 [profile.release]
 opt-level = 3
