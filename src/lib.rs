@@ -1,7 +1,4 @@
-use std::collections::{HashMap, BTreeMap};
-use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
+// Clean imports - removing unused ones
 use std::sync::Once;
 // Beejs: 高性能 JavaScript/TypeScript 运行时
 //
@@ -19,9 +16,7 @@ use std::sync::Once;
 // - 自动化 CI/CD 集成
 
 use rusty_v8 as v8;
-use std::path::{Path, PathBuf};
 use std::hash::Hash;
-use std::task::Context;
 // 模块声明
 // Stage 92: AI 原生性能引擎 (temporarily disabled)
 // pub mod ai {
@@ -312,9 +307,9 @@ impl Server {
         self.port
     }
 }
-use tracing::{debug, info, warn, error};
+// use tracing::{debug, info, warn, error}; // Unused
 // 核心运行时
-use anyhow::{Result, Error, anyhow};
+use anyhow::{Result, anyhow};
 /// Global flag to track V8 initialization state
 static V8_INITIALIZED: std::sync::OnceLock<std::sync::atomic::AtomicBool> = std::sync::OnceLock::new();
 /// Initialize V8 engine (idempotent - safe to call multiple times)

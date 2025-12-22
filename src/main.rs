@@ -56,6 +56,33 @@ enum Command {
     },
     /// Display version information
     Version,
+    /// Start HTTP server
+    Serve {
+        /// Port number
+        #[arg(short, long, default_value = "3000")]
+        port: u16,
+        /// Host address
+        #[arg(short, long, default_value = "localhost")]
+        host: String,
+    },
+    /// Initialize new project
+    Init {
+        /// Project name
+        name: Option<String>,
+    },
+    /// Add dependency package
+    Add {
+        /// Package name
+        package: String,
+    },
+    /// Create new project
+    Create {
+        /// Template type (js/ts)
+        #[arg(default_value = "js")]
+        template: String,
+        /// Project name
+        name: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -300,6 +327,77 @@ fn main() -> Result<()> {
             }
             return Ok(());
         }
+        Some(Command::Serve { port, host }) => {
+            println!("🚀 Starting HTTP Server");
+            println!("  Host: {}:{}", host, port);
+            println!("⚠️  Server feature is under development...");
+            println!("💡 Tip: Use 'beejs run' to execute JavaScript files");
+            return Ok(());
+        }
+        Some(Command::Init { name }) => {
+            let project_name = name.as_deref().unwrap_or("my-beejs-project");
+            println!("📦 Initializing new project: {}", project_name);
+
+            // Create project directory
+            std::fs::create_dir_all(project_name)?;
+
+            // Create package.json
+            let package_json = format!(
+                "{{
+  \"name\": \"{}\",
+  \"version\": \"0.1.0\",
+  \"description\": \"A Beejs project\",
+  \"main\": \"index.js\",
+  \"scripts\": {{
+    \"start\": \"beejs run index.js\"
+  }},
+  \"dependencies\": {{}},
+  \"devDependencies\": {{}}
+}}",
+                project_name
+            );
+
+            std::fs::write(format!("{}/package.json", project_name), package_json)?;
+
+            // Create example file
+            let example_code = "console.log('Hello from Beejs!');\n";
+            std::fs::write(format!("{}/index.js", project_name), example_code)?;
+
+            println!("✅ Project initialized!");
+            println!("  Project directory: {}", project_name);
+            println!("  Entry file: {}/index.js", project_name);
+            println!("\nRun 'cd {} && beejs run index.js' to start", project_name);
+            return Ok(());
+        }
+        Some(Command::Add { package }) => {
+            println!("📦 Adding dependency: {}", package);
+            println!("⚠️  Package manager feature is under development...");
+            println!("💡 Tip: Manually edit package.json to add dependencies");
+            return Ok(());
+        }
+        Some(Command::Create { template, name }) => {
+            println!("🎨 Creating new project: {}", name);
+            println!("  Template: {}", template);
+
+            // Create project directory
+            std::fs::create_dir_all(&name)?;
+
+            match template.as_str() {
+                "ts" => {
+                    let ts_code = "function greet(name: string): string {\n    return `Hello, ${name}!`;\n}\n\nconsole.log(greet('Beejs'));\n";
+                    std::fs::write(format!("{}/index.ts", name), ts_code)?;
+                    println!("✅ TypeScript project created");
+                }
+                "js" | _ => {
+                    let js_code = "console.log('Hello from Beejs!');\n";
+                    std::fs::write(format!("{}/index.js", name), js_code)?;
+                    println!("✅ JavaScript project created");
+                }
+            }
+
+            println!("\nRun 'cd {} && beejs run index.{}' to start", name, template);
+            return Ok(());
+        }
         None => {
             // No command provided, show help
             println!("🐝 Beejs - High-performance JavaScript/TypeScript runtime");
@@ -307,13 +405,17 @@ fn main() -> Result<()> {
             println!("Usage: beejs [COMMAND]");
             println!();
             println!("Commands:");
-            println!("  run <file>    Run a JavaScript/TypeScript file");
-            println!("  eval <code>   Evaluate JavaScript code");
-            println!("  repl          Start interactive REPL");
-            println!("  test [file]   Run tests (built-in or from file)");
-            println!("  bundle <file> Bundle code for production");
-            println!("  debug <file>  Debug a script with detailed output");
-            println!("  version       Display version information");
+            println!("  run <file>       Run a JavaScript/TypeScript file");
+            println!("  eval <code>      Evaluate JavaScript code");
+            println!("  repl             Start interactive REPL");
+            println!("  test [file]      Run tests (built-in or from file)");
+            println!("  bundle <file>    Bundle code for production");
+            println!("  debug <file>     Debug a script with detailed output");
+            println!("  serve [options]  Start HTTP server");
+            println!("  init [name]      Initialize new project");
+            println!("  add <package>    Add dependency package");
+            println!("  create [type]    Create new project");
+            println!("  version          Display version information");
             println!();
             println!("Examples:");
             println!("  beejs run script.js");
@@ -322,6 +424,10 @@ fn main() -> Result<()> {
             println!("  beejs test");
             println!("  beejs bundle entry.ts --output bundle.js");
             println!("  beejs debug script.ts");
+            println!("  beejs serve --port 8080");
+            println!("  beejs init my-project");
+            println!("  beejs create ts my-ts-app");
+            println!("  beejs add lodash");
             return Ok(());
         }
     }

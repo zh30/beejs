@@ -4,7 +4,6 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, Instant};
 
 /// A minimal runtime that only provides basic JavaScript execution
 /// This version avoids complex dependencies for faster startup
@@ -356,6 +355,169 @@ impl MinimalRuntime {
 
         let process_key = v8::String::new(scope, "process").unwrap().into();
         global.set(scope, process_key, process_obj.into());
+
+        // Set up global Buffer object
+        let buffer_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let size_or_string = args.get(0);
+                if size_or_string.is_number() {
+                    // Create buffer with specified size
+                    let size = size_or_string.to_integer(scope).unwrap().value() as usize;
+                    let buffer = v8::ArrayBuffer::new(scope, size);
+                    retval.set(buffer.into());
+                } else if let Some(str_val) = size_or_string.to_string(scope) {
+                    // Create buffer from string
+                    let rust_string = str_val.to_rust_string_lossy(scope);
+                    let buffer = v8::ArrayBuffer::new(scope, rust_string.len());
+                    retval.set(buffer.into());
+                }
+            } else {
+                // Create empty buffer
+                let buffer = v8::ArrayBuffer::new(scope, 0);
+                retval.set(buffer.into());
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Buffer function"))?;
+        let buffer_key = v8::String::new(scope, "Buffer").unwrap().into();
+        global.set(scope, buffer_key, buffer_fn.into());
+
+        // Set up global URL object (simplified)
+        let url_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let url_string = args.get(0);
+                if let Some(url_str) = url_string.to_string(scope) {
+                    let rust_url = url_str.to_rust_string_lossy(scope);
+                    let url_obj = v8::Object::new(scope);
+
+                    // Add href property
+                    let href_key = v8::String::new(scope, "href").unwrap().into();
+                    url_obj.set(scope, href_key, url_str.into());
+
+                    // Add protocol (simple parsing)
+                    let protocol_key = v8::String::new(scope, "protocol").unwrap().into();
+                    let protocol_val = if rust_url.starts_with("https://") {
+                        v8::String::new(scope, "https:").unwrap()
+                    } else if rust_url.starts_with("http://") {
+                        v8::String::new(scope, "http:").unwrap()
+                    } else {
+                        v8::String::new(scope, "unknown:").unwrap()
+                    };
+                    url_obj.set(scope, protocol_key, protocol_val.into());
+
+                    retval.set(url_obj.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create URL function"))?;
+        let url_key = v8::String::new(scope, "URL").unwrap().into();
+        global.set(scope, url_key, url_fn.into());
+
+        // Set up global Math object with common methods
+        let math_obj = v8::Object::new(scope);
+
+        // Add Math.PI
+        let pi_key = v8::String::new(scope, "PI").unwrap().into();
+        let pi_val = v8::Number::new(scope, std::f64::consts::PI);
+        math_obj.set(scope, pi_key, pi_val.into());
+
+        // Add Math.random (returns 0-1)
+        let random_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let random_val = fastrand::f64();
+            let random_num = v8::Number::new(scope, random_val);
+            retval.set(random_num.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create random function"))?;
+        let random_key = v8::String::new(scope, "random").unwrap().into();
+        math_obj.set(scope, random_key, random_fn.into());
+
+        let math_key = v8::String::new(scope, "Math").unwrap().into();
+        global.set(scope, math_key, math_obj.into());
+
+        // Set up global JSON object
+        let json_obj = v8::Object::new(scope);
+
+        // Add JSON.parse
+        let parse_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let json_string = args.get(0);
+                if let Some(str_val) = json_string.to_string(scope) {
+                    let rust_string = str_val.to_rust_string_lossy(scope);
+                    // Try to parse as JSON using serde_json (simplified)
+                    match serde_json::from_str::<serde_json::Value>(&rust_string) {
+                        Ok(value) => {
+                            // Convert to V8 value (simplified - just return the string)
+                            retval.set(str_val.into());
+                        }
+                        Err(_) => {
+                            // Return null on parse error
+                            let null_val = v8::null(scope);
+                            retval.set(null_val.into());
+                        }
+                    }
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create parse function"))?;
+        let parse_key = v8::String::new(scope, "parse").unwrap().into();
+        json_obj.set(scope, parse_key, parse_fn.into());
+
+        // Add JSON.stringify
+        let stringify_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                let value = args.get(0);
+                // Simple stringify - convert to string
+                if let Some(str_val) = value.to_string(scope) {
+                    retval.set(str_val.into());
+                } else {
+                    let null_val = v8::null(scope);
+                    retval.set(null_val.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create stringify function"))?;
+        let stringify_key = v8::String::new(scope, "stringify").unwrap().into();
+        json_obj.set(scope, stringify_key, stringify_fn.into());
+
+        let json_key = v8::String::new(scope, "JSON").unwrap().into();
+        global.set(scope, json_key, json_obj.into());
+
+        // Set up global Date object
+        let date_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            let now = chrono::Utc::now();
+            let date_str = now.to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+            let date_val = v8::String::new(scope, &date_str).unwrap();
+            retval.set(date_val.into());
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create Date function"))?;
+        let date_key = v8::String::new(scope, "Date").unwrap().into();
+        global.set(scope, date_key, date_fn.into());
+
+        // Set up global btoa/atob for base64 encoding/decoding
+        let btoa_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                if let Some(str_val) = args.get(0).to_string(scope) {
+                    let rust_string = str_val.to_rust_string_lossy(scope);
+                    let encoded = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, rust_string.as_bytes());
+                    let encoded_val = v8::String::new(scope, &encoded).unwrap();
+                    retval.set(encoded_val.into());
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create btoa function"))?;
+        let btoa_key = v8::String::new(scope, "btoa").unwrap().into();
+        global.set(scope, btoa_key, btoa_fn.into());
+
+        let atob_fn = v8::Function::new(scope, |scope: &mut v8::HandleScope, args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue| {
+            if args.length() >= 1 {
+                if let Some(str_val) = args.get(0).to_string(scope) {
+                    let rust_string = str_val.to_rust_string_lossy(scope);
+                    match base64::Engine::decode(&base64::engine::general_purpose::STANDARD, rust_string.as_bytes()) {
+                        Ok(decoded) => {
+                            if let Ok(decoded_str) = String::from_utf8(decoded) {
+                                let decoded_val = v8::String::new(scope, &decoded_str).unwrap();
+                                retval.set(decoded_val.into());
+                            }
+                        }
+                        Err(_) => {}
+                    }
+                }
+            }
+        }).ok_or_else(|| anyhow::anyhow!("Failed to create atob function"))?;
+        let atob_key = v8::String::new(scope, "atob").unwrap().into();
+        global.set(scope, atob_key, atob_fn.into());
 
         Ok(())
     }

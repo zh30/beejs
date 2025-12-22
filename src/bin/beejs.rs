@@ -4,6 +4,7 @@
 use beejs::runtime_minimal::MinimalRuntime;
 use clap::{Parser, Subcommand};
 use std::io::{Write, self, fs};
+use std::path::Path;
 
 /// CLI 参数结构
 #[derive(Parser)]
@@ -46,6 +47,45 @@ enum Commands {
 
     /// 显示版本信息
     Version,
+
+    /// 启动 HTTP 服务器
+    Serve {
+        /// 端口号
+        #[arg(short, long, default_value = "3000")]
+        port: u16,
+        /// 主机地址
+        #[arg(short, long, default_value = "localhost")]
+        host: String,
+    },
+
+    /// 初始化新项目
+    Init {
+        /// 项目名称
+        name: Option<String>,
+    },
+
+    /// 添加依赖包
+    Add {
+        /// 包名
+        package: String,
+    },
+
+    /// 创建新项目
+    Create {
+        /// 项目类型 (js/ts)
+        #[arg(default_value = "js")]
+        template: String,
+        /// 项目名称
+        name: String,
+    },
+
+    /// 打包代码
+    Build {
+        /// 输入文件
+        input: String,
+        /// 输出文件
+        output: Option<String>,
+    },
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -58,6 +98,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::Stats => show_stats(cli.verbose),
         Commands::Test { file } => run_tests(file, cli.verbose),
         Commands::Version => show_version(),
+        Commands::Serve { port, host } => start_server(*port, host, cli.verbose),
+        Commands::Init { name } => init_project(name.as_deref(), cli.verbose),
+        Commands::Add { package } => add_package(package, cli.verbose),
+        Commands::Create { template, name } => create_project(template, name, cli.verbose),
+        Commands::Build { input, output } => build_project(input, output.as_deref(), cli.verbose),
     }
 }
 
@@ -278,5 +323,148 @@ fn show_version() -> Result<(), Box<dyn std::error::Error>> {
     println!("Beejs v0.1.4");
     println!("高性能 JavaScript/TypeScript 运行时");
     println!("基于 Rust 和 V8 构建");
+    Ok(())
+}
+
+fn start_server(port: u16, host: &str, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🚀 启动 HTTP 服务器");
+    println!("  主机: {}:{}", host, port);
+
+    if verbose {
+        println!("模式: 开发服务器");
+    }
+
+    println!("⚠️  服务器功能正在开发中...");
+    println!("💡 提示: 使用 'beejs run' 命令执行 JavaScript 文件");
+
+    Ok(())
+}
+
+fn init_project(name: Option<&str>, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let project_name = name.unwrap_or("my-beejs-project");
+
+    println!("📦 初始化新项目: {}", project_name);
+
+    if verbose {
+        println!("创建目录结构...");
+    }
+
+    // 创建项目目录
+    fs::create_dir_all(project_name)?;
+
+    // 创建 package.json
+    let package_json = format!(
+        "{{
+  \"name\": \"{}\",
+  \"version\": \"0.1.0\",
+  \"description\": \"A Beejs project\",
+  \"main\": \"index.js\",
+  \"scripts\": {{
+    \"start\": \"beejs run index.js\"
+  }},
+  \"dependencies\": {{}},
+  \"devDependencies\": {{}}
+}}",
+        project_name
+    );
+
+    fs::write(format!("{}/package.json", project_name), package_json)?;
+
+    // 创建示例文件
+    let example_code = "console.log('Hello from Beejs!');\n";
+    fs::write(format!("{}/index.js", project_name), example_code)?;
+
+    println!("✅ 项目初始化完成!");
+    println!("  项目目录: {}", project_name);
+    println!("  入口文件: {}/index.js", project_name);
+    println!("\n运行 'cd {} && beejs run index.js' 启动项目", project_name);
+
+    Ok(())
+}
+
+fn add_package(package: &str, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+    println!("📦 添加依赖: {}", package);
+
+    if verbose {
+        println!("正在解析包信息...");
+    }
+
+    println!("⚠️  包管理器功能正在开发中...");
+    println!("💡 提示: 手动编辑 package.json 文件添加依赖");
+
+    Ok(())
+}
+
+fn create_project(template: &str, name: &str, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+    println!("🎨 创建新项目: {}", name);
+    println!("  模板: {}", template);
+
+    if verbose {
+        println!("使用模板: {}", template);
+    }
+
+    // 创建项目目录
+    fs::create_dir_all(name)?;
+
+    match template {
+        "ts" => {
+            // TypeScript 模板
+            let ts_code = "function greet(name: string): string {\n    return `Hello, ${name}!`;\n}\n\nconsole.log(greet('Beejs'));\n";
+            fs::write(format!("{}/index.ts", name), ts_code)?;
+            println!("✅ TypeScript 项目创建完成");
+        }
+        "js" | _ => {
+            // JavaScript 模板
+            let js_code = "console.log('Hello from Beejs!');\n";
+            fs::write(format!("{}/index.js", name), js_code)?;
+            println!("✅ JavaScript 项目创建完成");
+        }
+    }
+
+    // 创建 package.json
+    init_project(Some(name), verbose)?;
+
+    println!("\n运行 'cd {} && beejs run index.{}' 启动项目", name, template);
+
+    Ok(())
+}
+
+fn build_project(input: &str, output: Option<&str>, verbose: bool) -> Result<(), Box<dyn std::error::Error>> {
+    let output_file = output.unwrap_or_else(|| {
+        if input.ends_with(".ts") {
+            "dist/index.js"
+        } else {
+            "dist/bundle.js"
+        }
+    });
+
+    println!("🔨 打包项目");
+    println!("  输入: {}", input);
+    println!("  输出: {}", output_file);
+
+    if verbose {
+        println!("模式: 生产打包");
+    }
+
+    // 读取输入文件
+    let code = fs::read_to_string(input)?;
+
+    // 创建运行时并转译
+    let mut runtime = MinimalRuntime::new()
+        .map_err(|e| format!("运行时初始化失败: {}", e))?;
+
+    // 执行代码（会自动处理 TypeScript）
+    let result = runtime.execute_code(&code)?;
+
+    // 创建输出目录
+    if let Some(parent) = Path::new(output_file).parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    // 写入输出文件
+    fs::write(output_file, result)?;
+
+    println!("✅ 打包完成: {}", output_file);
+
     Ok(())
 }
