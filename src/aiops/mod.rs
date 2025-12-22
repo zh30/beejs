@@ -6,6 +6,13 @@ pub mod prediction_engine;
 pub mod anomaly_detection;
 pub mod root_cause_analysis;
 
+// Stage 95: AI 驱动运维 - 新增模块
+pub mod core;
+pub mod prediction;
+pub mod optimization;
+pub mod allocation;
+pub mod adaptation;
+
 // 其他模块将在后续阶段实现
 // pub mod knowledge_graph;
 // pub mod alert_aggregation;
@@ -44,6 +51,39 @@ pub use root_cause_analysis::{
     Change,
     ChangeType,
     ChangeImpactAnalysis,
+};
+
+// Stage 95: 新增导出
+pub use core::{
+    AIOpsEngine,
+    AIOpsError,
+    Result,
+    ModelManager,
+    DataCollector,
+};
+
+pub use prediction::{
+    AnomalyDetector as NewAnomalyDetector,
+    TrendAnalyzer,
+    FailurePredictor,
+};
+
+pub use optimization::{
+    PerformanceAnalyzer,
+    AutoTuner as NewAutoTuner,
+    Optimizer,
+};
+
+pub use allocation::{
+    ResourceOptimizer,
+    LoadBalancer,
+    Scheduler,
+};
+
+pub use adaptation::{
+    ArchitectureAdapter,
+    ConfigManager,
+    TopologyOptimizer,
 };
 
 // 其他模块将在后续阶段实现
