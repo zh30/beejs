@@ -56,7 +56,7 @@ pub struct ThresholdRule {
     pub description: String,
     pub enabled: bool,
     pub priority: u8, // 0-255, 数字越大优先级越高
-    pub conditions: HashMap<String, _>, // 额外的条件
+    pub conditions: HashMap<String, String>, // 额外的条件
 }
 /// 阈值配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,8 +82,8 @@ pub struct ThresholdHistory {
 pub struct ThresholdStats {
     pub total_rules: usize,
     pub enabled_rules: usize,
-    pub rules_by_level: HashMap<String, _>,
-    pub rules_by_type: HashMap<String, _>,
+    pub rules_by_level: HashMap<String, usize>,
+    pub rules_by_type: HashMap<String, usize>,
     pub auto_calibrated_count: usize,
 }
 /// 智能阈值建议
@@ -101,7 +101,7 @@ pub struct ThresholdManager {
     config: ThresholdConfig,
     history: Vec<ThresholdHistory>,
     config_dir: PathBuf,
-    adaptive_cache: HashMap<String, _>, // 用于自适应阈值的缓存
+    adaptive_cache: HashMap<String, Vec<f64>>, // 用于自适应阈值的缓存
 }
 impl ThresholdManager {
     /// 创建新的阈值管理器

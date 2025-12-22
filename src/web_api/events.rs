@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
+use anyhow::Result;
 
 /// Event type enum
 #[derive(Debug, Clone)]
@@ -84,7 +85,7 @@ impl Default for EventTarget {
 pub fn setup_events_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     // Create EventTarget constructor
     let event_target_template: _ = v8::FunctionTemplate::new(scope, event_target_constructor_callback);
     let event_target_constructor: _ = event_target_template.get_function(scope).unwrap();

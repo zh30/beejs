@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, atomic::Ordering};
+use anyhow::Result;
 
 /// Global timer ID counter
 static TIMER_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -26,7 +27,7 @@ fn mark_timer_cleared(id: u64) {
 pub fn setup_timer_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     let global: _ = context.global(scope);
     // Setup setTimeout
     let set_timeout_template: _ = v8::FunctionTemplate::new(scope, set_timeout_callback);
