@@ -4,7 +4,7 @@
 use kube::Api;
 use tracing::{info, warn, error};
 
-use super::super::crd::{ScalePolicy, ScalePolicyType};
+use super::super::crd::ScalePolicy;
 
 /// Scaler for managing resource scaling
 pub struct Scaler {

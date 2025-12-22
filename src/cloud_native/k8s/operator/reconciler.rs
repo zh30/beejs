@@ -1,7 +1,7 @@
 //! Reconciler implementation for Operator Controller
 //! Handles the actual reconciliation logic for cluster and workload resources
 
-use kube::runtime::reexport::Client;
+use kube::Client;
 use std::sync::Arc;
 use tokio::time::{Duration, Instant};
 use tracing::{info, warn, debug, error};

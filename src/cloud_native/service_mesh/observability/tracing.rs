@@ -3,7 +3,7 @@
 
 use opentelemetry::trace::{Tracer, Span, Status};
 use opentelemetry::propagation::TextMapPropagator;
-use opentelemetry::sdk::trace::{TracerProvider, sampling::SamplingDecision};
+use opentelemetry_sdk::trace::{TracerProvider, SamplingDecision};
 use opentelemetry_sdk::resource::{ResourceDetector, Resource};
 use std::collections::HashMap;
 

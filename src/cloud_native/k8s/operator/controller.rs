@@ -16,9 +16,8 @@ use tracing::{info, warn, error, debug};
 
 use super::super::crd::{
     BeejsCluster, BeejsClusterSpec, BeejsWorkload, BeejsWorkloadSpec, ClusterPhase,
-    Condition as BeejsCondition, ConditionStatus, ConditionType,
+    Condition as BeejsCondition, ConditionStatus, ConditionType, WorkloadPhase,
 };
-use super::super::k8s::crd::WorkloadPhase;
 
 /// Cluster controller for managing BeejsCluster resources
 pub struct ClusterController {
@@ -29,16 +28,16 @@ pub struct ClusterController {
     pub clusters: Api<BeejsCluster>,
 
     /// API for StatefulSet resources
-    pub statefulsets: Api<k8s::apps::v1::StatefulSet>,
+    pub statefulsets: Api<StatefulSet>,
 
     /// API for Service resources
-    pub services: Api<k8s::api::core::v1::Service>,
+    pub services: Api<Service>,
 
     /// API for ConfigMap resources
-    pub configmaps: Api<k8s::api::core::v1::ConfigMap>,
+    pub configmaps: Api<ConfigMap>,
 
     /// API for Secret resources
-    pub secrets: Api<k8s::api::core::v1::Secret>,
+    pub secrets: Api<Secret>,
 
     /// Event recorder
     pub recorder: Recorder,
@@ -193,16 +192,14 @@ impl ClusterController {
 
     /// Update the phase of the cluster
     async fn update_phase(&self, cluster: &BeejsCluster, phase: ClusterPhase) -> Result<(), Error> {
+        let is_ready = matches!(phase, ClusterPhase::Running);
         let patch = serde_json::json!({
             "status": {
                 "phase": phase,
                 "conditions": vec![
                     {
                         "type": "Ready",
-                        "status": match phase {
-                            ClusterPhase::Running => "True",
-                            _ => "False",
-                        }
+                        "status": is_ready.to_string()
                     }
                 ]
             }

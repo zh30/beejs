@@ -1,6 +1,12 @@
 //! Custom Resource Definitions for Kubernetes
 //! Defines BeejsCluster and BeejsWorkload CRDs
 
+use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
+
+mod beejs_cluster;
+mod beejs_workload;
+
 pub use beejs_cluster::{
     Affinity, BeejsCluster, BeejsClusterSpec, DistributedConfig, MonitoringConfig,
     PodAffinity, PodAntiAffinity, PreferredSchedulingTerm, ResourceRequirements,

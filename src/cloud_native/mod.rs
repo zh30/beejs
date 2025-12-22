@@ -47,7 +47,7 @@ pub use cicd::{
     GitHubActionsWorkflow, GitLabCIPipeline, JenkinsPipeline,
     DeploymentStrategy, BlueGreenDeployment, CanaryDeployment, RollingDeployment,
     PipelineStage, PipelineStatus, PipelineEvent, GitOpsConfig,
-    PipelineConfig, DeploymentConfig, DeploymentStatus, CICDError,
+    PipelineConfig, DeploymentConfig, DeploymentStatus, Error as CICDError,
 };
 
 #[cfg(test)]
