@@ -85,7 +85,7 @@ impl ArgoCDApplication {
     ) -> Self {
         Self {
             name,
-            environment,
+            environment: environment.clone(),
             repo_url,
             target_revision,
             path,

@@ -1,7 +1,8 @@
 //! Reconciler implementation for Operator Controller
 //! Handles the actual reconciliation logic for cluster and workload resources
 
-use kube::Client;
+use kube::{Client, Api, ResourceExt};
+use k8s_openapi::api::apps::v1::{StatefulSet, Deployment};
 use std::sync::Arc;
 use tokio::time::{Duration, Instant};
 use tracing::{info, warn, debug, error};
@@ -108,20 +109,18 @@ impl Reconciler {
     ) -> Result<ClusterState, super::controller::Error> {
         let namespace = cluster.namespace().unwrap_or_default();
 
-        // Check StatefulSet status
-        let statefulset = self
-            .client
-            .get::<k8s::apps::v1::StatefulSet>(&cluster.name_any(), &namespace)
-            .await?;
+        // Create API instances
+        let statefulsets = Api::<StatefulSet>::namespaced(self.client.clone(), &namespace);
 
-        let ready_replicas = statefulset.status.as_ref().and_then(|s| s.ready_replicas).unwrap_or(0);
-        let replicas = statefulset.spec.as_ref().and_then(|s| s.replicas).unwrap_or(0);
+        // Check StatefulSet status
+        let statefulset = statefulsets.get(&cluster.name_any()).await?;
+
+        let ready_replicas = statefulset.status.as_ref().and_then(|s| s.ready_replicas).unwrap_or(0) as u32;
+        let replicas = statefulset.spec.as_ref().and_then(|s| s.replicas).unwrap_or(0) as u32;
 
         // Check Service status
-        let _service = self
-            .client
-            .get::<k8s::api::core::v1::Service>(&cluster.name_any(), &namespace)
-            .await?;
+        let services = Api::<k8s_openapi::api::core::v1::Service>::namespaced(self.client.clone(), &namespace);
+        let _service = services.get(&cluster.name_any()).await?;
 
         // Determine phase based on ready replicas
         let phase = if ready_replicas == 0 {
@@ -224,14 +223,14 @@ impl Reconciler {
     ) -> Result<WorkloadState, super::controller::Error> {
         let namespace = workload.namespace().unwrap_or_default();
 
-        // Check Deployment status
-        let deployment = self
-            .client
-            .get::<k8s::apps::v1::Deployment>(&workload.name_any(), &namespace)
-            .await?;
+        // Create API instance
+        let deployments = Api::<Deployment>::namespaced(self.client.clone(), &namespace);
 
-        let ready_replicas = deployment.status.as_ref().and_then(|s| s.ready_replicas).unwrap_or(0);
-        let replicas = deployment.spec.as_ref().and_then(|s| s.replicas).unwrap_or(0);
+        // Check Deployment status
+        let deployment = deployments.get(&workload.name_any()).await?;
+
+        let ready_replicas = deployment.status.as_ref().and_then(|s| s.ready_replicas).unwrap_or(0) as u32;
+        let replicas = deployment.spec.as_ref().and_then(|s| s.replicas).unwrap_or(0) as u32;
 
         let phase = if ready_replicas == 0 {
             WorkloadPhase::Pending

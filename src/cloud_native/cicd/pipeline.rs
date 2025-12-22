@@ -526,7 +526,7 @@ impl PipelineManager {
     }
 
     /// Add Jenkins pipeline
-    pub fn add_pipeline(&mut self, pipeline: JenkinsPipeline) {
+    pub fn add_jenkins_pipeline(&mut self, pipeline: JenkinsPipeline) {
         self.jenkins_pipelines.push(pipeline);
     }
 

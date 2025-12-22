@@ -213,7 +213,7 @@ impl HPAController {
             from_replicas: action.current_replicas,
             to_replicas: action.desired_replicas,
             reason: action.reason.clone(),
-            metrics: self.metrics_collector.latest_metrics.clone(),
+            metrics: self.metrics_collector.latest_metrics.clone().expect("metrics not available"),
         });
 
         // Keep only last 100 events
@@ -229,7 +229,7 @@ impl HPAController {
 
     /// Get current metrics
     pub fn get_current_metrics(&self) -> Option<&Metrics> {
-        self.metrics_collector.latest_metrics.as_ref()
+        self.metrics_collector.latest_metrics.as_ref().map(|v| v.as_ref())
     }
 }
 

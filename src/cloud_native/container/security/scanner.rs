@@ -3,6 +3,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use tracing::info;
 
 /// Security scanner for container images
 pub struct SecurityScanner {
@@ -42,9 +43,9 @@ impl SecurityScanner {
             image_name: image.name.clone(),
             image_digest: image.digest.clone(),
             scan_timestamp: std::time::SystemTime::now(),
-            vulnerabilities,
-            compliance_issues,
-            secrets,
+            vulnerabilities: vulnerabilities.clone(),
+            compliance_issues: compliance_issues.clone(),
+            secrets: secrets.clone(),
             risk_score,
             recommendations: self.generate_recommendations(&vulnerabilities, &compliance_issues),
         };
@@ -247,7 +248,7 @@ impl SecurityScanner {
         }
 
         // Normalize to 0-100 scale
-        (score / 100.0).min(100.0)
+        (score / 100.0_f64).min(100.0_f64)
     }
 
     /// Generate recommendations
@@ -353,7 +354,7 @@ impl ImageLayer {
 }
 
 /// Vulnerability structure
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Vulnerability {
     /// Vulnerability ID (e.g., CVE-2023-1234)
     pub id: String,
@@ -375,7 +376,7 @@ pub struct Vulnerability {
 }
 
 /// Vulnerability severity
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum VulnerabilitySeverity {
     Critical,
     High,

@@ -1,17 +1,23 @@
 //! Distributed tracing for Service Mesh
-//! Provides OpenTelemetry integration for distributed tracing
+//! Provides simplified tracing implementation for distributed tracing
 
-use opentelemetry::trace::{Tracer, Span, Status};
-use opentelemetry::propagation::TextMapPropagator;
-use opentelemetry_sdk::trace::{TracerProvider, SamplingDecision};
-use opentelemetry_sdk::resource::{ResourceDetector, Resource};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// Global span ID counter
+static SPAN_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+static TRACE_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+
+fn generate_span_id() -> String {
+    format!("span-{:016x}", SPAN_ID_COUNTER.fetch_add(1, Ordering::SeqCst))
+}
+
+fn generate_trace_id() -> String {
+    format!("trace-{:016x}", TRACE_ID_COUNTER.fetch_add(1, Ordering::SeqCst))
+}
 
 /// Distributed tracer
 pub struct DistributedTracer {
-    /// OpenTelemetry tracer
-    tracer: opentelemetry::global::Tracer,
-
     /// Service name
     service_name: String,
 
@@ -22,13 +28,7 @@ pub struct DistributedTracer {
 impl DistributedTracer {
     /// Create a new distributed tracer
     pub fn new(service_name: String) -> Self {
-        // Initialize OpenTelemetry
-        opentelemetry::global::set_text_map_propagator(opentelemetry_jaeger::Propagator::new());
-
-        let tracer = opentelemetry::global::tracer(service_name.as_str());
-
         Self {
-            tracer,
             service_name,
             span_history: Vec::new(),
         }
@@ -40,86 +40,20 @@ impl DistributedTracer {
         operation_name: &str,
         trace_context: Option<TraceContext>,
     ) -> SpanHandle {
-        let mut builder = self.tracer.span_builder(operation_name);
+        let trace_id = trace_context
+            .as_ref()
+            .map(|c| c.trace_id.clone())
+            .unwrap_or_else(generate_trace_id);
 
-        // Set service name attribute
-        builder = builder.with_attributes(vec![
-            opentelemetry::KeyValue::new("service.name", self.service_name.clone()),
-            opentelemetry::KeyValue::new("service.version", "1.0.0".to_string()),
-        ]);
+        let span_id = generate_span_id();
+        let parent_span_id = trace_context.map(|c| c.span_id);
 
-        // Set trace context if provided
-        if let Some(context) = trace_context {
-            builder = builder.with_trace_id(context.trace_id);
-            builder = builder.with_span_id(context.span_id);
-        }
-
-        let span = builder.start(&self.tracer);
-        let span_handle = SpanHandle::new(span);
-
-        // Record span start
-        self.record_span_start(&span_handle);
-
-        span_handle
-    }
-
-    /// Start a child span
-    pub fn start_child_span(
-        &mut self,
-        parent: &SpanHandle,
-        operation_name: &str,
-    ) -> SpanHandle {
-        let mut builder = self.tracer.span_builder(operation_name);
-
-        // Link to parent span
-        builder = builder.with_links(vec![opentelemetry::trace::Link::new(
-            parent.span.context().span_context(),
-            HashMap::new(),
-        )]);
-
-        let span = builder.start(&self.tracer);
-        let span_handle = SpanHandle::new(span);
-
-        // Record span start
-        self.record_span_start(&span_handle);
-
-        span_handle
-    }
-
-    /// End a span
-    pub fn end_span(&mut self, span: SpanHandle) {
-        span.end();
-        self.record_span_end(&span);
-    }
-
-    /// Add event to span
-    pub fn add_event(&self, span: &SpanHandle, event_name: &str, attributes: HashMap<String, String>) {
-        let mut event = opentelemetry::trace::Event::new(
-            opentelemetry::logs::Severity::Info,
-            event_name,
-            opentelemetry::GlobalTimestamp::now(),
-            attributes.into_iter().map(|(k, v)| opentelemetry::KeyValue::new(k, v)),
-        );
-
-        span.span().add_event(event);
-    }
-
-    /// Add error to span
-    pub fn add_error(&self, span: &SpanHandle, error: &str) {
-        span.span().set_status(Status::Error { description: error.to_string() });
-    }
-
-    /// Set span attribute
-    pub fn set_attribute(&self, span: &SpanHandle, key: &str, value: &str) {
-        span.span().set_attribute(opentelemetry::KeyValue::new(key, value));
-    }
-
-    /// Record span start
-    fn record_span_start(&mut self, span: &SpanHandle) {
         let record = SpanRecord {
-            span_id: span.span().context().span_context().span_id().to_hex(),
-            trace_id: span.span().context().span_context().trace_id().to_hex(),
-            operation_name: span.operation_name.clone(),
+            span_id: span_id.clone(),
+            trace_id: trace_id.clone(),
+            parent_span_id,
+            operation_name: operation_name.to_string(),
+            service_name: self.service_name.clone(),
             start_time: std::time::Instant::now(),
             end_time: None,
             status: SpanStatus::Running,
@@ -128,15 +62,57 @@ impl DistributedTracer {
         };
 
         self.span_history.push(record);
+
+        SpanHandle {
+            span_id,
+            trace_id,
+            operation_name: operation_name.to_string(),
+        }
     }
 
-    /// Record span end
-    fn record_span_end(&mut self, span: &SpanHandle) {
-        let span_id = span.span().context().span_context().span_id().to_hex();
+    /// Start a child span
+    pub fn start_child_span(
+        &mut self,
+        parent: &SpanHandle,
+        operation_name: &str,
+    ) -> SpanHandle {
+        let context = TraceContext {
+            trace_id: parent.trace_id.clone(),
+            span_id: parent.span_id.clone(),
+        };
+        self.start_span(operation_name, Some(context))
+    }
 
-        if let Some(record) = self.span_history.iter_mut().find(|r| r.span_id == span_id) {
+    /// End a span
+    pub fn end_span(&mut self, span: SpanHandle) {
+        if let Some(record) = self.span_history.iter_mut().find(|r| r.span_id == span.span_id) {
             record.end_time = Some(std::time::Instant::now());
             record.status = SpanStatus::Completed;
+        }
+    }
+
+    /// Add event to span
+    pub fn add_event(&mut self, span: &SpanHandle, event_name: &str, attributes: HashMap<String, String>) {
+        if let Some(record) = self.span_history.iter_mut().find(|r| r.span_id == span.span_id) {
+            record.events.push(SpanEvent {
+                name: event_name.to_string(),
+                timestamp: std::time::Instant::now(),
+                attributes,
+            });
+        }
+    }
+
+    /// Add error to span
+    pub fn add_error(&mut self, span: &SpanHandle, _error: &str) {
+        if let Some(record) = self.span_history.iter_mut().find(|r| r.span_id == span.span_id) {
+            record.status = SpanStatus::Error;
+        }
+    }
+
+    /// Set span attribute
+    pub fn set_attribute(&mut self, span: &SpanHandle, key: &str, value: &str) {
+        if let Some(record) = self.span_history.iter_mut().find(|r| r.span_id == span.span_id) {
+            record.attributes.insert(key.to_string(), value.to_string());
         }
     }
 
@@ -165,7 +141,7 @@ impl DistributedTracer {
 
         let mut total_duration = std::time::Duration::from_secs(0);
         let mut max_duration = std::time::Duration::from_secs(0);
-        let mut slowest_span = None;
+        let mut slowest_span: Option<&SpanRecord> = None;
 
         for span in &trace_spans {
             if let Some(end_time) = span.end_time {
@@ -194,28 +170,27 @@ impl DistributedTracer {
 }
 
 /// Span handle wrapper
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SpanHandle {
-    span: opentelemetry::trace::Span,
+    span_id: String,
+    trace_id: String,
     operation_name: String,
 }
 
 impl SpanHandle {
-    fn new(span: opentelemetry::trace::Span) -> Self {
-        Self {
-            span,
-            operation_name: String::new(),
-        }
+    /// Get span ID
+    pub fn span_id(&self) -> &str {
+        &self.span_id
     }
 
-    /// End the span
-    pub fn end(self) {
-        self.span.end();
+    /// Get trace ID
+    pub fn trace_id(&self) -> &str {
+        &self.trace_id
     }
 
-    /// Get span reference
-    pub fn span(&self) -> &opentelemetry::trace::Span {
-        &self.span
+    /// Get operation name
+    pub fn operation_name(&self) -> &str {
+        &self.operation_name
     }
 }
 
@@ -223,10 +198,10 @@ impl SpanHandle {
 #[derive(Debug, Clone)]
 pub struct TraceContext {
     /// Trace ID
-    pub trace_id: opentelemetry::trace::TraceId,
+    pub trace_id: String,
 
     /// Span ID
-    pub span_id: opentelemetry::trace::SpanId,
+    pub span_id: String,
 }
 
 /// Span record for history
@@ -238,8 +213,14 @@ pub struct SpanRecord {
     /// Trace ID
     pub trace_id: String,
 
+    /// Parent span ID
+    pub parent_span_id: Option<String>,
+
     /// Operation name
     pub operation_name: String,
+
+    /// Service name
+    pub service_name: String,
 
     /// Start time
     pub start_time: std::time::Instant,
@@ -309,6 +290,7 @@ impl PerformanceAnalysis {
 /// Metrics collector for service mesh
 pub struct MetricsCollector {
     /// Service name
+    #[allow(dead_code)]
     service_name: String,
 
     /// Request metrics
@@ -325,7 +307,7 @@ impl MetricsCollector {
     /// Create a new metrics collector
     pub fn new(service_name: String) -> Self {
         Self {
-            service_name,
+            service_name: service_name.clone(),
             request_metrics: RequestMetrics::new(),
             latency_metrics: LatencyMetrics::new(),
             error_metrics: ErrorMetrics::new(),
@@ -461,7 +443,7 @@ impl LatencyMetrics {
         let mut sorted = self.latencies.clone();
         sorted.sort();
         let index = (sorted.len() as f64 * 0.95) as usize;
-        sorted.get(index).copied().unwrap_or(0) as f64
+        sorted.get(index.min(sorted.len() - 1)).copied().unwrap_or(0) as f64
     }
 
     fn p99(&self) -> f64 {
@@ -472,7 +454,7 @@ impl LatencyMetrics {
         let mut sorted = self.latencies.clone();
         sorted.sort();
         let index = (sorted.len() as f64 * 0.99) as usize;
-        sorted.get(index).copied().unwrap_or(0) as f64
+        sorted.get(index.min(sorted.len() - 1)).copied().unwrap_or(0) as f64
     }
 }
 
@@ -503,8 +485,6 @@ impl ErrorMetrics {
     }
 
     fn rate(&self) -> f64 {
-        // This would need total requests to calculate
-        // For now, return error count
         self.error_count as f64
     }
 
@@ -552,7 +532,9 @@ mod tests {
         let record = SpanRecord {
             span_id: "span-123".to_string(),
             trace_id: "trace-456".to_string(),
+            parent_span_id: None,
             operation_name: "test-operation".to_string(),
+            service_name: "test-service".to_string(),
             start_time: std::time::Instant::now(),
             end_time: None,
             status: SpanStatus::Running,
@@ -563,6 +545,18 @@ mod tests {
         assert_eq!(record.span_id, "span-123");
         assert_eq!(record.trace_id, "trace-456");
         assert_eq!(record.status, SpanStatus::Running);
+    }
+
+    #[test]
+    fn test_distributed_tracer() {
+        let mut tracer = DistributedTracer::new("test-service".to_string());
+
+        let span = tracer.start_span("test-operation", None);
+        assert!(!span.span_id().is_empty());
+        assert!(!span.trace_id().is_empty());
+
+        tracer.end_span(span);
+        assert!(!tracer.get_span_history().is_empty());
     }
 
     #[test]

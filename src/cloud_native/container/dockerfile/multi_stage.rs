@@ -12,7 +12,7 @@ pub struct MultiStageBuilder {
     runtime_stage: RuntimeStage,
 
     /// Optimization options
-    optimizations: Vec<Optimization>,
+    optimizations: Vec<Box<dyn Optimization>>,
 }
 
 impl MultiStageBuilder {
@@ -38,7 +38,7 @@ impl MultiStageBuilder {
     }
 
     /// Add optimization
-    pub fn add_optimization(mut self, optimization: Optimization) -> Self {
+    pub fn add_optimization(mut self, optimization: Box<dyn Optimization>) -> Self {
         self.optimizations.push(optimization);
         self
     }
@@ -80,7 +80,7 @@ impl MultiStageBuilder {
             self.optimizations
                 .iter()
                 .map(|o| o.name())
-                .collect::<Vec<_>>()
+                .collect::<Vec<&str>>()
                 .join(", ")
         );
 

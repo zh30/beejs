@@ -1,6 +1,7 @@
 //! Istio Service Mesh integration module
 //! Provides Istio configuration, traffic management, and observability
 
+pub mod types;
 pub mod config;
 pub mod traffic;
 

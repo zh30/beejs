@@ -2,6 +2,7 @@
 //! Implements the actual scaling logic for Deployments and StatefulSets
 
 use kube::Api;
+use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
 use tracing::{info, warn, error};
 
 use super::super::crd::ScalePolicy;
@@ -28,7 +29,7 @@ impl Scaler {
     ) -> Result<ScalingResult, Error> {
         info!("Scaling Deployment {}/{} to {} replicas", namespace, name, replicas);
 
-        let deployments: Api<k8s::apps::v1::Deployment> = Api::namespaced(self.client.clone(), namespace);
+        let deployments: Api<Deployment> = Api::namespaced(self.client.clone(), namespace);
 
         // Get current deployment
         let mut deployment = deployments.get(name).await?;
@@ -37,7 +38,7 @@ impl Scaler {
             .spec
             .as_ref()
             .and_then(|s| s.replicas)
-            .unwrap_or(0);
+            .unwrap_or(0) as u32;
 
         if current_replicas == replicas {
             info!("Deployment is already at desired replica count: {}", replicas);
@@ -61,18 +62,18 @@ impl Scaler {
 
         // Update deployment with new replica count
         if let Some(spec) = &mut deployment.spec {
-            spec.replicas = Some(final_replicas);
+            spec.replicas = Some(final_replicas as i32);
         }
 
         // Patch the deployment
-        let params = k8s::PatchParams::default();
+        let params = kube::api::PatchParams::default();
         let patch = serde_json::json!({
             "spec": {
                 "replicas": final_replicas
             }
         });
 
-        match deployments.patch(name, &params, &k8s::Patch::Merge(&patch)).await {
+        match deployments.patch(name, &params, &kube::api::Patch::Merge(&patch)).await {
             Ok(_) => {
                 info!(
                     "Successfully scaled Deployment {}/{} from {} to {} replicas",
@@ -113,7 +114,7 @@ impl Scaler {
     ) -> Result<ScalingResult, Error> {
         info!("Scaling StatefulSet {}/{} to {} replicas", namespace, name, replicas);
 
-        let statefulsets: Api<k8s::apps::v1::StatefulSet> = Api::namespaced(self.client.clone(), namespace);
+        let statefulsets: Api<StatefulSet> = Api::namespaced(self.client.clone(), namespace);
 
         // Get current statefulset
         let mut statefulset = statefulsets.get(name).await?;
@@ -122,7 +123,7 @@ impl Scaler {
             .spec
             .as_ref()
             .and_then(|s| s.replicas)
-            .unwrap_or(0);
+            .unwrap_or(0) as u32;
 
         if current_replicas == replicas {
             info!("StatefulSet is already at desired replica count: {}", replicas);
@@ -146,18 +147,18 @@ impl Scaler {
 
         // Update statefulset with new replica count
         if let Some(spec) = &mut statefulset.spec {
-            spec.replicas = Some(final_replicas);
+            spec.replicas = Some(final_replicas as i32);
         }
 
         // Patch the statefulset
-        let params = k8s::PatchParams::default();
+        let params = kube::api::PatchParams::default();
         let patch = serde_json::json!({
             "spec": {
                 "replicas": final_replicas
             }
         });
 
-        match statefulsets.patch(name, &params, &k8s::Patch::Merge(&patch)).await {
+        match statefulsets.patch(name, &params, &kube::api::Patch::Merge(&patch)).await {
             Ok(_) => {
                 info!(
                     "Successfully scaled StatefulSet {}/{} from {} to {} replicas",

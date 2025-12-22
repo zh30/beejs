@@ -6,7 +6,7 @@ use std::collections::HashMap;
 /// Dockerfile optimizer
 pub struct Optimizer {
     /// Optimization strategies
-    strategies: Vec<OptimizationStrategy>,
+    strategies: Vec<Box<dyn OptimizationStrategy>>,
 }
 
 impl Optimizer {
@@ -18,7 +18,7 @@ impl Optimizer {
     }
 
     /// Add optimization strategy
-    pub fn add_strategy(mut self, strategy: OptimizationStrategy) -> Self {
+    pub fn add_strategy(mut self, strategy: Box<dyn OptimizationStrategy>) -> Self {
         self.strategies.push(strategy);
         self
     }
@@ -131,7 +131,7 @@ impl OptimizationStrategy for LayerMinimizationStrategy {
         "layer-minimization"
     }
 
-    fn apply(&self, mut dockerfile: String) -> Result<String, Error> {
+    fn apply(&self, dockerfile: &str) -> Result<String, Error> {
         // Combine RUN commands to reduce layers
         let lines: Vec<&str> = dockerfile.lines().collect();
         let mut optimized_lines = Vec::new();
@@ -152,17 +152,17 @@ impl OptimizationStrategy for LayerMinimizationStrategy {
             } else {
                 // Flush current RUN if exists
                 if in_run {
-                    optimized_lines.push(&current_run);
-                    current_run = String::new();
+                    optimized_lines.push(current_run.clone());
+                    current_run.clear();
                     in_run = false;
                 }
-                optimized_lines.push(line);
+                optimized_lines.push(line.to_string());
             }
         }
 
         // Flush final RUN if exists
         if in_run {
-            optimized_lines.push(&current_run);
+            optimized_lines.push(current_run.clone());
         }
 
         Ok(optimized_lines.join("\n"))
@@ -183,17 +183,17 @@ impl OptimizationStrategy for BaseImageOptimizationStrategy {
         "base-image-optimization"
     }
 
-    fn apply(&self, mut dockerfile: String) -> Result<String, Error> {
+    fn apply(&self, dockerfile: &str) -> Result<String, Error> {
         // Replace base image
-        if self.use_distroless {
-            dockerfile = dockerfile
+        let result = if self.use_distroless {
+            dockerfile
                 .replace("FROM debian:bookworm-slim", "FROM gcr.io/distroless/base-debian12")
-                .replace("FROM ubuntu:", "FROM gcr.io/distroless/base");
+                .replace("FROM ubuntu:", "FROM gcr.io/distroless/base")
         } else {
-            dockerfile = dockerfile.replace("FROM ubuntu:", &format!("FROM {}:", self.target_image));
-        }
+            dockerfile.replace("FROM ubuntu:", &format!("FROM {}:", self.target_image))
+        };
 
-        Ok(dockerfile)
+        Ok(result)
     }
 }
 
@@ -205,7 +205,7 @@ impl OptimizationStrategy for CacheOptimizationStrategy {
         "cache-optimization"
     }
 
-    fn apply(&self, mut dockerfile: String) -> Result<String, Error> {
+    fn apply(&self, dockerfile: &str) -> Result<String, Error> {
         // Optimize COPY commands for better layer caching
         if dockerfile.contains("COPY . .") && !dockerfile.contains("COPY Cargo.toml") {
             // Insert dependency copy before source copy
@@ -213,16 +213,17 @@ impl OptimizationStrategy for CacheOptimizationStrategy {
             let mut optimized_lines = Vec::new();
 
             for line in &lines {
-                optimized_lines.push(line);
+                optimized_lines.push(*line);
                 if line.contains("WORKDIR /app") && !lines.iter().any(|l| l.contains("COPY Cargo.toml")) {
                     optimized_lines.push("COPY Cargo.toml Cargo.lock ./\nRUN cargo fetch");
                 }
             }
 
-            dockerfile = optimized_lines.join("\n");
+            let result = optimized_lines.join("\n");
+            Ok(result)
+        } else {
+            Ok(dockerfile.to_string())
         }
-
-        Ok(dockerfile)
     }
 }
 
@@ -243,7 +244,7 @@ impl OptimizationStrategy for SecurityHardeningStrategy {
         "security-hardening"
     }
 
-    fn apply(&self, mut dockerfile: String) -> Result<String, Error> {
+    fn apply(&self, dockerfile: &str) -> Result<String, Error> {
         let mut additions = Vec::new();
 
         if self.add_non_root_user {
@@ -259,15 +260,16 @@ impl OptimizationStrategy for SecurityHardeningStrategy {
             additions.push("RUN setcap cap_setpcap,cap_setuid,cap_setgid+ep /usr/local/bin/beejs".to_string());
         }
 
+        let mut result = dockerfile.to_string();
         if !additions.is_empty() {
-            dockerfile.push_str("\n# Security Hardening\n");
+            result.push_str("\n# Security Hardening\n");
             for addition in additions {
-                dockerfile.push_str(&addition);
-                dockerfile.push_str("\n");
+                result.push_str(&addition);
+                result.push_str("\n");
             }
         }
 
-        Ok(dockerfile)
+        Ok(result)
     }
 }
 
@@ -285,10 +287,12 @@ impl OptimizationStrategy for SizeOptimizationStrategy {
         "size-optimization"
     }
 
-    fn apply(&self, mut dockerfile: String) -> Result<String, Error> {
+    fn apply(&self, dockerfile: &str) -> Result<String, Error> {
+        let mut result = dockerfile.to_string();
+
         if self.strip_binaries && dockerfile.contains("cargo build --release") {
             // Add strip command to build
-            dockerfile = dockerfile.replace(
+            result = result.replace(
                 "cargo build --release",
                 "cargo build --release && strip target/release/beejs"
             );
@@ -299,10 +303,10 @@ impl OptimizationStrategy for SizeOptimizationStrategy {
             let cleanup = r#"
 RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.cargo/registry
 "#;
-            dockerfile.push_str(cleanup);
+            result.push_str(cleanup);
         }
 
-        Ok(dockerfile)
+        Ok(result)
     }
 }
 
