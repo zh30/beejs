@@ -10,8 +10,8 @@ use tokio::time::interval;
 use tracing::{info, debug, warn, instrument};
 use super::node_manager::NodeManager;
 use super::task_executor::TaskExecutor;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync::{Mutex, RwLock};
+use std::collections::{BTreeMap};
 /// 追踪ID
 pub type TraceId = String;
 /// 跨度ID

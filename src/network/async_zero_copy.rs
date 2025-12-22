@@ -8,7 +8,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use memmap2::{Mmap, MmapOptions};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 零拷贝错误
 #[derive(Debug, thiserror::Error)]

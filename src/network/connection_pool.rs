@@ -6,7 +6,7 @@ use std::net::{TcpStream, SocketAddr};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// 连接信息
 struct ConnectionInfo {
     stream: TcpStream,

@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync::{Mutex, RwLock};
+use std::collections::{BTreeMap};
 /// 权限控制错误
 #[derive(Error, Debug)]
 pub enum AuthzError {

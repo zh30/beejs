@@ -12,8 +12,8 @@ use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
 use tokio::time::{interval, Duration};
 use crate::cloud::{CloudAdapter, CloudConfig, CloudManager};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync::{Mutex, RwLock};
+use std::collections::{BTreeMap};
 /// 扩缩容策略
 #[derive(Debug, Clone)]
 pub enum ScalingStrategy {

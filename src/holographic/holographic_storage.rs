@@ -1,7 +1,7 @@
 //! 全息存储系统
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// 压缩模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionMode {

@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// DAP Message types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]

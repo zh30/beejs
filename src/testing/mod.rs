@@ -30,7 +30,7 @@ pub use test_timeout::{TestTimeout, TimeoutConfig};
 use std::sync::{Mutex, OnceLock};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 static TEST_REGISTRY: OnceLock<Mutex<HashMap<String, TestSuite>>> = OnceLock::new();
 /// Register a test suite
 pub fn register_suite(suite: TestSuite) {

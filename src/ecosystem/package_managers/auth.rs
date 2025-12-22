@@ -6,7 +6,7 @@ use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// 认证类型
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AuthType {

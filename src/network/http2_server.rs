@@ -4,7 +4,7 @@ use crate::network::{NetworkConfig, NetworkError};
 use std::collections::HashMap;
 use std::net::TcpListener;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// HTTP/2 路由处理器类型
 pub type Http2Handler = fn(&str, &[u8]) -> Result<Vec<u8>, NetworkError>;
 /// HTTP/2 路由

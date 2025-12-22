@@ -9,8 +9,8 @@ use serde::{Serialize, Deserialize};
 use crate::ai::code_generator::{Language, CodeContext};
 use crate::ai::auto_optimizer::{AutoOptimizer, Optimization, Bottleneck};
 use crate::ai::ai_performance_engine::{AiPerformanceEngine, PerformanceMetrics};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync::{Mutex, RwLock};
+use std::collections::{BTreeMap};
 /// 代码优化请求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeOptimizationRequest {

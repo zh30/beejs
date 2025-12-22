@@ -8,7 +8,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use std::net::SocketAddr;
 use std::io::{Result, Error, ErrorKind};
 use memmap2::{Mmap, MmapOptions};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 零拷贝网络配置
 #[derive(Debug, Clone)]

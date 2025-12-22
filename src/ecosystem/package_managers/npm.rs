@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// npm 兼容性管理器
 #[derive(Debug)]
 pub struct NpmCompatibility {

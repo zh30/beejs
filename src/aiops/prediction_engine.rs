@@ -7,8 +7,8 @@ use std::time::{SystemTime, Duration};
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use crate::aiops::anomaly_detection::{AnomalyDetector, Anomaly, BaselineCalculator};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync::{Mutex, RwLock};
+use std::collections::{BTreeMap};
 /// 系统指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MetricType {

@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use tracing::{debug, info};
 use wasmtime::{Engine, Module, Instance, Store, Memory};
 use anyhow::{Result, Context};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync::{Mutex, RwLock};
+use std::collections::{BTreeMap};
 /// WASM 执行结果
 #[derive(Debug, Clone)]
 pub struct WasmExecutionResult {

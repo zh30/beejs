@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use rand::Rng;
 use super::types::{BeejsError, ErrorContext};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 重试策略
 #[derive(Debug, Clone)]

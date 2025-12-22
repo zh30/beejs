@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// 零拷贝内存分配器 - 最小化内存复制开销
 /// 通过直接内存映射和智能池化策略，实现接近零开销的内存分配
 pub struct ZeroCopyAllocator {

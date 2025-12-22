@@ -7,7 +7,7 @@ use tracing::{debug, info};
 use wasmtime::Engine;
 use anyhow::{Result, Context};
 use rayon::prelude::*;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 多线程执行结果
 #[derive(Debug, Clone)]

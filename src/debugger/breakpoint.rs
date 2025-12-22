@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use crate::debugger::{DebugResult, SourceLocation};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// Unique breakpoint ID generator
 static BREAKPOINT_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 /// Breakpoint condition type

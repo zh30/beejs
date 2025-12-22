@@ -5,7 +5,7 @@ use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
 use once_cell::sync::Lazy;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 仓库信息
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

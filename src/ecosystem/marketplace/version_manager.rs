@@ -5,8 +5,8 @@ use std::sync::Arc;
 use chrono::Utc;
 use crate::ecosystem::types::*;
 use super::*;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync::{Mutex, RwLock};
+use std::collections::{BTreeMap};
 #[derive(Debug, Clone)]
 pub struct VersionManager {
     registry: Arc<ModuleRegistry>,

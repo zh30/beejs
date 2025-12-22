@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fmt;
 use thiserror::Error;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// 错误类型枚举 - 统一所有可能的错误
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum BeejsError {

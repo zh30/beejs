@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::{Result, Context};
 use std::time::{Duration, Instant};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// AI 推理引擎主结构
 #[derive(Debug)]

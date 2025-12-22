@@ -5,7 +5,7 @@ use anyhow::{Result, Context};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// 模型格式类型
 #[derive(Debug, Clone)]
 pub enum ModelFormat {

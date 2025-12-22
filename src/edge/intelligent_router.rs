@@ -7,8 +7,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::edge::{NodeId, NodeStatus, TaskPriority, Task};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync::{Mutex, RwLock};
+use std::collections::{BTreeMap};
 /// Request for routing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Request {

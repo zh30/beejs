@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync::{Mutex, RwLock};
+use std::collections::{BTreeMap};
 /// 异常类型
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum AnomalyType {

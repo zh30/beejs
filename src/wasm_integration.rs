@@ -6,7 +6,7 @@ use anyhow::{anyhow, Context, Result};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use wasmtime::*;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 #[derive(Debug, Clone)]
 pub struct WasmModule {

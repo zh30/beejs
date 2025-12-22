@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// 分代垃圾回收器 - 基于对象生命周期的智能垃圾回收
 /// 通过分代策略和并发回收，最小化 GC 停顿时间，提升性能
 pub struct GenerationalGC {

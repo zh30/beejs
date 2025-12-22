@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use tokio;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// Lockfile 类型
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LockfileType {

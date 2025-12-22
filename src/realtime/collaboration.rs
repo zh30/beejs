@@ -9,7 +9,7 @@ use anyhow::Result;
 use tracing::info;
 use serde::{Serialize, Deserialize};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Participant {
     pub id: String,

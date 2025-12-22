@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use rusty_v8 as v8;
 use crate::debugger::{DebugResult, config::DebugConfig};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// Scope types in JavaScript
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ScopeType {

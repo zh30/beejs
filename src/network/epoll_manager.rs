@@ -4,7 +4,7 @@ use crate::network::{NetworkConfig, NetworkError};
 use std::collections::HashMap;
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// epoll 事件管理器
 pub struct EpollManager {
     config: NetworkConfig,

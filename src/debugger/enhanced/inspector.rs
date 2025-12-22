@@ -9,7 +9,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// Heap snapshot
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeapSnapshot {

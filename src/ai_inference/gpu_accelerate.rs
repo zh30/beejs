@@ -5,7 +5,7 @@ use super::tensor_ops::Tensor;
 use anyhow::{Result};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// GPU 设备信息
 #[derive(Debug, Clone)]

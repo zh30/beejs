@@ -5,7 +5,7 @@
 use super::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// .d.ts 文件发射器
 #[derive(Debug)]
 pub struct DtsEmitter {

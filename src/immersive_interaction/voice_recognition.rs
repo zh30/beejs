@@ -1,7 +1,7 @@
 //! 语音识别系统
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// 语音配置
 #[derive(Debug, Clone)]
 pub struct VoiceConfig {

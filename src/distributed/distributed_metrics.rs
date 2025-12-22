@@ -11,7 +11,7 @@ use tokio::time::interval;
 use super::node_manager::NodeManager;
 use super::task_executor::TaskExecutor;
 use super::task_scheduler::TaskScheduler;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -7,7 +7,7 @@ use wasmtime::{Module, Config};
 use anyhow::{Result, Context};
 use tracing::{debug, info};
 use rayon::prelude::*;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// SIMD 优化结果
 #[derive(Debug, Clone)]

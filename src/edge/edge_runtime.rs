@@ -6,8 +6,8 @@ use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::sync::{Mutex, RwLock};
+use std::collections::{BTreeMap};
 /// Edge Runtime instance
 #[derive(Debug)]
 pub struct EdgeRuntimeInstance {

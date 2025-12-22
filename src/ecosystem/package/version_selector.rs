@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 use crate::ecosystem::types::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// 版本选择器
 #[derive(Debug, Clone)]
 pub struct VersionSelector {

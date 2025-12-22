@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use super::{Runtime, MetricType};
 use bytes::Bytes;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// 基准测试结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkResult {
