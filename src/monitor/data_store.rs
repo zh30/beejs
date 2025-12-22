@@ -24,7 +24,7 @@ pub struct QueryCondition {
     /// 结束时间
     pub end_time: Option<u64>,
     /// 标签过滤
-    pub tag_filters: HashMap<String, String, std::collections::HashMap<String, String, String, String>>,
+    pub tag_filters: HashMap<String, _>,
     /// 限制返回数量
     pub limit: Option<usize>,
 }
@@ -61,7 +61,7 @@ pub struct DataStore {
     /// 内存数据缓存
     memory_cache: Arc<Mutex<VecDeque<DataPoint>>>,
     /// 压缩数据存储
-    compressed_storage: Arc<Mutex<HashMap<String, CompressedData, std::collections::HashMap<String, CompressedData, String, CompressedData>>>>,
+    compressed_storage: Arc<Mutex<HashMap<String, _>>>,
     /// 查询索引
     query_index: Arc<Mutex<QueryIndex>>,
     /// 统计信息
@@ -89,7 +89,7 @@ pub struct QueryIndex {
     /// 按时间排序的索引
     pub time_index: Vec<(u64, MetricType)>,
     /// 按指标类型分组的索引
-    pub type_index: HashMap<MetricType, Vec<u64, std::collections::HashMap<MetricType, Vec<u64, MetricType, Vec<u64>>>,
+    pub type_index: HashMap<String, _>,
     /// 索引最后更新时间
     pub last_update: Instant,
 }
@@ -123,10 +123,10 @@ impl DataStore {
             memory_cache: Arc::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))),
             compressed_storage: Arc::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))),
             query_index: Arc::new(std::sync::Mutex::new(Mutex::new(QueryIndex {
-                time_index: Vec::new()),
+                time_index: Vec::new(),
                 type_index: HashMap::new(),
                 last_update: Instant::now(),
-            })),
+            }))),
             stats: Arc::new(std::sync::Mutex::new(Mutex::new(DataStoreStats {
                 total_data_points: 0,
                 memory_cache_size: 0,
@@ -234,7 +234,7 @@ impl DataStore {
         }
 
         // 按指标类型分组
-        let mut grouped_data: HashMap<MetricType, Vec<DataPoint, std::collections::HashMap<MetricType, Vec<DataPoint, MetricType, Vec<DataPoint>>> = HashMap::new();
+        let mut grouped_data: HashMap<String, _> = HashMap::new();
 
         while let Some(data_point) = memory_cache.pop_front() {
             grouped_data

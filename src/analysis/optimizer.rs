@@ -453,7 +453,7 @@ impl PerformanceOptimizer {
     pub fn generate_optimization_report(
         &self,
         report: &PerformanceReport,
-    ) -> HashMap<String, Vec<OptimizationSuggestion, std::collections::HashMap<String, Vec<OptimizationSuggestion, String, Vec<OptimizationSuggestion>>> {
+    ) -> HashMap<String, _> {
         let bottlenecks: _ = self.bottleneck_detector.detect_bottlenecks(report);
         let suggestions: _ = self.generate_suggestions(&bottlenecks);
 

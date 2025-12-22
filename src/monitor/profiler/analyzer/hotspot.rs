@@ -76,11 +76,11 @@ pub struct MemoryStats {
 #[derive(Debug)]
 pub struct HotspotAnalyzer {
     /// 函数执行时间数据
-    execution_times: HashMap<String, Vec<Duration, std::collections::HashMap<String, Vec<Duration, String, Vec<Duration>>>,
+    execution_times: HashMap<String, Vec<Duration>>,
     /// 函数内存使用数据
-    memory_usage: HashMap<String, Vec<usize, std::collections::HashMap<String, Vec<usize, String, Vec<usize>>>,
+    memory_usage: HashMap<String, Vec<usize>>,
     /// 函数调用计数
-    call_counts: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
+    call_counts: HashMap<String, u64>,
     /// 热点检测配置
     config: HotspotConfig,
     /// 分析统计

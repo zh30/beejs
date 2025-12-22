@@ -24,8 +24,6 @@ pub use visualizer::{
 };
 
 pub use trend_analyzer::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
     TrendAnalyzer, PerformanceDataPoint, PerformanceTrend, TrendDirection,
     StatisticalSummary,
 };

@@ -33,7 +33,7 @@ pub struct RuntimeLite {
 
     /// Cache for pre-compiled scripts to avoid repeated compilation
     /// Stage 65: Enhanced with LRU eviction and expiration
-    script_cache: Arc<std::sync::Mutex<HashMap<String, (v8::Global<v8::Script, std::collections::HashMap<String, (v8::Global<v8::Script, String, (v8::Global<v8::Script>>, Instant)>>>,
+    script_cache: Arc<std::sync::Mutex<HashMap<String, (v8::Global<v8::Script, String, Instant)>>>,
     /// Maximum cache size (Stage 65: Dynamic based on memory)
     max_cache_size: usize,
     /// Cache expiration time (Stage 65: TTL-based eviction)
