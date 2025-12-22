@@ -1,13 +1,11 @@
 //! 内存使用模式分析器 - Stage 90 Phase 5.2
 //! 分析内存分配模式，识别优化机会
-
 use std::collections::{HashMap, BTreeMap, VecDeque};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use std::time::{Duration, Instant};
-
 /// 内存分配记录
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AllocationRecord {
@@ -18,7 +16,6 @@ pub struct AllocationRecord {
     pub lifetime: Option<Duration>,
     pub stack_trace: Option<String>,
 }
-
 /// 分配类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum AllocationType {
@@ -41,7 +38,6 @@ pub enum AllocationType {
     /// 其他
     Other(String),
 }
-
 /// 内存使用模式
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryUsagePattern {
@@ -53,7 +49,6 @@ pub struct MemoryUsagePattern {
     pub fragmentation_score: f64,
     pub optimization_potential: f64,
 }
-
 /// 模式类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum PatternType {
@@ -76,7 +71,6 @@ pub enum PatternType {
     /// 其他
     Other(String),
 }
-
 /// 内存分配趋势
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AllocationTrend {
@@ -88,7 +82,6 @@ pub struct AllocationTrend {
     pub growth_rate: f64,
     pub trend_direction: TrendDirection,
 }
-
 /// 时间范围
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimeFrame {
@@ -96,7 +89,6 @@ pub struct TimeFrame {
     pub end_time: DateTime<Utc>,
     pub duration: Duration,
 }
-
 /// 趋势方向
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TrendDirection {
@@ -105,7 +97,6 @@ pub enum TrendDirection {
     Stable,
     Volatile,
 }
-
 /// 内存分配统计
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AllocationStatistics {
@@ -120,7 +111,6 @@ pub struct AllocationStatistics {
     pub allocation_rate: f64, // per second
     pub deallocation_rate: f64, // per second
 }
-
 /// 内存配置文件
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryProfile {
@@ -132,7 +122,6 @@ pub struct MemoryProfile {
     pub hotspots: Vec<MemoryHotspot>,
     pub optimization_recommendations: Vec<OptimizationRecommendation>,
 }
-
 /// 内存热点
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryHotspot {
@@ -142,7 +131,6 @@ pub struct MemoryHotspot {
     pub average_size: f64,
     pub impact_score: f64,
 }
-
 /// 优化建议
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationRecommendation {
@@ -154,7 +142,6 @@ pub struct OptimizationRecommendation {
     pub potential_savings: usize, // bytes
     pub confidence: f64,
 }
-
 /// 建议类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum RecommendationType {
@@ -177,7 +164,6 @@ pub enum RecommendationType {
     /// 其他
     Other(String),
 }
-
 /// 实施难度
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum EffortLevel {
@@ -185,7 +171,6 @@ pub enum EffortLevel {
     Medium,
     High,
 }
-
 /// 模式检测结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PatternDetection {
@@ -196,7 +181,6 @@ pub struct PatternDetection {
     pub affected_allocations: u64,
     pub total_size: usize,
 }
-
 /// 严重程度
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Severity {
@@ -205,7 +189,6 @@ pub enum Severity {
     High,
     Critical,
 }
-
 /// 内存使用模式分析器
 pub struct MemoryPatternAnalyzer {
     allocation_history: Arc<RwLock<VecDeque<AllocationRecord>>>,
@@ -214,7 +197,6 @@ pub struct MemoryPatternAnalyzer {
     config: AnalyzerConfig,
     analysis_window: Duration,
 }
-
 /// 分析器配置
 #[derive(Debug, Clone)]
 pub struct AnalyzerConfig {
@@ -224,7 +206,6 @@ pub struct AnalyzerConfig {
     pub leak_detection_threshold: Duration,
     pub fragmentation_threshold: f64,
 }
-
 impl Default for AnalyzerConfig {
     fn default() -> Self {
         Self {
@@ -236,13 +217,11 @@ impl Default for AnalyzerConfig {
         }
     }
 }
-
 impl MemoryPatternAnalyzer {
     /// 创建新的内存模式分析器
     pub fn new() -> Self {
         Self::with_config(AnalyzerConfig::default())
     }
-
     /// 使用配置创建分析器
     pub fn with_config(config: AnalyzerConfig) -> Self {
         Self {
@@ -264,7 +243,6 @@ impl MemoryPatternAnalyzer {
             analysis_window: Duration::from_secs(60),
         }
     }
-
     /// 记录内存分配
     pub async fn record_allocation(&self, record: AllocationRecord) {
         // 更新活动分配
@@ -272,18 +250,15 @@ impl MemoryPatternAnalyzer {
             let mut active = self.active_allocations.write().await;
             active.insert(record.allocation_id, record.clone());
         }
-
         // 更新历史
         {
             let mut history = self.allocation_history.write().await;
             history.push_back(record);
-
             // 限制历史大小
             if history.len() > self.config.max_history_size {
                 history.pop_front();
             }
         }
-
         // 更新统计
         {
             let mut stats = self.statistics.write().await;
@@ -291,7 +266,6 @@ impl MemoryPatternAnalyzer {
             stats.active_allocations += 1;
             stats.total_size += record.size;
             stats.active_size += record.size;
-
             // 更新峰值
             if stats.active_allocations > stats.peak_concurrent {
                 stats.peak_concurrent = stats.active_allocations;
@@ -299,14 +273,12 @@ impl MemoryPatternAnalyzer {
             if stats.active_size > stats.peak_size {
                 stats.peak_size = stats.active_size;
             }
-
             // 计算平均分配大小
             if stats.total_allocations > 0 {
                 stats.average_allocation_size = stats.total_size as f64 / stats.total_allocations as f64;
             }
         }
     }
-
     /// 记录内存释放
     pub async fn record_deallocation(&self, allocation_id: u64) {
         // 查找并移除活动分配
@@ -316,19 +288,16 @@ impl MemoryPatternAnalyzer {
                 // 计算生命周期
                 let lifetime: _ = Utc::now().signed_duration_since(record.timestamp).to_std().ok();
                 let size: _ = record.size;
-
                 // 更新历史记录中的生命周期
                 let mut history = self.allocation_history.write().await;
                 if let Some(historical_record) = history.iter_mut().find(|r| r.allocation_id == allocation_id) {
                     historical_record.lifetime = lifetime;
                 }
-
                 size
             } else {
                 0
             }
         };
-
         if allocation_size > 0 {
             // 更新统计
             {
@@ -339,15 +308,12 @@ impl MemoryPatternAnalyzer {
             }
         }
     }
-
     /// 检测内存使用模式
     pub async fn detect_patterns(&self) -> Vec<PatternDetection> {
         let history: _ = self.allocation_history.read().await;
         let active: _ = self.active_allocations.read().await;
         let stats: _ = self.statistics.read().await;
-
         let mut patterns = Vec::new();
-
         // 检测短生命周期对象模式
         let short_lived: _ = self.detect_short_lived_objects(&history).await;
         if !short_lived.is_empty() {
@@ -360,13 +326,11 @@ impl MemoryPatternAnalyzer {
                 total_size: stats.total_size / 2,
             });
         }
-
         // 检测频繁小对象分配模式
         let frequent_small: _ = self.detect_frequent_small_allocations(&history, &stats).await;
         if frequent_small.confidence > self.config.pattern_detection_threshold {
             patterns.push(frequent_small);
         }
-
         // 检测大对象分配模式
         let large_objects: _ = self.detect_large_object_allocations(&history).await;
         if !large_objects.is_empty() {
@@ -379,7 +343,6 @@ impl MemoryPatternAnalyzer {
                 total_size: stats.total_size / 2,
             });
         }
-
         // 检测内存泄漏模式
         let leaks: _ = self.detect_memory_leaks(&active).await;
         if !leaks.is_empty() {
@@ -392,10 +355,8 @@ impl MemoryPatternAnalyzer {
                 total_size: leaks.iter().map(|(_, size)| *size).sum(),
             });
         }
-
         patterns
     }
-
     /// 生成内存配置文件
     pub async fn generate_profile(&self, profile_id: String) -> MemoryProfile {
         let stats: _ = self.statistics.read().await.clone();
@@ -403,9 +364,7 @@ impl MemoryPatternAnalyzer {
         let trends: _ = self.analyze_trends().await;
         let hotspots: _ = self.identify_hotspots().await;
         let recommendations: _ = self.generate_recommendations(&patterns).await;
-
         let usage_patterns: _ = self.aggregate_patterns(&patterns).await;
-
         MemoryProfile {
             profile_id,
             created_at: Utc::now(),
@@ -416,26 +375,20 @@ impl MemoryPatternAnalyzer {
             optimization_recommendations: recommendations,
         }
     }
-
     /// 分析分配趋势
     async fn analyze_trends(&self) -> Vec<AllocationTrend> {
         let history: _ = self.allocation_history.read().await;
         let now: _ = Utc::now();
-
         // 按时间窗口分组
         let mut time_buckets: BTreeMap<DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc, DateTime<Utc>>, Vec<&AllocationRecord>> = BTreeMap::new();
-
         for record in history.iter() {
             let bucket_time: _ = record.timestamp.with_second(0).with_nanosecond(0).unwrap();
             time_buckets.entry(bucket_time).or_default().push(record);
         }
-
         let mut trends = Vec::new();
-
         for (time, allocations) in time_buckets.iter() {
             let allocation_rate: _ = allocations.len() as f64 / 60.0; // per second
             let total_size: usize = allocations.iter().map(|a| a.size).sum();
-
             trends.push(AllocationTrend {
                 timeframe: TimeFrame {
                     start_time: *time,
@@ -450,16 +403,12 @@ impl MemoryPatternAnalyzer {
                 trend_direction: TrendDirection::Stable,
             });
         }
-
         trends
     }
-
     /// 识别内存热点
     async fn identify_hotspots(&self) -> Vec<MemoryHotspot> {
         let history: _ = self.allocation_history.read().await;
-
         let mut location_counts: HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize), String, (u64, usize), std::collections::HashMap<String, (u64, usize), String, (u64, usize)>> = HashMap::new();
-
         for record in history.iter() {
             if let Some(stack_trace) = &record.stack_trace {
                 let entry: _ = location_counts.entry(stack_trace.clone()).or_insert((0, 0));
@@ -467,7 +416,6 @@ impl MemoryPatternAnalyzer {
                 entry.1 += record.size;
             }
         }
-
         location_counts
             .into_iter()
             .map(|(location, (count, total_size))| MemoryHotspot {
@@ -480,11 +428,9 @@ impl MemoryPatternAnalyzer {
             .filter(|h| h.impact_score > 10.0)
             .collect()
     }
-
     /// 生成优化建议
     async fn generate_recommendations(&self, patterns: &[PatternDetection]) -> Vec<OptimizationRecommendation> {
         let mut recommendations = Vec::new();
-
         for pattern in patterns {
             match pattern.pattern_type {
                 PatternType::ShortLivedObjects => {
@@ -523,10 +469,8 @@ impl MemoryPatternAnalyzer {
                 _ => {}
             }
         }
-
         recommendations
     }
-
     /// 检测短生命周期对象
     async fn detect_short_lived_objects(&self, history: &VecDeque<AllocationRecord>) -> Vec<String> {
         let short_lived_count: _ = history
@@ -539,14 +483,12 @@ impl MemoryPatternAnalyzer {
                 }
             })
             .count();
-
         if short_lived_count > history.len() / 3 {
             vec!["发现大量短生命周期对象".to_string()]
         } else {
             vec![]
         }
     }
-
     /// 检测频繁小对象分配
     async fn detect_frequent_small_allocations(
         &self,
@@ -557,13 +499,11 @@ impl MemoryPatternAnalyzer {
             .iter()
             .filter(|r| r.size < 1024) // 小于 1KB
             .collect();
-
         let confidence: _ = if stats.total_allocations > 0 {
             small_allocations.len() as f64 / stats.total_allocations as f64
         } else {
             0.0
         };
-
         PatternDetection {
             pattern_type: PatternType::FrequentSmallAllocations,
             confidence,
@@ -583,26 +523,22 @@ impl MemoryPatternAnalyzer {
             total_size: small_allocations.iter().map(|r| r.size).sum(),
         }
     }
-
     /// 检测大对象分配
     async fn detect_large_object_allocations(&self, history: &VecDeque<AllocationRecord>) -> Vec<String> {
         let large_objects: Vec<_> = history
             .iter()
             .filter(|r| r.size > 1024 * 1024) // 大于 1MB
             .collect();
-
         if large_objects.len() > 10 {
             vec!["检测到大量大对象分配".to_string()]
         } else {
             vec![]
         }
     }
-
     /// 检测内存泄漏
     async fn detect_memory_leaks(&self, active: &HashMap<u64, AllocationRecord>) -> Vec<(u64, usize)> {
         let now: _ = Utc::now();
         let threshold: _ = self.config.leak_detection_threshold;
-
         active
             .iter()
             .filter(|(_, record)| {
@@ -611,7 +547,6 @@ impl MemoryPatternAnalyzer {
             .map(|(id, record)| (*id, record.size))
             .collect()
     }
-
     /// 聚合模式
     async fn aggregate_patterns(&self, patterns: &[PatternDetection]) -> Vec<MemoryUsagePattern> {
         patterns
@@ -632,18 +567,15 @@ impl MemoryPatternAnalyzer {
             .collect()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use chrono::Utc;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_memory_pattern_analysis() {
         let analyzer: _ = MemoryPatternAnalyzer::new();
-
         // 记录分配
         let record: _ = AllocationRecord {
             allocation_id: 1,
@@ -653,13 +585,10 @@ use std::collections::{HashMap, BTreeMap};
             lifetime: None,
             stack_trace: Some("test_location".to_string()),
         };
-
         analyzer.record_allocation(record.clone()).await;
         analyzer.record_deallocation(1).await;
-
         let patterns: _ = analyzer.detect_patterns().await;
         assert!(!patterns.is_empty() || patterns.is_empty()); // 可能是空的，这是正常的
-
         let profile: _ = analyzer.generate_profile("test_profile".to_string()).await;
         assert_eq!(profile.profile_id, "test_profile");
     }

@@ -1,27 +1,22 @@
 //! 性能分析器增强模块
 //! Stage 76: 企业级性能分析系统
 //! 提供函数跟踪、热点分析、性能报告等高级功能
-
 use std::time::Duration;
-
 pub mod collector;
 pub mod analyzer;
 pub mod storage;
 pub mod report;
 // pub mod cli_integration; // TODO: 实现 CLI 集成
-
 pub use collector::{FunctionTracker, FunctionTraceHandle, FunctionStats, TrackerStats};
 pub use analyzer::{CallStackAnalyzer, HotspotAnalyzer, StackFrame, Hotspot};
 pub use storage::{RingBuffer, SamplingStrategy, SamplingConfig, PerformanceEvent, PerformanceEventType};
 pub use report::{PerformanceSummary, OptimizationRecommendation};
-
 // 重新导出分析器类型
 pub use analyzer::stack_analyzer::{
     CallStackAnalysis, Bottleneck, BottleneckType, RecursionInfo, DepthStats,
 };
 pub use analyzer::hotspot::{TimeStats, MemoryStats};
 pub use report::{RecommendationType, Priority, Difficulty};
-
 /// 高级性能分析器配置
 #[derive(Debug, Clone)]
 pub struct AdvancedProfilerConfig {
@@ -38,7 +33,6 @@ pub struct AdvancedProfilerConfig {
     /// 报告生成配置
     pub report_config: ReportConfig,
 }
-
 /// 报告配置
 #[derive(Debug, Clone)]
 pub struct ReportConfig {
@@ -51,7 +45,6 @@ pub struct ReportConfig {
     /// 报告输出目录
     pub output_dir: Option<String>,
 }
-
 impl Default for AdvancedProfilerConfig {
     fn default() -> Self {
         Self {
@@ -69,7 +62,6 @@ impl Default for AdvancedProfilerConfig {
         }
     }
 }
-
 /// 高级性能分析器
 #[derive(Debug)]
 pub struct AdvancedProfiler {
@@ -86,7 +78,6 @@ pub struct AdvancedProfiler {
     /// 开始时间
     start_time: Option<std::time::Instant>,
 }
-
 impl AdvancedProfiler {
     /// 创建新的高级性能分析器
     pub fn new(config: AdvancedProfilerConfig) -> Self {
@@ -94,19 +85,16 @@ impl AdvancedProfiler {
             config.event_buffer_capacity,
             config.sampling_config.clone(),
         );
-
         let stack_analyzer: _ = if config.enable_stack_analysis {
             Some(CallStackAnalyzer::new(config.max_call_depth))
         } else {
             None
         };
-
         let hotspot_analyzer: _ = if config.enable_hotspot_analysis {
             Some(HotspotAnalyzer::with_default_config())
         } else {
             None
         };
-
         Self {
             function_tracker,
             stack_analyzer,
@@ -116,28 +104,23 @@ impl AdvancedProfiler {
             start_time: None,
         }
     }
-
     /// 使用默认配置创建
     pub fn with_default_config() -> Self {
         Self::new(AdvancedProfilerConfig::default())
     }
-
     /// 启动性能分析
     pub fn start(&mut self) {
         self.is_running = true;
         self.start_time = Some(std::time::Instant::now());
     }
-
     /// 停止性能分析
     pub fn stop(&mut self) {
         self.is_running = false;
     }
-
     /// 检查是否正在运行
     pub fn is_active(&self) -> bool {
         self.is_running
     }
-
     /// 跟踪函数调用
     pub fn track_function(
         &mut self,
@@ -152,9 +135,7 @@ impl AdvancedProfiler {
             .as_ref()
             .map(|a| a.get_current_stack().len())
             .unwrap_or(0);
-
         let handle: _ = self.function_tracker.track_function(function_name, start_memory, call_depth);
-
         // 同时记录到调用栈分析器
         if let Some(stack_analyzer) = &mut self.stack_analyzer {
             let timestamp: _ = std::time::SystemTime::now()
@@ -163,10 +144,8 @@ impl AdvancedProfiler {
                 .as_secs();
             stack_analyzer.enter_function(function_name, file, line, column, timestamp);
         }
-
         handle
     }
-
     /// 记录函数返回
     pub fn record_return(
         &mut self,
@@ -174,7 +153,6 @@ impl AdvancedProfiler {
         end_memory: usize,
     ) -> Option<FunctionStats> {
         let stats: _ = self.function_tracker.record_return(handle.clone(), end_memory);
-
         // 同时记录到调用栈分析器
         if let Some(stack_analyzer) = &mut self.stack_analyzer {
             let timestamp: _ = std::time::SystemTime::now()
@@ -187,7 +165,6 @@ impl AdvancedProfiler {
                 end_memory,
             );
         }
-
         // 记录到热点分析器
         if let Some(hotspot_analyzer) = &mut self.hotspot_analyzer {
             if let Some(ref function_stats) = stats {
@@ -200,46 +177,36 @@ impl AdvancedProfiler {
                 );
             }
         }
-
         stats
     }
-
     /// 执行性能分析
     pub fn analyze(&mut self) -> PerformanceSummary {
         let mut summary = PerformanceSummary::new();
-
         // 获取执行时间
         if let Some(start_time) = self.start_time {
             summary.total_execution_time = start_time.elapsed();
         }
-
         // 获取函数统计
         let function_stats: _ = self.function_tracker.get_all_function_stats();
         summary.function_count = function_stats.len();
         summary.total_calls = function_stats.values().map(|s| s.call_count).sum();
-
         // 获取热点分析结果
         if let Some(hotspot_analyzer) = &mut self.hotspot_analyzer {
             summary.hotspots = hotspot_analyzer.identify_hotspots();
         }
-
         // 获取调用栈分析结果
         if let Some(stack_analyzer) = &mut self.stack_analyzer {
             let stack_analysis: _ = stack_analyzer.analyze_stack();
             summary.bottlenecks = stack_analysis.bottlenecks.clone();
             summary.call_stack_analysis = Some(stack_analysis);
         }
-
         // 生成优化建议
         summary.optimization_recommendations = self.generate_recommendations(&summary);
-
         summary
     }
-
     /// 生成优化建议
     fn generate_recommendations(&self, summary: &PerformanceSummary) -> Vec<OptimizationRecommendation> {
         let mut recommendations = Vec::new();
-
         // 基于热点函数生成建议
         for hotspot in &summary.hotspots {
             for suggestion in &hotspot.optimization_suggestions {
@@ -270,7 +237,6 @@ impl AdvancedProfiler {
                 });
             }
         }
-
         // 基于瓶颈生成建议
         for bottleneck in &summary.bottlenecks {
             recommendations.push(OptimizationRecommendation {
@@ -286,29 +252,23 @@ impl AdvancedProfiler {
                 difficulty: Difficulty::Hard,
             });
         }
-
         recommendations
     }
-
     /// 生成并保存报告
     pub fn generate_report(&mut self) -> Result<String, String> {
         let summary: _ = self.analyze();
-
         let mut output = String::new();
-
         // 生成文本报告
         if self.config.report_config.generate_text {
             output.push_str(&summary.to_text());
             output.push('\n');
         }
-
         // 生成 JSON 报告
         if self.config.report_config.generate_json {
             output.push_str("\n=== JSON 格式报告 ===\n");
             output.push_str(&summary.to_json());
             output.push('\n');
         }
-
         // 生成 HTML 报告
         if self.config.report_config.generate_html {
             let html: _ = summary.to_html();
@@ -319,10 +279,8 @@ impl AdvancedProfiler {
                 output.push_str(&format!("\nHTML 报告已保存到: {}\n", filename));
             }
         }
-
         Ok(output)
     }
-
     /// 获取实时快照
     pub fn get_realtime_snapshot(&self) -> RealtimeSnapshot {
         RealtimeSnapshot {
@@ -333,7 +291,6 @@ impl AdvancedProfiler {
             total_traces: self.function_tracker.get_tracker_stats().total_traces,
         }
     }
-
     /// 清除所有数据
     pub fn clear(&mut self) {
         self.function_tracker.clear();
@@ -344,18 +301,15 @@ impl AdvancedProfiler {
             hotspot_analyzer.clear();
         }
     }
-
     /// 获取函数统计
     pub fn get_function_stats(&self, function_name: &str) -> Option<&FunctionStats> {
         self.function_tracker.get_function_stats(function_name)
     }
-
     /// 获取所有函数统计
     pub fn get_all_function_stats(&self) -> Vec<FunctionStats> {
         self.function_tracker.get_all_function_stats().into_values().collect()
     }
 }
-
 /// 实时性能快照
 #[derive(Debug, Clone)]
 pub struct RealtimeSnapshot {
@@ -370,13 +324,11 @@ pub struct RealtimeSnapshot {
     /// 总跟踪数
     pub total_traces: u64,
 }
-
 impl RealtimeSnapshot {
     /// 获取运行时间（秒）
     pub fn get_uptime_seconds(&self) -> f64 {
         self.uptime.map(|d| d.as_secs_f64()).unwrap_or(0.0)
     }
-
     /// 获取每秒跟踪数
     pub fn get_traces_per_second(&self) -> f64 {
         let uptime: _ = self.get_uptime_seconds();
@@ -387,82 +339,63 @@ impl RealtimeSnapshot {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_advanced_profiler_creation() {
         let profiler: _ = AdvancedProfiler::with_default_config();
         assert!(!profiler.is_active());
     }
-
     #[test]
     fn test_start_and_stop() {
         let mut profiler = AdvancedProfiler::with_default_config();
-
         profiler.start();
         assert!(profiler.is_active());
-
         profiler.stop();
         assert!(!profiler.is_active());
     }
-
     #[test]
     fn test_track_and_record() {
         let mut profiler = AdvancedProfiler::with_default_config();
-
         profiler.start();
-
         let handle: _ = profiler.track_function("test_function", None, None, None);
         std::thread::sleep(std::time::Duration::from_millis(10));
-
         let stats: _ = profiler.record_return(handle, 1024);
         assert!(stats.is_some());
-
         let stats: _ = stats.unwrap();
         assert_eq!(stats.function_name, "test_function");
         assert!(stats.call_count >= 1);
     }
-
     #[test]
     fn test_generate_report() {
         let mut profiler = AdvancedProfiler::with_default_config();
-
         profiler.start();
-
         // 执行一些函数调用
         for _ in 0..10 {
             let handle: _ = profiler.track_function("test_func", None, None, None);
             std::thread::sleep(std::time::Duration::from_millis(1));
             profiler.record_return(handle, 1024);
         }
-
         let report: _ = profiler.generate_report();
         assert!(report.is_ok());
         assert!(report.unwrap().contains("性能分析摘要报告"));
     }
-
     #[test]
     fn test_realtime_snapshot() {
         let profiler: _ = AdvancedProfiler::with_default_config();
         let snapshot: _ = profiler.get_realtime_snapshot();
-
         assert!(!snapshot.is_running);
         assert_eq!(snapshot.active_traces, 0);
     }
-
     #[test]
     fn test_clear() {
         let mut profiler = AdvancedProfiler::with_default_config();
-
         profiler.start();
         profiler.track_function("test_func", None, None, None);
         profiler.clear();
-
         assert_eq!(profiler.get_all_function_stats().len(), 0);
     }
 }

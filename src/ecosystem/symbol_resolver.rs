@@ -2,12 +2,10 @@
 //! Stage 91 Phase 3.2.1 - 符号解析和引用解决
 //!
 //! 解析和跟踪代码中的符号引用，解决跨文件依赖
-
 use super::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 符号解析器
 #[derive(Debug)]
 pub struct SymbolResolver {
@@ -15,7 +13,6 @@ pub struct SymbolResolver {
     import_graph: HashMap<String, HashSet<String>>,
     config: ResolverConfig,
 }
-
 impl SymbolResolver {
     /// 创建新的符号解析器
     pub fn new() -> Self {
@@ -25,20 +22,15 @@ impl SymbolResolver {
             config: ResolverConfig::default(),
         }
     }
-
     /// 解析文件中的符号
     pub fn resolve_file_symbols(&mut self, filename: &str, source: &str) -> Result<Vec<ResolvedSymbol>, Box<dyn std::error::Error>> {
         let mut resolved_symbols = Vec::new();
-
         // 解析 import 语句
         let imports: _ = self.parse_imports(source)?;
-
         // 解析 export 语句
         let exports: _ = self.parse_exports(source)?;
-
         // 解析符号使用
         let usages: _ = self.parse_symbol_usages(source)?;
-
         // 解决符号引用
         for usage in usages {
             if let Some(symbol) = self.resolve_symbol(&usage.symbol_name, filename) {
@@ -50,28 +42,22 @@ impl SymbolResolver {
                 });
             }
         }
-
         // 记录导入关系
         self.import_graph.entry(filename.to_string()).or_insert_with(HashSet::new).extend(imports);
-
         Ok(resolved_symbols)
     }
-
     /// 解析 import 语句
     fn parse_imports(&self, source: &str) -> Result<HashSet<String>, Box<dyn std::error::Error>> {
         let mut imports = HashSet::new();
         let lines: Vec<&str> = source.lines().collect();
-
         for line in &lines {
             let trimmed: _ = line.trim();
-
             // ES6 import
             if trimmed.starts_with("import ") {
                 if let Some(imports_info) = self.parse_es6_import(trimmed) {
                     imports.extend(imports_info);
                 }
             }
-
             // CommonJS require
             if trimmed.starts_with("const ") && trimmed.contains("require(") {
                 if let Some(require_info) = self.parse_require(trimmed) {
@@ -79,14 +65,11 @@ impl SymbolResolver {
                 }
             }
         }
-
         Ok(imports)
     }
-
     /// 解析 ES6 import 语句
     fn parse_es6_import(&self, line: &str) -> Option<HashSet<String>> {
         let mut imports = HashSet::new();
-
         // import { ... } from 'module'
         if line.contains("from ") {
             if let Some(import_part) = line.split("from ").nth(1) {
@@ -108,7 +91,6 @@ impl SymbolResolver {
                 }
             }
         }
-
         // import * as name from 'module'
         if line.contains("* as ") {
             if let Some(alias_start) = line.find("* as ") {
@@ -117,21 +99,18 @@ impl SymbolResolver {
                 imports.insert(alias.trim().to_string());
             }
         }
-
         if imports.is_empty() {
             None
         } else {
             Some(imports)
         }
     }
-
     /// 解析 CommonJS require
     fn parse_require(&self, line: &str) -> Option<String> {
         if let Some(require_start) = line.find("require(") {
             let require_end: _ = line.find(')', require_start)?;
             let module_path: _ = &line[require_start + 8..require_end];
             let module_name: _ = module_path.trim().trim_matches('"').trim_matches('\'');
-
             // 从 module path 提取模块名
             if module_name.starts_with('.') {
                 // 相对路径
@@ -144,15 +123,12 @@ impl SymbolResolver {
             None
         }
     }
-
     /// 解析 export 语句
     fn parse_exports(&self, source: &str) -> Result<HashSet<String>, Box<dyn std::error::Error>> {
         let mut exports = HashSet::new();
         let lines: Vec<&str> = source.lines().collect();
-
         for line in &lines {
             let trimmed: _ = line.trim();
-
             // export { ... }
             if trimmed.starts_with("export {") {
                 if let Some(exports_part) = trimmed.strip_prefix("export {") {
@@ -162,43 +138,35 @@ impl SymbolResolver {
                     }
                 }
             }
-
             // export default ...
             if trimmed.starts_with("export default ") {
                 exports.insert("default".to_string());
             }
-
             // export function/class/const/let/var
             if trimmed.starts_with("export function ") {
                 if let Some(name) = trimmed.split_whitespace().nth(2) {
                     exports.insert(name.to_string());
                 }
             }
-
             if trimmed.starts_with("export class ") {
                 if let Some(name) = trimmed.split_whitespace().nth(2) {
                     exports.insert(name.to_string());
                 }
             }
-
             if trimmed.starts_with("export const ") || trimmed.starts_with("export let ") || trimmed.starts_with("export var ") {
                 if let Some(name) = trimmed.split_whitespace().nth(2) {
                     exports.insert(name.to_string());
                 }
             }
         }
-
         Ok(exports)
     }
-
     /// 解析符号使用
     fn parse_symbol_usages(&self, source: &str) -> Result<Vec<SymbolUsage>, Box<dyn std::error::Error>> {
         let mut usages = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
-
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed: _ = line.trim();
-
             // 跳过声明语句
             if trimmed.starts_with("import ") || trimmed.starts_with("export ") {
                 continue;
@@ -209,7 +177,6 @@ impl SymbolResolver {
             if trimmed.starts_with("class ") || trimmed.starts_with("interface ") || trimmed.starts_with("type ") {
                 continue;
             }
-
             // 查找符号使用
             // 简化实现 - 查找标识符
             let words: Vec<&str> = trimmed.split_whitespace().collect();
@@ -227,31 +194,25 @@ impl SymbolResolver {
                 }
             }
         }
-
         Ok(usages)
     }
-
     /// 检查是否是可能的符号名
     fn is_likely_symbol(&self, word: &str) -> bool {
         // 排除关键字和内置对象
         let keywords: _ = ["if", "else", "for", "while", "return", "function", "class", "const", "let", "var", "this", "new", "try", "catch", "throw"];
         let builtins: _ = ["console", "window", "document", "Math", "JSON", "Object", "Array", "String", "Number", "Boolean", "Date", "Promise"];
-
         !keywords.contains(&word) && !builtins.contains(&word) && word.len() > 1
     }
-
     /// 解析符号
     pub fn register_symbol(&mut self, symbol_name: String, symbol_info: SymbolInfo) {
         self.symbol_table.insert(symbol_name, symbol_info);
     }
-
     /// 解决符号引用
     pub fn resolve_symbol(&self, symbol_name: &str, current_file: &str) -> Option<SymbolInfo> {
         // 首先在当前文件的符号表中查找
         if let Some(symbol) = self.symbol_table.get(symbol_name) {
             return Some(symbol.clone());
         }
-
         // 在导入的模块中查找
         if let Some(imports) = self.import_graph.get(current_file) {
             for imported_module in imports {
@@ -261,30 +222,24 @@ impl SymbolResolver {
                 }
             }
         }
-
         None
     }
-
     /// 获取导入图
     pub fn get_import_graph(&self) -> &HashMap<String, HashSet<String> {
         &self.import_graph
     }
-
     /// 查找循环依赖
     pub fn find_circular_dependencies(&self) -> Vec<Vec<String> {
         let mut cycles = Vec::new();
         let mut visited = HashSet::new();
         let mut path = Vec::new();
-
         for module in self.import_graph.keys() {
             if !visited.contains(module) {
                 self.dfs_find_cycles(module, &mut visited, &mut path, &mut cycles);
             }
         }
-
         cycles
     }
-
     /// DFS 查找循环
     fn dfs_find_cycles(
         &self,
@@ -295,7 +250,6 @@ impl SymbolResolver {
     ) {
         visited.insert(node.to_string());
         path.push(node.to_string());
-
         if let Some(dependencies) = self.import_graph.get(node) {
             for dep in dependencies {
                 if !visited.contains(dep) {
@@ -309,30 +263,24 @@ impl SymbolResolver {
                 }
             }
         }
-
         path.pop();
     }
-
     /// 获取未解析的符号
     pub fn get_unresolved_symbols(&self, usages: &[SymbolUsage]) -> Vec<String> {
         let mut unresolved = Vec::new();
-
         for usage in usages {
             if !self.symbol_table.contains_key(&usage.symbol_name) {
                 unresolved.push(usage.symbol_name.clone());
             }
         }
-
         unresolved
     }
-
     /// 清理符号表
     pub fn clear(&mut self) {
         self.symbol_table.clear();
         self.import_graph.clear();
     }
 }
-
 /// 符号信息
 #[derive(Debug, Clone)]
 pub struct SymbolInfo {
@@ -343,7 +291,6 @@ pub struct SymbolInfo {
     pub exported: bool,
     pub js_doc: Option<String>,
 }
-
 /// 符号种类
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SymbolKind {
@@ -356,21 +303,18 @@ pub enum SymbolKind {
     Namespace,
     Module,
 }
-
 /// 符号使用
 #[derive(Debug, Clone)]
 pub struct SymbolUsage {
     pub symbol_name: String,
     pub location: UsageLocation,
 }
-
 /// 使用位置
 #[derive(Debug, Clone)]
 pub struct UsageLocation {
     pub line: usize,
     pub column: usize,
 }
-
 /// 已解析的符号
 #[derive(Debug, Clone)]
 pub struct ResolvedSymbol {
@@ -379,7 +323,6 @@ pub struct ResolvedSymbol {
     pub usage_location: UsageLocation,
     pub is_export: bool,
 }
-
 /// 解析器配置
 #[derive(Debug, Clone)]
 pub struct ResolverConfig {
@@ -387,7 +330,6 @@ pub struct ResolverConfig {
     pub track_usages: bool,
     pub check_circular_deps: bool,
 }
-
 impl Default for ResolverConfig {
     fn default() -> Self {
         Self {

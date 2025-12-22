@@ -5,7 +5,6 @@
 //! - 基准测试参数
 //! - 工作负载配置文件
 //! - 运行时对比配置
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -13,7 +12,6 @@ use std::time::Duration;
 use super::{Runtime, MetricType};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 基准测试配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkConfig {
@@ -46,7 +44,6 @@ pub struct BenchmarkConfig {
     /// 分类
     pub category: Option<String>,
 }
-
 impl Default for BenchmarkConfig {
     fn default() -> Self {
         Self {
@@ -67,86 +64,72 @@ impl Default for BenchmarkConfig {
         }
     }
 }
-
 impl BenchmarkConfig {
     /// 创建新的基准测试配置
     pub fn new() -> Self {
         Self::default()
     }
-
     /// 设置迭代次数
     pub fn iterations(mut self, iterations: u32) -> Self {
         self.iterations = iterations;
         self
     }
-
     /// 设置预热迭代次数
     pub fn warmup_iterations(mut self, warmup_iterations: u32) -> Self {
         self.warmup_iterations = warmup_iterations;
         self
     }
-
     /// 设置超时时间
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
     }
-
     /// 设置输出格式
     pub fn output_format(mut self, output_format: OutputFormat) -> Self {
         self.output_format = output_format;
         self
     }
-
     /// 启用性能分析
     pub fn enable_profiling(mut self, enable: bool) -> Self {
         self.enable_profiling = enable;
         self
     }
-
     /// 设置工作线程数
     pub fn workers(mut self, workers: u32) -> Self {
         self.workers = workers;
         self
     }
-
     /// 设置输出目录
     pub fn output_dir(mut self, output_dir: PathBuf) -> Self {
         self.output_dir = output_dir;
         self
     }
-
     /// 设置详细程度
     pub fn verbosity(mut self, verbosity: Verbosity) -> Self {
         self.verbosity = verbosity;
         self
     }
-
     /// 设置基准测试名称
     pub fn name(mut self, name: &str) -> Self {
         self.name = name.to_string();
         self
     }
-
     /// 设置描述
     pub fn description(mut self, description: &str) -> Self {
         self.description = Some(description.to_string());
         self
     }
-
     /// 添加标签
     pub fn add_tag(mut self, tag: &str) -> Self {
         self.tags.push(tag.to_string());
         self
     }
-
     /// 设置分类
     pub fn category(mut self, category: &str) -> Self {
         self.category = Some(category.to_string());
         self
     }
 }
-
 /// 输出格式
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum OutputFormat {
@@ -161,13 +144,11 @@ pub enum OutputFormat {
     /// Prometheus 格式
     Prometheus,
 }
-
 impl Default for OutputFormat {
     fn default() -> Self {
         OutputFormat::Json
     }
 }
-
 /// 详细程度
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Verbosity {
@@ -184,13 +165,11 @@ pub enum Verbosity {
     /// 详细调试信息
     Trace,
 }
-
 impl Default for Verbosity {
     fn default() -> Self {
         Verbosity::Info
     }
 }
-
 /// 测试套件配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestSuite {
@@ -215,7 +194,6 @@ pub struct TestSuite {
     /// 清理脚本
     pub cleanup_script: Option<PathBuf>,
 }
-
 impl TestSuite {
     /// 创建新的测试套件
     pub fn new(name: &str, description: &str) -> Self {
@@ -232,38 +210,32 @@ impl TestSuite {
             cleanup_script: None,
         }
     }
-
     /// 添加基准测试
     pub fn add_benchmark(mut self, benchmark: BenchmarkTest) -> Self {
         self.benchmarks.push(benchmark);
         self
     }
-
     /// 添加工作负载
     pub fn add_workload(mut self, workload: WorkloadProfile) -> Self {
         self.workloads.push(workload);
         self
     }
-
     /// 添加运行时
     pub fn add_runtime(mut self, runtime: Runtime) -> Self {
         self.runtimes.push(runtime);
         self
     }
-
     /// 添加环境变量
     pub fn add_env(mut self, key: &str, value: &str) -> Self {
         self.environment.insert(key.to_string(), value.to_string());
         self
     }
-
     /// 设置环境变量
     pub fn environment(mut self, environment: HashMap<String, String>) -> Self {
         self.environment = environment;
         self
     }
 }
-
 /// 基准测试定义
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkTest {
@@ -296,7 +268,6 @@ pub struct BenchmarkTest {
     /// 清理代码
     pub cleanup_code: Option<String>,
 }
-
 impl BenchmarkTest {
     /// 创建新的基准测试
     pub fn new(name: &str, description: &str, code: &str, language: TestLanguage) -> Self {
@@ -317,74 +288,62 @@ impl BenchmarkTest {
             cleanup_code: None,
         }
     }
-
     /// 设置预期结果
     pub fn expected_result(mut self, result: &str) -> Self {
         self.expected_result = Some(result.to_string());
         self
     }
-
     /// 设置迭代次数
     pub fn iterations(mut self, iterations: u32) -> Self {
         self.iterations = Some(iterations);
         self
     }
-
     /// 设置超时时间
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.timeout = Some(timeout);
         self
     }
-
     /// 添加标签
     pub fn add_tag(mut self, tag: &str) -> Self {
         self.tags.push(tag.to_string());
         self
     }
-
     /// 设置分类
     pub fn category(mut self, category: &str) -> Self {
         self.category = Some(category.to_string());
         self
     }
-
     /// 启用测试
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
         self
     }
-
     /// 添加依赖
     pub fn add_dependency(mut self, dependency: &str) -> Self {
         self.dependencies.push(dependency.to_string());
         self
     }
-
     /// 添加环境变量
     pub fn add_env(mut self, key: &str, value: &str) -> Self {
         self.environment.insert(key.to_string(), value.to_string());
         self
     }
-
     /// 设置环境变量
     pub fn environment(mut self, environment: HashMap<String, String>) -> Self {
         self.environment = environment;
         self
     }
-
     /// 设置设置代码
     pub fn setup_code(mut self, code: &str) -> Self {
         self.setup_code = Some(code.to_string());
         self
     }
-
     /// 设置清理代码
     pub fn cleanup_code(mut self, code: &str) -> Self {
         self.cleanup_code = Some(code.to_string());
         self
     }
 }
-
 /// 测试语言
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TestLanguage {
@@ -397,13 +356,11 @@ pub enum TestLanguage {
     /// Rust
     Rust,
 }
-
 impl Default for TestLanguage {
     fn default() -> Self {
         TestLanguage::JavaScript
     }
 }
-
 impl std::fmt::Display for TestLanguage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -414,7 +371,6 @@ impl std::fmt::Display for TestLanguage {
         }
     }
 }
-
 /// 工作负载配置文件
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkloadProfile {
@@ -441,7 +397,6 @@ pub struct WorkloadProfile {
     /// 启用/禁用
     pub enabled: bool,
 }
-
 impl WorkloadProfile {
     /// 创建新的工作负载配置
     pub fn new(name: &str, workload_type: WorkloadType, description: &str) -> Self {
@@ -459,62 +414,52 @@ impl WorkloadProfile {
             enabled: true,
         }
     }
-
     /// 添加参数
     pub fn add_parameter(mut self, key: &str, value: serde_json::Value) -> Self {
         self.parameters.insert(key.to_string(), value);
         self
     }
-
     /// 设置参数
     pub fn parameters(mut self, parameters: HashMap<String, serde_json::Value>) -> Self {
         self.parameters = parameters;
         self
     }
-
     /// 设置资源需求
     pub fn resource_requirements(mut self, requirements: ResourceRequirements) -> Self {
         self.resource_requirements = requirements;
         self
     }
-
     /// 设置持续时间
     pub fn duration(mut self, duration: Duration) -> Self {
         self.duration = Some(duration);
         self
     }
-
     /// 设置迭代次数
     pub fn iterations(mut self, iterations: u32) -> Self {
         self.iterations = Some(iterations);
         self
     }
-
     /// 设置并发级别
     pub fn concurrency(mut self, concurrency: u32) -> Self {
         self.concurrency = concurrency;
         self
     }
-
     /// 添加标签
     pub fn add_tag(mut self, tag: &str) -> Self {
         self.tags.push(tag.to_string());
         self
     }
-
     /// 设置分类
     pub fn category(mut self, category: &str) -> Self {
         self.category = Some(category.to_string());
         self
     }
-
     /// 启用工作负载
     pub fn enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
         self
     }
 }
-
 /// 工作负载类型
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum WorkloadType {
@@ -531,7 +476,6 @@ pub enum WorkloadType {
     /// 混合型
     Mixed,
 }
-
 impl std::fmt::Display for WorkloadType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -544,7 +488,6 @@ impl std::fmt::Display for WorkloadType {
         }
     }
 }
-
 /// 资源需求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceRequirements {
@@ -561,7 +504,6 @@ pub struct ResourceRequirements {
     /// GPU 要求
     pub gpu_requirements: Option<GpuRequirements>,
 }
-
 impl Default for ResourceRequirements {
     fn default() -> Self {
         Self {
@@ -574,50 +516,42 @@ impl Default for ResourceRequirements {
         }
     }
 }
-
 impl ResourceRequirements {
     /// 创建新的资源需求
     pub fn new() -> Self {
         Self::default()
     }
-
     /// 设置最小内存
     pub fn min_memory(mut self, memory: u64) -> Self {
         self.min_memory = Some(memory);
         self
     }
-
     /// 设置最大内存
     pub fn max_memory(mut self, memory: u64) -> Self {
         self.max_memory = Some(memory);
         self
     }
-
     /// 设置 CPU 核心数
     pub fn cpu_cores(mut self, cores: u32) -> Self {
         self.cpu_cores = Some(cores);
         self
     }
-
     /// 设置网络带宽
     pub fn network_bandwidth(mut self, bandwidth: u64) -> Self {
         self.network_bandwidth = Some(bandwidth);
         self
     }
-
     /// 设置磁盘 I/O
     pub fn disk_io(mut self, io: u64) -> Self {
         self.disk_io = Some(io);
         self
     }
-
     /// 设置 GPU 要求
     pub fn gpu_requirements(mut self, requirements: GpuRequirements) -> Self {
         self.gpu_requirements = Some(requirements);
         self
     }
 }
-
 /// GPU 要求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GpuRequirements {
@@ -628,7 +562,6 @@ pub struct GpuRequirements {
     /// 必需的 GPU 数量
     pub gpu_count: Option<u32>,
 }
-
 impl GpuRequirements {
     /// 创建新的 GPU 要求
     pub fn new() -> Self {
@@ -638,26 +571,22 @@ impl GpuRequirements {
             gpu_count: None,
         }
     }
-
     /// 设置最小显存
     pub fn min_vram(mut self, vram: u64) -> Self {
         self.min_vram = Some(vram);
         self
     }
-
     /// 设置计算能力
     pub fn compute_capability(mut self, capability: u32) -> Self {
         self.compute_capability = Some(capability);
         self
     }
-
     /// 设置 GPU 数量
     pub fn gpu_count(mut self, count: u32) -> Self {
         self.gpu_count = Some(count);
         self
     }
 }
-
 /// 运行时对比配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuntimeComparison {
@@ -690,7 +619,6 @@ pub struct RuntimeComparison {
     /// 历史数据路径
     pub history_path: Option<PathBuf>,
 }
-
 impl Default for RuntimeComparison {
     fn default() -> Self {
         Self {
@@ -711,7 +639,6 @@ impl Default for RuntimeComparison {
         }
     }
 }
-
 impl RuntimeComparison {
     /// 创建新的运行时对比
     pub fn new(name: &str, description: &str) -> Self {
@@ -721,80 +648,67 @@ impl RuntimeComparison {
             ..Self::default()
         }
     }
-
     /// 设置基准运行时
     pub fn baseline_runtime(mut self, runtime: Runtime) -> Self {
         self.baseline_runtime = runtime;
         self
     }
-
     /// 添加对比运行时
     pub fn add_comparison_runtime(mut self, runtime: Runtime) -> Self {
         self.comparison_runtimes.push(runtime);
         self
     }
-
     /// 添加基准测试
     pub fn add_benchmark(mut self, benchmark: &str) -> Self {
         self.benchmarks.push(benchmark.to_string());
         self
     }
-
     /// 添加工作负载
     pub fn add_workload(mut self, workload: &str) -> Self {
         self.workloads.push(workload.to_string());
         self
     }
-
     /// 设置对比模式
     pub fn comparison_mode(mut self, mode: ComparisonMode) -> Self {
         self.comparison_mode = mode;
         self
     }
-
     /// 设置统计显著性水平
     pub fn significance_level(mut self, level: f64) -> Self {
         self.significance_level = level;
         self
     }
-
     /// 设置最小样本数
     pub fn min_samples(mut self, samples: u32) -> Self {
         self.min_samples = samples;
         self
     }
-
     /// 启用自动检测运行时
     pub fn auto_detect_runtimes(mut self, auto_detect: bool) -> Self {
         self.auto_detect_runtimes = auto_detect;
         self
     }
-
     /// 生成报告
     pub fn generate_report(mut self, generate: bool) -> Self {
         self.generate_report = generate;
         self
     }
-
     /// 设置报告格式
     pub fn report_format(mut self, format: OutputFormat) -> Self {
         self.report_format = format;
         self
     }
-
     /// 保存历史数据
     pub fn save_history(mut self, save: bool) -> Self {
         self.save_history = save;
         self
     }
-
     /// 设置历史数据路径
     pub fn history_path(mut self, path: PathBuf) -> Self {
         self.history_path = Some(path);
         self
     }
 }
-
 /// 对比模式
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ComparisonMode {
@@ -807,7 +721,6 @@ pub enum ComparisonMode {
     /// 百分比对比
     Percentage,
 }
-
 impl Default for ComparisonMode {
     fn default() -> Self {
         ComparisonMode::Statistical

@@ -1,10 +1,8 @@
 //! Web Crypto API implementation
-
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 pub fn setup_crypto_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
@@ -18,7 +16,6 @@ pub fn setup_crypto_api(
         println!("crypto.getRandomValues called");
     });
     let get_random_func_instance: _ = get_random_func.get_function(scope).unwrap();
-
     subtle_obj.set(scope, get_random_key.into(), get_random_func_instance.into());
     
     crypto_obj.set(scope, subtle_key.into(), subtle_obj.into());

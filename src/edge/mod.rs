@@ -1,6 +1,5 @@
 //! Edge Computing Module
 //! CDN integration, edge deployment, global distribution, and caching strategies
-
 pub mod cdn_provider;
 pub mod cloudflare_integration;
 pub mod vercel_integration;
@@ -15,7 +14,6 @@ pub mod intelligent_router;
 pub mod distributed_coordinator;
 pub mod performance_optimizer;
 pub mod network_optimizer;
-
 pub use cache_strategy::*;
 pub use node_manager::{*, NodeId, NodeStatus, EdgeNode, NodeHealth, Task, TaskPriority, LoadBalancingStrategy};
 pub use local_cache::{*, CacheStats as LocalCacheStats};

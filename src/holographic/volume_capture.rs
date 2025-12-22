@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 // 体积捕捉系统
-
 /// 颜色格式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorFormat {
@@ -18,13 +17,11 @@ pub enum ColorFormat {
     /// 16位浮点 RGBA
     RGBA16F,
 }
-
 impl Default for ColorFormat {
     fn default() -> Self {
         Self::RGBA32
     }
 }
-
 /// 捕捉配置
 #[derive(Debug, Clone)]
 pub struct CaptureConfig {
@@ -35,7 +32,6 @@ pub struct CaptureConfig {
     /// 颜色格式
     pub color_format: ColorFormat,
 }
-
 impl Default for CaptureConfig {
     fn default() -> Self {
         Self {
@@ -45,7 +41,6 @@ impl Default for CaptureConfig {
         }
     }
 }
-
 /// 体积捕捉系统
 pub struct VolumeCapture {
     /// 配置
@@ -53,7 +48,6 @@ pub struct VolumeCapture {
     /// 当前帧数据
     current_volume: Option<VolumeData>,
 }
-
 impl VolumeCapture {
     /// 创建体积捕捉系统
     pub fn new(config: CaptureConfig) -> Result<Self, CaptureError> {
@@ -62,38 +56,31 @@ impl VolumeCapture {
             current_volume: None,
         })
     }
-
     /// 获取分辨率
     pub fn resolution(&self) -> (u32, u32, u32) {
         self.config.resolution
     }
-
     /// 捕捉体积数据
     pub fn capture(&mut self) -> Result<&VolumeData, CaptureError> {
         let (x, y, z) = self.config.resolution;
         let voxel_count: _ = (x * y * z) as usize;
-
         let volume: _ = VolumeData {
             resolution: self.config.resolution,
             voxels: vec![Voxel::default(); voxel_count],
             timestamp: std::time::SystemTime::now(),
         };
-
         self.current_volume = Some(volume);
         Ok(self.current_volume.as_ref().unwrap())
     }
-
     /// 获取当前体积数据
     pub fn current_volume(&self) -> Option<&VolumeData> {
         self.current_volume.as_ref()
     }
-
     /// 获取配置
     pub fn config(&self) -> &CaptureConfig {
         &self.config
     }
 }
-
 /// 体素
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Voxel {
@@ -104,7 +91,6 @@ pub struct Voxel {
     /// 法线
     pub normal: [f32; 3],
 }
-
 /// 体积数据
 #[derive(Debug, Clone)]
 pub struct VolumeData {
@@ -115,7 +101,6 @@ pub struct VolumeData {
     /// 时间戳
     pub timestamp: std::time::SystemTime,
 }
-
 /// 捕捉错误
 #[derive(Debug, Clone)]
 pub enum CaptureError {
@@ -126,7 +111,6 @@ pub enum CaptureError {
     /// 设备未找到
     DeviceNotFound,
 }
-
 impl std::fmt::Display for CaptureError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -136,5 +120,4 @@ impl std::fmt::Display for CaptureError {
         }
     }
 }
-
 impl std::error::Error for CaptureError {}

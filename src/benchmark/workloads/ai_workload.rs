@@ -1,18 +1,15 @@
 //! AI 工作负载
 //!
 //! 实现 AI 推理相关任务的性能测试
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use super::{WorkloadResult, ResourceUsage, BenchmarkError, BenchmarkResult as Result};
-
 /// AI 工作负载
 #[derive(Debug)]
 pub struct AIWorkload {
     workload_type: super::WorkloadType,
 }
-
 impl AIWorkload {
     /// 创建新的 AI 工作负载
     pub fn new() -> Self {
@@ -20,7 +17,6 @@ impl AIWorkload {
             workload_type: super::WorkloadType::AiWorkload,
         }
     }
-
     /// 执行工作负载
     pub async fn execute(
         &self,
@@ -29,10 +25,8 @@ impl AIWorkload {
     ) -> Result<WorkloadResult> {
         let mut result = WorkloadResult::new(self.workload_type);
         result.start();
-
         let iterations: _ = get_iterations(&parameters);
         let operation: _ = get_operation(&parameters);
-
         // 并行执行 AI 任务
         let handles: Vec<_> = (0..concurrency)
             .map(|_| {
@@ -43,7 +37,6 @@ impl AIWorkload {
                 })
             })
             .collect();
-
         // 等待所有任务完成
         let mut total_iterations = 0;
         for handle in handles {
@@ -59,22 +52,18 @@ impl AIWorkload {
                 }
             }
         }
-
         // 收集资源使用情况
         let resource_usage: _ = Self::collect_resource_usage();
         result.resource_usage = resource_usage;
-
         result.finish(total_iterations);
         Ok(result)
     }
-
     /// 运行 AI 任务
     async fn run_ai_tasks(
         operation: String,
         iterations: u32,
     ) -> Result<u32, BenchmarkError> {
         let mut completed_iterations = 0;
-
         for _ in 0..iterations {
             match operation.as_str() {
                 "tensor_operation" => {
@@ -94,42 +83,34 @@ impl AIWorkload {
                         format!("Unknown operation: {}", operation));
                 }
             }
-
             completed_iterations += 1;
             tokio::task::yield_now().await;
         }
-
         Ok(completed_iterations)
     }
-
     /// 张量运算基准测试
     async fn tensor_operation_benchmark() -> Result<(), BenchmarkError> {
         // 模拟张量运算
         let size: _ = 100;
         let mut tensor = vec![vec![0.0f64; size]; size];
-
         for i in 0..size {
             for j in 0..size {
                 tensor[i][j] = (i as f64 * j as f64).sin();
             }
         }
-
         Ok(())
     }
-
     /// 神经网络推理基准测试
     async fn neural_network_inference_benchmark() -> Result<(), BenchmarkError> {
         // 模拟神经网络推理
         let input_size: _ = 784; // MNIST 图像大小
         let hidden_size: _ = 128;
         let output_size: _ = 10;
-
         let mut input = vec![0.0f64; input_size];
         let mut hidden_weights = vec![vec![0.0f64; hidden_size]; input_size];
         let mut hidden_bias = vec![0.0f64; hidden_size];
         let mut output_weights = vec![vec![0.0f64; output_size]; hidden_size];
         let mut output_bias = vec![0.0f64; output_size];
-
         // 前向传播
         let mut hidden = vec![0.0f64; hidden_size];
         for i in 0..hidden_size {
@@ -138,7 +119,6 @@ impl AIWorkload {
             }
             hidden[i] += hidden_bias[i];
         }
-
         let mut output = vec![0.0f64; output_size];
         for i in 0..output_size {
             for j in 0..hidden_size {
@@ -146,10 +126,8 @@ impl AIWorkload {
             }
             output[i] += output_bias[i];
         }
-
         Ok(())
     }
-
     /// Transformer 注意力机制基准测试
     async fn transformer_attention_benchmark() -> Result<(), BenchmarkError> {
         // 模拟注意力机制计算
@@ -157,11 +135,9 @@ impl AIWorkload {
         let d_model: _ = 512;
         let num_heads: _ = 8;
         let head_dim: _ = d_model / num_heads;
-
         let mut query = vec![vec![0.0f64; head_dim]; seq_len * num_heads];
         let mut key = vec![vec![0.0f64; head_dim]; seq_len * num_heads];
         let mut value = vec![vec![0.0f64; head_dim]; seq_len * num_heads];
-
         // 计算注意力分数
         for h in 0..num_heads {
             for i in 0..seq_len {
@@ -175,17 +151,14 @@ impl AIWorkload {
                 }
             }
         }
-
         Ok(())
     }
-
     /// AI 矩阵乘法基准测试
     async fn ai_matrix_multiplication_benchmark() -> Result<(), BenchmarkError> {
         let size: _ = 256;
         let mut a = vec![vec![0.0f64; size]; size];
         let mut b = vec![vec![0.0f64; size]; size];
         let mut c = vec![vec![0.0f64; size]; size];
-
         // 初始化矩阵
         for i in 0..size {
             for j in 0..size {
@@ -193,7 +166,6 @@ impl AIWorkload {
                 b[i][j] = (i as f64 * j as f64 * 0.02).cos();
             }
         }
-
         // 矩阵乘法 (简化的批处理版本)
         for i in 0..size {
             for j in 0..size {
@@ -204,23 +176,19 @@ impl AIWorkload {
                 c[i][j] = sum;
             }
         }
-
         Ok(())
     }
-
     /// 收集资源使用情况
     fn collect_resource_usage() -> ResourceUsage {
         ResourceUsage::new()
             .cpu_usage(80.0) // AI 工作负载 CPU 使用率较高
     }
 }
-
 impl Default for AIWorkload {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// 获取迭代次数
 fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
     parameters
@@ -229,7 +197,6 @@ fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
         .map(|v| v as u32)
         .unwrap_or(10)
 }
-
 /// 获取操作类型
 fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
     parameters
@@ -238,21 +205,17 @@ fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
         .map(|s| s.to_string())
         .unwrap_or_else(|| "tensor_operation".to_string())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_workload_execution() {
         let workload: _ = AIWorkload::new();
         let mut parameters = HashMap::new();
         parameters.insert("iterations".to_string(), serde_json::Value::from(5u64));
-
         let result: _ = workload.execute(parameters, 1).await.unwrap();
-
         assert_eq!(result.workload_type, super::super::WorkloadType::AiWorkload);
         assert!(result.success);
     }

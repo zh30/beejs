@@ -2,19 +2,16 @@
 //! Stage 91 Phase 3.2.1 - 类型定义文件输出
 //!
 //! 将类型分析结果转换为 TypeScript 声明文件
-
 use super::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// .d.ts 文件发射器
 #[derive(Debug)]
 pub struct DtsEmitter {
     config: EmitterConfig,
     indent_level: usize,
 }
-
 impl DtsEmitter {
     /// 创建新的发射器
     pub fn new() -> Self {
@@ -23,108 +20,86 @@ impl DtsEmitter {
             indent_level: 0,
         }
     }
-
     /// 发射类型定义
     pub fn emit_types(&self, types: &HashMap<String, TypeDefinition>, filename: &str) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-
         // 添加文件头
         output.push_str(&format!("// Type definitions for {}\n", filename));
         output.push_str("// Project: Beejs Runtime\n");
         output.push_str("// Definitions by: Beejs Type Generator\n\n");
-
         // 添加模块声明
         output.push_str(&format!("declare module '{}' {{\n", self.get_module_name(filename));
         self.indent();
-
         // 发射所有类型
         for (_name, type_def) in types {
             let type_output: _ = self.emit_type_definition(type_def)?;
             output.push_str(&type_output);
             output.push('\n');
         }
-
         self.dedent();
         output.push_str("}\n");
-
         Ok(output)
     }
-
     /// 发射单个类型定义
     pub fn emit_type_definition(&self, type_def: &TypeDefinition) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-
         // 添加 JSDoc 注释
         if let Some(ref js_doc) = type_def.js_doc {
             for line in js_doc.lines() {
                 output.push_str(&format!("{}{}\n", self.get_indent(), line.trim());
             }
         }
-
         match type_def.kind {
             TypeKind::Interface => {
                 output.push_str(&format!("{}export interface {}", self.get_indent(), type_def.name));
-
                 // 类型参数
                 if !type_def.type_params.is_empty() {
                     output.push_str(&format!("<{}>", type_def.type_params.join(", "));
                 }
-
                 // 继承
                 if !type_def.extends.is_empty() {
                     output.push_str(&format!(" extends {}", type_def.extends.join(", "));
                 }
-
                 output.push_str(" {\n");
                 self.indent();
-
                 // 成员
                 for (_member_name, member) in &type_def.members {
                     let member_output: _ = self.emit_type_member(member)?;
                     output.push_str(&member_output);
                     output.push('\n');
                 }
-
                 self.dedent();
                 output.push_str(&format!("{}}}\n", self.get_indent());
             }
             TypeKind::Class => {
                 output.push_str(&format!("{}export class {}", self.get_indent(), type_def.name));
-
                 // 类型参数
                 if !type_def.type_params.is_empty() {
                     output.push_str(&format!("<{}>", type_def.type_params.join(", "));
                 }
-
                 // 继承
                 if let Some(_extends) = type_def.extends.first() {
                     // output.push_str(&format!(" extends {}", extends));
                 }
-
                 output.push_str(" {\n");
                 self.indent();
-
                 // 构造函数
                 output.push_str(&format!("{}constructor();\n", self.get_indent());
-
                 // 成员
                 for (_member_name, member) in &type_def.members {
                     let member_output: _ = self.emit_type_member(member)?;
                     output.push_str(&member_output);
                     output.push('\n');
                 }
-
                 self.dedent();
                 output.push_str(&format!("{}}}\n", self.get_indent());
             }
             TypeKind::TypeAlias => {
                 output.push_str(&format!("{}export type {} = ", self.get_indent(), type_def.name));
-
                 // 类型参数
                 if !type_def.type_params.is_empty() {
                     output.push_str(&format!("<{}> = ", type_def.type_params.join(", "));
                 }
-
                 output.push_str("unknown;\n");
             }
             TypeKind::Function => {
@@ -134,21 +109,17 @@ impl DtsEmitter {
                 output.push_str(&format!("{}export const {}: any;\n", self.get_indent(), type_def.name));
             }
         }
-
         Ok(output)
     }
-
     /// 发射类型成员
     pub fn emit_type_member(&self, member: &TypeMember) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-
         // JSDoc
         if let Some(ref js_doc) = member.js_doc {
             for line in js_doc.lines() {
                 output.push_str(&format!("{}{}\n", self.get_indent(), line.trim());
             }
         }
-
         match &member.member_type {
             MemberType::Property(prop_type) => {
                 output.push_str(&format!("{}{}", self.get_indent(), member.name));
@@ -170,10 +141,8 @@ impl DtsEmitter {
                 output.push_str("any;");
             }
         }
-
         Ok(output)
     }
-
     /// 发射类型
     pub fn emit_type(&self, type_info: &Type) -> Result<String, Box<dyn std::error::Error>> {
         match type_info {
@@ -203,11 +172,9 @@ impl DtsEmitter {
                 let mut output = String::new();
                 output.push_str("{\n");
                 self.indent();
-
                 for (prop_name, prop_type) in properties {
                     output.push_str(&format!("{}{}: {},\n", self.get_indent(), prop_name, self.emit_type(prop_type)?));
                 }
-
                 self.dedent();
                 output.push_str(&format!("{}}}", self.get_indent());
                 Ok(output)
@@ -218,19 +185,14 @@ impl DtsEmitter {
                 type_params,
             } => {
                 let mut output = String::new();
-
                 if !type_params.is_empty() {
                     output.push_str(&format!("<{}>", type_params.join(", "));
                 }
-
                 output.push('(');
-
                 let param_strs: Result<Vec<String>, _> = params.iter().map(|p| self.emit_type(p)).collect();
                 output.push_str(&param_strs?.join(", "));
-
                 output.push_str(") => ");
                 output.push_str(&self.emit_type(return_type)?);
-
                 Ok(output)
             }
             Type::TypeRef(type_name) => Ok(type_name.clone()),
@@ -242,55 +204,43 @@ impl DtsEmitter {
             Type::Unknown => Ok("unknown".to_string()),
         }
     }
-
     /// 发射项目范围的类型定义
     pub fn emit_project_types(&self, project_info: &ProjectTypeInfo) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-
         // 文件头
         output.push_str("// Type definitions for Beejs Project\n");
         output.push_str("// Generated automatically by Beejs Type Generator\n\n");
-
         // 全局类型
         if !project_info.globals.is_empty() {
             output.push_str("declare global {\n");
             self.indent();
-
             for (_name, type_def) in &project_info.globals {
                 let type_output: _ = self.emit_type_definition(type_def)?;
                 output.push_str(&type_output);
                 output.push('\n');
             }
-
             self.dedent();
             output.push_str("}\n\n");
         }
-
         // 模块类型
         for (_module_name, module_info) in &project_info.modules {
             output.push_str(&format!("declare module '{}' {{\n", module_info.name));
             self.indent();
-
             for (_export_name, type_def) in &module_info.exports {
                 let type_output: _ = self.emit_type_definition(type_def)?;
                 output.push_str(&type_output);
                 output.push('\n');
             }
-
             self.dedent();
             output.push_str("}\n\n");
         }
-
         Ok(output)
     }
-
     /// 发射索引文件
     pub fn emit_index_file(&self, project_info: &ProjectTypeInfo) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
-
         output.push_str("// Type definition index\n");
         output.push_str("// Auto-generated by Beejs Type Generator\n\n");
-
         // 导出所有类型
         for (file_path, file_info) in &project_info.files {
             output.push_str(&format!("// {}\n", file_path));
@@ -302,27 +252,22 @@ impl DtsEmitter {
             }
             output.push('\n');
         }
-
         Ok(output)
     }
-
     /// 获取缩进字符串
     fn get_indent(&self) -> String {
         "    ".repeat(self.indent_level)
     }
-
     /// 增加缩进级别
     fn indent(&mut self) {
         self.indent_level += 1;
     }
-
     /// 减少缩进级别
     fn dedent(&mut self) {
         if self.indent_level > 0 {
             self.indent_level -= 1;
         }
     }
-
     /// 获取模块名
     fn get_module_name(&self, filename: &str) -> String {
         // 简化实现 - 从文件名提取模块名
@@ -334,7 +279,6 @@ impl DtsEmitter {
         }
     }
 }
-
 /// 发射器配置
 #[derive(Debug, Clone)]
 pub struct EmitterConfig {
@@ -343,7 +287,6 @@ pub struct EmitterConfig {
     pub sort_members: bool,
     pub include_source_map: bool,
 }
-
 impl Default for EmitterConfig {
     fn default() -> Self {
         Self {

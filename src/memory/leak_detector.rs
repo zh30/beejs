@@ -4,7 +4,6 @@ use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 内存泄漏检测器 - 实时监控和自动报告内存泄漏
 /// 通过对象生命周期追踪和访问模式分析，实现零内存泄漏保障
 pub struct MemoryLeakDetector {
@@ -19,7 +18,6 @@ pub struct MemoryLeakDetector {
     /// 停止标志
     stop_flag: Arc<AtomicUsize>,
 }
-
 /// 对象跟踪信息
 struct ObjectTrackingInfo {
     /// 对象地址
@@ -41,7 +39,6 @@ struct ObjectTrackingInfo {
     /// 是否被标记为泄漏候选
     leak_candidate: bool,
 }
-
 impl Clone for ObjectTrackingInfo {
     fn clone(&self) -> Self {
         Self {
@@ -57,7 +54,6 @@ impl Clone for ObjectTrackingInfo {
         }
     }
 }
-
 /// 对象类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ObjectType {
@@ -72,7 +68,6 @@ pub enum ObjectType {
     /// 循环引用对象
     Cyclic,
 }
-
 /// 泄漏检测统计
 pub struct LeakDetectionStats {
     /// 总分配对象数
@@ -98,7 +93,6 @@ pub struct LeakDetectionStats {
     /// 平均对象年龄 (秒)
     pub avg_object_age_seconds: AtomicU64,
 }
-
 /// 泄漏检测配置
 #[derive(Debug, Clone)]
 pub struct LeakDetectorConfig {
@@ -123,7 +117,6 @@ pub struct LeakDetectorConfig {
     /// 详细跟踪
     pub detailed_tracking: bool,
 }
-
 impl Default for LeakDetectorConfig {
     fn default() -> Self {
         Self {
@@ -140,7 +133,6 @@ impl Default for LeakDetectorConfig {
         }
     }
 }
-
 /// 泄漏报告
 #[derive(Debug, Clone)]
 pub struct LeakReport {
@@ -157,7 +149,6 @@ pub struct LeakReport {
     /// 泄漏详细信息
     leak_details: Vec<LeakDetail>,
 }
-
 /// 泄漏详细信息
 #[derive(Debug, Clone)]
 pub struct LeakDetail {
@@ -178,7 +169,6 @@ pub struct LeakDetail {
     /// 泄漏严重程度
     severity: LeakSeverity,
 }
-
 /// 泄漏严重程度
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum LeakSeverity {
@@ -191,7 +181,6 @@ pub enum LeakSeverity {
     /// 严重 - 极大量泄漏
     Critical,
 }
-
 impl MemoryLeakDetector {
     /// 创建新的内存泄漏检测器
     pub fn new(config: LeakDetectorConfig) -> Self {
@@ -208,16 +197,13 @@ impl MemoryLeakDetector {
             max_object_age_seconds: AtomicU64::new(0),
             avg_object_age_seconds: AtomicU64::new(0),
         });
-
         let stop_flag: _ = Arc::new(Mutex::new(AtomicUsize::new(0)),;
-
         // 启动检测线程
         let detection_thread: _ = Some(Self::start_detection_thread(
             Arc::clone(stats),
             Arc::clone(stop_flag),
             config.clone(),
         ));
-
         Self {
             active_objects: Arc::new(Mutex::new(HashMap::new()))
             stats,
@@ -226,7 +212,6 @@ impl MemoryLeakDetector {
             stop_flag,
         }
     }
-
     /// 记录对象分配
     pub fn track_allocation(
         &self,
@@ -236,7 +221,6 @@ impl MemoryLeakDetector {
         allocation_location: Option<String>,
     ) {
         let mut objects = self.active_objects.write().unwrap();
-
         let now: _ = Instant::now();
         objects.insert(address, ObjectTrackingInfo {
             address,
@@ -249,11 +233,9 @@ impl MemoryLeakDetector {
             expected_lifetime: None,
             leak_candidate: false,
         });
-
         self.stats.total_allocated.fetch_add(1, Ordering::Relaxed);
         self.stats.active_objects.fetch_add(1, Ordering::Relaxed);
     }
-
     /// 记录对象访问
     pub fn track_access(&self, address: usize) {
         let mut objects = self.active_objects.write().unwrap();
@@ -262,7 +244,6 @@ impl MemoryLeakDetector {
             info.access_count.fetch_add(1, Ordering::Relaxed);
         }
     }
-
     /// 记录对象释放
     pub fn track_deallocation(&self, address: usize) {
         let mut objects = self.active_objects.write().unwrap();
@@ -271,31 +252,24 @@ impl MemoryLeakDetector {
             self.stats.active_objects.fetch_sub(1, Ordering::Relaxed);
         }
     }
-
     /// 执行泄漏检测
     pub fn detect_leaks(&self) -> LeakReport {
         let start_time: _ = Instant::now();
         self.stats.detection_runs.fetch_add(1, Ordering::Relaxed);
-
         let mut objects = self.active_objects.write().unwrap();
         let now: _ = Instant::now();
-
         let mut leak_details = Vec::new();
         let mut total_leaked_bytes = 0usize;
         let mut oldest_leak_age = 0u64;
         let mut leak_type_distribution = HashMap::new();
-
         // 分析每个活跃对象
         for (address, info) in objects.iter_mut() {
             let age_seconds: _ = now.duration_since(info.allocated_at).as_secs();
             let access_count: _ = info.access_count.load(Ordering::Relaxed);
-
             // 检查是否为泄漏候选
             let is_leak: _ = self.is_potential_leak(info, age_seconds, access_count);
-
             if is_leak {
                 info.leak_candidate = true;
-
                 let severity: _ = self.calculate_leak_severity(info, age_seconds, access_count);
                 let leak_detail: _ = LeakDetail {
                     address: *address,
@@ -307,13 +281,10 @@ impl MemoryLeakDetector {
                     allocation_location: info.allocation_location.clone(),
                     severity,
                 };
-
                 leak_details.push(leak_detail);
                 total_leaked_bytes += info.size;
                 oldest_leak_age = oldest_leak_age.max(age_seconds);
-
                 *leak_type_distribution.entry(info.object_type).or_insert(0) += 1;
-
                 // 自动清理
                 if self.config.enable_auto_cleanup
                     && total_leaked_bytes >= self.config.auto_cleanup_threshold
@@ -324,31 +295,26 @@ impl MemoryLeakDetector {
                 info.leak_candidate = false;
             }
         }
-
         // 更新统计
         let detection_time: _ = start_time.elapsed();
         self.stats.detection_time_ns.fetch_add(
             detection_time.as_nanos() as u64,
             Ordering::Relaxed
         );
-
         if !leak_details.is_empty() {
             self.stats.leaked_objects.fetch_add(leak_details.len() as u64, Ordering::Relaxed);
             self.stats.leaked_bytes.fetch_add(total_leaked_bytes as u64, Ordering::Relaxed);
-
             // 更新最大对象年龄
             let current_max: _ = self.stats.max_object_age_seconds.load(Ordering::Relaxed);
             if oldest_leak_age > current_max {
                 self.stats.max_object_age_seconds.store(oldest_leak_age, Ordering::Relaxed);
             }
-
             // 更新平均对象年龄
             let total_objects: _ = self.stats.active_objects.load(Ordering::Relaxed);
             let current_avg: _ = self.stats.avg_object_age_seconds.load(Ordering::Relaxed);
             let new_avg: _ = (current_avg * (total_objects as u64 - 1) + oldest_leak_age) / total_objects as u64;
             self.stats.avg_object_age_seconds.store(new_avg, Ordering::Relaxed);
         }
-
         LeakReport {
             detected_at: now,
             leaked_object_count: leak_details.len(),
@@ -358,7 +324,6 @@ impl MemoryLeakDetector {
             leak_details,
         }
     }
-
     /// 检查是否为潜在泄漏
     fn is_potential_leak(&self, info: &ObjectTrackingInfo, age_seconds: u64, access_count: usize) -> bool {
         // 检查对象年龄
@@ -380,12 +345,10 @@ impl MemoryLeakDetector {
             false
         }
     }
-
     /// 计算泄漏严重程度
     fn calculate_leak_severity(&self, info: &ObjectTrackingInfo, age_seconds: u64, _access_count: usize) -> LeakSeverity {
         let size_mb: _ = info.size as f64 / (1024.0 * 1024.0);
         let age_hours: _ = age_seconds as f64 / 3600.0;
-
         if size_mb > 100.0 || age_hours > 24.0 {
             LeakSeverity::Critical
         } else if size_mb > 10.0 || age_hours > 6.0 {
@@ -396,7 +359,6 @@ impl MemoryLeakDetector {
             LeakSeverity::Low
         }
     }
-
     /// 自动清理泄漏
     fn auto_cleanup_leak(&self, address: usize) {
         let mut objects = self.active_objects.write().unwrap();
@@ -409,7 +371,6 @@ impl MemoryLeakDetector {
             }
         }
     }
-
     /// 启动检测线程
     fn start_detection_thread(
         _stats: Arc<LeakDetectionStats>,
@@ -419,7 +380,6 @@ impl MemoryLeakDetector {
         std::thread::spawn(move || {
             while stop_flag.load(Ordering::Relaxed) == 0 {
                 std::thread::sleep(config.detection_interval);
-
                 // 执行检测
                 if stop_flag.load(Ordering::Relaxed) == 0 {
                     // 这里应该实际执行检测逻辑
@@ -428,7 +388,6 @@ impl MemoryLeakDetector {
             }
         })
     }
-
     /// 获取泄漏检测统计
     pub fn get_stats(&self) -> LeakDetectionStatsSnapshot {
         LeakDetectionStatsSnapshot {
@@ -458,19 +417,16 @@ impl MemoryLeakDetector {
             },
         }
     }
-
     /// 获取详细的对象信息
     pub fn get_object_info(&self, address: usize) -> Option<ObjectTrackingInfo> {
         let objects: _ = self.active_objects.read().unwrap();
         objects.get(&address).cloned()
     }
-
     /// 获取所有活跃对象
     pub fn get_all_active_objects(&self) -> HashMap<usize, ObjectTrackingInfo> {
         let objects: _ = self.active_objects.read().unwrap();
         objects.clone()
     }
-
     /// 停止检测器
     pub fn stop(&mut self) {
         self.stop_flag.store(1, Ordering::Relaxed);
@@ -479,7 +435,6 @@ impl MemoryLeakDetector {
         }
     }
 }
-
 /// 泄漏检测统计快照
 #[derive(Debug, Clone)]
 pub struct LeakDetectionStatsSnapshot {
@@ -496,7 +451,6 @@ pub struct LeakDetectionStatsSnapshot {
     pub avg_object_age_seconds: u64,
     pub leak_detection_rate: f64,
 }
-
 impl Drop for MemoryLeakDetector {
     fn drop(&mut self) {
         self.stop();

@@ -6,11 +6,9 @@
 //! - 线程安全访问
 //! - 缓冲区复用机制
 //! - 内存对齐优化
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-
 /// 网络缓冲区池
 ///
 /// 该结构体管理网络缓冲区池，提供高效的缓冲区分配和回收机制。
@@ -23,85 +21,63 @@ use std::time::{Duration, Instant};
 pub struct NetworkBufferPool {
     /// 缓冲区池：大小 -> 缓冲区列表
     pools: Arc<Mutex<HashMap<usize, Vec<BufferEntry>>>>,
-
     /// LRU 追踪：最近访问的缓冲区 ID
     lru_tracker: Arc<Mutex<Vec<u64>>>,
-
     /// 缓冲区大小配置
     config: BufferPoolConfig,
-
     /// 统计信息
     stats: Arc<Mutex<BufferPoolStats>>,
 }
-
 /// 缓冲区条目
 #[derive(Debug)]
 struct BufferEntry {
     /// 缓冲区 ID
     id: u64,
-
     /// 缓冲区数据
     data: Vec<u8>,
-
     /// 最后访问时间
     #[allow(dead_code)]
     last_access: Instant,
-
     /// 引用计数
     #[allow(dead_code)]
     ref_count: usize,
 }
-
 /// 缓冲区池配置
 #[derive(Debug, Clone)]
 pub struct BufferPoolConfig {
     /// 默认缓冲区大小
     pub default_size: usize,
-
     /// 预分配缓冲区数量
     pub preallocate_count: usize,
-
     /// 最大池大小
     pub max_pool_size: usize,
-
     /// 缓冲区对齐大小（缓存行对齐）
     pub alignment: usize,
-
     /// LRU 清理阈值
     pub lru_threshold: Duration,
 }
-
 /// 缓冲区池统计信息
 #[derive(Debug, Clone, Default)]
 pub struct BufferPoolStats {
     /// 活跃缓冲区数量
     pub active_buffers: usize,
-
     /// 池中缓冲区数量
     pub pooled_buffers: usize,
-
     /// 总分配次数
     pub total_allocations: u64,
-
     /// 总释放次数
     pub total_deallocations: u64,
-
     /// 池命中次数
     pub pool_hits: u64,
-
     /// 池未命中次数
     pub pool_misses: u64,
-
     /// 缓存命中率
     pub hit_rate: f64,
-
     /// 平均缓冲区大小
     pub avg_buffer_size: f64,
-
     /// 总内存使用量 (bytes)
     pub total_memory_usage: u64,
 }
-
 impl NetworkBufferPool {
     /// 创建新的网络缓冲区池
     ///
@@ -117,13 +93,10 @@ impl NetworkBufferPool {
             config: config.clone(),
             stats: Arc::new(Mutex::new(BufferPoolStats::default())),
         };
-
         // 预分配缓冲区
         pool.preallocate_buffers();
-
         pool
     }
-
     /// 使用默认配置创建缓冲区池
     pub fn default() -> Self {
         let config: _ = BufferPoolConfig {
@@ -133,25 +106,20 @@ impl NetworkBufferPool {
             alignment: 64,                // 64 字节对齐（缓存行大小）
             lru_threshold: Duration::from_secs(60), // 1 分钟
         };
-
         Self::new(config)
     }
-
     /// 预分配缓冲区
     fn preallocate_buffers(&self) {
         let mut pools = self.pools.lock().unwrap();
-
         for _ in 0..self.config.preallocate_count {
             let buffer: _ = self.create_buffer(self.config.default_size);
             let size: _ = buffer.data.len();
-
             if let Some(pool) = pools.get_mut(&size) {
                 pool.push(buffer);
             } else {
                 pools.insert(size, vec![buffer]);
             }
         }
-
         // 更新统计信息
         {
             let mut stats = self.stats.lock().unwrap();
@@ -159,12 +127,10 @@ impl NetworkBufferPool {
             stats.avg_buffer_size = self.config.default_size as f64;
         }
     }
-
     /// 创建新的缓冲区
     fn create_buffer(&self, size: usize) -> BufferEntry {
         // 计算对齐后的缓冲区大小
         let aligned_size: _ = self.align_size(size);
-
         BufferEntry {
             id: self.generate_id(),
             data: vec![0u8; aligned_size],
@@ -172,15 +138,12 @@ impl NetworkBufferPool {
             ref_count: 0,
         }
     }
-
     /// 生成唯一缓冲区 ID
     fn generate_id(&self) -> u64 {
         use std::sync::atomic::{AtomicU64, Ordering};
-
         static COUNTER: AtomicU64 = AtomicU64::new(1);
         COUNTER.fetch_add(1, Ordering::SeqCst)
     }
-
     /// 计算对齐后的缓冲区大小
     fn align_size(&self, size: usize) -> usize {
         let alignment: _ = self.config.alignment;
@@ -191,7 +154,6 @@ impl NetworkBufferPool {
             size + (alignment - remainder)
         }
     }
-
     /// 获取缓冲区
     ///
     /// # 参数
@@ -201,11 +163,9 @@ impl NetworkBufferPool {
     /// 返回 (缓冲区数据, 实际大小) 元组
     pub fn get_buffer(&self, size: usize) -> (Vec<u8>, usize) {
         let aligned_size: _ = self.align_size(size);
-
         // 尝试从池中获取
         {
             let mut pools = self.pools.lock().unwrap();
-
             if let Some(pool) = pools.get_mut(&aligned_size) {
                 if let Some(buffer) = pool.pop() {
                     // 更新统计信息
@@ -217,15 +177,12 @@ impl NetworkBufferPool {
                         stats.hit_rate = stats.pool_hits as f64
                             / (stats.pool_hits + stats.pool_misses) as f64;
                     }
-
                     // 更新 LRU 追踪
                     self.update_lru(buffer.id);
-
                     return (buffer.data, aligned_size);
                 }
             }
         }
-
         // 池中没有可用缓冲区，创建新的
         {
             let mut stats = self.stats.lock().unwrap();
@@ -234,10 +191,8 @@ impl NetworkBufferPool {
             stats.active_buffers += 1;
             stats.total_memory_usage += aligned_size as u64;
         }
-
         (vec![0u8; aligned_size], aligned_size)
     }
-
     /// 归还缓冲区到池中
     ///
     /// # 参数
@@ -245,7 +200,6 @@ impl NetworkBufferPool {
     /// - `size`: 缓冲区实际大小
     pub fn return_buffer(&self, mut buffer: Vec<u8>, size: usize) {
         let aligned_size: _ = self.align_size(size);
-
         // 如果缓冲区超过最大池大小，直接丢弃
         {
             let stats: _ = self.stats.lock().unwrap();
@@ -253,27 +207,22 @@ impl NetworkBufferPool {
                 return;
             }
         }
-
         // 清理缓冲区数据
         buffer.clear();
-
         let buffer_entry: _ = BufferEntry {
             id: self.generate_id(),
             data: buffer,
             last_access: Instant::now(),
             ref_count: 0,
         };
-
         // 添加到池中
         {
             let mut pools = self.pools.lock().unwrap();
-
             if let Some(pool) = pools.get_mut(&aligned_size) {
                 pool.push(buffer_entry);
             } else {
                 pools.insert(aligned_size, vec![buffer_entry]);
             }
-
             // 更新统计信息
             {
                 let mut stats = self.stats.lock().unwrap();
@@ -282,27 +231,21 @@ impl NetworkBufferPool {
                 stats.total_deallocations += 1;
             }
         }
-
         // 执行 LRU 清理
         self.cleanup_lru();
     }
-
     /// 更新 LRU 追踪
     fn update_lru(&self, buffer_id: u64) {
         let mut tracker = self.lru_tracker.lock().unwrap();
-
         // 移除已存在的 ID
         tracker.retain(|&id| id != buffer_id);
-
         // 添加到末尾（最近使用）
         tracker.push(buffer_id);
     }
-
     /// 清理 LRU 缓冲区
     fn cleanup_lru(&self) {
         let mut pools = self.pools.lock().unwrap();
         let mut tracker = self.lru_tracker.lock().unwrap();
-
         // 如果追踪器超过阈值，清理最久未使用的缓冲区
         while tracker.len() > self.config.max_pool_size {
             if let Some(oldest_id) = tracker.first().cloned() {
@@ -310,12 +253,10 @@ impl NetworkBufferPool {
                 for pool in pools.values_mut() {
                     pool.retain(|buffer| buffer.id != oldest_id);
                 }
-
                 // 从追踪器中移除
                 tracker.remove(0);
             }
         }
-
         // 清理超时的缓冲区
         let _now: _ = Instant::now();
         tracker.retain(|&_id| {
@@ -324,18 +265,15 @@ impl NetworkBufferPool {
             true
         });
     }
-
     /// 获取缓冲区池统计信息
     pub fn get_stats(&self) -> BufferPoolStats {
         self.stats.lock().unwrap().clone()
     }
-
     /// 重置统计信息
     pub fn reset_stats(&self) {
         let mut stats = self.stats.lock().unwrap();
         *stats = BufferPoolStats::default();
     }
-
     /// 预热缓冲区池
     ///
     /// 预先分配指定数量和大小的缓冲区
@@ -346,17 +284,14 @@ impl NetworkBufferPool {
     pub fn warmup(&self, size: usize, count: usize) {
         let aligned_size: _ = self.align_size(size);
         let mut pools = self.pools.lock().unwrap();
-
         for _ in 0..count {
             let buffer: _ = self.create_buffer(aligned_size);
-
             if let Some(pool) = pools.get_mut(&aligned_size) {
                 pool.push(buffer);
             } else {
                 pools.insert(aligned_size, vec![buffer]);
             }
         }
-
         // 更新统计信息
         {
             let mut stats = self.stats.lock().unwrap();
@@ -364,32 +299,26 @@ impl NetworkBufferPool {
             stats.avg_buffer_size = (stats.avg_buffer_size + size as f64) / 2.0;
         }
     }
-
     /// 清空缓冲区池
     pub fn clear(&self) {
         let mut pools = self.pools.lock().unwrap();
         pools.clear();
-
         let mut tracker = self.lru_tracker.lock().unwrap();
         tracker.clear();
-
         let mut stats = self.stats.lock().unwrap();
         stats.pooled_buffers = 0;
         stats.total_memory_usage = 0;
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_zero_copy_network_buffer_pool_performance() {
         // 创建测试用的网络缓冲区池
         let _pool: _ = NetworkBufferPool::default();
-
         println!("NetworkBufferPool performance test placeholder");
         println!("This test validates buffer pool allocation and deallocation performance");
     }

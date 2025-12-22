@@ -3,7 +3,6 @@ use std::sync::atomic::{AtomicUsize, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 内存压缩优化器 - 自动压缩冷数据以减少内存占用
 /// 通过智能压缩算法和访问模式分析，实现 30%+ 的内存使用降低
 pub struct MemoryCompression {
@@ -18,7 +17,6 @@ pub struct MemoryCompression {
     /// 停止标志
     stop_flag: Arc<AtomicUsize>,
 }
-
 /// 压缩算法集合
 #[derive(Debug)]
 struct CompressionAlgorithms {
@@ -31,7 +29,6 @@ struct CompressionAlgorithms {
     /// 自适应算法选择
     algorithm_selector: AlgorithmSelector,
 }
-
 /// LZ4 压缩算法 - 高速压缩，适合热数据
 #[derive(Debug)]
 struct LZ4Compressor {
@@ -40,7 +37,6 @@ struct LZ4Compressor {
     /// 最小压缩比
     min_ratio: f64,
 }
-
 /// Snappy 压缩算法 - 平衡速度和压缩比
 #[derive(Debug)]
 struct SnappyCompressor {
@@ -49,7 +45,6 @@ struct SnappyCompressor {
     /// 最小压缩比
     min_ratio: f64,
 }
-
 /// Zstd 压缩算法 - 高压缩比，适合冷数据
 #[derive(Debug)]
 struct ZstdCompressor {
@@ -60,14 +55,12 @@ struct ZstdCompressor {
     /// 压缩级别
     compression_level: u8,
 }
-
 /// 算法选择器
 #[derive(Debug)]
 struct AlgorithmSelector {
     /// 选择策略
     strategy: SelectionStrategy,
 }
-
 /// 选择策略
 #[derive(Debug, Clone)]
 enum SelectionStrategy {
@@ -78,7 +71,6 @@ enum SelectionStrategy {
     /// 基于内容类型的选择
     ContentBased,
 }
-
 /// 压缩统计信息
 pub struct CompressionStats {
     /// 总压缩次数
@@ -104,7 +96,6 @@ pub struct CompressionStats {
     /// 解压时间 (纳秒)
     pub decompression_time_ns: AtomicU64,
 }
-
 /// 压缩配置
 #[derive(Debug, Clone)]
 pub struct CompressionConfig {
@@ -125,7 +116,6 @@ pub struct CompressionConfig {
     /// 启用实时压缩
     pub enable_realtime_compression: bool,
 }
-
 impl Default for CompressionConfig {
     fn default() -> Self {
         Self {
@@ -140,7 +130,6 @@ impl Default for CompressionConfig {
         }
     }
 }
-
 /// 压缩数据块
 #[derive(Debug, Clone)]
 pub struct CompressedBlock {
@@ -163,7 +152,6 @@ pub struct CompressedBlock {
     /// 压缩比
     compression_ratio: f64,
 }
-
 /// 压缩算法类型
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CompressionAlgorithm {
@@ -176,7 +164,6 @@ pub enum CompressionAlgorithm {
     /// 无压缩
     None,
 }
-
 impl MemoryCompression {
     /// 创建新的内存压缩器
     pub fn new(config: CompressionConfig) -> Self {
@@ -193,7 +180,6 @@ impl MemoryCompression {
             compression_time_ns: AtomicU64::new(0),
             decompression_time_ns: AtomicU64::new(0),
         });
-
         let algorithms: _ = Arc::new(Mutex::new(CompressionAlgorithms {)),
             lz4_compressor: LZ4Compressor {
                 threshold: 1024,  // 1KB
@@ -212,9 +198,7 @@ impl MemoryCompression {
                 strategy: SelectionStrategy::SizeBased,
             },
         })));
-
         let stop_flag: _ = Arc::new(Mutex::new(AtomicUsize::new(0)),;
-
         // 启动压缩线程
         let compression_thread: _ = Some(Self::start_compression_thread(
             Arc::clone(algorithms),
@@ -222,7 +206,6 @@ impl MemoryCompression {
             Arc::clone(stop_flag),
             config.clone(),
         ));
-
         Self {
             algorithms,
             stats,
@@ -231,14 +214,11 @@ impl MemoryCompression {
             stop_flag,
         }
     }
-
     /// 压缩数据
     pub fn compress(&self, data: &[u8], address: usize) -> Result<CompressedBlock, CompressionError> {
         let start_time: _ = Instant::now();
-
         // 选择最佳压缩算法
         let algorithm: _ = self.select_algorithm(data);
-
         // 执行压缩
         let (compressed_data, compression_ratio, algorithm_used) = match algorithm {
             CompressionAlgorithm::LZ4 => {
@@ -263,14 +243,12 @@ impl MemoryCompression {
                 return Err(CompressionError::TooSmall);
             }
         };
-
         // 更新统计
         let compression_time: _ = start_time.elapsed();
         self.stats.compression_time_ns.fetch_add(
             compression_time.as_nanos() as u64,
             Ordering::Relaxed
         );
-
         self.stats.total_compressions.fetch_add(1, Ordering::Relaxed);
         self.stats.original_bytes.fetch_add(data.len() as u64, Ordering::Relaxed);
         self.stats.compressed_bytes.fetch_add(compressed_data.len() as u64, Ordering::Relaxed);
@@ -278,15 +256,12 @@ impl MemoryCompression {
             (data.len() - compressed_data.len()) as u64,
             Ordering::Relaxed
         );
-
         // 更新平均压缩比
         let total_compressions: _ = self.stats.total_compressions.load(Ordering::Relaxed);
         let current_avg: _ = self.stats.avg_compression_ratio.load(Ordering::Relaxed);
         let new_avg: _ = (current_avg * (total_compressions - 1) + (compression_ratio * 1000.0) as u64) / total_compressions;
         self.stats.avg_compression_ratio.store(new_avg, Ordering::Relaxed);
-
         let compressed_size: _ = compressed_data.len();
-
         Ok(CompressedBlock {
             original_address: address,
             compressed_data,
@@ -299,11 +274,9 @@ impl MemoryCompression {
             compression_ratio,
         })
     }
-
     /// 解压数据
     pub fn decompress(&self, mut block: CompressedBlock) -> Result<Vec<u8>, CompressionError> {
         let start_time: _ = Instant::now();
-
         let decompressed_data: _ = match block.algorithm {
             CompressionAlgorithm::LZ4 => self.decompress_lz4(&block.compressed_data)?,
             CompressionAlgorithm::Snappy => self.decompress_snappy(&block.compressed_data)?,
@@ -312,27 +285,21 @@ impl MemoryCompression {
                 return Err(CompressionError::UnsupportedAlgorithm);
             }
         };
-
         // 更新统计
         let decompression_time: _ = start_time.elapsed();
         self.stats.decompression_time_ns.fetch_add(
             decompression_time.as_nanos() as u64,
             Ordering::Relaxed
         );
-
         self.stats.total_decompressions.fetch_add(1, Ordering::Relaxed);
-
         // 更新访问信息
         block.last_accessed = Instant::now();
         block.access_count += 1;
-
         Ok(decompressed_data)
     }
-
     /// 选择最佳压缩算法
     fn select_algorithm(&self, data: &[u8]) -> CompressionAlgorithm {
         let algorithms: _ = self.algorithms.read().unwrap();
-
         // 基于数据大小选择算法
         if data.len() < algorithms.lz4_compressor.threshold {
             CompressionAlgorithm::None
@@ -344,7 +311,6 @@ impl MemoryCompression {
             CompressionAlgorithm::Zstd
         }
     }
-
     /// LZ4 压缩
     fn compress_lz4(&self, data: &[u8]) -> Result<Vec<u8>, CompressionError> {
         // 简化的 LZ4 压缩实现
@@ -353,13 +319,11 @@ impl MemoryCompression {
         compressed.extend_from_slice(data);
         Ok(compressed)
     }
-
     /// LZ4 解压
     fn decompress_lz4(&self, data: &[u8]) -> Result<Vec<u8>, CompressionError> {
         // 简化的 LZ4 解压实现
         Ok(data.to_vec())
     }
-
     /// Snappy 压缩
     fn compress_snappy(&self, data: &[u8]) -> Result<Vec<u8>, CompressionError> {
         // 简化的 Snappy 压缩实现
@@ -367,13 +331,11 @@ impl MemoryCompression {
         compressed.extend_from_slice(data);
         Ok(compressed)
     }
-
     /// Snappy 解压
     fn decompress_snappy(&self, data: &[u8]) -> Result<Vec<u8>, CompressionError> {
         // 简化的 Snappy 解压实现
         Ok(data.to_vec())
     }
-
     /// Zstd 压缩
     fn compress_zstd(&self, data: &[u8]) -> Result<Vec<u8>, CompressionError> {
         // 简化的 Zstd 压缩实现
@@ -381,13 +343,11 @@ impl MemoryCompression {
         compressed.extend_from_slice(data);
         Ok(compressed)
     }
-
     /// Zstd 解压
     fn decompress_zstd(&self, data: &[u8]) -> Result<Vec<u8>, CompressionError> {
         // 简化的 Zstd 解压实现
         Ok(data.to_vec())
     }
-
     /// 计算压缩比
     fn calculate_compression_ratio(&self, original: &[u8], compressed: &[u8]) -> f64 {
         if compressed.is_empty() {
@@ -396,7 +356,6 @@ impl MemoryCompression {
             original.len() as f64 / compressed.len() as f64
         }
     }
-
     /// 启动压缩线程
     fn start_compression_thread(
         algorithms: Arc<RwLock<CompressionAlgorithms>>,
@@ -406,19 +365,16 @@ impl MemoryCompression {
     ) -> std::thread::JoinHandle<()> {
         std::thread::spawn(move || {
             let mut last_compression = Instant::now();
-
             while stop_flag.load(Ordering::Relaxed) == 0 {
                 if Instant::now().duration_since(last_compression) > config.compression_interval {
                     // 执行压缩任务
                     Self::perform_compression_tasks(&algorithms, &stats, &config);
                     last_compression = Instant::now();
                 }
-
                 std::thread::sleep(Duration::from_secs(10));
             }
         })
     }
-
     /// 执行压缩任务
     fn perform_compression_tasks(
         _algorithms: &Arc<RwLock<CompressionAlgorithms>>,
@@ -428,13 +384,11 @@ impl MemoryCompression {
         // 实际的压缩任务实现
         // 扫描内存中的数据，识别冷数据并压缩
     }
-
     /// 获取压缩统计信息
     pub fn get_stats(&self) -> CompressionStatsSnapshot {
         let total_compressions: _ = self.stats.total_compressions.load(Ordering::Relaxed);
         let original_bytes: _ = self.stats.original_bytes.load(Ordering::Relaxed);
         let compressed_bytes: _ = self.stats.compressed_bytes.load(Ordering::Relaxed);
-
         CompressionStatsSnapshot {
             total_compressions: self.stats.total_compressions.load(Ordering::Relaxed),
             total_decompressions: self.stats.total_decompressions.load(Ordering::Relaxed),
@@ -466,7 +420,6 @@ impl MemoryCompression {
             },
         }
     }
-
     /// 停止压缩器
     pub fn stop(&mut self) {
         self.stop_flag.store(1, Ordering::Relaxed);
@@ -475,7 +428,6 @@ impl MemoryCompression {
         }
     }
 }
-
 /// 压缩统计快照
 #[derive(Debug, Clone)]
 pub struct CompressionStatsSnapshot {
@@ -492,7 +444,6 @@ pub struct CompressionStatsSnapshot {
     pub avg_decompression_time_ms: f64,
     pub compression_efficiency: f64,
 }
-
 /// 压缩错误
 #[derive(Debug)]
 pub enum CompressionError {
@@ -505,7 +456,6 @@ pub enum CompressionError {
     /// 解压失败
     DecompressionFailed,
 }
-
 impl std::fmt::Display for CompressionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -516,9 +466,7 @@ impl std::fmt::Display for CompressionError {
         }
     }
 }
-
 impl std::error::Error for CompressionError {}
-
 impl Drop for MemoryCompression {
     fn drop(&mut self) {
         self.stop();

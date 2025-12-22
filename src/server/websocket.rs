@@ -2,7 +2,6 @@
 //!
 //! Separate WebSocket server that runs alongside the HTTP server
 //! to handle real-time code execution and streaming output.
-
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
@@ -13,7 +12,6 @@ use crate::Runtime;
 use super::EvalResponse;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// WebSocket server configuration
 #[derive(Debug, Clone)]
 pub struct WebSocketConfig {
@@ -22,7 +20,6 @@ pub struct WebSocketConfig {
     pub max_connections: usize,
     pub request_timeout_ms: u64,
 }
-
 impl Default for WebSocketConfig {
     fn default() -> Self {
         Self {
@@ -33,7 +30,6 @@ impl Default for WebSocketConfig {
         }
     }
 }
-
 /// WebSocket message types
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
@@ -49,13 +45,11 @@ pub enum WebSocketMessage {
     #[serde(rename = "pong")]
     Pong,
 }
-
 /// WebSocket server state
 pub struct WebSocketServer {
     config: WebSocketConfig,
     runtime: Arc<Mutex<Runtime>>,
 }
-
 impl WebSocketServer {
     /// Create a new WebSocket server
     pub fn new(config: WebSocketConfig, runtime: Runtime) -> Self {
@@ -64,16 +58,13 @@ impl WebSocketServer {
             runtime: Arc::new(Mutex::new(runtime)))
         }
     }
-
     /// Start the WebSocket server
     pub async fn start(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let addr: _ = format!("{}:{}, self.config.host", self.config.port));
         let listener: _ = TcpListener::bind(&addr).await
             .map_err(|e| format!("Failed to bind WebSocket server to {}: {}", addr, e))?;
-
         info!("🔌 WebSocket server started on ws://{}", addr);
         info!("📡 Ready for WebSocket connections");
-
         // Accept incoming connections
         loop {
             match listener.accept().await {
@@ -92,7 +83,6 @@ impl WebSocketServer {
             }
         }
     }
-
     /// Handle a single WebSocket connection
     async fn handle_connection(
         stream: TcpStream,
@@ -100,20 +90,16 @@ impl WebSocketServer {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Accept the WebSocket connection
         let ws_stream: _ = accept_async(stream).await?;
-
         info!("WebSocket connection established");
-
         // Handle WebSocket messages
         let (mut sender, mut receiver) = ws_stream.split();
         let mut connection_alive = true;
-
         while connection_alive {
             // Receive message with timeout
             let message: _ = tokio::time::timeout(
                 std::time::Duration::from_secs(30),
                 receiver.next()
             ).await;
-
             match message {
                 Ok(Some(Ok(message)) => {
                     match Self::handle_message_impl(&message, &mut sender, runtime.clone()).await {
@@ -138,11 +124,9 @@ impl WebSocketServer {
                 }
             }
         }
-
         info!("WebSocket connection ended");
         Ok(())
     }
-
     /// Handle a single WebSocket message (static implementation)
     async fn handle_message_impl(
         message: &Message,
@@ -152,7 +136,6 @@ impl WebSocketServer {
         match message {
             Message::Text(ref text) => {
                 info!("Received WebSocket message: {} bytes", text.len());
-
                 // Parse the message as JSON
                 match serde_json::from_str::<WebSocketMessage>(text) {
                     Ok(msg) => {
@@ -164,9 +147,7 @@ impl WebSocketServer {
                                     let runtime_guard: _ = runtime.lock().map_err(|e| format!("Runtime lock error: {}", e))?;
                                     runtime_guard.execute_code(&code)
                                 };
-
                                 let execution_time_ms: _ = start_time.elapsed().as_millis() as u64;
-
                                 // Send response
                                 let response: _ = match result {
                                     Ok(output) => EvalResponse {
@@ -182,7 +163,6 @@ impl WebSocketServer {
                                         error: Some(e.to_string()),
                                     }
                                 };
-
                                 if let Ok(response_json) = serde_json::to_string(&response) {
                                     let _: _ = sender.send(Message::Text(response_json)).await;
                                 }
@@ -204,7 +184,6 @@ impl WebSocketServer {
                             cached: false,
                             error: Some(format!("Invalid JSON: {}", e)),
                         };
-
                         if let Ok(response_json) = serde_json::to_string(&error_response) {
                             let _: _ = sender.send(Message::Text(response_json)).await;
                         }

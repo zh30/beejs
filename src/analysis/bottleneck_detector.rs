@@ -3,11 +3,9 @@
 //! This module provides algorithms to detect performance bottlenecks
 //! in JavaScript/TypeScript execution, identifying slow operations,
 //! memory leaks, and other performance issues.
-
 use crate::performance_analyzer::{ExecutionMetrics, PerformanceReport};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
 /// Types of performance bottlenecks
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum BottleneckType {
@@ -30,7 +28,6 @@ pub enum BottleneckType {
     /// Other unspecified bottleneck
     Other(String),
 }
-
 /// A detected performance bottleneck
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Bottleneck {
@@ -41,7 +38,6 @@ pub struct Bottleneck {
     pub suggestion: String,
     pub code_location: Option<String>,
 }
-
 /// Severity levels for bottlenecks
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum BottleneckSeverity {
@@ -56,7 +52,6 @@ pub enum BottleneckSeverity {
     /// Informational - no immediate action needed
     Info,
 }
-
 /// Bottleneck detection configuration
 #[derive(Debug, Clone)]
 pub struct BottleneckDetectorConfig {
@@ -69,7 +64,6 @@ pub struct BottleneckDetectorConfig {
     /// Threshold for event loop lag (ms)
     pub event_loop_lag_threshold_ms: f64,
 }
-
 impl Default for BottleneckDetectorConfig {
     fn default() -> Self {
         Self {
@@ -80,12 +74,10 @@ impl Default for BottleneckDetectorConfig {
         }
     }
 }
-
 /// Performance bottleneck detector
 pub struct BottleneckDetector {
     config: BottleneckDetectorConfig,
 }
-
 impl BottleneckDetector {
     /// Create a new bottleneck detector with default configuration
     pub fn new() -> Self {
@@ -93,16 +85,13 @@ impl BottleneckDetector {
             config: BottleneckDetectorConfig::default(),
         }
     }
-
     /// Create a new bottleneck detector with custom configuration
     pub fn with_config(config: BottleneckDetectorConfig) -> Self {
         Self { config }
     }
-
     /// Detect bottlenecks from performance report
     pub fn detect_bottlenecks(&self, report: &PerformanceReport) -> Vec<Bottleneck> {
         let mut bottlenecks = Vec::new();
-
         // Detect slow execution
         if report.average_time_ms > self.config.slow_execution_threshold_ms {
             bottlenecks.push(Bottleneck {
@@ -123,7 +112,6 @@ impl BottleneckDetector {
                 code_location: None,
             });
         }
-
         // Detect low cache hit rate
         if report.cache_hit_rate < self.config.low_cache_hit_rate_threshold {
             bottlenecks.push(Bottleneck {
@@ -144,7 +132,6 @@ impl BottleneckDetector {
                 code_location: None,
             });
         }
-
         // Detect high memory usage
         if report.total_code_executed > self.config.high_memory_usage_threshold_mb as usize * 1024 * 1024 {
             bottlenecks.push(Bottleneck {
@@ -159,26 +146,20 @@ impl BottleneckDetector {
                 code_location: None,
             });
         }
-
         bottlenecks
     }
-
     /// Detect bottlenecks from execution metrics
     pub fn detect_bottlenecks_from_metrics(&self, metrics: &[ExecutionMetrics]) -> Vec<Bottleneck> {
         if metrics.is_empty() {
             return Vec::new();
         }
-
         let mut bottlenecks = Vec::new();
-
         // Analyze execution time distribution
         let total_executions: _ = metrics.len() as f64;
         let slow_executions: _ = metrics.iter()
             .filter(|m| m.execution_time_ms > self.config.slow_execution_threshold_ms)
             .count() as f64;
-
         let slow_execution_percentage: _ = (slow_executions / total_executions) * 100.0;
-
         if slow_execution_percentage > 20.0 {
             bottlenecks.push(Bottleneck {
                 bottleneck_type: BottleneckType::SlowExecution,
@@ -198,11 +179,9 @@ impl BottleneckDetector {
                 code_location: None,
             });
         }
-
         // Analyze cache hit rate distribution
         let cache_hits: _ = metrics.iter().filter(|m| m.cache_hit).count() as f64;
         let cache_hit_rate: _ = (cache_hits / total_executions) * 100.0;
-
         if cache_hit_rate < self.config.low_cache_hit_rate_threshold {
             bottlenecks.push(Bottleneck {
                 bottleneck_type: BottleneckType::LowCacheHitRate,
@@ -222,10 +201,8 @@ impl BottleneckDetector {
                 code_location: None,
             });
         }
-
         bottlenecks
     }
-
     /// Get severity as numeric value for sorting
     pub fn severity_to_value(severity: &BottleneckSeverity) -> i32 {
         match severity {
@@ -236,7 +213,6 @@ impl BottleneckDetector {
             BottleneckSeverity::Info => 1,
         }
     }
-
     /// Sort bottlenecks by severity (most severe first)
     pub fn sort_bottlenecks_by_severity(bottlenecks: &mut Vec<Bottleneck>) {
         bottlenecks.sort_by(|a, b| {
@@ -245,7 +221,6 @@ impl BottleneckDetector {
             b_val.cmp(&a_val)
         });
     }
-
     /// Generate a summary of bottlenecks
     pub fn generate_summary(&self, bottlenecks: &[Bottleneck]) -> HashMap<String, usize> {
         let mut summary = HashMap::new();
@@ -256,25 +231,21 @@ impl BottleneckDetector {
         summary
     }
 }
-
 impl Default for BottleneckDetector {
     fn default() -> Self {
         Self::new()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_bottleneck_detector_creation() {
         let detector: _ = BottleneckDetector::new();
         assert_eq!(detector.config.slow_execution_threshold_ms, 10.0);
     }
-
     #[test]
     fn test_bottleneck_detector_with_config() {
         let config: _ = BottleneckDetectorConfig {
@@ -287,7 +258,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(detector.config.slow_execution_threshold_ms, 5.0);
         assert_eq!(detector.config.low_cache_hit_rate_threshold, 60.0);
     }
-
     #[test]
     fn test_detect_slow_execution() {
         let detector: _ = BottleneckDetector::new();
@@ -299,13 +269,11 @@ use std::collections::{HashMap, BTreeMap};
             cache_hit_rate: 70.0,
             total_code_executed: 1000,
         };
-
         let bottlenecks: _ = detector.detect_bottlenecks(&report);
         assert_eq!(bottlenecks.len(), 1);
         assert!(matches!(bottlenecks[0].bottleneck_type, BottleneckType::SlowExecution));
         assert!(matches!(bottlenecks[0].severity, BottleneckSeverity::Medium));
     }
-
     #[test]
     fn test_detect_low_cache_hit_rate() {
         let detector: _ = BottleneckDetector::new();
@@ -317,13 +285,11 @@ use std::collections::{HashMap, BTreeMap};
             cache_hit_rate: 30.0,
             total_code_executed: 1000,
         };
-
         let bottlenecks: _ = detector.detect_bottlenecks(&report);
         assert_eq!(bottlenecks.len(), 1);
         assert!(matches!(bottlenecks[0].bottleneck_type, BottleneckType::LowCacheHitRate));
         assert!(matches!(bottlenecks[0].severity, BottleneckSeverity::High));
     }
-
     #[test]
     fn test_detect_high_memory_usage() {
         let detector: _ = BottleneckDetector::new();
@@ -335,12 +301,10 @@ use std::collections::{HashMap, BTreeMap};
             cache_hit_rate: 70.0,
             total_code_executed: 200 * 1024 * 1024, // 200MB
         };
-
         let bottlenecks: _ = detector.detect_bottlenecks(&report);
         assert_eq!(bottlenecks.len(), 1);
         assert!(matches!(bottlenecks[0].bottleneck_type, BottleneckType::HighMemoryUsage));
     }
-
     #[test]
     fn test_no_bottlenecks() {
         let detector: _ = BottleneckDetector::new();
@@ -352,11 +316,9 @@ use std::collections::{HashMap, BTreeMap};
             cache_hit_rate: 80.0,
             total_code_executed: 1000,
         };
-
         let bottlenecks: _ = detector.detect_bottlenecks(&report);
         assert!(bottlenecks.is_empty());
     }
-
     #[test]
     fn test_detect_bottlenecks_from_metrics() {
         let detector: _ = BottleneckDetector::new();
@@ -372,12 +334,10 @@ use std::collections::{HashMap, BTreeMap};
                 code_length: 100,
             },
         ];
-
         let bottlenecks: _ = detector.detect_bottlenecks_from_metrics(&metrics);
         assert_eq!(bottlenecks.len(), 1);
         assert!(matches!(bottlenecks[0].bottleneck_type, BottleneckType::SlowExecution));
     }
-
     #[test]
     fn test_sort_bottlenecks_by_severity() {
         let mut bottlenecks = vec![
@@ -398,12 +358,10 @@ use std::collections::{HashMap, BTreeMap};
                 code_location: None,
             },
         ];
-
         BottleneckDetector::sort_bottlenecks_by_severity(&mut bottlenecks);
         assert!(matches!(bottlenecks[0].severity, BottleneckSeverity::Critical));
         assert!(matches!(bottlenecks[1].severity, BottleneckSeverity::Low));
     }
-
     #[test]
     fn test_generate_summary() {
         let detector: _ = BottleneckDetector::new();
@@ -425,11 +383,9 @@ use std::collections::{HashMap, BTreeMap};
                 code_location: None,
             },
         ];
-
         let summary: _ = detector.generate_summary(&bottlenecks);
         assert_eq!(summary.get("SlowExecution"), Some(&2));
     }
-
     #[test]
     fn test_severity_to_value() {
         assert_eq!(BottleneckDetector::severity_to_value(&BottleneckSeverity::Critical), 5);

@@ -3,10 +3,8 @@
 //! Provides functionality for monitoring variable values during debugging sessions.
 //! Watch expressions are evaluated each time execution pauses, allowing developers
 //! to track how values change over time.
-
 use std::collections::HashMap;
 use uuid::Uuid;
-
 /// A watch expression being monitored
 #[derive(Debug, Clone)]
 pub struct WatchExpression {
@@ -25,7 +23,6 @@ pub struct WatchExpression {
     /// Number of times this watch was evaluated
     pub evaluation_count: u64,
 }
-
 impl WatchExpression {
     /// Create a new watch expression
     pub fn new(expression: &str) -> Self {
@@ -39,7 +36,6 @@ impl WatchExpression {
             evaluation_count: 0,
         }
     }
-
     /// Format the watch for display
     pub fn format(&self) -> String {
         if self.has_error {
@@ -57,7 +53,6 @@ impl WatchExpression {
             format!("{}: <not evaluated>", self.expression)
         }
     }
-
     /// Clear the evaluated value and error state
     pub fn reset(&mut self) {
         self.last_value = None;
@@ -66,7 +61,6 @@ impl WatchExpression {
         self.error_message = None;
     }
 }
-
 /// Manages a collection of watch expressions
 #[derive(Debug)]
 pub struct WatchManager {
@@ -74,7 +68,6 @@ pub struct WatchManager {
     /// Order in which watches were added (for consistent display)
     order: Vec<String>,
 }
-
 impl WatchManager {
     /// Create a new empty watch manager
     pub fn new() -> Self {
@@ -83,18 +76,14 @@ impl WatchManager {
             order: Vec::new(),
         }
     }
-
     /// Add a new watch expression
     pub fn add(&mut self, expression: &str) -> Result<WatchExpression, String> {
         let watch: _ = WatchExpression::new(expression);
         let id: _ = watch.id.clone();
-
         self.order.push(id.clone());
         self.watches.insert(id, watch.clone());
-
         Ok(watch)
     }
-
     /// Remove a watch expression by ID
     pub fn remove(&mut self, id: &str) -> Result<(), String> {
         if self.watches.remove(id).is_some() {
@@ -104,17 +93,14 @@ impl WatchManager {
             Err(format!("Watch with ID '{}' not found", id))
         }
     }
-
     /// Get a watch expression by ID
     pub fn get(&self, id: &str) -> Option<&WatchExpression> {
         self.watches.get(id)
     }
-
     /// Get a mutable reference to a watch expression by ID
     pub fn get_mut(&mut self, id: &str) -> Option<&mut WatchExpression> {
         self.watches.get_mut(id)
     }
-
     /// List all watch expressions in order
     pub fn list(&self) -> Vec<&WatchExpression> {
         self.order
@@ -122,12 +108,10 @@ impl WatchManager {
             .filter_map(|id| self.watches.get(id))
             .collect()
     }
-
     /// Get the number of watch expressions
     pub fn count(&self) -> usize {
         self.watches.len()
     }
-
     /// Update the value of a watch expression
     pub fn update_value(
         &mut self,
@@ -146,7 +130,6 @@ impl WatchManager {
             Err(format!("Watch with ID '{}' not found", id))
         }
     }
-
     /// Set an error on a watch expression
     pub fn set_error(&mut self, id: &str, error: &str) -> Result<(), String> {
         if let Some(watch) = self.watches.get_mut(id) {
@@ -159,13 +142,11 @@ impl WatchManager {
             Err(format!("Watch with ID '{}' not found", id))
         }
     }
-
     /// Clear all watch expressions
     pub fn clear(&mut self) {
         self.watches.clear();
         self.order.clear();
     }
-
     /// Reset all watch values (but keep the expressions)
     pub fn reset_all(&mut self) {
         for watch in self.watches.values_mut() {
@@ -173,19 +154,16 @@ impl WatchManager {
         }
     }
 }
-
 impl Default for WatchManager {
     fn default() -> Self {
         Self::new()
     }
 }
-
 #[cfg(test)]
 mod unit_tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_watch_expression_creation() {
         let watch: _ = WatchExpression::new("x + 1");
@@ -193,32 +171,25 @@ use std::collections::{HashMap, BTreeMap};
         assert!(!watch.id.is_empty());
         assert!(watch.last_value.is_none());
     }
-
     #[test]
     fn test_watch_manager_basic_operations() {
         let mut manager = WatchManager::new();
-
         // Add
         let watch: _ = manager.add("counter").unwrap();
         assert_eq!(manager.count(), 1);
-
         // Get
         let retrieved: _ = manager.get(&watch.id).unwrap();
         assert_eq!(retrieved.expression, "counter");
-
         // Remove
         manager.remove(&watch.id).unwrap();
         assert_eq!(manager.count(), 0);
     }
-
     #[test]
     fn test_watch_ordering() {
         let mut manager = WatchManager::new();
-
         manager.add("first").unwrap();
         manager.add("second").unwrap();
         manager.add("third").unwrap();
-
         let list: _ = manager.list();
         assert_eq!(list[0].expression, "first");
         assert_eq!(list[1].expression, "second");

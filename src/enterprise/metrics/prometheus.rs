@@ -1,6 +1,5 @@
 //! Prometheus Metrics Integration for Beejs
 //! 实现 Prometheus 指标收集和导出功能
-
 use anyhow::{Result, Context};
 use prometheus::{
     Counter, CounterVec, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec,
@@ -10,7 +9,6 @@ use prometheus::{
 use std::sync::Arc;
 use tokio::time::{Duration, Instant};
 use tracing::{info, warn, debug};
-
 /// Prometheus metrics configuration
 #[derive(Debug, Clone)]
 pub struct PrometheusConfig {
@@ -25,7 +23,6 @@ pub struct PrometheusConfig {
     /// Histogram buckets
     pub histogram_buckets: Vec<f64>,
 }
-
 /// Core runtime metrics
 pub struct RuntimeMetrics {
     /// Process start time
@@ -41,7 +38,6 @@ pub struct RuntimeMetrics {
     /// CPU usage percentage
     pub cpu_usage_percent: Gauge,
 }
-
 /// Performance metrics
 pub struct PerformanceMetrics {
     /// Execution time histogram
@@ -57,7 +53,6 @@ pub struct PerformanceMetrics {
     /// GC frequency
     pub gc_frequency: CounterVec,
 }
-
 /// Network metrics
 pub struct NetworkMetrics {
     /// Network requests total
@@ -71,7 +66,6 @@ pub struct NetworkMetrics {
     /// Network throughput (bytes/sec)
     pub network_throughput: GaugeVec,
 }
-
 /// Business metrics
 pub struct BusinessMetrics {
     /// Requests per second
@@ -87,7 +81,6 @@ pub struct BusinessMetrics {
     /// Uptime
     pub uptime_seconds: IntGauge,
 }
-
 /// Cluster metrics
 pub struct ClusterMetrics {
     /// Cluster nodes total
@@ -103,7 +96,6 @@ pub struct ClusterMetrics {
     /// Upgrade progress
     pub upgrade_progress: GaugeVec,
 }
-
 /// Prometheus metrics manager
 #[derive(Debug)]
 pub struct PrometheusManager {
@@ -124,27 +116,20 @@ pub struct PrometheusManager {
     /// Last collection time
     last_collection: Instant,
 }
-
 impl PrometheusManager {
     /// Create a new PrometheusManager
     pub fn new(config: PrometheusConfig) -> Result<Self> {
         let registry: _ = Registry::new();
-
         // Initialize runtime metrics
         let runtime: _ = RuntimeMetrics::new(&registry, &config.namespace)?;
-
         // Initialize performance metrics
         let performance: _ = PerformanceMetrics::new(&registry, &config.namespace)?;
-
         // Initialize network metrics
         let network: _ = NetworkMetrics::new(&registry, &config.namespace)?;
-
         // Initialize business metrics
         let business: _ = BusinessMetrics::new(&registry, &config.namespace)?;
-
         // Initialize cluster metrics
         let cluster: _ = ClusterMetrics::new(&registry, &config.namespace)?;
-
         Ok(Self {
             registry,
             runtime,
@@ -156,12 +141,10 @@ impl PrometheusManager {
             last_collection: Instant::now(),
         })
     }
-
     /// Get the Prometheus registry
     pub fn registry(&self) -> &Registry {
         &self.registry
     }
-
     /// Record execution
     pub fn record_execution(&self, duration_ms: f64, success: bool) {
         // Update runtime metrics
@@ -169,13 +152,11 @@ impl PrometheusManager {
         if !success {
             self.runtime.execution_errors.inc();
         }
-
         // Update performance metrics
         self.performance
             .execution_duration
             .with_label_values(&["total"])
             .observe(duration_ms);
-
         if success {
             self.performance
                 .execution_duration
@@ -188,14 +169,12 @@ impl PrometheusManager {
                 .observe(duration_ms);
         }
     }
-
     /// Record JIT compilation
     pub fn record_jit_compilation(&self, compilation_time_ms: f64, cache_hit: bool) {
         self.performance
             .jit_compilation_time
             .with_label_values(&[if cache_hit { "hit" } else { "miss" }])
             .observe(compilation_time_ms);
-
         // Update cache hit rate (simple moving average)
         let current_hit_rate: _ = self.performance.jit_cache_hit_rate.get();
         let new_hit_rate: _ = if cache_hit {
@@ -205,25 +184,21 @@ impl PrometheusManager {
         };
         self.performance.jit_cache_hit_rate.set(new_hit_rate);
     }
-
     /// Record memory usage
     pub fn record_memory_usage(&self, bytes: usize) {
         self.runtime.memory_usage_bytes.set(bytes as i64);
     }
-
     /// Record GC event
     pub fn record_gc_event(&self, pause_time_ms: f64, gc_type: &str) {
         self.performance
             .gc_pause_time
             .with_label_values(&[gc_type])
             .observe(pause_time_ms);
-
         self.performance
             .gc_frequency
             .with_label_values(&[gc_type])
             .inc();
     }
-
     /// Record network request
     pub fn record_network_request(
         &self,
@@ -236,12 +211,10 @@ impl PrometheusManager {
             .network_requests_total
             .with_label_values(&[method, endpoint, &status_code.to_string()])
             .inc();
-
         self.network
             .network_request_duration
             .with_label_values(&[method, endpoint])
             .observe(duration_ms);
-
         if status_code >= 400 {
             self.network
                 .network_errors
@@ -249,7 +222,6 @@ impl PrometheusManager {
                 .inc();
         }
     }
-
     /// Update business metrics
     pub fn update_business_metrics(
         &self,
@@ -265,7 +237,6 @@ impl PrometheusManager {
         self.business.response_time_p99.set(p99);
         self.business.error_rate.set(error_rate);
     }
-
     /// Update cluster metrics
     pub fn update_cluster_metrics(
         &self,
@@ -285,7 +256,6 @@ impl PrometheusManager {
             .with_label_values(&["total"])
             .set(memory_usage);
     }
-
     /// Record pod restart
     pub fn record_pod_restart(&self, namespace: &str, pod_name: &str) {
         self.cluster
@@ -293,7 +263,6 @@ impl PrometheusManager {
             .with_label_values(&[namespace, pod_name])
             .inc();
     }
-
     /// Update upgrade progress
     pub fn update_upgrade_progress(&self, cluster_name: &str, percentage: f64) {
         self.cluster
@@ -301,48 +270,37 @@ impl PrometheusManager {
             .with_label_values(&[cluster_name])
             .set(percentage);
     }
-
     /// Collect and export metrics
     pub async fn collect_and_export(&self) -> Result<String> {
         // Collect system metrics
         self.collect_system_metrics().await;
-
         // Generate Prometheus text format
         let encoder: _ = TextEncoder::new();
         let metric_families: _ = self.registry.gather();
-
         let mut output = String::new();
         encoder.encode_utf8(&metric_families, &mut output)
             .context("Failed to encode metrics")?;
-
         debug!("Exported {} metric families", metric_families.len());
-
         Ok(output)
     }
-
     /// Collect system metrics
     async fn collect_system_metrics(&self) {
         // Update process start time if needed
         // This would typically be done once at startup
-
         // Update memory usage
         if let Ok(mem_usage) = sysinfo::System::new_all().total_memory() {
             self.record_memory_usage(mem_usage as usize);
         }
-
         // Update uptime
         let uptime: _ = self.last_collection.elapsed().as_secs();
         self.business.uptime_seconds.set(uptime as i64);
-
         info!("Collected system metrics (uptime: {}s)", uptime);
     }
 }
-
 /// Implement RuntimeMetrics
 impl RuntimeMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
         let ns: _ = format!("{}_", namespace));
-
         let process_start_time: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}process_start_time_seconds", ns),
@@ -350,7 +308,6 @@ impl RuntimeMetrics {
             )
         )
         .context("Failed to create process_start_time metric")?;
-
         let active_isolates: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}active_isolates", ns),
@@ -358,7 +315,6 @@ impl RuntimeMetrics {
             )
         )
         .context("Failed to create active_isolates metric")?;
-
         let total_executions: _ = IntCounter::with_opts(
             Opts::new(
                 format!("{}executions_total", ns),
@@ -366,7 +322,6 @@ impl RuntimeMetrics {
             )
         )
         .context("Failed to create executions_total metric")?;
-
         let execution_errors: _ = IntCounter::with_opts(
             Opts::new(
                 format!("{}execution_errors_total", ns),
@@ -374,7 +329,6 @@ impl RuntimeMetrics {
             )
         )
         .context("Failed to create execution_errors metric")?;
-
         let memory_usage_bytes: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}memory_usage_bytes", ns),
@@ -382,7 +336,6 @@ impl RuntimeMetrics {
             )
         )
         .context("Failed to create memory_usage metric")?;
-
         let cpu_usage_percent: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}cpu_usage_percent", ns),
@@ -390,7 +343,6 @@ impl RuntimeMetrics {
             )
         )
         .context("Failed to create cpu_usage metric")?;
-
         // Register metrics
         registry.register(Box::new(process_start_time.clone())?;
         registry.register(Box::new(active_isolates.clone())?;
@@ -398,7 +350,6 @@ impl RuntimeMetrics {
         registry.register(Box::new(execution_errors.clone())?;
         registry.register(Box::new(memory_usage_bytes.clone())?;
         registry.register(Box::new(cpu_usage_percent.clone())?;
-
         Ok(Self {
             process_start_time,
             active_isolates,
@@ -409,12 +360,10 @@ impl RuntimeMetrics {
         })
     }
 }
-
 /// Implement PerformanceMetrics
 impl PerformanceMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
         let ns: _ = format!("{}_", namespace));
-
         let execution_duration: _ = HistogramVec::new(
             HistogramOpts::new(
                 format!("{}execution_duration_seconds", ns),
@@ -424,7 +373,6 @@ impl PerformanceMetrics {
             &["result"],
         )
         .context("Failed to create execution_duration metric")?;
-
         let jit_compilation_time: _ = HistogramVec::new(
             HistogramOpts::new(
                 format!("{}jit_compilation_time_seconds", ns),
@@ -434,7 +382,6 @@ impl PerformanceMetrics {
             &["cache_status"],
         )
         .context("Failed to create jit_compilation_time metric")?;
-
         let jit_cache_hit_rate: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}jit_cache_hit_rate", ns),
@@ -442,7 +389,6 @@ impl PerformanceMetrics {
             )
         )
         .context("Failed to create jit_cache_hit_rate metric")?;
-
         let memory_allocation_rate: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}memory_allocation_rate_bytes_per_second", ns),
@@ -450,7 +396,6 @@ impl PerformanceMetrics {
             )
         )
         .context("Failed to create memory_allocation_rate metric")?;
-
         let gc_pause_time: _ = HistogramVec::new(
             HistogramOpts::new(
                 format!("{}gc_pause_time_seconds", ns),
@@ -460,7 +405,6 @@ impl PerformanceMetrics {
             &["gc_type"],
         )
         .context("Failed to create gc_pause_time metric")?;
-
         let gc_frequency: _ = CounterVec::new(
             Opts::new(
                 format!("{}gc_runs_total", ns),
@@ -469,7 +413,6 @@ impl PerformanceMetrics {
             &["gc_type"],
         )
         .context("Failed to create gc_frequency metric")?;
-
         // Register metrics
         registry.register(Box::new(execution_duration.clone())?;
         registry.register(Box::new(jit_compilation_time.clone())?;
@@ -477,7 +420,6 @@ impl PerformanceMetrics {
         registry.register(Box::new(memory_allocation_rate.clone())?;
         registry.register(Box::new(gc_pause_time.clone())?;
         registry.register(Box::new(gc_frequency.clone())?;
-
         Ok(Self {
             execution_duration,
             jit_compilation_time,
@@ -488,12 +430,10 @@ impl PerformanceMetrics {
         })
     }
 }
-
 /// Implement NetworkMetrics
 impl NetworkMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
         let ns: _ = format!("{}_", namespace));
-
         let network_requests_total: _ = IntCounterVec::new(
             Opts::new(
                 format!("{}network_requests_total", ns),
@@ -502,7 +442,6 @@ impl NetworkMetrics {
             &["method", "endpoint", "status_code"],
         )
         .context("Failed to create network_requests_total metric")?;
-
         let network_request_duration: _ = HistogramVec::new(
             HistogramOpts::new(
                 format!("{}network_request_duration_seconds", ns),
@@ -512,7 +451,6 @@ impl NetworkMetrics {
             &["method", "endpoint"],
         )
         .context("Failed to create network_request_duration metric")?;
-
         let network_errors: _ = IntCounterVec::new(
             Opts::new(
                 format!("{}network_errors_total", ns),
@@ -521,7 +459,6 @@ impl NetworkMetrics {
             &["method", "endpoint", "status_code"],
         )
         .context("Failed to create network_errors metric")?;
-
         let active_connections: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}active_connections", ns),
@@ -529,7 +466,6 @@ impl NetworkMetrics {
             )
         )
         .context("Failed to create active_connections metric")?;
-
         let network_throughput: _ = GaugeVec::new(
             Opts::new(
                 format!("{}network_throughput_bytes_per_second", ns),
@@ -538,14 +474,12 @@ impl NetworkMetrics {
             &["direction"],
         )
         .context("Failed to create network_throughput metric")?;
-
         // Register metrics
         registry.register(Box::new(network_requests_total.clone())?;
         registry.register(Box::new(network_request_duration.clone())?;
         registry.register(Box::new(network_errors.clone())?;
         registry.register(Box::new(active_connections.clone())?;
         registry.register(Box::new(network_throughput.clone())?;
-
         Ok(Self {
             network_requests_total,
             network_request_duration,
@@ -555,12 +489,10 @@ impl NetworkMetrics {
         })
     }
 }
-
 /// Implement BusinessMetrics
 impl BusinessMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
         let ns: _ = format!("{}_", namespace));
-
         let requests_per_second: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}requests_per_second", ns),
@@ -568,7 +500,6 @@ impl BusinessMetrics {
             )
         )
         .context("Failed to create requests_per_second metric")?;
-
         let response_time_p50: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}response_time_p50_seconds", ns),
@@ -576,7 +507,6 @@ impl BusinessMetrics {
             )
         )
         .context("Failed to create response_time_p50 metric")?;
-
         let response_time_p95: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}response_time_p95_seconds", ns),
@@ -584,7 +514,6 @@ impl BusinessMetrics {
             )
         )
         .context("Failed to create response_time_p95 metric")?;
-
         let response_time_p99: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}response_time_p99_seconds", ns),
@@ -592,7 +521,6 @@ impl BusinessMetrics {
             )
         )
         .context("Failed to create response_time_p99 metric")?;
-
         let error_rate: _ = Gauge::with_opts(
             Opts::new(
                 format!("{}error_rate", ns),
@@ -600,7 +528,6 @@ impl BusinessMetrics {
             )
         )
         .context("Failed to create error_rate metric")?;
-
         let uptime_seconds: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}uptime_seconds", ns),
@@ -608,7 +535,6 @@ impl BusinessMetrics {
             )
         )
         .context("Failed to create uptime_seconds metric")?;
-
         // Register metrics
         registry.register(Box::new(requests_per_second.clone())?;
         registry.register(Box::new(response_time_p50.clone())?;
@@ -616,7 +542,6 @@ impl BusinessMetrics {
         registry.register(Box::new(response_time_p99.clone())?;
         registry.register(Box::new(error_rate.clone())?;
         registry.register(Box::new(uptime_seconds.clone())?;
-
         Ok(Self {
             requests_per_second,
             response_time_p50,
@@ -627,12 +552,10 @@ impl BusinessMetrics {
         })
     }
 }
-
 /// Implement ClusterMetrics
 impl ClusterMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
         let ns: _ = format!("{}_", namespace));
-
         let cluster_nodes_total: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}cluster_nodes_total", ns),
@@ -640,7 +563,6 @@ impl ClusterMetrics {
             )
         )
         .context("Failed to create cluster_nodes_total metric")?;
-
         let cluster_nodes_ready: _ = IntGauge::with_opts(
             Opts::new(
                 format!("{}cluster_nodes_ready", ns),
@@ -648,7 +570,6 @@ impl ClusterMetrics {
             )
         )
         .context("Failed to create cluster_nodes_ready metric")?;
-
         let cluster_cpu_usage: _ = GaugeVec::new(
             Opts::new(
                 format!("{}cluster_cpu_usage_percent", ns),
@@ -657,7 +578,6 @@ impl ClusterMetrics {
             &["scope"],
         )
         .context("Failed to create cluster_cpu_usage metric")?;
-
         let cluster_memory_usage: _ = GaugeVec::new(
             Opts::new(
                 format!("{}cluster_memory_usage_bytes", ns),
@@ -666,7 +586,6 @@ impl ClusterMetrics {
             &["scope"],
         )
         .context("Failed to create cluster_memory_usage metric")?;
-
         let pod_restarts: _ = IntCounterVec::new(
             Opts::new(
                 format!("{}pod_restarts_total", ns),
@@ -675,7 +594,6 @@ impl ClusterMetrics {
             &["namespace", "pod"],
         )
         .context("Failed to create pod_restarts metric")?;
-
         let upgrade_progress: _ = GaugeVec::new(
             Opts::new(
                 format!("{}upgrade_progress_percent", ns),
@@ -684,7 +602,6 @@ impl ClusterMetrics {
             &["cluster"],
         )
         .context("Failed to create upgrade_progress metric")?;
-
         // Register metrics
         registry.register(Box::new(cluster_nodes_total.clone())?;
         registry.register(Box::new(cluster_nodes_ready.clone())?;
@@ -692,7 +609,6 @@ impl ClusterMetrics {
         registry.register(Box::new(cluster_memory_usage.clone())?;
         registry.register(Box::new(pod_restarts.clone())?;
         registry.register(Box::new(upgrade_progress.clone())?;
-
         Ok(Self {
             cluster_nodes_total,
             cluster_nodes_ready,
@@ -703,13 +619,11 @@ impl ClusterMetrics {
         })
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_prometheus_manager_creation() {
         let config: _ = PrometheusConfig {
@@ -719,11 +633,9 @@ use std::collections::{HashMap, BTreeMap};
             custom_metrics: true,
             histogram_buckets: vec![0.1, 0.5, 1.0],
         };
-
         let manager: _ = PrometheusManager::new(config);
         assert!(manager.is_ok());
     }
-
     #[test]
     fn test_record_execution() {
         let config: _ = PrometheusConfig {
@@ -733,26 +645,20 @@ use std::collections::{HashMap, BTreeMap};
             custom_metrics: true,
             histogram_buckets: vec![0.1, 0.5, 1.0],
         };
-
         let manager: _ = PrometheusManager::new(config).unwrap();
-
         // Record successful execution
         manager.record_execution(10.0, true);
-
         // Record failed execution
         manager.record_execution(5.0, false);
-
         // Verify metrics can be collected
         let output: _ = tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(manager.collect_and_export());
-
         assert!(output.is_ok());
         let text: _ = output.unwrap();
         assert!(text.contains("beejs_executions_total"));
         assert!(text.contains("beejs_execution_errors_total"));
     }
-
     #[test]
     fn test_record_jit_compilation() {
         let config: _ = PrometheusConfig {
@@ -762,18 +668,14 @@ use std::collections::{HashMap, BTreeMap};
             custom_metrics: true,
             histogram_buckets: vec![0.1, 0.5, 1.0],
         };
-
         let manager: _ = PrometheusManager::new(config).unwrap();
-
         // Record JIT compilation
         manager.record_jit_compilation(5.0, true);
         manager.record_jit_compilation(10.0, false);
-
         // Verify metrics can be collected
         let output: _ = tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(manager.collect_and_export());
-
         assert!(output.is_ok());
         let text: _ = output.unwrap();
         assert!(text.contains("beejs_jit_compilation_time_seconds"));

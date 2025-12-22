@@ -1,6 +1,5 @@
 //! Jaeger Tracing Integration for Beejs
 //! 实现与 Jaeger 分布式追踪系统的集成
-
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -11,7 +10,6 @@ use tokio::time::sleep;
 use tracing::{info, warn, debug, error};
 use udp::UdpSocket;
 use uuid::Uuid;
-
 /// Jaeger collector configuration
 #[derive(Debug, Clone)]
 pub struct JaegerConfig {
@@ -30,7 +28,6 @@ pub struct JaegerConfig {
     /// Enable debug logging
     pub debug: bool,
 }
-
 /// Jaeger span tag
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JaegerTag {
@@ -45,7 +42,6 @@ pub struct JaegerTag {
     /// Tag type
     pub tag_type: String,
 }
-
 /// Jaeger log entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JaegerLog {
@@ -54,7 +50,6 @@ pub struct JaegerLog {
     /// Fields
     pub fields: Vec<JaegerTag>,
 }
-
 /// Jaeger span reference
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JaegerRef {
@@ -65,7 +60,6 @@ pub struct JaegerRef {
     /// Span ID
     pub span_id: String,
 }
-
 /// Jaeger span
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JaegerSpan {
@@ -90,7 +84,6 @@ pub struct JaegerSpan {
     /// Logs
     pub logs: Vec<JaegerLog>,
 }
-
 /// Jaeger batch
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JaegerBatch {
@@ -101,14 +94,12 @@ pub struct JaegerBatch {
     /// Spans
     pub spans: Vec<JaegerSpan>,
 }
-
 /// Jaeger message
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JaegerMessage {
     /// Batches
     pub batch: JaegerBatch,
 }
-
 /// Jaeger tracer
 #[derive(Debug)]
 pub struct JaegerTracer {
@@ -121,7 +112,6 @@ pub struct JaegerTracer {
     /// UDP socket for sending spans
     udp_socket: Arc<UdpSocket>,
 }
-
 /// Jaeger span wrapper
 #[derive(Debug)]
 pub struct JaegerSpan {
@@ -132,15 +122,12 @@ pub struct JaegerSpan {
     /// Service name
     pub service_name: String,
 }
-
 impl JaegerTracer {
     /// Create a new JaegerTracer
     pub fn new(config: JaegerConfig) -> Result<Self> {
         let udp_socket: _ = UdpSocket::bind("0.0.0.0:0")
             .context("Failed to bind UDP socket")?;
-
         info!("Jaeger tracer initialized for service: {}", config.service_name);
-
         Ok(Self {
             config,
             span_buffer: Arc::new(Mutex::new(Vec::new()))
@@ -148,12 +135,10 @@ impl JaegerTracer {
             udp_socket: Arc::new(Mutex::new(udp_socket)))
         })
     }
-
     /// Start a new Jaeger span
     pub fn start_span(&self, operation_name: &str) -> JaegerSpan {
         let trace_id: _ = generate_trace_id();
         let span_id: _ = generate_span_id();
-
         let span: _ = super::distributed_tracer::Span {
             trace_id: trace_id.clone(),
             span_id: span_id.clone(),
@@ -163,16 +148,13 @@ impl JaegerTracer {
             tags: HashMap::new(),
             logs: Vec::new(),
         };
-
         info!("Started Jaeger span: {}/{}", trace_id, span_id);
-
         JaegerSpan {
             inner: span,
             start_time: Instant::now(),
             service_name: self.config.service_name.clone(),
         }
     }
-
     /// Start a child span
     pub fn start_child_span(&self, parent_span: &JaegerSpan, operation_name: &str) -> JaegerSpan {
         let span: _ = super::distributed_tracer::Span {
@@ -184,65 +166,52 @@ impl JaegerTracer {
             tags: HashMap::new(),
             logs: Vec::new(),
         };
-
         info!("Started child Jaeger span: {}/{} (parent: {})",
             span.trace_id, span.span_id, parent_span.inner.span_id);
-
         JaegerSpan {
             inner: span,
             start_time: Instant::now(),
             service_name: self.config.service_name.clone(),
         }
     }
-
     /// Add a tag to a span
     pub fn add_tag(&self, span: &mut JaegerSpan, key: &str, value: &str) {
         span.inner.add_tag(key, value);
         debug!("Added tag to span {}: {}={}", span.inner.span_id, key, value);
     }
-
     /// Add a numeric tag to a span
     pub fn add_numeric_tag(&self, span: &mut JaegerSpan, key: &str, value: f64) {
         span.inner.add_tag(key, &value.to_string());
         debug!("Added numeric tag to span {}: {}={}", span.inner.span_id, key, value);
     }
-
     /// Add a boolean tag to a span
     pub fn add_boolean_tag(&self, span: &mut JaegerSpan, key: &str, value: bool) {
         span.inner.add_tag(key, &value.to_string());
         debug!("Added boolean tag to span {}: {}={}", span.inner.span_id, key, value);
     }
-
     /// Log an event to a span
     pub fn log_event(&self, span: &mut JaegerSpan, event: &str) {
         span.inner.log_event(event);
         debug!("Logged event to span {}: {}", span.inner.span_id, event);
     }
-
     /// Finish a span and send to Jaeger
     pub fn finish_span(&self, mut span: JaegerSpan) -> Result<()> {
         let duration: _ = span.start_time.elapsed();
-
         // Add duration as a tag
         span.inner.add_tag("duration_ms", &duration.as_millis().to_string());
-
         // Convert to Jaeger span format
         let jaeger_span: _ = self.convert_to_jaeger_span(span)?;
-
         // Add to buffer
         {
             let mut buffer = self.span_buffer.lock().unwrap();
             buffer.push(jaeger_span);
-
             // Check if we should flush
             if buffer.len() >= self.config.batch_size {
                 self.flush_spans()?;
             }
         }
-
         Ok(())
     }
-
     /// Flush all buffered spans to Jaeger
     pub fn flush_spans(&self) -> Result<()> {
         let spans_to_send: _ = {
@@ -251,13 +220,10 @@ impl JaegerTracer {
             buffer.clear();
             spans
         };
-
         if spans_to_send.is_empty() {
             return Ok(());
         }
-
         info!("Flushing {} spans to Jaeger", spans_to_send.len());
-
         // Group spans by operation name
         let mut spans_by_operation: HashMap<String, Vec<JaegerSpan> = HashMap::new();
         for span in spans_to_send {
@@ -266,21 +232,17 @@ impl JaegerTracer {
                 .or_insert_with(Vec::new)
                 .push(span);
         }
-
         // Send batches
         for (operation_name, spans) in spans_by_operation {
             self.send_batch(&operation_name, spans)?;
         }
-
         // Update last flush time
         {
             let mut last_flush = self.last_flush.lock().unwrap();
             *last_flush = Instant::now();
         }
-
         Ok(())
     }
-
     /// Send a batch of spans to Jaeger agent
     fn send_batch(&self, operation_name: &str, spans: Vec<JaegerSpan>) -> Result<()> {
         let batch: _ = JaegerBatch {
@@ -288,29 +250,22 @@ impl JaegerTracer {
             operation_name: operation_name.to_string(),
             spans,
         };
-
         let message: _ = JaegerMessage { batch };
-
         // Serialize to JSON
         let json: _ = serde_json::to_string(&message)
             .context("Failed to serialize Jaeger message")?;
-
         // Send via UDP
         let agent_addr: _ = format!("{}:{}, self.config.agent_host", self.config.agent_port));
         self.udp_socket
             .send_to(json.as_bytes(), agent_addr)
             .context("Failed to send spans to Jaeger agent")?;
-
         debug!("Sent batch to Jaeger agent: {} spans for operation {}",
             batch.spans.len(), operation_name);
-
         Ok(())
     }
-
     /// Convert internal span to Jaeger span format
     fn convert_to_jaeger_span(&self, span: JaegerSpan) -> Result<JaegerSpan> {
         let duration: _ = span.start_time.elapsed();
-
         // Convert tags
         let mut jaeger_tags = Vec::new();
         for (key, value) in &span.inner.tags {
@@ -322,7 +277,6 @@ impl JaegerTracer {
                 tag_type: "string".to_string(),
             });
         }
-
         // Convert logs
         let mut jaeger_logs = Vec::new();
         for log_entry in &span.inner.logs {
@@ -340,7 +294,6 @@ impl JaegerTracer {
                 }],
             });
         }
-
         // Create Jaeger span
         let jaeger_span: _ = JaegerSpan {
             trace_id: span.inner.trace_id,
@@ -357,31 +310,25 @@ impl JaegerTracer {
             tags: jaeger_tags,
             logs: jaeger_logs,
         };
-
         Ok(jaeger_span)
     }
-
     /// Start background flushing task
     pub async fn start_background_flushing(&self) {
         let span_buffer: _ = self.span_buffer.clone();
         let last_flush: _ = self.last_flush.clone();
         let flush_interval: _ = self.config.flush_interval;
-
         tokio::spawn(async move {
             loop {
                 sleep(flush_interval).await;
-
                 let should_flush: _ = {
                     let last: _ = *last_flush.lock().unwrap();
                     last.elapsed() >= flush_interval
                 };
-
                 if should_flush {
                     let buffer_len: _ = {
                         let buffer: _ = span_buffer.lock().unwrap();
                         buffer.len()
                     };
-
                     if buffer_len > 0 {
                         warn!("Background flush triggered with {} buffered spans", buffer_len);
                         // Note: In a real implementation, you would call flush_spans() here
@@ -390,24 +337,19 @@ impl JaegerTracer {
                 }
             }
         });
-
         info!("Started background flushing task with interval {:?}", flush_interval);
     }
-
     /// Get tracer statistics
     pub fn get_stats(&self) -> HashMap<String, usize> {
         let buffer: _ = self.span_buffer.lock().unwrap();
         let last_flush: _ = self.last_flush.lock().unwrap();
-
         let mut stats = HashMap::new();
         stats.insert("buffered_spans".to_string(), buffer.len());
         stats.insert("time_since_last_flush_ms".to_string(), last_flush.elapsed().as_millis() as usize);
         stats.insert("flush_interval_ms".to_string(), self.config.flush_interval.as_millis() as usize);
-
         stats
     }
 }
-
 /// Generate a 64-bit trace ID
 fn generate_trace_id() -> String {
     let bytes: _ = Uuid::new_v4().as_bytes();
@@ -418,7 +360,6 @@ fn generate_trace_id() -> String {
     }
     trace_id
 }
-
 /// Generate a 64-bit span ID
 fn generate_span_id() -> String {
     let bytes: _ = Uuid::new_v4().as_bytes();
@@ -429,13 +370,11 @@ fn generate_span_id() -> String {
     }
     span_id
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_jaeger_tracer_creation() {
         let config: _ = JaegerConfig {
@@ -447,11 +386,9 @@ use std::collections::{HashMap, BTreeMap};
             flush_interval: Duration::from_secs(5),
             debug: false,
         };
-
         let tracer: _ = JaegerTracer::new(config);
         assert!(tracer.is_ok());
     }
-
     #[test]
     fn test_start_span() {
         let config: _ = JaegerConfig {
@@ -463,15 +400,12 @@ use std::collections::{HashMap, BTreeMap};
             flush_interval: Duration::from_secs(5),
             debug: false,
         };
-
         let tracer: _ = JaegerTracer::new(config).unwrap();
         let span: _ = tracer.start_span("test_operation");
-
         assert_eq!(span.inner.operation_name, "test_operation");
         assert!(!span.inner.trace_id.is_empty());
         assert!(!span.inner.span_id.is_empty());
     }
-
     #[test]
     fn test_add_tags() {
         let config: _ = JaegerConfig {
@@ -483,19 +417,15 @@ use std::collections::{HashMap, BTreeMap};
             flush_interval: Duration::from_secs(5),
             debug: false,
         };
-
         let tracer: _ = JaegerTracer::new(config).unwrap();
         let mut span = tracer.start_span("test_operation");
-
         tracer.add_tag(&mut span, "key1", "value1");
         tracer.add_numeric_tag(&mut span, "duration_ms", 123.45);
         tracer.add_boolean_tag(&mut span, "success", true);
-
         assert_eq!(span.inner.tags.get("key1"), Some(&"value1".to_string());
         assert_eq!(span.inner.tags.get("duration_ms"), Some(&"123.45".to_string());
         assert_eq!(span.inner.tags.get("success"), Some(&"true".to_string());
     }
-
     #[test]
     fn test_finish_span() {
         let config: _ = JaegerConfig {
@@ -507,14 +437,11 @@ use std::collections::{HashMap, BTreeMap};
             flush_interval: Duration::from_secs(5),
             debug: false,
         };
-
         let tracer: _ = JaegerTracer::new(config).unwrap();
         let span: _ = tracer.start_span("test_operation");
-
         let result: _ = tracer.finish_span(span);
         assert!(result.is_ok());
     }
-
     #[test]
     fn test_get_stats() {
         let config: _ = JaegerConfig {
@@ -526,10 +453,8 @@ use std::collections::{HashMap, BTreeMap};
             flush_interval: Duration::from_secs(5),
             debug: false,
         };
-
         let tracer: _ = JaegerTracer::new(config).unwrap();
         let stats: _ = tracer.get_stats();
-
         assert!(stats.contains_key("buffered_spans"));
         assert!(stats.contains_key("time_since_last_flush_ms"));
         assert!(stats.contains_key("flush_interval_ms"));

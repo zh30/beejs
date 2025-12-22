@@ -7,16 +7,13 @@
 //! - 自适应扩缩容策略
 //! - 负载预测
 //! - 成本优化
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
 use tokio::time::{interval, Duration};
-
 use crate::cloud::{CloudAdapter, CloudConfig, CloudManager};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 扩缩容策略
 #[derive(Debug, Clone)]
 pub enum ScalingStrategy {
@@ -50,7 +47,6 @@ pub enum ScalingStrategy {
         weights: HashMap<String, f64>,
     },
 }
-
 /// 扩缩容动作
 #[derive(Debug, Clone)]
 pub enum ScalingAction {
@@ -58,7 +54,6 @@ pub enum ScalingAction {
     ScaleDown(u32),
     NoOp,
 }
-
 /// 扩缩容决策
 #[derive(Debug, Clone)]
 pub struct ScalingDecision {
@@ -67,7 +62,6 @@ pub struct ScalingDecision {
     pub confidence: f64,
     pub metadata: HashMap<String, String>,
 }
-
 /// 性能指标
 #[derive(Debug, Clone)]
 pub struct PerformanceMetrics {
@@ -81,7 +75,6 @@ pub struct PerformanceMetrics {
     pub active_connections: u32,
     pub timestamp: std::time::SystemTime,
 }
-
 /// 自动扩缩容器
 pub struct AutoScaler {
     config: AutoScalingConfig,
@@ -91,7 +84,6 @@ pub struct AutoScaler {
     cloud_manager: CloudManager,
     decision_callback: Option<Box<dyn Fn(ScalingDecision) + Send + Sync>>,
 }
-
 impl AutoScaler {
     /// 创建新的自动扩缩容器
     pub fn new(
@@ -108,7 +100,6 @@ impl AutoScaler {
             decision_callback: None,
         }
     }
-
     /// 设置扩缩容决策回调
     pub fn set_decision_callback<F>(&mut self, callback: F)
     where
@@ -116,29 +107,24 @@ impl AutoScaler {
     {
         self.decision_callback = Some(Box::new(callback));
     }
-
     /// 更新性能指标
     pub async fn update_metrics(&self, metrics: PerformanceMetrics) {
         let mut history = self.metrics_history.write().await;
         history.push(metrics);
-
         // 保留最近 100 个数据点
         if history.len() > 100 {
             history.remove(0);
         }
     }
-
     /// 获取当前副本数
     pub async fn get_current_replicas(&self) -> u32 {
         *self.current_replicas.read().await
     }
-
     /// 手动设置副本数
     pub async fn set_replicas(&self, replicas: u32) {
         let mut current = self.current_replicas.write().await;
         *current = replicas.clamp(self.config.min_replicas, self.config.max_replicas);
     }
-
     /// 评估是否需要扩缩容
     pub async fn evaluate(&self) -> Result<ScalingDecision, Box<dyn std::error::Error>> {
         let history: _ = self.metrics_history.read().await;
@@ -150,18 +136,14 @@ impl AutoScaler {
                 metadata: HashMap::new(),
             });
         }
-
         let latest_metrics: _ = history.last().unwrap();
         let decision: _ = self.evaluate_strategy(latest_metrics).await?;
-
         // 应用扩缩容
         if let Some(callback) = &self.decision_callback {
             callback(decision.clone());
         }
-
         Ok(decision)
     }
-
     /// 评估扩缩容策略
     async fn evaluate_strategy(&self, metrics: &PerformanceMetrics) -> Result<ScalingDecision, Box<dyn std::error::Error>> {
         match &self.strategy {
@@ -309,7 +291,6 @@ impl AutoScaler {
                 let mut total_score = 0.0;
                 let mut total_weight = 0.0;
                 let mut reasons = Vec::new();
-
                 for strategy in strategies {
                     let strategy_decision: _ = self.evaluate_single_strategy(strategy, metrics).await?;
                     let weight: _ = weights
@@ -319,13 +300,11 @@ impl AutoScaler {
                     total_weight += weight;
                     reasons.push(strategy_decision.reason);
                 }
-
                 let avg_score: _ = if total_weight > 0.0 {
                     total_score / total_weight
                 } else {
                     0.0
                 };
-
                 let action: _ = if avg_score > 0.5 {
                     ScalingAction::ScaleUp(1)
                 } else if avg_score < -0.5 {
@@ -333,7 +312,6 @@ impl AutoScaler {
                 } else {
                     ScalingAction::NoOp
                 };
-
                 Ok(ScalingDecision {
                     action,
                     reason: format!("Composite strategy: {}", reasons.join(", ")),
@@ -346,7 +324,6 @@ impl AutoScaler {
             }
         }
     }
-
     /// 评估单个策略
     async fn evaluate_single_strategy(
         &self,
@@ -362,7 +339,6 @@ impl AutoScaler {
             metadata: HashMap::new(),
         })
     }
-
     /// 获取策略名称
     fn get_strategy_name(&self, strategy: &ScalingStrategy) -> String {
         match strategy {
@@ -373,14 +349,12 @@ impl AutoScaler {
             ScalingStrategy::Composite { .. } => "composite".to_string(),
         }
     }
-
     /// 执行扩缩容
     pub async fn execute_scaling(&self, decision: &ScalingDecision) -> Result<(), Box<dyn std::error::Error>> {
         let adapter: _ = match self.cloud_manager.get_adapter() {
             Some(adapter) => adapter,
             None => return Err("No cloud adapter configured".into()),
         };
-
         let new_replicas: _ = match decision.action {
             ScalingAction::ScaleUp(inc) => {
                 let current: _ = *self.current_replicas.read().await;
@@ -396,28 +370,22 @@ impl AutoScaler {
             }
             ScalingAction::NoOp => return Ok(()),
         };
-
         // 假设 deployment_id 是 "default"
         let deployment_id: _ = "default";
         adapter.scale(deployment_id, new_replicas).await?;
-
         tracing::info!(
             "Scaling executed: {:?} -> new replicas: {}, reason: {}",
             decision.action,
             new_replicas,
             decision.reason
         );
-
         Ok(())
     }
-
     /// 启动自动扩缩容循环
     pub async fn start_auto_scaling(&self, interval_seconds: u64) {
         let mut tick_interval = interval(Duration::from_secs(interval_seconds));
-
         loop {
             tick_interval.tick().await;
-
             if let Ok(decision) = self.evaluate().await {
                 if !matches!(decision.action, ScalingAction::NoOp) {
                     if let Err(e) = self.execute_scaling(&decision).await {
@@ -428,53 +396,43 @@ impl AutoScaler {
         }
     }
 }
-
 /// 负载预测器
 pub struct LoadPredictor {
     history: Arc<RwLock<Vec<PerformanceMetrics>>>,
 }
-
 impl LoadPredictor {
     pub fn new() -> Self {
         Self {
             history: Arc::new(Mutex::new(Vec::new()))
         }
     }
-
     /// 预测未来负载
     pub async fn predict_load(&self, horizon_minutes: u32) -> Result<f64, Box<dyn std::error::Error>> {
         let history: _ = self.history.read().await;
         if history.len() < 10 {
             return Ok(0.0);
         }
-
         // 简单的线性回归预测
         let n: _ = history.len() as f64;
         let mut sum_x = 0.0;
         let mut sum_y = 0.0;
         let mut sum_xy = 0.0;
         let mut sum_x2 = 0.0;
-
         for (i, metrics) in history.iter().enumerate() {
             let x: _ = i as f64;
             let y: _ = metrics.request_rate;
-
             sum_x += x;
             sum_y += y;
             sum_xy += x * y;
             sum_x2 += x * x;
         }
-
         let slope: _ = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x);
         let intercept: _ = (sum_y - slope * sum_x) / n;
-
         let future_x: _ = (history.len() + horizon_minutes as usize) as f64;
         let prediction: _ = intercept + slope * future_x;
-
         Ok(prediction.max(0.0))
     }
 }
-
 impl Default for LoadPredictor {
     fn default() -> Self {
         Self::new()

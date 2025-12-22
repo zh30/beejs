@@ -1,9 +1,7 @@
 //! 全息计算引擎核心实现
-
 use super::wavefront_propagator::PropagationMethod;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 全息引擎配置
 #[derive(Debug, Clone)]
 pub struct HolographicConfig {
@@ -16,7 +14,6 @@ pub struct HolographicConfig {
     /// 计算方法
     pub compute_method: PropagationMethod,
 }
-
 impl Default for HolographicConfig {
     fn default() -> Self {
         Self {
@@ -27,7 +24,6 @@ impl Default for HolographicConfig {
         }
     }
 }
-
 /// 全息计算引擎
 pub struct HolographicEngine {
     /// 配置
@@ -35,7 +31,6 @@ pub struct HolographicEngine {
     /// 当前帧
     current_frame: u64,
 }
-
 impl HolographicEngine {
     /// 创建全息引擎
     pub fn new(config: HolographicConfig) -> Result<Self, HolographicError> {
@@ -44,30 +39,25 @@ impl HolographicEngine {
             current_frame: 0,
         })
     }
-
     /// 获取配置
     pub fn config(&self) -> &HolographicConfig {
         &self.config
     }
-
     /// 计算全息图
     pub fn compute_hologram(&self) -> Result<Vec<u8>, HolographicError> {
         let (x, y, _z) = self.config.resolution;
         let size: _ = (x * y) as usize;
         Ok(vec![0u8; size])
     }
-
     /// 获取当前帧编号
     pub fn current_frame(&self) -> u64 {
         self.current_frame
     }
-
     /// 推进一帧
     pub fn advance_frame(&mut self) {
         self.current_frame += 1;
     }
 }
-
 /// 全息引擎错误
 #[derive(Debug, Clone)]
 pub enum HolographicError {
@@ -80,7 +70,6 @@ pub enum HolographicError {
     /// 不支持的格式
     UnsupportedFormat(String),
 }
-
 impl std::fmt::Display for HolographicError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -91,5 +80,4 @@ impl std::fmt::Display for HolographicError {
         }
     }
 }
-
 impl std::error::Error for HolographicError {}

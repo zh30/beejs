@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 // 动作捕捉系统
-
 /// 动作捕捉配置
 #[derive(Debug, Clone)]
 pub struct MotionConfig {
@@ -12,7 +11,6 @@ pub struct MotionConfig {
     /// 启用预测
     pub enable_prediction: bool,
 }
-
 impl Default for MotionConfig {
     fn default() -> Self {
         Self {
@@ -22,7 +20,6 @@ impl Default for MotionConfig {
         }
     }
 }
-
 /// 关节位置
 #[derive(Debug, Clone, Copy)]
 pub struct JointPosition {
@@ -33,7 +30,6 @@ pub struct JointPosition {
     /// 置信度
     pub confidence: f32,
 }
-
 impl Default for JointPosition {
     fn default() -> Self {
         Self {
@@ -43,7 +39,6 @@ impl Default for JointPosition {
         }
     }
 }
-
 /// 身体姿态
 #[derive(Debug, Clone)]
 pub struct BodyPose {
@@ -54,7 +49,6 @@ pub struct BodyPose {
     /// 时间戳
     pub timestamp: u64,
 }
-
 impl Default for BodyPose {
     fn default() -> Self {
         Self {
@@ -64,7 +58,6 @@ impl Default for BodyPose {
         }
     }
 }
-
 /// 动作捕捉系统
 pub struct MotionCapture {
     /// 配置
@@ -74,7 +67,6 @@ pub struct MotionCapture {
     /// 帧计数
     frame_count: u64,
 }
-
 impl MotionCapture {
     /// 创建动作捕捉系统
     pub fn new(config: MotionConfig) -> Result<Self, MotionCaptureError> {
@@ -84,12 +76,10 @@ impl MotionCapture {
             frame_count: 0,
         })
     }
-
     /// 获取关节数量
     pub fn joint_count(&self) -> u32 {
         self.config.joint_count
     }
-
     /// 获取身体姿态
     pub fn get_body_pose(&mut self) -> Result<BodyPose, MotionCaptureError> {
         self.frame_count += 1;
@@ -101,18 +91,15 @@ impl MotionCapture {
         self.current_pose = Some(pose.clone());
         Ok(pose)
     }
-
     /// 获取当前姿态
     pub fn current_pose(&self) -> Option<&BodyPose> {
         self.current_pose.as_ref()
     }
-
     /// 预测是否启用
     pub fn prediction_enabled(&self) -> bool {
         self.config.enable_prediction
     }
 }
-
 /// 动作捕捉错误
 #[derive(Debug, Clone)]
 pub enum MotionCaptureError {
@@ -123,7 +110,6 @@ pub enum MotionCaptureError {
     /// 设备未找到
     DeviceNotFound,
 }
-
 impl std::fmt::Display for MotionCaptureError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -133,5 +119,4 @@ impl std::fmt::Display for MotionCaptureError {
         }
     }
 }
-
 impl std::error::Error for MotionCaptureError {}

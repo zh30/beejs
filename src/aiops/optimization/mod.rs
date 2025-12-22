@@ -2,11 +2,9 @@
 //!
 //! 这个模块提供了基于 AI 的自动性能调优功能，包括性能分析、
 //! 自动调优和优化引擎。
-
 pub mod performance_analyzer;
 pub mod auto_tuner;
 pub mod optimizer;
-
 // 重新导出主要类型
 pub use performance_analyzer::{
     PerformanceAnalyzer,
@@ -14,7 +12,6 @@ pub use performance_analyzer::{
     PerformanceMetric,
     PerformanceMetricType,
 };
-
 pub use auto_tuner::{
     AutoTuner,
     OptimizationPlan,
@@ -24,7 +21,6 @@ pub use auto_tuner::{
     OptimizationFeedback,
     OptimizationResult,
 };
-
 pub use optimizer::{
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};

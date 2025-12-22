@@ -1,13 +1,10 @@
 //! REPL (Read-Eval-Print Loop) Module
 //! Stage 36.0 - 实现交互式 REPL 功能
-
 use std::collections::VecDeque;
 use std::io::{self, Write};
 use std::sync::Arc;
 use std::time::Instant;
-
 use crate::RuntimeLite;
-
 /// REPL configuration
 #[derive(Debug, Clone)]
 pub struct ReplConfig {
@@ -20,7 +17,6 @@ pub struct ReplConfig {
     /// Auto-indent for multiline input
     pub auto_indent: bool,
 }
-
 impl Default for ReplConfig {
     fn default() -> Self {
         Self {
@@ -31,7 +27,6 @@ impl Default for ReplConfig {
         }
     }
 }
-
 /// REPL result
 #[derive(Debug, Clone)]
 pub struct ReplResult {
@@ -39,7 +34,6 @@ pub struct ReplResult {
     pub execution_time: std::time::Duration,
     pub is_error: bool,
 }
-
 /// REPL (Read-Eval-Print Loop) implementation
 pub struct Repl {
     /// Runtime to execute code
@@ -55,7 +49,6 @@ pub struct Repl {
     /// Indentation level
     indent_level: usize,
 }
-
 impl Repl {
     /// Create a new REPL instance
     pub fn new(runtime: Arc<RuntimeLite>) -> Self {
@@ -68,7 +61,6 @@ impl Repl {
             indent_level: 0,
         }
     }
-
     /// Create with custom configuration
     pub fn with_config(runtime: Arc<RuntimeLite>, config: ReplConfig) -> Self {
         Self {
@@ -80,12 +72,10 @@ impl Repl {
             indent_level: 0,
         }
     }
-
     /// Get runtime reference (for testing purposes)
     pub fn runtime(&self) -> &Arc<RuntimeLite> {
         &self.runtime
     }
-
     /// Run the REPL
     pub async fn run(&mut self) -> anyhow::Result<()> {
         println!("🐝 Beejs REPL - High-performance JavaScript/TypeScript runtime");
@@ -93,7 +83,6 @@ impl Repl {
         println!("Type .exit or Ctrl+C to quit");
         println!("Type .help for more information");
         println!();
-
         loop {
             // Display prompt
             let prompt: _ = if self.in_multiline {
@@ -101,34 +90,27 @@ impl Repl {
             } else {
                 self.config.prompt.clone()
             };
-
             print!("{}", prompt);
             io::stdout().flush()?;
-
             // Read input
             let input: _ = self.read_line()?;
-
             // Process input
             if input.trim() == ".exit" || input.trim() == ".quit" {
                 println!("Goodbye! 👋");
                 break;
             }
-
             if input.trim() == ".help" {
                 self.print_help();
                 continue;
             }
-
             if input.trim() == ".clear" {
                 self.clear_screen();
                 continue;
             }
-
             if input.trim() == ".history" {
                 self.print_history();
                 continue;
             }
-
             // Handle empty input
             if input.trim().is_empty() {
                 if self.in_multiline {
@@ -137,32 +119,26 @@ impl Repl {
                 }
                 continue;
             }
-
             // Check for multiline input
             if self.is_multiline_start(&input) {
                 self.start_multiline(&input);
                 continue;
             }
-
             if self.in_multiline {
                 self.add_to_multiline(&input);
                 continue;
             }
-
             // Execute single line
             self.execute_line(&input).await?;
         }
-
         Ok(())
     }
-
     /// Read a line from stdin
     fn read_line(&self) -> anyhow::Result<String> {
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
         Ok(input)
     }
-
     /// Check if input starts a multiline block
     fn is_multiline_start(&self, input: &str) -> bool {
         let trimmed: _ = input.trim();
@@ -176,18 +152,15 @@ impl Repl {
         trimmed.starts_with("try ") ||
         trimmed.starts_with("class ")
     }
-
     /// Start multiline input
     fn start_multiline(&mut self, input: &str) {
         self.in_multiline = true;
         self.multiline_buffer.clear();
         self.add_to_multiline(input);
     }
-
     /// Add line to multiline buffer
     fn add_to_multiline(&mut self, input: &str) {
         self.multiline_buffer.push(input.to_string());
-
         // Auto-indent
         if self.config.auto_indent {
             let trimmed: _ = input.trim();
@@ -198,46 +171,36 @@ impl Repl {
             }
         }
     }
-
     /// Execute multiline buffer
     async fn execute_multiline(&mut self) -> anyhow::Result<()> {
         let code: _ = self.multiline_buffer.join("\n");
         self.execute_code(&code).await?;
-
         // Reset multiline state
         self.in_multiline = false;
         self.multiline_buffer.clear();
         self.indent_level = 0;
-
         Ok(())
     }
-
     /// Execute a single line
     async fn execute_line(&mut self, code: &str) -> anyhow::Result<()> {
         self.execute_code(code).await?;
-
         // Add to history
         if self.history.len() >= self.config.history_size {
             self.history.pop_front();
         }
         self.history.push_back(code.to_string());
-
         Ok(())
     }
-
     /// Execute JavaScript/TypeScript code
     async fn execute_code(&self, code: &str) -> anyhow::Result<ReplResult> {
         let start: _ = Instant::now();
-
         match self.runtime.execute_code(code) {
             Ok(result) => {
                 let execution_time: _ = start.elapsed();
-
                 // Print result if not undefined
                 if result != "undefined" && !result.is_empty() {
                     println!("{}", result);
                 }
-
                 Ok(ReplResult {
                     output: result,
                     execution_time,
@@ -247,7 +210,6 @@ impl Repl {
             Err(e) => {
                 let execution_time: _ = start.elapsed();
                 println!("Error: {}", e);
-
                 Ok(ReplResult {
                     output: e.to_string(),
                     execution_time,
@@ -256,20 +218,16 @@ impl Repl {
             }
         }
     }
-
     /// Execute code and record in history (for testing)
     pub async fn execute_and_record(&mut self, code: &str) -> anyhow::Result<ReplResult> {
         let result: _ = self.execute_code(code).await?;
-
         // Add to history
         if self.history.len() >= self.config.history_size {
             self.history.pop_front();
         }
         self.history.push_back(code.to_string());
-
         Ok(result)
     }
-
     /// Print help information
     fn print_help(&self) {
         println!("\n🐝 Beejs REPL Commands:");
@@ -283,13 +241,11 @@ impl Repl {
         println!("  - Syntax highlighting: Enabled for better readability");
         println!();
     }
-
     /// Clear the screen
     fn clear_screen(&self) {
         print!("\x1B[2J\x1B[H");
         io::stdout().flush().unwrap();
     }
-
     /// Print command history
     fn print_history(&self) {
         println!("\nCommand History:");
@@ -298,7 +254,6 @@ impl Repl {
         }
         println!();
     }
-
     /// Get execution statistics
     pub fn get_stats(&self) -> ReplStats {
         let total_commands: _ = self.history.len();
@@ -307,7 +262,6 @@ impl Repl {
         } else {
             0
         };
-
         ReplStats {
             total_commands,
             avg_command_length: avg_history_len,
@@ -316,7 +270,6 @@ impl Repl {
         }
     }
 }
-
 /// REPL statistics
 #[derive(Debug, Clone)]
 pub struct ReplStats {
@@ -325,7 +278,6 @@ pub struct ReplStats {
     pub history_size: usize,
     pub max_history_size: usize,
 }
-
 impl ReplStats {
     pub fn print(&self) {
         println!("\n📊 REPL Statistics:");
@@ -335,51 +287,41 @@ impl ReplStats {
         println!();
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::RuntimeLite;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_repl_basic_execution() {
         let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false).expect("Failed to create runtime")));
         let mut repl = Repl::new(runtime);
-
         let result: _ = repl.execute_code("1 + 1").await.expect("Failed to execute");
         assert_eq!(result.output, "2");
         assert!(!result.is_error);
     }
-
     #[tokio::test]
     async fn test_repl_error_handling() {
         let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false).expect("Failed to create runtime")));
         let mut repl = Repl::new(runtime);
-
         let result: _ = repl.execute_code("invalid syntax {{").await.expect("Failed to execute");
         assert!(result.is_error);
     }
-
     #[tokio::test]
     async fn test_repl_multiline_detection() {
         let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false).expect("Failed to create runtime")));
         let mut repl = Repl::new(runtime);
-
         assert!(repl.is_multiline_start("function foo() {"));
         assert!(repl.is_multiline_start("if (true) {"));
         assert!(!repl.is_multiline_start("console.log('hello')"));
     }
-
     #[tokio::test]
     async fn test_repl_history() {
         let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false).expect("Failed to create runtime")));
         let mut repl = Repl::new(runtime);
-
         repl.execute_and_record("1 + 1").await.expect("Failed to execute");
         repl.execute_and_record("2 + 2").await.expect("Failed to execute");
-
         let stats: _ = repl.get_stats();
         assert_eq!(stats.total_commands, 2);
     }

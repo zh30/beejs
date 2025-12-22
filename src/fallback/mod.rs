@@ -1,8 +1,6 @@
 //! Stage 89 Phase 2: 优雅降级模块
 //! 提供功能降级策略和自动恢复机制
-
 pub mod manager;
-
 pub use manager::{
     FallbackManager,
     FallbackStrategy,
@@ -10,41 +8,34 @@ pub use manager::{
     FallbackEvent,
     FallbackStats,
 };
-
 /// 创建降级管理器的便捷函数
 pub fn create_fallback_manager() -> FallbackManager {
     FallbackManager::new()
 }
-
 /// 创建带有预定义策略的降级管理器
 pub async fn create_fallback_manager_with_strategies() -> FallbackManager {
     let mut manager = FallbackManager::new();
-
     // V8 优化降级策略
     manager.register_strategies(vec![
         (Feature::V8Optimization, FallbackStrategy::RetryLater(std::time::Duration::from_millis(100)),
         (Feature::V8Optimization, FallbackStrategy::DegradeToBasic),
         (Feature::V8Optimization, FallbackStrategy::DisableFeature),
     ]).await;
-
     // Python 运行时降级策略
     manager.register_strategies(vec![
         (Feature::PythonRuntime, FallbackStrategy::UseAlternative("Python subprocess".to_string()),
         (Feature::PythonRuntime, FallbackStrategy::Ignore),
     ]).await;
-
     // Go 运行时降级策略
     manager.register_strategies(vec![
         (Feature::GoRuntime, FallbackStrategy::SwitchToBackup("Go subprocess".to_string()),
         (Feature::GoRuntime, FallbackStrategy::LogAndContinue),
     ]).await;
-
     // WebAssembly 降级策略
     manager.register_strategies(vec![
         (Feature::WebAssembly, FallbackStrategy::RetryLater(std::time::Duration::from_millis(200)),
         (Feature::WebAssembly, FallbackStrategy::UseAlternative("V8 interpretation".to_string()),
     ]).await;
-
     // 企业级功能降级策略
     manager.register_strategies(vec![
         (Feature::KubernetesIntegration, FallbackStrategy::LogAndContinue),
@@ -52,20 +43,16 @@ pub async fn create_fallback_manager_with_strategies() -> FallbackManager {
         (Feature::SecurityManager, FallbackStrategy::DisableFeature),
         (Feature::ComplianceManager, FallbackStrategy::DisableFeature),
     ]).await;
-
     // 边缘计算降级策略
     manager.register_strategies(vec![
         (Feature::EdgeComputing, FallbackStrategy::DegradeToBasic),
         (Feature::OfflineMode, FallbackStrategy::Ignore),
         (Feature::DistributedCoordination, FallbackStrategy::LogAndContinue),
     ]).await;
-
     manager
 }
-
 /// 降级工具函数
 pub struct FallbackUtils;
-
 impl FallbackUtils {
     /// 检查功能是否应该降级
     pub fn should_fallback(error: &crate::error::BeejsError) -> bool {
@@ -78,7 +65,6 @@ impl FallbackUtils {
             _ => false,
         }
     }
-
     /// 获取默认的降级策略
     pub fn get_default_strategy(feature: &Feature) -> FallbackStrategy {
         match feature {
@@ -92,7 +78,6 @@ impl FallbackUtils {
             _ => FallbackStrategy::LogAndContinue,
         }
     }
-
     /// 创建降级建议
     pub fn create_fallback_suggestions(feature: &Feature) -> Vec<String> {
         match feature {
@@ -131,7 +116,6 @@ impl FallbackUtils {
         }
     }
 }
-
 /// 降级宏
 #[macro_export]
 macro_rules! with_fallback {
@@ -158,51 +142,41 @@ macro_rules! with_fallback {
         }
     }};
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_fallback_manager_creation() {
         let manager: _ = create_fallback_manager();
         assert!(manager.is_feature_active(&Feature::V8Optimization).await);
     }
-
     #[tokio::test]
     async fn test_fallback_manager_with_strategies() {
         let mut manager = create_fallback_manager().await;
-
         manager.register_strategy(
             Feature::PythonRuntime,
             FallbackStrategy::UseAlternative("Test alternative".to_string()),
         ).await;
-
         let strategies: _ = manager.get_strategies(&Feature::PythonRuntime).await;
         assert!(strategies.is_some());
         assert!(!strategies.unwrap().is_empty());
     }
-
     #[test]
     fn test_should_fallback() {
         let v8_error: _ = crate::error::BeejsError::V8Error("Test".to_string());
         let config_error: _ = crate::error::BeejsError::ConfigurationError("Test".to_string());
-
         assert!(FallbackUtils::should_fallback(&v8_error));
         assert!(!FallbackUtils::should_fallback(&config_error));
     }
-
     #[test]
     fn test_default_strategy() {
         let v8_strategy: _ = FallbackUtils::get_default_strategy(&Feature::V8Optimization);
         assert!(matches!(v8_strategy, FallbackStrategy::DegradeToBasic));
-
         let python_strategy: _ = FallbackUtils::get_default_strategy(&Feature::PythonRuntime);
         assert!(matches!(python_strategy, FallbackStrategy::UseAlternative(_));
     }
-
     #[test]
     fn test_fallback_suggestions() {
         let suggestions: _ = FallbackUtils::create_fallback_suggestions(&Feature::V8Optimization);

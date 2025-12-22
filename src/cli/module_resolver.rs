@@ -7,13 +7,10 @@
 //! - Built-in module detection
 //! - Package.json "main" field support
 //! - Relative and absolute path resolution
-
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-
 use crate::cli::script_executor::ModuleSystem;
-
 /// Module resolution result
 #[derive(Debug, Clone)]
 pub struct ResolutionResult {
@@ -24,7 +21,6 @@ pub struct ResolutionResult {
     /// Whether it's a directory (package)
     pub is_package: bool,
 }
-
 /// Type of module
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModuleType {
@@ -39,7 +35,6 @@ pub enum ModuleType {
     /// Built-in module
     BuiltIn,
 }
-
 /// Module resolver implementing Node.js algorithm
 pub struct ModuleResolver {
     /// Current working directory for resolution
@@ -49,7 +44,6 @@ pub struct ModuleResolver {
     /// Search paths for node_modules
     search_paths: Vec<PathBuf>,
 }
-
 impl ModuleResolver {
     /// Create a new module resolver
     pub fn new(current_dir: PathBuf) -> Self {
@@ -61,7 +55,6 @@ impl ModuleResolver {
         resolver.build_search_paths();
         resolver
     }
-
     /// Resolve a module request (e.g., 'lodash', './utils', '/abs/path')
     pub fn resolve(&mut self, request: &str, parent: &Path) -> Result<ResolutionResult, String> {
         // Check cache first
@@ -69,7 +62,6 @@ impl ModuleResolver {
         if let Some(cached) = self.cache.get(&cache_key) {
             return Ok(cached.clone());
         }
-
         let result: _ = match request {
             // Built-in modules
             _ if self.is_builtin_module(request) => {
@@ -88,15 +80,12 @@ impl ModuleResolver {
                 self.resolve_from_node_modules(request, parent)
             }
         };
-
         // Cache the result
         if let Ok(ref res) = result {
             self.cache.insert(cache_key, res.clone());
         }
-
         result
     }
-
     /// Check if a module name is a built-in Node.js module
     fn is_builtin_module(&self, name: &str) -> bool {
         matches!(
@@ -108,7 +97,6 @@ impl ModuleResolver {
             "worker_threads" | "zlib"
         )
     }
-
     /// Resolve built-in modules
     fn resolve_builtin(&self, name: &str) -> Result<ResolutionResult, String> {
         Ok(ResolutionResult {
@@ -117,12 +105,10 @@ impl ModuleResolver {
             is_package: false,
         })
     }
-
     /// Resolve relative module paths
     fn resolve_relative(&self, request: &str, parent: &Path) -> Result<ResolutionResult, String> {
         let parent_dir: _ = parent.parent().unwrap_or(parent);
         let mut candidate = parent_dir.join(request);
-
         // Try extensions in order: .js → .json → .node
         let extensions: _ = ["", ".js", ".json", ".node"];
         for ext in &extensions {
@@ -147,14 +133,11 @@ impl ModuleResolver {
                 }
             }
         }
-
         Err(format!("Cannot find module '{}' from '{}'", request, parent.display()))
     }
-
     /// Resolve absolute paths
     fn resolve_absolute(&self, request: &str) -> Result<ResolutionResult, String> {
         let path: _ = Path::new(request);
-
         // Try as file first
         if path.exists() {
             return Ok(ResolutionResult {
@@ -163,16 +146,13 @@ impl ModuleResolver {
                 is_package: false,
             });
         }
-
         // Try as directory with package.json
         let package_path: _ = path.clone().join("package.json");
         if package_path.exists() {
             return self.resolve_package(path.to_path_buf());
         }
-
         Err(format!("Cannot find module '{}'", request))
     }
-
     /// Resolve modules from node_modules directories
     fn resolve_from_node_modules(&self, request: &str, parent: &Path) -> Result<ResolutionResult, String> {
         // Start from parent directory and traverse up
@@ -207,10 +187,8 @@ impl ModuleResolver {
                 }
             }
         }
-
         Err(format!("Cannot find module '{}'", request))
     }
-
     /// Resolve a package directory (with package.json)
     fn resolve_package(&self, package_path: PathBuf) -> Result<ResolutionResult, String> {
         let package_json: _ = package_path.join("package.json");
@@ -218,7 +196,6 @@ impl ModuleResolver {
         if !package_json.exists() {
             return Err(format!("Package not found at {}", package_path.display()));
         }
-
         // Read package.json to find main entry point
         match fs::read_to_string(&package_json) {
             Ok(content) => {
@@ -241,7 +218,6 @@ impl ModuleResolver {
                                 }
                             }
                         }
-
                         let final_path: _ = main_path.clone();
                         let module_type: _ = self.get_module_type(&final_path);
                         Ok(ResolutionResult {
@@ -268,7 +244,6 @@ impl ModuleResolver {
             Err(_) => Err(format!("Cannot read package.json at {}", package_json.display())),
         }
     }
-
     /// Get module type based on file extension
     fn get_module_type(&self, path: &Path) -> ModuleType {
         match path.extension().and_then(|e| e.to_str()) {
@@ -278,7 +253,6 @@ impl ModuleResolver {
             _ => ModuleType::JavaScript, // Default
         }
     }
-
     /// Build search paths for node_modules
     fn build_search_paths(&mut self) {
         let mut dir = self.current_dir.clone();
@@ -300,25 +274,21 @@ impl ModuleResolver {
             }
         }
     }
-
     /// Clear the module cache
     pub fn clear_cache(&mut self) {
         self.cache.clear();
     }
-
     /// Get all search paths
     pub fn search_paths(&self) -> &[PathBuf] {
         &self.search_paths
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_resolve_builtin_module() {
         let mut resolver = ModuleResolver::new(PathBuf::from("/test"));
@@ -328,7 +298,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(result.module_type, ModuleType::BuiltIn);
         assert_eq!(result.path, PathBuf::from("fs"));
     }
-
     #[test]
     fn test_resolve_relative_path() {
         let mut resolver = ModuleResolver::new(PathBuf::from("/test"));
@@ -336,7 +305,6 @@ use std::collections::{HashMap, BTreeMap};
         // Will fail without actual files, but tests the logic
         assert!(result.is_err() || result.is_ok());
     }
-
     #[test]
     fn test_is_builtin_module() {
         let mut resolver = ModuleResolver::new(PathBuf::from("/test"));
@@ -344,7 +312,6 @@ use std::collections::{HashMap, BTreeMap};
         assert!(resolver.is_builtin_module("http"));
         assert!(!resolver.is_builtin_module("lodash"));
     }
-
     #[test]
     fn test_get_module_type() {
         let mut resolver = ModuleResolver::new(PathBuf::from("/test"));

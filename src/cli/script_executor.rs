@@ -7,10 +7,8 @@
 //! - Module resolution (ES Modules and CommonJS)
 //! - Environment variable handling
 //! - Shebang detection
-
 use std::collections::HashMap;
 use std::path::PathBuf;
-
 /// File type enumeration for script detection
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileType {
@@ -27,13 +25,11 @@ pub enum FileType {
     /// Unknown file type
     Unknown,
 }
-
 impl FileType {
     /// Check if this file type requires transpilation
     pub fn needs_transpilation(&self) -> bool {
         matches!(self, FileType::TypeScript)
     }
-
     /// Check if this file type is executable
     pub fn is_executable(&self) -> bool {
         matches!(
@@ -44,7 +40,6 @@ impl FileType {
                 | FileType::TypeScript
         )
     }
-
     /// Get the module system for this file type
     pub fn module_system(&self) -> ModuleSystem {
         match self {
@@ -56,7 +51,6 @@ impl FileType {
         }
     }
 }
-
 /// Module system type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModuleSystem {
@@ -69,11 +63,9 @@ pub enum ModuleSystem {
     /// Not a module (JSON, etc.)
     None,
 }
-
 /// Detect file type from path extension
 pub fn detect_file_type(path: &PathBuf) -> FileType {
     let extension: _ = path.extension().and_then(|ext| ext.to_str());
-
     match extension {
         Some("js") => FileType::JavaScript,
         Some("mjs") => FileType::EsModule,
@@ -83,7 +75,6 @@ pub fn detect_file_type(path: &PathBuf) -> FileType {
         _ => FileType::Unknown,
     }
 }
-
 /// Execution context for scripts
 #[derive(Debug, Clone)]
 pub struct ExecutionContext {
@@ -104,38 +95,31 @@ pub struct ExecutionContext {
     /// Module system to use
     pub module_system: ModuleSystem,
 }
-
 impl ExecutionContext {
     /// Create a new execution context for a script
     pub fn new(script_path: PathBuf) -> Self {
         let cwd: _ = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-
         // Resolve to absolute path
         let absolute_path: _ = if script_path.is_absolute() {
             script_path.clone()
         } else {
             cwd.join(&script_path)
         };
-
         // Get directory containing the script
         let dirname: _ = absolute_path
             .parent()
             .map(|p| p.to_path_buf())
             .unwrap_or_else(|| PathBuf::from("."));
-
         // Detect file type
         let file_type: _ = detect_file_type(&absolute_path);
         let module_system: _ = file_type.module_system();
-
         // Build initial argv
         let argv: _ = vec![
             "beejs".to_string(),
             script_path.to_string_lossy().to_string(),
         ];
-
         // Collect environment variables
         let env: HashMap<String, String> = std::env::vars().collect();
-
         Self {
             cwd,
             script_path: absolute_path.clone(),
@@ -147,55 +131,45 @@ impl ExecutionContext {
             module_system,
         }
     }
-
     /// Add script arguments to process.argv
     pub fn with_args(mut self, args: Vec<String>) -> Self {
         self.argv.extend(args);
         self
     }
-
     /// Add or override an environment variable
     pub fn with_env(mut self, key: &str, value: &str) -> Self {
         self.env.insert(key.to_string(), value.to_string());
         self
     }
-
     /// Set the module system explicitly
     pub fn with_module_system(mut self, system: ModuleSystem) -> Self {
         self.module_system = system;
         self
     }
-
     /// Generate JavaScript code to set up the execution context globals
     pub fn to_setup_code(&self) -> String {
         let dirname_escaped: _ = self.dirname.to_string_lossy().replace('\\', "\\\\");
         let filename_escaped: _ = self.filename.to_string_lossy().replace('\\', "\\\\");
         let cwd_escaped: _ = self.cwd.to_string_lossy().replace('\\', "\\\\");
-
         // Build argv JSON array
         let argv_json: Vec<String> = self
             .argv
             .iter()
             .map(|a| format!("\"{}\"", a.replace('\\', "\\\\").replace('"', "\\\"")))
             .collect();
-
         format!(
             r#"
 // Beejs execution context setup
 globalThis.__dirname = "{}";
 globalThis.__filename = "{}";
-
 // Ensure process object exists
 if (typeof globalThis.process === 'undefined') {{
     globalThis.process = {{}};
 }}
-
 // Set process.cwd()
 globalThis.process.cwd = function() {{ return "{}"; }};
-
 // Set process.argv
 globalThis.process.argv = [{}];
-
 // Note: process.env is set up separately via native binding
 "#,
             dirname_escaped,
@@ -205,7 +179,6 @@ globalThis.process.argv = [{}];
         )
     }
 }
-
 /// Script executor configuration
 #[derive(Debug, Clone)]
 pub struct ExecutorConfig {
@@ -218,7 +191,6 @@ pub struct ExecutorConfig {
     /// Verbose output
     pub verbose: bool,
 }
-
 impl Default for ExecutorConfig {
     fn default() -> Self {
         Self {
@@ -229,29 +201,24 @@ impl Default for ExecutorConfig {
         }
     }
 }
-
 /// Script executor for running JS/TS files
 pub struct ScriptExecutor {
     /// Executor configuration
     config: ExecutorConfig,
 }
-
 impl ScriptExecutor {
     /// Create a new script executor with the given configuration
     pub fn new(config: ExecutorConfig) -> Self {
         Self { config }
     }
-
     /// Validate that a script file can be executed
     pub fn validate_script(&self, path: &PathBuf) -> Result<FileType, String> {
         // Check file exists
         if !path.exists() {
             return Err(format!("Script not found: {}", path.display()));
         }
-
         // Detect file type
         let file_type: _ = detect_file_type(path);
-
         match file_type {
             FileType::JavaScript | FileType::EsModule | FileType::CommonJs => Ok(file_type),
             FileType::TypeScript => {
@@ -267,24 +234,20 @@ impl ScriptExecutor {
                 path.display())),
         }
     }
-
     /// Check if a file needs transpilation before execution
     pub fn needs_transpilation(&self, path: &PathBuf) -> bool {
         let file_type: _ = detect_file_type(path);
         file_type.needs_transpilation()
     }
-
     /// Build the execution context for a script
     pub fn build_context(&self, path: PathBuf, args: Vec<String>) -> ExecutionContext {
         ExecutionContext::new(path).with_args(args)
     }
-
     /// Get the executor configuration
     pub fn config(&self) -> &ExecutorConfig {
         &self.config
     }
 }
-
 /// Shebang detection utilities
 pub mod shebang {
     /// Detect shebang line from file content
@@ -296,7 +259,6 @@ pub mod shebang {
             None
         }
     }
-
     /// Check if a shebang indicates a Beejs-compatible script
     pub fn is_compatible(shebang: &str) -> bool {
         shebang.contains("beejs")
@@ -306,7 +268,6 @@ pub mod shebang {
             || shebang.ends_with("/node")
             || shebang.ends_with("/bun")
     }
-
     /// Strip shebang from script content for execution
     pub fn strip(content: &str) -> &str {
         if content.starts_with("#!") {
@@ -317,7 +278,6 @@ pub mod shebang {
         }
     }
 }
-
 /// Argument parsing utilities for CLI
 pub mod args {
     /// Options that take a value argument
@@ -334,7 +294,6 @@ pub mod args {
         "--define",
         "--external",
     ];
-
     /// Parsed command line arguments
     #[derive(Debug, Clone)]
     pub struct ParsedArgs {
@@ -345,7 +304,6 @@ pub mod args {
         /// Path to the script file
         pub script_path: Option<String>,
     }
-
     impl ParsedArgs {
         /// Parse command line arguments with -- separator support
         pub fn parse(args: Vec<String>) -> Self {
@@ -355,13 +313,11 @@ pub mod args {
             let mut found_separator = false;
             let mut found_script = false;
             let mut expect_value = false;
-
             for arg in args.into_iter().skip(1) {
                 if arg == "--" {
                     found_separator = true;
                     continue;
                 }
-
                 if found_separator {
                     script_args.push(arg);
                 } else if expect_value {
@@ -379,7 +335,6 @@ pub mod args {
                     }
                 }
             }
-
             Self {
                 runtime_args,
                 script_args,
@@ -388,13 +343,11 @@ pub mod args {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_file_type_detection() {
         assert_eq!(detect_file_type(&PathBuf::from("test.js")), FileType::JavaScript);
@@ -405,28 +358,24 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(detect_file_type(&PathBuf::from("test.json")), FileType::Json);
         assert_eq!(detect_file_type(&PathBuf::from("test.txt")), FileType::Unknown);
     }
-
     #[test]
     fn test_file_type_needs_transpilation() {
         assert!(!FileType::JavaScript.needs_transpilation());
         assert!(!FileType::EsModule.needs_transpilation());
         assert!(FileType::TypeScript.needs_transpilation());
     }
-
     #[test]
     fn test_execution_context_creation() {
         let ctx: _ = ExecutionContext::new(PathBuf::from("test.js"));
         assert!(ctx.argv.len() >= 2);
         assert_eq!(ctx.argv[0], "beejs");
     }
-
     #[test]
     fn test_execution_context_with_args() {
         let ctx: _ = ExecutionContext::new(PathBuf::from("test.js"))
             .with_args(vec!["--port".to_string(), "3000".to_string()]);
         assert_eq!(ctx.argv.len(), 4);
     }
-
     #[test]
     fn test_shebang_detection() {
         assert_eq!(
@@ -434,13 +383,11 @@ use std::collections::{HashMap, BTreeMap};
             Some("/usr/bin/env beejs".to_string()));
         assert!(shebang::detect("console.log('hi')").is_none());
     }
-
     #[test]
     fn test_shebang_strip() {
         let content: _ = "#!/usr/bin/env beejs\nconsole.log('hi')";
         assert_eq!(shebang::strip(content), "console.log('hi')");
     }
-
     #[test]
     fn test_shebang_compatibility() {
         assert!(shebang::is_compatible("/usr/bin/env beejs"));

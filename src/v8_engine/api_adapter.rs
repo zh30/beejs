@@ -5,12 +5,10 @@
 //!
 //! 该模块实现了一个适配层，允许旧版本的 V8 API 在新版本上运行，
 //! 并提供自动迁移和兼容性检查功能。
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-
 /// API 适配器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdapterConfig {
@@ -25,7 +23,6 @@ pub struct AdapterConfig {
     /// 最大重试次数
     pub max_retries: u32,
 }
-
 impl Default for AdapterConfig {
     fn default() -> Self {
         Self {
@@ -37,7 +34,6 @@ impl Default for AdapterConfig {
         }
     }
 }
-
 /// API 适配器项
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdapterItem {
@@ -54,7 +50,6 @@ pub struct AdapterItem {
     /// 性能影响评估
     pub performance_impact: PerformanceImpact,
 }
-
 /// 适配类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum AdapterType {
@@ -71,7 +66,6 @@ pub enum AdapterType {
     /// 代理 (委托给新 API)
     Proxy,
 }
-
 /// 性能影响评估
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceImpact {
@@ -84,7 +78,6 @@ pub struct PerformanceImpact {
     /// 影响等级
     pub impact_level: ImpactLevel,
 }
-
 /// 影响等级
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ImpactLevel {
@@ -94,7 +87,6 @@ pub enum ImpactLevel {
     High,       // 15-30%
     Critical,   // > 30%
 }
-
 /// 适配结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdaptationResult {
@@ -109,7 +101,6 @@ pub struct AdaptationResult {
     /// 验证状态
     pub verification_status: VerificationStatus,
 }
-
 /// 验证状态
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum VerificationStatus {
@@ -118,7 +109,6 @@ pub enum VerificationStatus {
     Failed,
     Skipped,
 }
-
 /// 适配统计
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdaptationStats {
@@ -135,7 +125,6 @@ pub struct AdaptationStats {
     /// 总性能影响
     pub total_performance_impact: f64,
 }
-
 /// V8 API 适配器
 pub struct V8APIAdapter {
     /// 配置
@@ -145,7 +134,6 @@ pub struct V8APIAdapter {
     /// 统计信息
     stats: Arc<RwLock<AdaptationStats>>,
 }
-
 impl V8APIAdapter {
     /// 创建新的 API 适配器
     pub fn new(config: AdapterConfig) -> Self {
@@ -161,17 +149,14 @@ impl V8APIAdapter {
                 total_performance_impact: 0.0,
             })),
         };
-
         // 初始化内置适配器
         adapter.initialize_builtin_adapters();
         adapter
     }
-
     /// 使用默认配置创建
     pub fn new_with_default_config() -> Self {
         Self::new(AdapterConfig::default())
     }
-
     /// 初始化内置适配器
     fn initialize_builtin_adapters(&mut self) {
         // OldContext -> V8Context
@@ -188,7 +173,6 @@ impl V8APIAdapter {
                 impact_level: ImpactLevel::Negligible,
             },
         });
-
         // HandleScope::Empty -> HandleScope::New
         self.register_adapter(AdapterItem {
             original_name: "HandleScope::Empty".to_string(),
@@ -203,7 +187,6 @@ impl V8APIAdapter {
                 impact_level: ImpactLevel::Negligible,
             },
         });
-
         // V8::Initialize -> V8::init_once
         self.register_adapter(AdapterItem {
             original_name: "V8::Initialize".to_string(),
@@ -218,7 +201,6 @@ impl V8APIAdapter {
                 impact_level: ImpactLevel::Negligible,
             },
         });
-
         // String::New -> String::new (如果需要)
         self.register_adapter(AdapterItem {
             original_name: "String::New".to_string(),
@@ -233,7 +215,6 @@ impl V8APIAdapter {
                 impact_level: ImpactLevel::Low,
             },
         });
-
         // Object::New -> Object::create
         self.register_adapter(AdapterItem {
             original_name: "Object::New".to_string(),
@@ -248,7 +229,6 @@ impl V8APIAdapter {
                 impact_level: ImpactLevel::Low,
             },
         });
-
         // Function::New -> Function::create
         self.register_adapter(AdapterItem {
             original_name: "Function::New".to_string(),
@@ -263,7 +243,6 @@ impl V8APIAdapter {
                 impact_level: ImpactLevel::Low,
             },
         });
-
         // Array::New -> Array::with_length
         self.register_adapter(AdapterItem {
             original_name: "Array::New".to_string(),
@@ -279,23 +258,19 @@ impl V8APIAdapter {
             },
         });
     }
-
     /// 注册新的适配器
     pub fn register_adapter(&mut self, adapter: AdapterItem) {
         let adapters: _ = Arc::get_mut(&mut self.adapters).unwrap();
         let mut adapters_map = adapters.try_write().unwrap();
         adapters_map.insert(adapter.original_name.clone(), adapter);
-
         // 更新统计
         let stats: _ = Arc::get_mut(&mut self.stats).unwrap();
         let mut stats_map = stats.try_write().unwrap();
         stats_map.total_adapters += 1;
     }
-
     /// 适配 API 调用
     pub async fn adapt_api_call(&self, original_api: &str, parameters: serde_json::Value) -> AdaptationResult {
         let adapters: _ = self.adapters.read().await;
-
         if let Some(adapter) = adapters.get(original_api) {
             // 执行适配
             match adapter.adapter_type {
@@ -379,7 +354,6 @@ impl V8APIAdapter {
             }
         }
     }
-
     /// 参数转换
     async fn convert_parameters(&self, api_name: &str, params: serde_json::Value) -> Result<serde_json::Value, anyhow::Error> {
         match api_name {
@@ -405,91 +379,74 @@ impl V8APIAdapter {
             _ => Ok(params),
         }
     }
-
     /// 检查 API 是否需要适配
     pub async fn needs_adaptation(&self, api_name: &str) -> bool {
         let adapters: _ = self.adapters.read().await;
         adapters.contains_key(api_name)
     }
-
     /// 获取适配器信息
     pub async fn get_adapter_info(&self, api_name: &str) -> Option<AdapterItem> {
         let adapters: _ = self.adapters.read().await;
         adapters.get(api_name).cloned()
     }
-
     /// 获取所有适配器
     pub async fn get_all_adapters(&self) -> HashMap<String, AdapterItem> {
         let adapters: _ = self.adapters.read().await;
         adapters.clone()
     }
-
     /// 获取统计信息
     pub async fn get_stats(&self) -> AdaptationStats {
         let stats: _ = self.stats.read().await;
         stats.clone()
     }
-
     /// 验证适配器
     pub async fn verify_adapter(&self, api_name: &str) -> Result<bool, anyhow::Error> {
         let adapters: _ = self.adapters.read().await;
-
         if let Some(adapter) = adapters.get(api_name) {
             // 这里可以实现实际的验证逻辑
             // 例如：编译测试、检查 API 签名等
-
             let mut adapter_mut = adapter.clone();
             adapter_mut.verified = true;
-
             drop(adapters);
-
             // 更新验证状态
             let mut adapters_map = self.adapters.write().await;
             adapters_map.insert(api_name.to_string(), adapter_mut);
-
             Ok(true)
         } else {
             Ok(false)
         }
     }
-
     /// 批量验证所有适配器
     pub async fn verify_all_adapters(&self) -> Result<Vec<String>, anyhow::Error> {
         let adapters: _ = self.adapters.read().await;
         let api_names: Vec<String> = adapters.keys().cloned().collect();
         drop(adapters);
-
         let mut verified = Vec::new();
         for api_name in api_names {
             if self.verify_adapter(&api_name).await? {
                 verified.push(api_name);
             }
         }
-
         Ok(verified)
     }
-
     /// 移除适配器
     pub async fn remove_adapter(&mut self, api_name: &str) -> bool {
         let adapters: _ = Arc::get_mut(&mut self.adapters).unwrap();
         let mut adapters_map = adapters.try_write().unwrap();
         adapters_map.remove(api_name).is_some()
     }
-
     /// 清除所有适配器
     pub async fn clear_adapters(&mut self) {
         let adapters: _ = Arc::get_mut(&mut self.adapters).unwrap();
         let mut adapters_map = adapters.try_write().unwrap();
         adapters_map.clear();
     }
-
     /// 导出适配器配置
     pub async fn export_config(&self) -> Result<String, anyhow::Error> {
         let adapters: _ = self.adapters.read().await;
         let config_data: _ = serde_json::to_string_pretty(&(*adapters))?;
         Ok(config_data)
     }
-
     /// 导入适配器配置
     pub async fn import_config(&mut self, config_json: &str) -> Result<(), anyhow::Error> {
         let adapters: HashMap<String, AdapterItem> = serde_json::from_str(config_json)?;
@@ -497,12 +454,10 @@ impl V8APIAdapter {
         *adapters_map = adapters;
         Ok(())
     }
-
     /// 生成适配报告
     pub async fn generate_report(&self) -> Result<AdaptationReport, anyhow::Error> {
         let adapters: _ = self.adapters.read().await;
         let stats: _ = self.get_stats().await;
-
         let mut adapter_list = Vec::new();
         for (name, adapter) in adapters.iter() {
             adapter_list.push(AdapterReportItem {
@@ -513,7 +468,6 @@ impl V8APIAdapter {
                 performance_impact: adapter.performance_impact.clone(),
             });
         }
-
         Ok(AdaptationReport {
             total_adapters: stats.total_adapters,
             verified_adapters: adapter_list.iter().filter(|a| a.verified).count(),
@@ -521,33 +475,25 @@ impl V8APIAdapter {
             recommendations: self.generate_recommendations().await,
         })
     }
-
     /// 生成建议
     async fn generate_recommendations(&self) -> Vec<String> {
         let mut recommendations = Vec::new();
-
         let adapters: _ = self.adapters.read().await;
         let unverified_count: _ = adapters.values().filter(|a| !a.verified).count();
-
         if unverified_count > 0 {
             recommendations.push(format!("⚠️  有 {} 个适配器未验证，建议运行验证", unverified_count));
         }
-
         let high_impact_count: _ = adapters.values()
             .filter(|a| matches!(a.performance_impact.impact_level, ImpactLevel::High | ImpactLevel::Critical))
             .count();
-
         if high_impact_count > 0 {
             recommendations.push(format!("⚡  有 {} 个适配器性能影响较大，请谨慎使用", high_impact_count));
         }
-
         recommendations.push("✅ 定期验证适配器确保兼容性".to_string());
         recommendations.push("📊 监控适配器性能影响".to_string());
-
         recommendations
     }
 }
-
 /// 适配报告
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdaptationReport {
@@ -556,7 +502,6 @@ pub struct AdaptationReport {
     pub adapter_list: Vec<AdapterReportItem>,
     pub recommendations: Vec<String>,
 }
-
 /// 适配器报告项
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdapterReportItem {
@@ -566,31 +511,26 @@ pub struct AdapterReportItem {
     pub verified: bool,
     pub performance_impact: PerformanceImpact,
 }
-
 impl Default for V8APIAdapter {
     fn default() -> Self {
         Self::new_with_default_config()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_v8_api_adapter_creation() {
         let adapter: _ = V8APIAdapter::new_with_default_config();
         let stats: _ = adapter.get_stats().await;
         assert!(stats.total_adapters > 0);
     }
-
     #[tokio::test]
     async fn test_register_adapter() {
         let mut adapter = V8APIAdapter::new_with_default_config();
         let initial_count: _ = adapter.get_stats().await.total_adapters;
-
         adapter.register_adapter(AdapterItem {
             original_name: "TestAPI".to_string(),
             target_name: "TestAPI2".to_string(),
@@ -604,34 +544,28 @@ use std::collections::{HashMap, BTreeMap};
                 impact_level: ImpactLevel::Negligible,
             },
         });
-
         let new_count: _ = adapter.get_stats().await.total_adapters;
         assert_eq!(new_count, initial_count + 1);
     }
-
     #[tokio::test]
     async fn test_adapt_api_call() {
         let adapter: _ = V8APIAdapter::new_with_default_config();
-
         let result: _ = adapter.adapt_api_call("OldContext", serde_json::json!({})).await;
         assert!(result.success);
         assert_eq!(result.adapted_name, "V8Context");
     }
-
     #[tokio::test]
     async fn test_needs_adaptation() {
         let adapter: _ = V8APIAdapter::new_with_default_config();
         assert!(adapter.needs_adaptation("OldContext").await);
         assert!(!adapter.needs_adaptation("NonExistentAPI").await);
     }
-
     #[tokio::test]
     async fn test_verify_adapter() {
         let adapter: _ = V8APIAdapter::new_with_default_config();
         let result: _ = adapter.verify_adapter("OldContext").await;
         assert!(result.is_ok());
     }
-
     #[tokio::test]
     async fn test_generate_report() {
         let adapter: _ = V8APIAdapter::new_with_default_config();

@@ -2,20 +2,16 @@
 //! 实现智能故障检测、自动恢复和容错机制
 //!
 //! Stage 29.6: 故障检测与恢复 - 提供企业级容错能力
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
-
 use tokio::sync::RwLock;
 use tokio::time::{interval, sleep};
-
 use super::health_monitor::HealthMonitor;
 use super::task_executor::TaskExecutor;
 use super::node_manager::NodeManager;
 use super::task_scheduler::{TaskScheduler, Task};
-
 /// 故障检测配置
 #[derive(Debug, Clone)]
 pub struct FaultDetectionConfig {
@@ -26,7 +22,6 @@ pub struct FaultDetectionConfig {
     pub max_recovery_attempts: u32,
     pub health_check_timeout: Duration,
 }
-
 /// 故障严重程度
 #[derive(Debug, Clone, PartialEq)]
 pub enum FaultSeverity {
@@ -35,7 +30,6 @@ pub enum FaultSeverity {
     Medium,     // 中等优先级故障
     Low,        // 低优先级故障
 }
-
 /// 故障类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FaultType {
@@ -46,7 +40,6 @@ pub enum FaultType {
     HealthCheckFailure,
     Timeout,
 }
-
 /// 故障事件
 #[derive(Debug, Clone)]
 pub struct FaultEvent {
@@ -58,7 +51,6 @@ pub struct FaultEvent {
     pub description: String,
     pub metadata: HashMap<String, String>,
 }
-
 /// 恢复策略
 #[derive(Debug, Clone)]
 pub enum RecoveryStrategy {
@@ -70,7 +62,6 @@ pub enum RecoveryStrategy {
     CircuitBreaker,
     Failover,
 }
-
 /// 恢复动作
 #[derive(Debug, Clone)]
 pub struct RecoveryAction {
@@ -80,7 +71,6 @@ pub struct RecoveryAction {
     pub parameters: HashMap<String, String>,
     pub estimated_duration: Duration,
 }
-
 /// 故障检测器
 #[derive(Clone, Debug)]
 pub struct FaultDetector {
@@ -93,7 +83,6 @@ pub struct FaultDetector {
     fault_history: Arc<RwLock<Vec<FaultEvent>>>,
     recovery_actions: Arc<RwLock<HashMap<String, RecoveryAction>>>,
 }
-
 impl FaultDetector {
     /// 创建新的故障检测器
     pub fn new(
@@ -113,7 +102,6 @@ impl FaultDetector {
             fault_history: Arc::new(Mutex::new(Vec::new())),
             recovery_actions: Arc::new(Mutex::new(HashMap::new())),
         };
-
         // 启动故障检测任务
         let detector_clone: _ = detector.clone();
         tokio::spawn(async move {
@@ -123,30 +111,22 @@ impl FaultDetector {
                 detector_clone.detect_faults().await;
             }
         });
-
         detector
     }
-
     /// 检测故障
     async fn detect_faults(&self) {
         debug!("Starting fault detection cycle");
-
         // 检测节点故障
         self.detect_node_faults().await;
-
         // 检测任务执行故障
         self.detect_task_faults().await;
-
         // 检测网络分区
         self.detect_network_partition_faults().await;
-
         debug!("Fault detection cycle completed");
     }
-
     /// 检测节点故障
     async fn detect_node_faults(&self) {
         let unhealthy_nodes: _ = self.health_monitor.get_unhealthy_nodes().await;
-
         for node_id in unhealthy_nodes {
             let fault_event: _ = FaultEvent {
                 event_id: format!("node-fault-{}", node_id),
@@ -157,16 +137,13 @@ impl FaultDetector {
                 description: format!("Node {} is unhealthy", node_id),
                 metadata: HashMap::new(),
             };
-
             self.report_fault(fault_event).await;
         }
     }
-
     /// 检测任务执行故障
     async fn detect_task_faults(&self) {
         // 检查失败的任务
         let failed_tasks: _ = self.get_failed_tasks().await;
-
         for task in failed_tasks {
             let fault_event: _ = FaultEvent {
                 event_id: format!("task-fault-{}", task.id),
@@ -177,15 +154,12 @@ impl FaultDetector {
                 description: format!("Task {} failed execution", task.id),
                 metadata: HashMap::new(),
             };
-
             self.report_fault(fault_event).await;
         }
     }
-
     /// 检测网络分区故障
     async fn detect_network_partition_faults(&self) {
         let cluster_health: _ = self.health_monitor.check_cluster_health().await;
-
         match cluster_health {
             super::health_monitor::ClusterHealthStatus::Unhealthy => {
                 let fault_event: _ = FaultEvent {
@@ -197,52 +171,42 @@ impl FaultDetector {
                     description: "Cluster health is unhealthy - possible network partition".to_string(),
                     metadata: HashMap::new(),
                 };
-
                 self.report_fault(fault_event).await;
             }
             _ => {}
         }
     }
-
     /// 报告故障
     async fn report_fault(&self, fault: FaultEvent) {
         info!("Reporting fault: {:?}", fault);
-
         // 添加到活动故障列表
         {
             let mut active_faults = self.active_faults.write().await;
             active_faults.insert(fault.event_id.clone(), fault.clone());
         }
-
         // 添加到历史记录
         {
             let mut fault_history = self.fault_history.write().await;
             fault_history.push(fault.clone());
         }
-
         // 如果启用自动恢复，触发恢复
         if self.config.auto_recovery_enabled {
             self.trigger_recovery(&fault).await;
         }
     }
-
     /// 触发恢复
     async fn trigger_recovery(&self, fault: &FaultEvent) {
         let recovery_strategy: _ = self.determine_recovery_strategy(fault).await;
         let recovery_action: _ = self.create_recovery_action(fault, &recovery_strategy).await;
-
         info!("Triggering recovery for fault {}: {:?}", fault.event_id, recovery_strategy);
-
         // 记录恢复动作
         {
             let mut recovery_actions = self.recovery_actions.write().await;
             recovery_actions.insert(recovery_action.action_id.clone(), recovery_action.clone());
         }
-
         // 执行恢复动作
         self.execute_recovery_action(&recovery_action).await;
     }
-
     /// 确定恢复策略
     async fn determine_recovery_strategy(&self, fault: &FaultEvent) -> RecoveryStrategy {
         match fault.fault_type {
@@ -267,11 +231,9 @@ impl FaultDetector {
             _ => RecoveryStrategy::RestartTask,
         }
     }
-
     /// 创建恢复动作
     async fn create_recovery_action(&self, fault: &FaultEvent, strategy: &RecoveryStrategy) -> RecoveryAction {
         let action_id: _ = format!("recovery-{}-{:?}", fault.event_id, Instant::now());
-
         let parameters: _ = match strategy {
             RecoveryStrategy::RestartNode => {
                 let mut params = HashMap::new();
@@ -285,7 +247,6 @@ impl FaultDetector {
             }
             _ => HashMap::new(),
         };
-
         RecoveryAction {
             action_id,
             strategy: strategy.clone(),
@@ -294,11 +255,9 @@ impl FaultDetector {
             estimated_duration: Duration::from_secs(30), // 默认30秒
         }
     }
-
     /// 执行恢复动作
     async fn execute_recovery_action(&self, action: &RecoveryAction) {
         debug!("Executing recovery action: {:?}", action);
-
         match action.strategy {
             RecoveryStrategy::RestartNode => {
                 self.restart_node(&action.target_id).await;
@@ -322,118 +281,88 @@ impl FaultDetector {
                 self.execute_failover().await;
             }
         }
-
         info!("Recovery action completed: {}", action.action_id);
     }
-
     /// 重启节点
     async fn restart_node(&self, node_id: &str) {
         warn!("Restarting node: {}", node_id);
-
         // 模拟节点重启
         sleep(Duration::from_secs(5)).await;
-
         info!("Node restarted successfully: {}", node_id);
     }
-
     /// 重启任务
     async fn restart_task(&self, task_id: &str) {
         warn!("Restarting task: {}", task_id);
-
         // 模拟任务重启
         sleep(Duration::from_secs(2)).await;
-
         info!("Task restarted successfully: {}", task_id);
     }
-
     /// 迁移任务
     async fn migrate_task(&self, task_id: &str) {
         warn!("Migrating task: {}", task_id);
-
         // 模拟任务迁移
         sleep(Duration::from_secs(3)).await;
-
         info!("Task migrated successfully: {}", task_id);
     }
-
     /// 扩容
     async fn scale_up(&self) {
         warn!("Scaling up cluster");
-
         // 模拟扩容操作
         sleep(Duration::from_secs(10)).await;
-
         info!("Cluster scaled up successfully");
     }
-
     /// 重试任务（带退避）
     async fn retry_task_with_backoff(&self, task_id: &str) {
         warn!("Retrying task with backoff: {}", task_id);
-
         // 模拟退避重试
         sleep(Duration::from_secs(1)).await;
-
         info!("Task retried successfully: {}", task_id);
     }
-
     /// 激活熔断器
     async fn activate_circuit_breaker(&self, target_id: &str) {
         warn!("Activating circuit breaker for: {}", target_id);
-
         // 模拟熔断器激活
         sleep(Duration::from_secs(1)).await;
-
         info!("Circuit breaker activated for: {}", target_id);
     }
-
     /// 执行故障转移
     async fn execute_failover(&self) {
         warn!("Executing cluster failover");
-
         // 模拟故障转移
         sleep(Duration::from_secs(15)).await;
-
         info!("Cluster failover completed");
     }
-
     /// 辅助方法
     async fn can_restart_node(&self, _node_id: &str) -> bool {
         // 简化实现：检查节点是否可重启
         true
     }
-
     async fn can_retry_task(&self, _task_id: &str) -> bool {
         // 简化实现：检查任务是否可重试
         true
     }
-
     async fn get_failed_tasks(&self) -> Vec<Task> {
         // 简化实现：返回空列表
         Vec::new()
     }
-
     /// 获取活动故障列表
     pub async fn get_active_faults(&self) -> Vec<FaultEvent> {
         let active_faults: _ = self.active_faults.read().await;
         active_faults.values().cloned().collect()
     }
-
     /// 获取故障历史
     pub async fn get_fault_history(&self) -> Vec<FaultEvent> {
         let fault_history: _ = self.fault_history.read().await;
         fault_history.clone()
     }
-
     /// 获取恢复动作历史
     pub async fn get_recovery_actions(&self) -> Vec<RecoveryAction> {
         let recovery_actions: _ = self.recovery_actions.read().await;
         recovery_actions.values().cloned().collect()
     }
-
     /// 清除故障
     pub async fn clear_fault(&self, event_id: &str) -> Result<(), String> {
         let mut active_faults = self.active_faults.write().await;
-
         if active_faults.remove(event_id).is_some() {
             info!("Fault cleared: {}", event_id);
             Ok(())
@@ -441,18 +370,15 @@ impl FaultDetector {
             Err(format!("Fault not found: {}", event_id))
         }
     }
-
     /// 获取故障统计信息
     pub async fn get_fault_statistics(&self) -> FaultStatistics {
         let fault_history: _ = self.fault_history.read().await;
         let active_faults: _ = self.active_faults.read().await;
-
         let mut fault_counts = HashMap::new();
         for fault in fault_history.iter() {
             let count: _ = fault_counts.entry(fault.fault_type.clone()).or_insert(0);
             *count += 1;
         }
-
         FaultStatistics {
             total_faults: fault_history.len(),
             active_faults: active_faults.len(),
@@ -461,7 +387,6 @@ impl FaultDetector {
         }
     }
 }
-
 /// 故障统计信息
 #[derive(Debug, Clone)]
 pub struct FaultStatistics {
@@ -470,7 +395,6 @@ pub struct FaultStatistics {
     pub fault_type_counts: HashMap<FaultType, usize>,
     pub recovery_actions_count: usize,
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -478,7 +402,6 @@ mod tests {
     use crate::distributed::node_manager::NodeManager;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_fault_detection() {
         let config: _ = DiscoveryConfig {
@@ -486,11 +409,9 @@ use std::collections::{HashMap, BTreeMap};
             gossip_interval: Duration::from_millis(100),
             node_timeout: Duration::from_secs(5),
         };
-
         let service_discovery: _ = ServiceDiscovery::new(config);
         let node_manager: _ = Arc::new(Mutex::new(NodeManager::new(service_discovery.clone())));
         let _health_monitor: _ = Arc::new(Mutex::new(HealthMonitor::new(node_manager.clone())));
-
         let _fault_config: _ = FaultDetectionConfig {
             detection_interval: Duration::from_millis(100),
             failure_threshold: 3,
@@ -499,7 +420,6 @@ use std::collections::{HashMap, BTreeMap};
             max_recovery_attempts: 3,
             health_check_timeout: Duration::from_secs(10),
         };
-
         // 这里需要创建其他依赖的模拟对象
         // 由于依赖较多，实际测试中建议使用测试替身
     }

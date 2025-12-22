@@ -1,6 +1,5 @@
 //! 预编译模块缓存系统
 //! 预编译常用 Node.js 模块并缓存字节码，提升执行速度
-
 use crate::code_cache::{BytecodeCache, CacheConfig};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
@@ -9,7 +8,6 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-
 /// 预编译模块缓存统计
 #[derive(Debug, Clone, Default)]
 pub struct PrecompiledCacheStats {
@@ -20,7 +18,6 @@ pub struct PrecompiledCacheStats {
     pub average_compile_time_ms: f64,
     pub total_compile_time_ms: u64,
 }
-
 /// 预编译模块条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrecompiledModuleEntry {
@@ -30,7 +27,6 @@ pub struct PrecompiledModuleEntry {
     pub compile_time_ms: u64,
     pub created_at: std::time::SystemTime,
 }
-
 /// 预编译模块缓存
 pub struct PrecompiledModuleCache {
     /// 缓存目录
@@ -43,23 +39,18 @@ pub struct PrecompiledModuleCache {
     #[allow(dead_code)]
     bytecode_cache: Arc<BytecodeCache>,
 }
-
 impl PrecompiledModuleCache {
     /// 创建新的预编译模块缓存
     pub fn new() -> Result<Self> {
         let cache_dir: _ = std::env::temp_dir().join("beejs_precompiled_cache");
-
         Self::new_with_path(cache_dir)
     }
-
     /// 使用指定路径创建预编译模块缓存
     pub fn new_with_path(cache_dir: PathBuf) -> Result<Self> {
         // 创建缓存目录
         fs::create_dir_all(&cache_dir)
             .context(format!("Failed to create cache directory: {:?}", cache_dir))?;
-
         let cache_config: _ = CacheConfig::default();
-
         Ok(Self {
             cache_dir,
             modules: Arc::new(Mutex::new(HashMap::new()))
@@ -67,31 +58,24 @@ impl PrecompiledModuleCache {
             bytecode_cache: Arc::new(Mutex::new(BytecodeCache::new(cache_config)))
         })
     }
-
     /// 从磁盘加载预编译模块缓存
     pub fn load_from_path(cache_dir: PathBuf) -> Result<Self> {
         let mut cache = PrecompiledModuleCache::new_with_path(cache_dir)?;
-
         // 加载已缓存的模块
         cache.load_from_disk()?;
-
         Ok(cache)
     }
-
     /// 预编译所有内置模块
     pub fn precompile_builtin_modules(&self) -> Result<()> {
         let builtin_modules: _ = Self::get_builtin_modules_list();
-
         for module in &builtin_modules {
             if !self.is_module_cached(module) {
                 let source: _ = self.get_builtin_module_source(module)?;
                 self.cache_module(module, &source)?;
             }
         }
-
         Ok(())
     }
-
     /// 获取内置模块列表
     pub fn get_builtin_modules_list() -> Vec<&'static str> {
         vec![
@@ -107,7 +91,6 @@ impl PrecompiledModuleCache {
             "crypto",
         ]
     }
-
     /// 获取内置模块源码
     fn get_builtin_module_source(&self, module_name: &str) -> Result<String> {
         match module_name {
@@ -124,19 +107,14 @@ impl PrecompiledModuleCache {
             _ => Err(anyhow!("Unknown builtin module: {}", module_name)),
         }
     }
-
     /// 缓存模块
     pub fn cache_module(&self, module_name: &str, source_code: &str) -> Result<()> {
         let start_time: _ = Instant::now();
-
         // 计算源码哈希
         let source_hash: _ = self.calculate_source_hash(source_code);
-
         // 编译源码
         let bytecode: _ = self.compile_to_bytecode(source_code)?;
-
         let compile_time: _ = start_time.elapsed();
-
         let entry: _ = PrecompiledModuleEntry {
             module_name: module_name.to_string(),
             bytecode,
@@ -144,32 +122,25 @@ impl PrecompiledModuleCache {
             compile_time_ms: compile_time.as_millis() as u64,
             created_at: std::time::SystemTime::now(),
         };
-
         // 保存到内存缓存
         {
             let mut modules = self.modules.lock().unwrap();
             modules.insert(module_name.to_string(), entry.clone());
         }
-
         // 持久化到磁盘
         self.persist_module(module_name, &entry)?;
-
         // 更新统计
         self.update_stats(compile_time);
-
         Ok(())
     }
-
     /// 检查模块是否已缓存
     pub fn is_module_cached(&self, module_name: &str) -> bool {
         let modules: _ = self.modules.lock().unwrap();
         modules.contains_key(module_name)
     }
-
     /// 获取预编译字节码
     pub fn get_precompiled_bytecode(&self, module_name: &str) -> Option<Vec<u8> {
         let modules: _ = self.modules.lock().unwrap();
-
         if let Some(entry) = modules.get(module_name) {
             // 更新命中统计
             {
@@ -186,7 +157,6 @@ impl PrecompiledModuleCache {
             None
         }
     }
-
     /// 使模块缓存失效
     pub fn invalidate_module(&self, module_name: &str) -> Result<()> {
         // 从内存缓存中移除
@@ -194,22 +164,18 @@ impl PrecompiledModuleCache {
             let mut modules = self.modules.lock().unwrap();
             modules.remove(module_name);
         }
-
         // 从磁盘移除
         let module_file: _ = self.cache_dir.join(format!("{}.bin", module_name));
         if module_file.exists() {
             fs::remove_file(&module_file)
                 .context(format!("Failed to remove cached module: {}", module_name))?;
         }
-
         Ok(())
     }
-
     /// 获取缓存统计
     pub fn get_stats(&self) -> PrecompiledCacheStats {
         let modules: _ = self.modules.lock().unwrap();
         let stats: _ = self.stats.lock().unwrap();
-
         PrecompiledCacheStats {
             total_modules: modules.len(),
             cached_modules: modules.len(),
@@ -223,17 +189,14 @@ impl PrecompiledModuleCache {
             total_compile_time_ms: stats.total_compile_time_ms,
         }
     }
-
     /// 计算源码哈希
     fn calculate_source_hash(&self, source: &str) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-
         let mut hasher = DefaultHasher::new();
         source.hash(&mut hasher);
         format!("{:x}", hasher.finish())
     }
-
     /// 编译源码为字节码
     fn compile_to_bytecode(&self, source: &str) -> Result<Vec<u8> {
         // 这里我们需要集成 V8 编译逻辑
@@ -241,57 +204,43 @@ impl PrecompiledModuleCache {
         let bytecode: _ = source.as_bytes().to_vec();
         Ok(bytecode)
     }
-
     /// 更新统计信息
     fn update_stats(&self, compile_time: Duration) {
         let mut stats = self.stats.lock().unwrap();
         stats.total_compile_time_ms += compile_time.as_millis() as u64;
     }
-
     /// 持久化模块到磁盘
     fn persist_module(&self, module_name: &str, entry: &PrecompiledModuleEntry) -> Result<()> {
         let module_file: _ = self.cache_dir.join(format!("{}.bin", module_name));
-
         let serialized: _ = bincode::serialize(entry)
             .context(format!("Failed to serialize module: {}", module_name))?;
-
         fs::write(&module_file, serialized)
             .context(format!("Failed to write cached module: {:?}", module_file))?;
-
         Ok(())
     }
-
     /// 从磁盘加载缓存
     fn load_from_disk(&mut self) -> Result<()> {
         if !self.cache_dir.exists() {
             return Ok(());
         }
-
         let entries: _ = fs::read_dir(&self.cache_dir)
             .context(format!("Failed to read cache directory: {:?}", self.cache_dir))?;
-
         for entry in entries {
             let entry: _ = entry?;
             let path: _ = entry.path();
-
             if path.extension().map_or(false, |ext| ext == "bin") {
                 let serialized: _ = fs::read(&path)
                     .context(format!("Failed to read cached file: {:?}", path))?;
-
                 let module_entry: PrecompiledModuleEntry = bincode::deserialize(&serialized)
                     .context(format!("Failed to deserialize module: {:?}", path))?;
-
                 let module_name: _ = module_entry.module_name.clone();
                 let mut modules = self.modules.lock().unwrap();
                 modules.insert(module_name, module_entry);
             }
         }
-
         Ok(())
     }
-
     // ========== 内置模块源码实现 ==========
-
     fn builtin_console_module() -> String {
         r#"
         const console = {
@@ -315,7 +264,6 @@ impl PrecompiledModuleCache {
         "#
         .to_string()
     }
-
     fn builtin_process_module() -> String {
         r#"
         const process = {
@@ -332,7 +280,6 @@ impl PrecompiledModuleCache {
         "#
         .to_string()
     }
-
     fn builtin_path_module() -> String {
         r#"
         const path = {
@@ -354,7 +301,6 @@ impl PrecompiledModuleCache {
         "#
         .to_string()
     }
-
     fn builtin_fs_module() -> String {
         r#"
         const fs = {
@@ -369,7 +315,6 @@ impl PrecompiledModuleCache {
         "#
         .to_string()
     }
-
     fn builtin_os_module() -> String {
         r#"
         const os = {
@@ -381,7 +326,6 @@ impl PrecompiledModuleCache {
         "#
         .to_string()
     }
-
     fn builtin_util_module() -> String {
         r#"
         const util = {
@@ -398,7 +342,6 @@ impl PrecompiledModuleCache {
         "#
         .to_string()
     }
-
     fn builtin_events_module() -> String {
         r#"
         class EventEmitter {
@@ -421,7 +364,6 @@ impl PrecompiledModuleCache {
         "#
         .to_string()
     }
-
     fn builtin_stream_module() -> String {
         r#"
         const stream = {
@@ -440,7 +382,6 @@ impl PrecompiledModuleCache {
         "#
         .to_string()
     }
-
     fn builtin_buffer_module() -> String {
         r#"
         class Buffer {
@@ -455,7 +396,6 @@ impl PrecompiledModuleCache {
         "#
         .to_string()
     }
-
     fn builtin_crypto_module() -> String {
         r#"
         const crypto = {
@@ -471,19 +411,16 @@ impl PrecompiledModuleCache {
         .to_string()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_cache_creation() {
         let cache: _ = PrecompiledModuleCache::new();
         assert!(cache.is_ok());
     }
-
     #[test]
     fn test_builtin_modules_list() {
         let modules: _ = PrecompiledModuleCache::get_builtin_modules_list();
@@ -491,23 +428,18 @@ use std::collections::{HashMap, BTreeMap};
         assert!(modules.contains(&"console"));
         assert!(modules.contains(&"process"));
     }
-
     #[test]
     fn test_module_caching() {
         let cache: _ = PrecompiledModuleCache::new().unwrap();
-
         let source: _ = "module.exports = { test: true };";
         let result: _ = cache.cache_module("test_module", source);
-
         assert!(result.is_ok());
         assert!(cache.is_module_cached("test_module"));
     }
-
     #[test]
     fn test_cache_stats() {
         let cache: _ = PrecompiledModuleCache::new().unwrap();
         cache.precompile_builtin_modules().unwrap();
-
         let stats: _ = cache.get_stats();
         assert!(stats.cached_modules > 0);
     }

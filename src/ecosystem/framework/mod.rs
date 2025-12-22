@@ -2,22 +2,18 @@
 //! Stage 91 Phase 3.3 - React/Vue/Angular 框架支持
 //!
 //! 为主流前端框架提供完整的运行时支持
-
 pub mod react;
 pub mod vue;
 pub mod angular;
 pub mod ssr;
-
 pub use react::*;
 pub use vue::*;
 pub use angular::*;
 pub use ssr::*;
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 框架类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FrameworkType {
@@ -29,7 +25,6 @@ pub enum FrameworkType {
     Nuxt,
     Other,
 }
-
 /// 框架配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FrameworkConfig {
@@ -42,7 +37,6 @@ pub struct FrameworkConfig {
     pub tree_shaking: bool,
     pub bundle_splitting: bool,
 }
-
 /// 水合策略
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum HydrationStrategy {
@@ -51,7 +45,6 @@ pub enum HydrationStrategy {
     Selective,
     Progressive,
 }
-
 /// 组件信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComponentInfo {
@@ -62,7 +55,6 @@ pub struct ComponentInfo {
     pub lifecycle_hooks: Vec<String>,
     pub dependencies: Vec<String>,
 }
-
 /// 属性信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PropInfo {
@@ -71,7 +63,6 @@ pub struct PropInfo {
     pub required: bool,
     pub default_value: Option<String>,
 }
-
 /// 属性类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PropType {
@@ -85,7 +76,6 @@ pub enum PropType {
     Element,
     Any,
 }
-
 /// 状态信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StateInfo {
@@ -93,7 +83,6 @@ pub struct StateInfo {
     pub state_type: StateType,
     pub initial_value: Option<String>,
 }
-
 /// 状态类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum StateType {
@@ -101,7 +90,6 @@ pub enum StateType {
     Global,
     Computed,
 }
-
 /// 渲染结果
 #[derive(Debug, Clone)]
 pub struct RenderResult {
@@ -111,7 +99,6 @@ pub struct RenderResult {
     pub scripts: Vec<String>,
     pub data: Option<serde_json::Value>,
 }
-
 /// 构建配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildConfig {
@@ -123,7 +110,6 @@ pub struct BuildConfig {
     pub target: BuildTarget,
     pub environment: BuildEnvironment,
 }
-
 /// 构建目标
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BuildTarget {
@@ -131,7 +117,6 @@ pub enum BuildTarget {
     Node,
     Universal,
 }
-
 /// 构建环境
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BuildEnvironment {
@@ -140,7 +125,6 @@ pub enum BuildEnvironment {
     Staging,
     Production,
 }
-
 /// 优化选项
 #[derive(Debug, Clone)]
 pub struct OptimizationOptions {
@@ -150,7 +134,6 @@ pub struct OptimizationOptions {
     pub enable_caching: bool,
     pub enable_deduplication: bool,
 }
-
 /// 性能指标
 #[derive(Debug, Clone)]
 pub struct PerformanceMetrics {

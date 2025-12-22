@@ -1,21 +1,17 @@
 //! 元宇宙渲染引擎模块
 //!
 //! 提供高性能 3D 渲染、WebXR/OpenXR 支持、实时光线追踪和多用户协作渲染。
-
 pub mod engine;
 pub mod xr_runtime;
 pub mod ray_tracer;
 pub mod multiuser_renderer;
 pub mod spatial_audio;
-
 pub use xr_runtime::{XRRuntime, XRConfig, XRMode};
 pub use ray_tracer::{RayTracer, RayTracerConfig, BounceLimit};
 pub use multiuser_renderer::{MultiuserRenderer, UserAvatar, AvatarConfig, SyncMode as MultiuserSyncMode};
 pub use spatial_audio::{SpatialAudioSystem, AudioSource, AudioConfig, HRTFProfile};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
-
 /// XR 平台类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum XRPlatform {
@@ -32,13 +28,11 @@ pub enum XRPlatform {
     /// 桌面 VR
     Desktop,
 }
-
 impl Default for XRPlatform {
     fn default() -> Self {
         Self::WebXR
     }
 }
-
 /// 渲染模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RenderMode {
@@ -51,13 +45,11 @@ pub enum RenderMode {
     /// 路径追踪
     PathTracing,
 }
-
 impl Default for RenderMode {
     fn default() -> Self {
         Self::Rasterization
     }
 }
-
 /// 场景物体变换
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Transform {
@@ -68,7 +60,6 @@ pub struct Transform {
     /// 缩放 [x, y, z]
     pub scale: [f32; 3],
 }
-
 impl Transform {
     pub fn identity() -> Self {
         Self {
@@ -78,7 +69,6 @@ impl Transform {
         }
     }
 }
-
 /// 材质属性
 #[derive(Debug, Clone)]
 pub struct Material {
@@ -91,7 +81,6 @@ pub struct Material {
     /// 自发光颜色 [r, g, b]
     pub emission: [f32; 3],
 }
-
 impl Default for Material {
     fn default() -> Self {
         Self {
@@ -102,7 +91,6 @@ impl Default for Material {
         }
     }
 }
-
 /// 光源类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LightType {
@@ -117,7 +105,6 @@ pub enum LightType {
     /// 环境光
     Ambient,
 }
-
 /// 光源
 #[derive(Debug, Clone)]
 pub struct Light {
@@ -136,7 +123,6 @@ pub struct Light {
     /// 聚光灯角度
     pub spot_angle: f32,
 }
-
 impl Default for Light {
     fn default() -> Self {
         Self {
@@ -150,7 +136,6 @@ impl Default for Light {
         }
     }
 }
-
 /// 相机模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CameraMode {
@@ -163,13 +148,11 @@ pub enum CameraMode {
     /// 全景 360°
     Panoramic,
 }
-
 impl Default for CameraMode {
     fn default() -> Self {
         Self::Perspective
     }
 }
-
 /// 相机
 #[derive(Debug, Clone)]
 pub struct Camera {
@@ -190,7 +173,6 @@ pub struct Camera {
     /// 瞳距 (VR 模式)
     pub ipd: f32,
 }
-
 impl Default for Camera {
     fn default() -> Self {
         Self {
@@ -205,7 +187,6 @@ impl Default for Camera {
         }
     }
 }
-
 /// 渲染统计
 #[derive(Debug, Clone, Default)]
 pub struct RenderStats {
@@ -222,7 +203,6 @@ pub struct RenderStats {
     /// 延迟 (毫秒)
     pub latency_ms: f64,
 }
-
 /// 场景物体
 #[derive(Debug, Clone)]
 pub struct SceneObject {
@@ -239,7 +219,6 @@ pub struct SceneObject {
     /// 是否接收阴影
     receive_shadow: bool,
 }
-
 impl SceneObject {
     /// 创建新的场景物体
     pub fn new(name: &str, transform: Transform, material: Material) -> Self {
@@ -252,23 +231,18 @@ impl SceneObject {
             receive_shadow: true,
         }
     }
-
     pub fn name(&self) -> &str {
         &self.name
     }
-
     pub fn transform(&self) -> &Transform {
         &self.transform
     }
-
     pub fn material(&self) -> &Material {
         &self.material
     }
-
     pub fn is_visible(&self) -> bool {
         self.visible
     }
-
     pub fn set_visible(&mut self, visible: bool) {
         self.visible = visible;
     }

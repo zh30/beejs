@@ -1,14 +1,11 @@
 //! Multi-tenancy Isolation Manager
 //! Implements secure multi-tenancy for Beejs clusters
-
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn, error, debug};
-
 /// Tenant identifier
 #[derive(Debug, Clone, Hash, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct TenantId(pub String);
-
 /// Tenant information
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Tenant {
@@ -20,7 +17,6 @@ pub struct Tenant {
     pub resource_quota: ResourceQuota,
     pub security_context: SecurityContext,
 }
-
 /// Tenant status
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub enum TenantStatus {
@@ -28,7 +24,6 @@ pub enum TenantStatus {
     Suspended,
     Terminated,
 }
-
 /// Resource quota for a tenant
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ResourceQuota {
@@ -39,7 +34,6 @@ pub struct ResourceQuota {
     pub max_storage_gb: u64,
     pub max_concurrent_executions: u32,
 }
-
 /// Security context for isolation
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SecurityContext {
@@ -48,7 +42,6 @@ pub struct SecurityContext {
     pub resource_limits: ResourceLimits,
     pub allowed_apis: Vec<String>,
 }
-
 /// Network policy for tenant isolation
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct NetworkPolicy {
@@ -58,14 +51,12 @@ pub struct NetworkPolicy {
     pub allowed_destinations: Vec<String>,
     pub blocked_ports: Vec<u16>,
 }
-
 /// RBAC role
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RbacRole {
     pub name: String,
     pub permissions: Vec<Permission>,
 }
-
 /// Permission types
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum Permission {
@@ -76,7 +67,6 @@ pub enum Permission {
     ExecuteScript,
     ManageResources,
 }
-
 /// Resource limits
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ResourceLimits {
@@ -85,7 +75,6 @@ pub struct ResourceLimits {
     pub storage_limit_per_cluster_gb: u64,
     pub network_bandwidth_limit_mbps: u64,
 }
-
 /// Execution context for a tenant
 #[derive(Debug, Clone)]
 pub struct ExecutionContext {
@@ -95,19 +84,15 @@ pub struct ExecutionContext {
     pub security_context: SecurityContext,
     pub execution_id: String,
 }
-
 /// Multi-tenancy manager
 pub struct TenancyManager {
     /// Active tenants
     tenants: Arc<RwLock<std::collections::HashMap<TenantId, Tenant>>>,
-
     /// Tenant executions
     executions: Arc<RwLock<std::collections::HashMap<String, ExecutionContext>>>,
-
     /// Resource usage tracker
     resource_usage: Arc<RwLock<std::collections::HashMap<TenantId, ResourceUsage>>>,
 }
-
 /// Resource usage by tenant
 #[derive(Debug, Clone, Default)]
 pub struct ResourceUsage {
@@ -118,7 +103,6 @@ pub struct ResourceUsage {
     pub storage_usage_gb: u64,
     pub concurrent_executions: u32,
 }
-
 impl TenancyManager {
     /// Create a new tenancy manager
     pub fn new() -> Self {
@@ -128,7 +112,6 @@ impl TenancyManager {
             resource_usage: Arc::new(Mutex::new(std::collections::HashMap::new()))
         }
     }
-
     /// Create a new tenant
     pub async fn create_tenant(
         &self,
@@ -137,9 +120,7 @@ impl TenancyManager {
         resource_quota: ResourceQuota,
     ) -> Result<TenantId, Box<dyn std::error::Error>> {
         let tenant_id: _ = TenantId(uuid::Uuid::new_v4().to_string());
-
         info!("Creating tenant: {} ({})", name, tenant_id.0);
-
         let tenant: _ = Tenant {
             id: tenant_id.clone(),
             name,
@@ -165,24 +146,19 @@ impl TenancyManager {
                 allowed_apis: vec!["*".to_string()],
             },
         };
-
         let mut tenants = self.tenants.write().await;
         tenants.insert(tenant_id.clone(), tenant);
-
         // Initialize resource usage tracking
         let mut resource_usage = self.resource_usage.write().await;
         resource_usage.insert(tenant_id.clone(), ResourceUsage::default());
-
         info!("Successfully created tenant: {} ({})", tenant.name, tenant_id.0);
         Ok(tenant_id)
     }
-
     /// Get tenant by ID
     pub async fn get_tenant(&self, tenant_id: &TenantId) -> Option<Tenant> {
         let tenants: _ = self.tenants.read().await;
         tenants.get(tenant_id).cloned()
     }
-
     /// Update tenant
     pub async fn update_tenant(
         &self,
@@ -208,21 +184,16 @@ impl TenancyManager {
             Err(format!("Tenant not found: {}", tenant_id.0).into())
         }
     }
-
     /// Delete tenant
     pub async fn delete_tenant(&self, tenant_id: &TenantId) -> Result<(), Box<dyn std::error::Error>> {
         info!("Deleting tenant: {}", tenant_id.0);
-
         let mut tenants = self.tenants.write().await;
         tenants.remove(tenant_id);
-
         let mut resource_usage = self.resource_usage.write().await;
         resource_usage.remove(tenant_id);
-
         info!("Successfully deleted tenant: {}", tenant_id.0);
         Ok(())
     }
-
     /// Create an execution context for a tenant
     pub async fn create_execution_context(
         &self,
@@ -234,13 +205,10 @@ impl TenancyManager {
             // Check resource quota
             let mut resource_usage = self.resource_usage.write().await;
             let usage: _ = resource_usage.entry(tenant_id.clone()).or_insert_with(ResourceUsage::default);
-
             if usage.concurrent_executions >= tenant.resource_quota.max_concurrent_executions {
                 return Err("Maximum concurrent executions reached".into());
             }
-
             usage.concurrent_executions += 1;
-
             let execution_id: _ = uuid::Uuid::new_v4().to_string();
             let context: _ = ExecutionContext {
                 tenant_id: tenant_id.clone(),
@@ -249,17 +217,14 @@ impl TenancyManager {
                 security_context: tenant.security_context.clone(),
                 execution_id,
             };
-
             let mut executions = self.executions.write().await;
             executions.insert(context.execution_id.clone(), context.clone());
-
             info!("Created execution context for tenant: {} (execution: {})", tenant_id.0, execution_id);
             Ok(context)
         } else {
             Err(format!("Tenant not found: {}", tenant_id.0).into())
         }
     }
-
     /// Clean up execution context
     pub async fn cleanup_execution(&self, execution_id: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut executions = self.executions.write().await;
@@ -276,19 +241,16 @@ impl TenancyManager {
             Err(format!("Execution not found: {}", execution_id).into())
         }
     }
-
     /// Get resource usage for a tenant
     pub async fn get_resource_usage(&self, tenant_id: &TenantId) -> Option<ResourceUsage> {
         let resource_usage: _ = self.resource_usage.read().await;
         resource_usage.get(tenant_id).cloned()
     }
-
     /// List all tenants
     pub async fn list_tenants(&self) -> Vec<Tenant> {
         let tenants: _ = self.tenants.read().await;
         tenants.values().cloned().collect()
     }
-
     /// Check if tenant has exceeded resource quota
     pub async fn check_quota_exceeded(&self, tenant_id: &TenantId) -> Result<bool, Box<dyn std::error::Error>> {
         let tenants: _ = self.tenants.read().await;
@@ -301,7 +263,6 @@ impl TenancyManager {
                     || usage.cpu_usage_cores > tenant.resource_quota.max_cpu_cores
                     || usage.storage_usage_gb > tenant.resource_quota.max_storage_gb
                     || usage.concurrent_executions > tenant.resource_quota.max_concurrent_executions;
-
                 Ok(exceeded)
             } else {
                 Ok(false)
@@ -311,7 +272,6 @@ impl TenancyManager {
         }
     }
 }
-
 /// Updates for tenant
 #[derive(Debug, Default)]
 pub struct TenantUpdates {
@@ -320,43 +280,35 @@ pub struct TenantUpdates {
     pub status: Option<TenantStatus>,
     pub resource_quota: Option<ResourceQuota>,
 }
-
 impl TenantUpdates {
     pub fn new() -> Self {
         Self::default()
     }
-
     pub fn with_name(mut self, name: String) -> Self {
         self.name = Some(name);
         self
     }
-
     pub fn with_email(mut self, email: String) -> Self {
         self.email = Some(email);
         self
     }
-
     pub fn with_status(mut self, status: TenantStatus) -> Self {
         self.status = Some(status);
         self
     }
-
     pub fn with_resource_quota(mut self, resource_quota: ResourceQuota) -> Self {
         self.resource_quota = Some(resource_quota);
         self
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_create_tenant() {
         let manager: _ = TenancyManager::new();
-
         let resource_quota: _ = ResourceQuota {
             max_clusters: 10,
             max_replicas_per_cluster: 5,
@@ -365,22 +317,18 @@ use std::collections::{HashMap, BTreeMap};
             max_storage_gb: 100,
             max_concurrent_executions: 20,
         };
-
         let tenant_id: _ = manager
             .create_tenant("test-tenant".to_string(), "test@example.com".to_string(), resource_quota)
             .await
             .unwrap();
-
         let tenant: _ = manager.get_tenant(&tenant_id).await.unwrap();
         assert_eq!(tenant.name, "test-tenant");
         assert_eq!(tenant.email, "test@example.com");
         assert_eq!(tenant.status, TenantStatus::Active);
     }
-
     #[tokio::test]
     async fn test_execution_context_creation() {
         let manager: _ = TenancyManager::new();
-
         let resource_quota: _ = ResourceQuota {
             max_clusters: 10,
             max_replicas_per_cluster: 5,
@@ -389,26 +337,22 @@ use std::collections::{HashMap, BTreeMap};
             max_storage_gb: 100,
             max_concurrent_executions: 2,
         };
-
         let tenant_id: _ = manager
             .create_tenant("test-tenant".to_string(), "test@example.com".to_string(), resource_quota)
             .await
             .unwrap();
-
         // Create first execution
         let context1: _ = manager
             .create_execution_context(&tenant_id, "cluster-1".to_string())
             .await
             .unwrap();
         assert_eq!(context1.tenant_id, tenant_id);
-
         // Create second execution
         let context2: _ = manager
             .create_execution_context(&tenant_id, "cluster-2".to_string())
             .await
             .unwrap();
         assert_eq!(context2.tenant_id, tenant_id);
-
         // Try to create third execution (should fail)
         let result: _ = manager
             .create_execution_context(&tenant_id, "cluster-3".to_string())

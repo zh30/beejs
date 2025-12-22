@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 // 眼动追踪系统
-
 /// 眼动追踪配置
 #[derive(Debug, Clone)]
 pub struct EyeTrackingConfig {
@@ -12,7 +11,6 @@ pub struct EyeTrackingConfig {
     /// 校准点数量
     pub calibration_points: u32,
 }
-
 impl Default for EyeTrackingConfig {
     fn default() -> Self {
         Self {
@@ -22,7 +20,6 @@ impl Default for EyeTrackingConfig {
         }
     }
 }
-
 /// 注视点
 #[derive(Debug, Clone, Copy)]
 pub struct GazePoint {
@@ -33,7 +30,6 @@ pub struct GazePoint {
     /// 深度
     pub depth: f32,
 }
-
 impl Default for GazePoint {
     fn default() -> Self {
         Self {
@@ -43,7 +39,6 @@ impl Default for GazePoint {
         }
     }
 }
-
 /// 注视点渲染区域
 #[derive(Debug, Clone)]
 pub struct FoveatedRegion {
@@ -56,7 +51,6 @@ pub struct FoveatedRegion {
     /// 外围区域质量
     pub peripheral_quality: f32,
 }
-
 impl Default for FoveatedRegion {
     fn default() -> Self {
         Self {
@@ -67,7 +61,6 @@ impl Default for FoveatedRegion {
         }
     }
 }
-
 /// 眼动追踪系统
 pub struct EyeTracking {
     /// 配置
@@ -77,7 +70,6 @@ pub struct EyeTracking {
     /// 是否已校准
     calibrated: bool,
 }
-
 impl EyeTracking {
     /// 创建眼动追踪系统
     pub fn new(config: EyeTrackingConfig) -> Result<Self, EyeTrackingError> {
@@ -87,17 +79,14 @@ impl EyeTracking {
             calibrated: false,
         })
     }
-
     /// 注视点渲染是否启用
     pub fn foveated_rendering_enabled(&self) -> bool {
         self.config.enable_foveated_rendering
     }
-
     /// 获取当前注视点
     pub fn get_gaze_point(&mut self) -> Result<GazePoint, EyeTrackingError> {
         Ok(self.current_gaze)
     }
-
     /// 计算注视点渲染区域
     pub fn calculate_foveated_region(&self, gaze: &GazePoint) -> Result<FoveatedRegion, EyeTrackingError> {
         Ok(FoveatedRegion {
@@ -107,25 +96,21 @@ impl EyeTracking {
             peripheral_quality: 0.25,
         })
     }
-
     /// 开始校准
     pub fn start_calibration(&mut self) -> Result<(), EyeTrackingError> {
         self.calibrated = false;
         Ok(())
     }
-
     /// 完成校准
     pub fn complete_calibration(&mut self) -> Result<(), EyeTrackingError> {
         self.calibrated = true;
         Ok(())
     }
-
     /// 是否已校准
     pub fn is_calibrated(&self) -> bool {
         self.calibrated
     }
 }
-
 /// 眼动追踪错误
 #[derive(Debug, Clone)]
 pub enum EyeTrackingError {
@@ -138,7 +123,6 @@ pub enum EyeTrackingError {
     /// 设备未找到
     DeviceNotFound,
 }
-
 impl std::fmt::Display for EyeTrackingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -149,5 +133,4 @@ impl std::fmt::Display for EyeTrackingError {
         }
     }
 }
-
 impl std::error::Error for EyeTrackingError {}

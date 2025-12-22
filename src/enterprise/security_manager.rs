@@ -1,12 +1,10 @@
 //! Enterprise Security Manager
 //! Provides security policy enforcement, RBAC, and audit logging
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use anyhow::{Result, anyhow};
 use tokio::sync::RwLock;
-
 /// User role definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UserRole {
@@ -17,7 +15,6 @@ pub enum UserRole {
     Guest,
     Custom(String),
 }
-
 /// User permissions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserPermissions {
@@ -29,7 +26,6 @@ pub struct UserPermissions {
     pub can_access_sandbox: bool,
     pub can_view_audit_logs: bool,
 }
-
 /// User identity
 #[derive(Debug, Clone)]
 pub struct User {
@@ -39,7 +35,6 @@ pub struct User {
     pub permissions: UserPermissions,
     pub tenant_id: Option<String>,
 }
-
 /// Security policy type
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecurityPolicy {
@@ -50,7 +45,6 @@ pub enum SecurityPolicy {
     /// Custom policy with specific rules
     Custom(HashMap<String, SecurityRule>),
 }
-
 /// Security rule definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityRule {
@@ -61,7 +55,6 @@ pub struct SecurityRule {
     pub resource_type: String,
     pub action: String,
 }
-
 /// Enhanced security manager with RBAC support
 #[derive(Debug)]
 pub struct SecurityManager {
@@ -70,7 +63,6 @@ pub struct SecurityManager {
     users: Arc<RwLock<HashMap<String, User>>>,
     roles: Arc<RwLock<HashMap<String, UserPermissions>>>,
 }
-
 /// Security audit event
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityEvent {
@@ -81,14 +73,12 @@ pub struct SecurityEvent {
     pub result: SecurityResult,
     pub details: HashMap<String, String>,
 }
-
 /// Security result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SecurityResult {
     Allowed,
     Denied(String),
 }
-
 impl SecurityManager {
     /// Create a new security manager with default roles and policies
     pub fn new() -> Self {
@@ -98,23 +88,18 @@ impl SecurityManager {
             users: Arc::new(Mutex::new(HashMap::new()))
             roles: Arc::new(Mutex::new(HashMap::new()))
         };
-
         // Initialize default roles
         manager.initialize_default_roles();
-
         // Add default permissive policy
         manager.policies.insert(
             "default".to_string(),
             SecurityPolicy::Permissive,
         );
-
         manager
     }
-
     /// Initialize default role-based permissions
     fn initialize_default_roles(&self) {
         let mut roles = self.roles.blocking_write();
-
         // Admin role - full permissions
         roles.insert("Admin".to_string(), UserPermissions {
             can_execute: true,
@@ -125,7 +110,6 @@ impl SecurityManager {
             can_access_sandbox: true,
             can_view_audit_logs: true,
         });
-
         // Developer role
         roles.insert("Developer".to_string(), UserPermissions {
             can_execute: true,
@@ -136,7 +120,6 @@ impl SecurityManager {
             can_access_sandbox: true,
             can_view_audit_logs: false,
         });
-
         // Operator role
         roles.insert("Operator".to_string(), UserPermissions {
             can_execute: true,
@@ -147,7 +130,6 @@ impl SecurityManager {
             can_access_sandbox: true,
             can_view_audit_logs: true,
         });
-
         // Auditor role
         roles.insert("Auditor".to_string(), UserPermissions {
             can_execute: false,
@@ -158,7 +140,6 @@ impl SecurityManager {
             can_access_sandbox: false,
             can_view_audit_logs: true,
         });
-
         // Guest role
         roles.insert("Guest".to_string(), UserPermissions {
             can_execute: false,
@@ -170,25 +151,21 @@ impl SecurityManager {
             can_view_audit_logs: false,
         });
     }
-
     /// Add a security policy
     pub fn add_policy(&mut self, name: String, policy: SecurityPolicy) {
         self.policies.insert(name, policy);
     }
-
     /// Register a new user with RBAC
     pub async fn register_user(&self, user: User) -> Result<()> {
         let mut users = self.users.write().await;
         users.insert(user.id.clone(), user);
         Ok(())
     }
-
     /// Authenticate user and get permissions
     pub async fn authenticate_user(&self, username: &str) -> Option<User> {
         let users: _ = self.users.read().await;
         users.values().find(|u| u.username == username).cloned()
     }
-
     /// Check user permission for an operation
     pub async fn check_user_permission(
         &self,
@@ -196,7 +173,6 @@ impl SecurityManager {
         operation: &str,
     ) -> Result<SecurityResult> {
         let users: _ = self.users.read().await;
-
         if let Some(user) = users.get(user_id) {
             let allowed: _ = match operation {
                 "execute" => user.permissions.can_execute,
@@ -208,13 +184,11 @@ impl SecurityManager {
                 "view_audit_logs" => user.permissions.can_view_audit_logs,
                 _ => false,
             };
-
             let result: _ = if allowed {
                 SecurityResult::Allowed
             } else {
                 SecurityResult::Denied(format!("User '{}' not allowed to '{}'", user.username, operation))
             };
-
             // Log the event
             self.log_event(
                 "user_permission_check".to_string(),
@@ -223,13 +197,11 @@ impl SecurityManager {
                 result.clone(),
                 HashMap::new(),
             ).await;
-
             Ok(result)
         } else {
             Ok(SecurityResult::Denied("User not found".to_string())
         }
     }
-
     /// Check if an operation is allowed (legacy method)
     pub fn check_permission(
         &self,
@@ -239,7 +211,6 @@ impl SecurityManager {
     ) -> Result<SecurityResult> {
         let policy: _ = self.policies.get(policy_name)
             .ok_or_else(|| anyhow!("Policy not found: {}", policy_name))?;
-
         let result: _ = match policy {
             SecurityPolicy::Permissive => SecurityResult::Allowed,
             SecurityPolicy::Restrictive => {
@@ -257,7 +228,6 @@ impl SecurityManager {
                 }
             }
         };
-
         // Log the security event (sync log for legacy compatibility)
         let details: _ = context.clone();
         let event: _ = SecurityEvent {
@@ -268,13 +238,10 @@ impl SecurityManager {
             result: result.clone(),
             details,
         };
-
         // In a real implementation, this would be async
         println!("Security Event: {:?}", event);
-
         Ok(result)
     }
-
     /// Async log a security event
     pub async fn log_event(
         &self,
@@ -292,24 +259,19 @@ impl SecurityManager {
             result,
             details,
         };
-
         let mut log = self.audit_log.write().await;
         log.push(event);
     }
-
     /// Get audit log
     pub async fn get_audit_log(&self) -> Vec<SecurityEvent> {
         let log: _ = self.audit_log.read().await;
         log.clone()
     }
-
     /// Get user statistics
     pub async fn get_user_stats(&self) -> HashMap<String, serde_json::Value> {
         let users: _ = self.users.read().await;
         let mut stats = HashMap::new();
-
         stats.insert("total_users".to_string(), serde_json::Value::from(users.len());
-
         // Count users by role
         let mut role_counts = HashMap::new();
         for user in users.values() {
@@ -323,35 +285,28 @@ impl SecurityManager {
             };
             *role_counts.entry(role_name.to_string()).or_insert(0) += 1;
         }
-
         stats.insert("role_distribution".to_string(), serde_json::to_value(role_counts).unwrap());
-
         stats
     }
 }
-
 impl Default for SecurityManager {
     fn default() -> Self {
         Self::new()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_security_manager_creation() {
         let manager: _ = SecurityManager::new();
         assert!(!manager.policies.is_empty());
     }
-
     #[tokio::test]
     async fn test_rbac_user_registration() {
         let manager: _ = SecurityManager::new();
-
         let user: _ = User {
             id: "user1".to_string(),
             username: "alice".to_string(),
@@ -367,15 +322,12 @@ use std::collections::{HashMap, BTreeMap};
             },
             tenant_id: None,
         };
-
         let result: _ = manager.register_user(user).await;
         assert!(result.is_ok());
     }
-
     #[tokio::test]
     async fn test_user_permission_check() {
         let manager: _ = SecurityManager::new();
-
         let user: _ = User {
             id: "user1".to_string(),
             username: "alice".to_string(),
@@ -391,29 +343,23 @@ use std::collections::{HashMap, BTreeMap};
             },
             tenant_id: None,
         };
-
         manager.register_user(user).await.unwrap();
-
         // Test allowed operation
         let result: _ = manager.check_user_permission("user1", "execute").await;
         assert!(matches!(result, Ok(SecurityResult::Allowed));
-
         // Test denied operation
         let result: _ = manager.check_user_permission("user1", "delete").await;
         assert!(matches!(result, Ok(SecurityResult::Denied(_));
     }
-
     #[test]
     fn test_permissive_policy() {
         let manager: _ = SecurityManager::new();
         let result: _ = manager.check_permission("default", "execute_script", &HashMap::new());
         assert!(matches!(result, Ok(SecurityResult::Allowed));
     }
-
     #[tokio::test]
     async fn test_audit_log() {
         let manager: _ = SecurityManager::new();
-
         manager.log_event(
             "test_event".to_string(),
             "test_source".to_string(),
@@ -421,16 +367,13 @@ use std::collections::{HashMap, BTreeMap};
             SecurityResult::Allowed,
             HashMap::new(),
         ).await;
-
         let log: _ = manager.get_audit_log().await;
         assert_eq!(log.len(), 1);
         assert_eq!(log[0].event_type, "test_event");
     }
-
     #[tokio::test]
     async fn test_user_stats() {
         let manager: _ = SecurityManager::new();
-
         let admin_user: _ = User {
             id: "admin1".to_string(),
             username: "admin".to_string(),
@@ -446,9 +389,7 @@ use std::collections::{HashMap, BTreeMap};
             },
             tenant_id: None,
         };
-
         manager.register_user(admin_user).await.unwrap();
-
         let stats: _ = manager.get_user_stats().await;
         assert_eq!(stats["total_users"], serde_json::Value::from(1));
     }

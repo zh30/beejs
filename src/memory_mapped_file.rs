@@ -1,6 +1,5 @@
 //! 内存映射文件模块
 //! 提供高性能的大文件共享访问机制
-
 use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
@@ -9,7 +8,6 @@ use std::fs::{File, OpenOptions};
 use memmap2::{Mmap, MmapOptions};
 use anyhow::{Result, Context};
 use std::collections::HashMap;
-
 /// 访问模式
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum AccessMode {
@@ -20,7 +18,6 @@ pub enum AccessMode {
     /// 写时复制模式
     CopyOnWrite,
 }
-
 /// 内存映射文件
 #[derive(Debug)]
 pub struct MemoryMappedFile {
@@ -41,37 +38,30 @@ pub struct MemoryMappedFile {
     /// 引用计数
     ref_count: Arc<AtomicUsize>,
 }
-
 impl MemoryMappedFile {
     /// 创建只读内存映射文件
     pub fn open_readonly<P: AsRef<Path>>(path: P) -> Result<Self> {
         Self::open_with_mode(path, AccessMode::ReadOnly)
     }
-
     /// 创建读写内存映射文件
     pub fn open_readwrite<P: AsRef<Path>>(path: P) -> Result<Self> {
         Self::open_with_mode(path, AccessMode::ReadWrite)
     }
-
     /// 创建写时复制内存映射文件
     pub fn open_copy_on_write<P: AsRef<Path>>(path: P) -> Result<Self> {
         Self::open_with_mode(path, AccessMode::CopyOnWrite)
     }
-
     /// 根据访问模式打开文件
     fn open_with_mode<P: AsRef<Path>>(path: P, access_mode: AccessMode) -> Result<Self> {
         let path: _ = path.as_ref().to_path_buf();
-
         // 检查文件是否存在
         if !path.exists() {
             return Err(anyhow::anyhow!("File does not exist: {:?}", path));
         }
-
         // 获取文件元数据
         let metadata: _ = std::fs::metadata(&path)
             .context("Failed to get file metadata")?;
         let size: _ = metadata.len() as usize;
-
         // 打开文件
         let file: _ = match access_mode {
             AccessMode::ReadOnly => {
@@ -95,14 +85,12 @@ impl MemoryMappedFile {
                     .context("Failed to open file for copy-on-write")?
             }
         };
-
         // 创建内存映射
         let mmap: _ = unsafe {
             MmapOptions::new()
                 .map(&file)
                 .context("Failed to create memory mapping")?
         };
-
         Ok(Self {
             path,
             mmap,
@@ -114,20 +102,17 @@ impl MemoryMappedFile {
             ref_count: Arc::new(Mutex::new(AtomicUsize::new(1))),
         })
     }
-
     /// 从现有文件创建新的内存映射
     pub fn new_from_file(file: File, access_mode: AccessMode, path: Option<PathBuf>) -> Result<Self> {
         let path: _ = path.unwrap_or_else(|| PathBuf::from("unknown"));
         let metadata: _ = file.metadata()
             .context("Failed to get file metadata")?;
         let size: _ = metadata.len() as usize;
-
         let mmap: _ = unsafe {
             MmapOptions::new()
                 .map(&file)
                 .context("Failed to create memory mapping")?
         };
-
         Ok(Self {
             path,
             mmap,
@@ -139,25 +124,20 @@ impl MemoryMappedFile {
             ref_count: Arc::new(Mutex::new(AtomicUsize::new(1))),
         })
     }
-
     /// 读取数据
     pub fn read(&self, offset: usize, size: usize) -> Result<&[u8]> {
         if offset + size > self.size {
             return Err(anyhow::anyhow!("Read range exceeds file size"));
         }
-
         // 更新访问时间
         {
             let mut last_accessed = self.last_accessed.lock().unwrap();
             *last_accessed = Instant::now();
         }
-
         // 增加访问计数
         self.access_count.fetch_add(1, Ordering::SeqCst);
-
         Ok(&self.mmap[offset..offset + size])
     }
-
     /// 写入数据（仅限读写模式）
     /// 注意：当前实现使用只读mmap，不支持直接写入
     #[allow(dead_code)]
@@ -166,64 +146,51 @@ impl MemoryMappedFile {
         // 如需支持写入，应使用MmapMut
         Err(anyhow::anyhow!("Direct write not supported in current implementation"))
     }
-
     /// 获取文件大小
     pub fn len(&self) -> usize {
         self.size
     }
-
     /// 检查是否为空
     pub fn is_empty(&self) -> bool {
         self.size == 0
     }
-
     /// 获取文件路径
     pub fn path(&self) -> &Path {
         &self.path
     }
-
     /// 获取访问模式
     pub fn access_mode(&self) -> AccessMode {
         self.access_mode
     }
-
     /// 获取访问计数
     pub fn get_access_count(&self) -> usize {
         self.access_count.load(Ordering::SeqCst)
     }
-
     /// 获取引用计数
     pub fn get_ref_count(&self) -> usize {
         self.ref_count.load(Ordering::SeqCst)
     }
-
     /// 增加引用计数
     pub fn add_ref(&self) -> usize {
         self.ref_count.fetch_add(1, Ordering::SeqCst) + 1
     }
-
     /// 获取整个文件的切片（零拷贝访问）
     pub fn as_slice(&self) -> &[u8] {
         &self.mmap
     }
-
     /// 减少引用计数
     pub fn remove_ref(&self) -> usize {
         self.ref_count.fetch_sub(1, Ordering::SeqCst) - 1
     }
-
-
     /// 获取创建时间
     pub fn get_created_at(&self) -> Instant {
         self.created_at
     }
-
     /// 获取最后访问时间
     pub fn get_last_accessed(&self) -> Instant {
         *self.last_accessed.lock().unwrap()
     }
 }
-
 /// 内存映射文件配置
 #[derive(Debug, Clone)]
 pub struct MemoryMappedFileConfig {
@@ -238,7 +205,6 @@ pub struct MemoryMappedFileConfig {
     /// 预读大小
     pub readahead_size: usize,
 }
-
 impl Default for MemoryMappedFileConfig {
     fn default() -> Self {
         Self {
@@ -250,7 +216,6 @@ impl Default for MemoryMappedFileConfig {
         }
     }
 }
-
 /// 内存映射文件统计信息
 #[derive(Debug, Default, Clone)]
 pub struct MemoryMappedFileStats {
@@ -264,7 +229,6 @@ pub struct MemoryMappedFileStats {
     pub gc_runs: u64,
     pub mappings_evicted: usize,
 }
-
 /// 内存映射文件管理器
 #[derive(Debug)]
 pub struct MemoryMappedFileManager {
@@ -277,7 +241,6 @@ pub struct MemoryMappedFileManager {
     /// 运行状态
     running: Arc<AtomicBool>,
 }
-
 #[allow(dead_code)]
 /// 内存映射文件包装器
 #[derive(Debug)]
@@ -287,7 +250,6 @@ struct MmapWrapper {
     /// 创建时间
     created_at: Instant,
 }
-
 impl MemoryMappedFileManager {
     /// 创建新的内存映射文件管理器
     pub fn new(config: MemoryMappedFileConfig) -> Self {
@@ -297,17 +259,13 @@ impl MemoryMappedFileManager {
             stats: Arc::new(Mutex::new(MemoryMappedFileStats::default())),
             running: Arc::new(Mutex::new(AtomicBool::new(true))),
         };
-
         // 启动GC线程
         manager.start_gc_thread();
-
         manager
     }
-
     /// 打开内存映射文件
     pub fn open<P: AsRef<Path>>(&self, path: P) -> Result<Arc<Mutex<MemoryMappedFile>>> {
         let path: _ = path.as_ref().to_path_buf();
-
         // 检查是否已存在
         {
             let mappings: _ = self.mappings.lock().unwrap();
@@ -318,17 +276,14 @@ impl MemoryMappedFileManager {
                         let mut stats = self.stats.lock().unwrap();
                         stats.cache_hits += 1;
                     }
-
                     return Ok(file);
                 }
             }
         }
-
         // 检查文件大小
         let metadata: _ = std::fs::metadata(&path)
             .context("Failed to get file metadata")?;
         let size: _ = metadata.len() as usize;
-
         if size > self.config.max_file_size {
             return Err(anyhow::anyhow!(
                 "File size {} exceeds maximum allowed size {}",
@@ -336,36 +291,29 @@ impl MemoryMappedFileManager {
                 self.config.max_file_size
             ));
         }
-
         // 创建新的内存映射
         let file: _ = Arc::new(Mutex::new(MemoryMappedFile::open_readonly(&path)?));
-
         // 注册到管理器
         {
             let mut mappings = self.mappings.lock().unwrap();
-
             // 检查映射数量限制
             if mappings.len() >= self.config.max_mappings {
                 // 清理失效的弱引用
                 mappings.retain(|_, weak| weak.strong_count() > 0);
             }
-
             mappings.insert(
                 path,
                 Arc::downgrade(&file),
             );
         }
-
         // 更新统计
         {
             let mut stats = self.stats.lock().unwrap();
             stats.total_mappings += 1;
             stats.active_mappings += 1;
         }
-
         Ok(file)
     }
-
     #[allow(dead_code)]
     /// 清理最老的映射
     fn cleanup_oldest_mapping(
@@ -375,21 +323,17 @@ impl MemoryMappedFileManager {
         mappings.retain(|_, weak| weak.strong_count() > 0);
         Ok(())
     }
-
     /// 获取统计信息
     pub fn get_stats(&self) -> MemoryMappedFileStats {
         self.stats.lock().unwrap().clone()
     }
-
     #[allow(dead_code)]
     /// 清理过期映射
     fn cleanup_expired(&self) {
         let mut cleaned = 0;
         let now: _ = Instant::now();
-
         {
             let mut mappings = self.mappings.lock().unwrap();
-
             let paths_to_remove: Vec<PathBuf> = mappings
                 .iter()
                 .filter_map(|(path, weak_wrapper)| {
@@ -407,13 +351,11 @@ impl MemoryMappedFileManager {
                     }
                 })
                 .collect();
-
             for path in paths_to_remove {
                 mappings.remove(&path);
                 cleaned += 1;
             }
         }
-
         if cleaned > 0 {
             let mut stats = self.stats.lock().unwrap();
             stats.gc_runs += 1;
@@ -421,39 +363,32 @@ impl MemoryMappedFileManager {
             stats.active_mappings = stats.active_mappings.saturating_sub(cleaned);
         }
     }
-
     /// 启动GC线程
     fn start_gc_thread(&self) {
         let mappings: _ = Arc::downgrade(&self.mappings);
         let _config: _ = self.config.clone();
         let running: _ = self.running.clone();
-
         std::thread::spawn(move || {
             while running.load(Ordering::SeqCst) {
                 std::thread::sleep(Duration::from_secs(60));
-
                 if let Some(mappings) = mappings.upgrade() {
-                    let mut mappings = mappings..lock().unwrap();
-
+                    let mut mappings = mappings.lock().unwrap();
                     // 简单清理：移除所有弱引用已失效的条目
                     mappings.retain(|_, weak_wrapper| weak_wrapper.strong_count() > 0);
                 }
             }
         });
     }
-
     /// 关闭管理器
     pub fn shutdown(&self) {
         self.running.store(false, Ordering::SeqCst);
     }
 }
-
 impl Drop for MemoryMappedFileManager {
     fn drop(&mut self) {
         self.shutdown();
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -461,102 +396,73 @@ mod tests {
     use tempfile::NamedTempFile;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_readonly_mapping() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"Hello, World!").unwrap();
-
         let mmap: _ = MemoryMappedFile::open_readonly(file.path()).unwrap();
-
         let data: _ = mmap.read(0, 13).unwrap();
         assert_eq!(data, b"Hello, World!");
     }
-
     #[test]
     fn test_readwrite_mapping() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"Hello").unwrap();
-
         let mmap: _ = MemoryMappedFile::open_readwrite(file.path()).unwrap();
-
         // 写入操作当前不支持（使用只读mmap）
         // 只验证读取功能
         let data: _ = mmap.read(0, 5).unwrap();
         assert_eq!(data, b"Hello");
     }
-
     #[test]
     fn test_access_count() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"test").unwrap();
-
         let mmap: _ = MemoryMappedFile::open_readonly(file.path()).unwrap();
-
         assert_eq!(mmap.get_access_count(), 0);
-
         // 执行读操作
         let _: _ = mmap.read(0, 4);
-
         assert_eq!(mmap.get_access_count(), 1);
     }
-
     #[test]
     fn test_ref_count() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"test").unwrap();
-
         let mmap: _ = MemoryMappedFile::open_readonly(file.path()).unwrap();
-
         assert_eq!(mmap.get_ref_count(), 1);
-
         mmap.add_ref();
         assert_eq!(mmap.get_ref_count(), 2);
-
         mmap.remove_ref();
         assert_eq!(mmap.get_ref_count(), 1);
     }
-
     #[test]
     fn test_error_on_write_to_readonly() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"test").unwrap();
-
         let mut mmap = MemoryMappedFile::open_readonly(file.path()).unwrap();
-
         let result: _ = mmap.write(0, b"x");
-
         // 当前实现不支持写入，所以会返回错误
         assert!(result.is_err());
     }
-
     #[test]
     fn test_error_on_invalid_read() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"test").unwrap();
-
         let mmap: _ = MemoryMappedFile::open_readonly(file.path()).unwrap();
-
         // 尝试读取超出文件大小的数据
         let result: _ = mmap.read(0, 10);
-
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("exceeds file size"));
     }
-
     #[test]
     fn test_file_size() {
         let mut file = NamedTempFile::new().unwrap();
         file.write_all(b"Hello, World!").unwrap();
-
         let mmap: _ = MemoryMappedFile::open_readonly(file.path()).unwrap();
-
         assert_eq!(mmap.len(), 13);
         assert!(!mmap.is_empty());
-
         let empty_file: _ = NamedTempFile::new().unwrap();
         let empty_mmap: _ = MemoryMappedFile::open_readonly(empty_file.path()).unwrap();
-
         assert_eq!(empty_mmap.len(), 0);
         assert!(empty_mmap.is_empty());
     }

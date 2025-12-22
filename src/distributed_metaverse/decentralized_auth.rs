@@ -1,9 +1,7 @@
 //! 去中心化认证系统
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 认证配置
 #[derive(Debug, Clone)]
 pub struct AuthConfig {
@@ -14,7 +12,6 @@ pub struct AuthConfig {
     /// 支持的区块链
     pub supported_chains: Vec<String>,
 }
-
 impl Default for AuthConfig {
     fn default() -> Self {
         Self {
@@ -24,7 +21,6 @@ impl Default for AuthConfig {
         }
     }
 }
-
 /// 身份
 #[derive(Debug, Clone)]
 pub struct Identity {
@@ -37,7 +33,6 @@ pub struct Identity {
     /// 元数据
     pub metadata: HashMap<String, String>,
 }
-
 /// 凭证
 #[derive(Debug, Clone)]
 pub struct Credential {
@@ -50,7 +45,6 @@ pub struct Credential {
     /// 证明
     pub proof: Vec<u8>,
 }
-
 /// 去中心化认证系统
 pub struct DecentralizedAuth {
     /// 配置
@@ -60,7 +54,6 @@ pub struct DecentralizedAuth {
     /// 凭证缓存
     credentials: Vec<Credential>,
 }
-
 impl DecentralizedAuth {
     /// 创建去中心化认证系统
     pub fn new(config: AuthConfig) -> Result<Self, AuthError> {
@@ -70,7 +63,6 @@ impl DecentralizedAuth {
             credentials: Vec::new(),
         })
     }
-
     /// 创建身份
     pub fn create_identity(&mut self, user_id: &str) -> Result<Identity, AuthError> {
         let did: _ = format!("did:beejs:{}", user_id);
@@ -86,29 +78,24 @@ impl DecentralizedAuth {
         self.identities.insert(did, identity.clone());
         Ok(identity)
     }
-
     /// 获取身份
     pub fn get_identity(&self, did: &str) -> Option<&Identity> {
         self.identities.get(did)
     }
-
     /// 验证凭证
     pub fn verify_credential(&self, credential: &Credential) -> Result<bool, AuthError> {
         // 简化实现：检查基本结构
         if credential.holder_did.is_empty() || credential.issuer_did.is_empty() {
             return Ok(false);
         }
-
         if self.config.enable_zero_knowledge {
             // 零知识证明验证
             if credential.proof.is_empty() {
                 return Ok(false);
             }
         }
-
         Ok(true)
     }
-
     /// 颁发凭证
     pub fn issue_credential(
         &mut self,
@@ -125,18 +112,15 @@ impl DecentralizedAuth {
         self.credentials.push(credential.clone());
         Ok(credential)
     }
-
     /// DID 是否启用
     pub fn did_enabled(&self) -> bool {
         self.config.enable_did
     }
-
     /// 零知识证明是否启用
     pub fn zero_knowledge_enabled(&self) -> bool {
         self.config.enable_zero_knowledge
     }
 }
-
 /// 认证错误
 #[derive(Debug, Clone)]
 pub enum AuthError {
@@ -149,7 +133,6 @@ pub enum AuthError {
     /// 无效凭证
     InvalidCredential(String),
 }
-
 impl std::fmt::Display for AuthError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -160,5 +143,4 @@ impl std::fmt::Display for AuthError {
         }
     }
 }
-
 impl std::error::Error for AuthError {}

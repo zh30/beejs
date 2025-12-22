@@ -1,6 +1,5 @@
 //! Intelligent Auto-Scaling System
 //! 实现基于指标的智能扩缩容系统，支持多种扩缩容策略
-
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -8,10 +7,8 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tracing::{info, warn, error, debug};
 use uuid::Uuid;
-
 /// Cluster identifier
 pub type ClusterId = String;
-
 /// Scaling action type
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScalingAction {
@@ -30,7 +27,6 @@ pub enum ScalingAction {
         current_replicas: u32,
     },
 }
-
 /// Metric snapshot
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetricSnapshot {
@@ -39,7 +35,6 @@ pub struct MetricSnapshot {
     pub timestamp: SystemTime,
     pub unit: String,
 }
-
 /// Scaling policy
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScalingPolicy {
@@ -51,7 +46,6 @@ pub struct ScalingPolicy {
     pub metrics: Vec<PolicyMetric>,
     pub stabilization_window: Duration,
 }
-
 /// Policy metric
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolicyMetric {
@@ -60,7 +54,6 @@ pub struct PolicyMetric {
     pub tolerance: f64,
     pub weight: f64,
 }
-
 /// Scaling decision
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScalingDecision {
@@ -71,19 +64,16 @@ pub struct ScalingDecision {
     pub timestamp: SystemTime,
     pub metrics: Vec<MetricSnapshot>,
 }
-
 /// Metrics client
 #[derive(Debug)]
 pub struct MetricsClient {
     endpoint: String,
 }
-
 /// Kubernetes client (simplified)
 #[derive(Debug)]
 pub struct K8sClient {
     endpoint: String,
 }
-
 /// Auto-scaler
 #[derive(Debug)]
 pub struct AutoScaler {
@@ -92,7 +82,6 @@ pub struct AutoScaler {
     policies: BTreeMap<ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy, ClusterId, ScalingPolicy>>,
     decision_history: Vec<ScalingDecision>,
 }
-
 impl MetricsClient {
     /// Create a new metrics client
     pub fn new(endpoint: &str) -> Self {
@@ -100,11 +89,9 @@ impl MetricsClient {
             endpoint: endpoint.to_string(),
         }
     }
-
     /// Get cluster metrics
     pub async fn get_cluster_metrics(&self, cluster_id: &ClusterId) -> Result<Vec<MetricSnapshot> {
         debug!("Fetching metrics for cluster: {}", cluster_id);
-
         // 模拟获取指标
         let metrics: _ = vec![
             MetricSnapshot {
@@ -126,14 +113,11 @@ impl MetricsClient {
                 unit: "rps".to_string(),
             },
         ];
-
         Ok(metrics)
     }
-
     /// Get tenant metrics
     pub async fn get_tenant_metrics(&self, cluster_id: &ClusterId, tenant_id: &str) -> Result<Vec<MetricSnapshot> {
         debug!("Fetching tenant metrics for cluster: {}, tenant: {}", cluster_id, tenant_id);
-
         // 模拟获取租户指标
         let metrics: _ = vec![
             MetricSnapshot {
@@ -149,11 +133,9 @@ impl MetricsClient {
                 unit: "percent".to_string(),
             },
         ];
-
         Ok(metrics)
     }
 }
-
 impl K8sClient {
     /// Create a new Kubernetes client
     pub fn new(endpoint: &str) -> Self {
@@ -161,22 +143,18 @@ impl K8sClient {
             endpoint: endpoint.to_string(),
         }
     }
-
     /// Scale cluster to target replicas
     pub async fn scale_cluster(&self, cluster_id: &ClusterId, target_replicas: u32) -> Result<()> {
         info!("Scaling cluster {} to {} replicas", cluster_id, target_replicas);
-
         // 模拟扩缩容操作
         Ok(())
     }
-
     /// Get current replica count
     pub async fn get_current_replicas(&self, cluster_id: &ClusterId) -> Result<u32> {
         // 模拟获取当前副本数
         Ok(5)
     }
 }
-
 impl AutoScaler {
     /// Create a new auto-scaler
     pub fn new(metrics_client: MetricsClient, k8s_client: K8sClient) -> Self {
@@ -187,20 +165,17 @@ impl AutoScaler {
             decision_history: Vec::new(),
         }
     }
-
     /// Add scaling policy for cluster
     pub fn add_policy(&mut self, cluster_id: ClusterId, policy: ScalingPolicy) {
         self.policies.insert(cluster_id, policy);
         info!("Added scaling policy for cluster: {}", cluster_id);
     }
-
     /// Evaluate scaling needs
     pub async fn evaluate_scaling(&mut self, cluster_id: &ClusterId) -> Result<ScalingDecision> {
         let policy: _ = self
             .policies
             .get(cluster_id)
             .context("Scaling policy not found")?;
-
         if !policy.enabled {
             return Ok(ScalingDecision {
                 id: Uuid::new_v4(),
@@ -214,16 +189,12 @@ impl AutoScaler {
                 metrics: Vec::new(),
             });
         }
-
         // 获取当前指标
         let current_metrics: _ = self.metrics_client.get_cluster_metrics(cluster_id).await?;
-
         // 计算目标副本数
         let (target_replicas, reason, confidence) = self.calculate_target_replicas(policy, &current_metrics).await?;
-
         // 获取当前副本数
         let current_replicas: _ = self.k8s_client.get_current_replicas(cluster_id).await?;
-
         // 做出扩缩容决策
         let decision: _ = if target_replicas > current_replicas {
             ScalingAction::ScaleUp {
@@ -243,7 +214,6 @@ _metrics.clone(),
                 current_replicas,
             }
         };
-
         let scaling_decision: _ = ScalingDecision {
             id: Uuid::new_v4(),
             cluster_id: cluster_id.clone(),
@@ -252,13 +222,10 @@ _metrics.clone(),
             timestamp: SystemTime::now(),
             metrics: current_metrics,
         };
-
         // 保存到历史记录
         self.decision_history.push(scaling_decision.clone());
-
         Ok(scaling_decision)
     }
-
     /// Calculate target replica count
     async fn calculate_target_replicas(
         &self,
@@ -267,7 +234,6 @@ _metrics.clone(),
     ) -> Result<(u32, String, f64)> {
         let mut total_score = 0.0;
         let mut total_weight = 0.0;
-
         // 计算加权分数
         for metric in metrics {
             if let Some(policy_metric) = policy.metrics.iter().find(|m| m.name == metric.name) {
@@ -276,26 +242,21 @@ _metrics.clone(),
                 total_weight += policy_metric.weight;
             }
         }
-
         let normalized_score: _ = if total_weight > 0.0 {
             total_score / total_weight
         } else {
             0.0
         };
-
         // 计算目标副本数
         let base_replicas: _ = (policy.min_replicas + policy.max_replicas) / 2;
         let target_replicas: _ = (base_replicas as f64 + normalized_score) as u32;
         let target_replicas: _ = target_replicas.clamp(policy.min_replicas, policy.max_replicas);
-
         let reason: _ = format!(
             "Based on metrics score: {:.2}, calculated target replicas: {}",
             normalized_score, target_replicas
         );
-
         Ok((target_replicas, reason, 0.85))
     }
-
     /// Calculate metric score
     fn calculate_metric_score(&self, metric: &MetricSnapshot, policy_metric: &PolicyMetric) -> f64 {
         match metric.name.as_str() {
@@ -325,7 +286,6 @@ _metrics.clone(),
             _ => 0.0,
         }
     }
-
     /// Execute scaling action
     pub async fn execute_scaling(&self, decision: &ScalingDecision) -> Result<()> {
         match &decision.action {
@@ -351,20 +311,16 @@ _metrics.clone(),
                 debug!("No scaling action for cluster {}: {}", decision.cluster_id, reason);
             }
         }
-
         Ok(())
     }
-
     /// Get scaling history
     pub fn get_scaling_history(&self) -> Vec<&ScalingDecision> {
         self.decision_history.iter().collect()
     }
-
     /// Get policy for cluster
     pub fn get_policy(&self, cluster_id: &ClusterId) -> Option<&ScalingPolicy> {
         self.policies.get(cluster_id)
     }
-
     /// Enable/disable policy
     pub fn set_policy_enabled(&mut self, cluster_id: &ClusterId, enabled: bool) -> Result<()> {
         if let Some(policy) = self.policies.get_mut(cluster_id) {
@@ -376,7 +332,6 @@ _metrics.clone(),
         }
     }
 }
-
 /// Default scaling policy
 pub fn default_scaling_policy() -> ScalingPolicy {
     ScalingPolicy {
@@ -408,57 +363,47 @@ pub fn default_scaling_policy() -> ScalingPolicy {
         ],
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_calculate_metric_score() {
         let metrics_client: _ = MetricsClient::new("http://localhost:9090");
         let k8s_client: _ = K8sClient::new("http://localhost:8080");
         let auto_scaler: _ = AutoScaler::new(metrics_client, k8s_client);
-
         let metric: _ = MetricSnapshot {
             name: "cpu_utilization".to_string(),
             value: 85.0,
             timestamp: SystemTime::now(),
             unit: "percent".to_string(),
         };
-
         let policy_metric: _ = PolicyMetric {
             name: "cpu_utilization".to_string(),
             target_value: 70.0,
             tolerance: 10.0,
             weight: 1.0,
         };
-
         let score: _ = auto_scaler.calculate_metric_score(&metric, &policy_metric);
         assert!(score > 0.0); // 应该需要扩容
     }
-
     #[tokio::test]
     async fn test_auto_scaler_evaluation() {
         let mut metrics_client = MetricsClient::new("http://localhost:9090");
         let k8s_client: _ = K8sClient::new("http://localhost:8080");
         let mut auto_scaler = AutoScaler::new(metrics_client, k8s_client);
-
         let cluster_id: _ = "test-cluster".to_string();
         let policy: _ = default_scaling_policy();
         auto_scaler.add_policy(cluster_id.clone(), policy);
-
         let decision: _ = auto_scaler.evaluate_scaling(&cluster_id).await.unwrap();
         assert!(decision.id != Uuid::nil());
     }
-
     #[tokio::test]
     async fn test_execute_scaling() {
         let metrics_client: _ = MetricsClient::new("http://localhost:9090");
         let k8s_client: _ = K8sClient::new("http://localhost:8080");
         let auto_scaler: _ = AutoScaler::new(metrics_client, k8s_client);
-
         let decision: _ = ScalingDecision {
             id: Uuid::new_v4(),
             cluster_id: "test-cluster".to_string(),
@@ -471,10 +416,8 @@ use std::collections::{HashMap, BTreeMap};
             timestamp: SystemTime::now(),
             metrics: Vec::new(),
         };
-
         assert!(auto_scaler.execute_scaling(&decision).await.is_ok());
     }
-
     #[test]
     fn test_default_policy() {
         let policy: _ = default_scaling_policy();

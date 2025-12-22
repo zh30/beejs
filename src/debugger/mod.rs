@@ -10,7 +10,6 @@
 //! - Remote debugging support (Chrome DevTools + DAP)
 //! - Source map integration
 //! - Performance profiling integration
-
 pub mod engine;
 pub mod breakpoint;
 pub mod stack_trace;
@@ -21,7 +20,6 @@ pub mod session;
 pub mod cli;
 pub mod watch;
 pub mod enhanced;
-
 pub use engine::{DebuggerEngine, DebugState, SimpleEventListener};
 pub use breakpoint::{Breakpoint, BreakpointManager, BreakpointCondition};
 pub use stack_trace::{StackFrame, StackTrace, StackFrameInfo};
@@ -29,10 +27,8 @@ pub use variable_scope::{VariableScope, ScopeType, VariableInspector};
 pub use session::DebugSession;
 pub use config::DebugConfig;
 pub use watch::{WatchExpression, WatchManager};
-
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 // Stage 93 Phase 3.2: Enhanced debugger exports
 pub use enhanced::{
     EnhancedDebugger,
@@ -56,7 +52,6 @@ pub use enhanced::{
     RemoteDebugSession,
     DebugProtocol,
 };
-
 /// Debug event types
 #[derive(Debug, Clone, PartialEq)]
 pub enum DebugEvent {
@@ -89,7 +84,6 @@ pub enum DebugEvent {
         exit_code: i32,
     },
 }
-
 /// Step operation types
 #[derive(Debug, Clone, PartialEq)]
 pub enum StepType {
@@ -98,7 +92,6 @@ pub enum StepType {
     Out,    // Step out of current function
     Next,   // Step to next statement
 }
-
 /// Source location information
 #[derive(Debug, Clone, PartialEq)]
 pub struct SourceLocation {
@@ -107,7 +100,6 @@ pub struct SourceLocation {
     pub line_number: u32,
     pub column_number: u32,
 }
-
 /// Debug result - compatible with Rust's ? operator
 #[derive(Debug, Clone)]
 pub struct DebugResult<T> {
@@ -115,7 +107,6 @@ pub struct DebugResult<T> {
     pub data: Option<T>,
     pub error: Option<String>,
 }
-
 impl<T> DebugResult<T> {
     pub fn ok(data: T) -> Self {
         Self {
@@ -124,7 +115,6 @@ impl<T> DebugResult<T> {
             error: None,
         }
     }
-
     pub fn err(error: String) -> Self {
         Self {
             success: false,
@@ -132,7 +122,6 @@ impl<T> DebugResult<T> {
             error: Some(error),
         }
     }
-
     /// Unwrap the result, panicking if not successful
     pub fn unwrap(self) -> T {
         if self.success {
@@ -142,7 +131,6 @@ impl<T> DebugResult<T> {
         }
     }
 }
-
 /// Debug command types
 #[derive(Debug, Clone, PartialEq)]
 pub enum DebugCommand {
@@ -164,7 +152,6 @@ pub enum DebugCommand {
     Backtrace,
     Quit,
 }
-
 /// Debug statistics
 #[derive(Debug, Clone)]
 pub struct DebugStats {
@@ -176,7 +163,6 @@ pub struct DebugStats {
     pub watches_added: u64,
     pub start_time: std::time::Instant,
 }
-
 impl Default for DebugStats {
     fn default() -> Self {
         Self {
@@ -190,17 +176,14 @@ impl Default for DebugStats {
         }
     }
 }
-
 impl DebugStats {
     pub fn new() -> Self {
         Self::default()
     }
-
     pub fn elapsed(&self) -> std::time::Duration {
         self.start_time.elapsed()
     }
 }
-
 /// Initialize the debugger module
 pub fn init() {
     // Set up V8 debug message queue

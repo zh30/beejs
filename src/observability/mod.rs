@@ -20,7 +20,6 @@
 //! # Ok(())
 //! # }
 //! ```
-
 pub mod prometheus_exporter;
 pub mod structured_logging;
 pub mod metrics;
@@ -28,9 +27,7 @@ pub mod alerting;
 pub mod jaeger_tracer;
 pub mod dashboard;
 pub mod visualization;
-
 pub use jaeger_tracer::*;
-
 pub use prometheus_exporter::PrometheusExporter;
 pub use structured_logging::StructuredLogger;
 pub use metrics::{CustomMetrics, RuntimeMetrics, PerformanceMetrics, BusinessMetrics};
@@ -41,7 +38,6 @@ pub use dashboard::{
     GridPos, QueryTarget, FieldConfig, ThresholdsConfig, PanelOptions,
     LegendConfig, TooltipConfig, TimeRangeConfig, TemplateVariable
 };
-
 pub use visualization::{
     LineChart, BarChart, PieChart, TopologyGraph,
     LineChartBuilder, BarChartBuilder, PieChartBuilder, TopologyGraphBuilder,
@@ -50,7 +46,6 @@ pub use visualization::{
     Position, Size, GraphNode, GraphEdge, EdgeStyle, LayoutConfig,
     LayoutAlgorithm, ForceLayoutParams, InteractionConfig, FilterConfig
 };
-
 use anyhow::Result;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -58,7 +53,6 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info};
-
 /// Configuration for observability system
 #[derive(Debug, Clone)]
 pub struct ObservabilityConfig {
@@ -75,7 +69,6 @@ pub struct ObservabilityConfig {
     /// Metrics update interval
     pub metrics_update_interval: std::time::Duration,
 }
-
 impl Default for ObservabilityConfig {
     fn default() -> Self {
         Self {
@@ -88,7 +81,6 @@ impl Default for ObservabilityConfig {
         }
     }
 }
-
 /// Main observability system that manages all observability components
 pub struct ObservableSystem {
     config: ObservabilityConfig,
@@ -97,12 +89,10 @@ pub struct ObservableSystem {
     custom_metrics: Arc<RwLock<CustomMetrics>>,
     alerting_system: Option<AlertingSystem>,
 }
-
 impl ObservableSystem {
     /// Create a new observability system
     pub async fn new(config: ObservabilityConfig) -> Result<Self> {
         info!("Initializing observability system...");
-
         let mut system = Self {
             config: config.clone(),
             prometheus_exporter: None,
@@ -110,7 +100,6 @@ impl ObservableSystem {
             custom_metrics: Arc::new(Mutex::new(CustomMetrics::new())),
             alerting_system: None,
         };
-
         // Initialize structured logging first
         if config.enable_structured_logging {
             system.structured_logger = Some(StructuredLogger::new(
@@ -119,44 +108,36 @@ impl ObservableSystem {
             ));
             info!("Structured logging initialized");
         }
-
         // Initialize Prometheus exporter
         if config.enable_prometheus {
             let exporter: _ = PrometheusExporter::new()?;
             system.prometheus_exporter = Some(Arc::new(Mutex::new(exporter)));
             info!("Prometheus exporter initialized");
         }
-
         // Initialize alerting system
         if config.enable_alerting {
             system.alerting_system = Some(AlertingSystem::new());
             info!("Alerting system initialized");
         }
-
         info!("Observability system initialized successfully");
         Ok(system)
     }
-
     /// Get Prometheus exporter reference
     pub fn prometheus_exporter(&self) -> Option<Arc<RwLock<PrometheusExporter>>> {
         self.prometheus_exporter.clone()
     }
-
     /// Get structured logger reference
     pub fn logger(&self) -> &StructuredLogger {
         self.structured_logger.as_ref().expect("Structured logger not initialized")
     }
-
     /// Get custom metrics reference
     pub fn custom_metrics(&self) -> Arc<RwLock<CustomMetrics>> {
         self.custom_metrics.clone()
     }
-
     /// Get alerting system reference
     pub fn alerting_system(&self) -> Option<&AlertingSystem> {
         self.alerting_system.as_ref()
     }
-
     /// Record a script execution event
     pub async fn record_script_execution(
         &self,
@@ -167,7 +148,6 @@ impl ObservableSystem {
         // Update metrics
         let metrics: _ = self.custom_metrics.write().await;
         metrics.record_script_execution(duration, success).await;
-
         // Log event
         if let Some(logger) = &self.structured_logger {
             let context: _ = HashMap::from([
@@ -175,7 +155,6 @@ impl ObservableSystem {
                 ("duration_ms".to_string(), Value::Number(serde_json::Number::from(duration.as_millis() as u64))),
                 ("success".to_string(), Value::Bool(success)),
             ]);
-
             if success {
                 logger.info("Script executed successfully", context).await;
             } else {
@@ -183,13 +162,11 @@ impl ObservableSystem {
             }
         }
     }
-
     /// Record memory usage
     pub async fn record_memory_usage(&self, bytes: usize) {
         let metrics: _ = self.custom_metrics.write().await;
         metrics.record_memory_usage(bytes).await;
     }
-
     /// Record network I/O event
     pub async fn record_network_io(
         &self,
@@ -200,7 +177,6 @@ impl ObservableSystem {
         let metrics: _ = self.custom_metrics.write().await;
         metrics.record_network_io(operation, bytes, duration).await;
     }
-
     /// Get current observable metrics
     pub async fn get_metrics(&self) -> ObservableMetrics {
         let custom_metrics: _ = self.custom_metrics.read().await;
@@ -210,33 +186,27 @@ impl ObservableSystem {
             business: custom_metrics.business_metrics().await.clone(),
         }
     }
-
     /// Shutdown observability system
     pub async fn shutdown(&self) -> Result<()> {
         info!("Shutting down observability system...");
-
         // Shutdown alerting system
         if let Some(alerting) = &self.alerting_system {
             alerting.shutdown().await?;
         }
-
         // Shutdown Prometheus exporter
         if let Some(exporter) = &self.prometheus_exporter {
             exporter.write().await.shutdown().await?;
         }
-
         info!("Observability system shutdown complete");
         Ok(())
     }
 }
-
 /// Observable metrics container
 pub struct ObservableMetrics {
     pub runtime: std::sync::Arc<tokio::sync::RwLock<RuntimeMetrics>>,
     pub performance: std::sync::Arc<tokio::sync::RwLock<PerformanceMetrics>>,
     pub business: std::sync::Arc<tokio::sync::RwLock<BusinessMetrics>>,
 }
-
 /// Runtime metrics snapshot
 #[derive(Debug, Clone)]
 pub struct RuntimeMetricsSnapshot {
@@ -244,7 +214,6 @@ pub struct RuntimeMetricsSnapshot {
     pub memory_usage_bytes: u64,
     pub cpu_usage_percent: f64,
 }
-
 /// Performance metrics snapshot
 #[derive(Debug, Clone)]
 pub struct PerformanceMetricsSnapshot {
@@ -254,7 +223,6 @@ pub struct PerformanceMetricsSnapshot {
     pub gc_pause_time_ms: f64,
     pub network_latency_ms: f64,
 }
-
 /// Business metrics snapshot
 #[derive(Debug, Clone)]
 pub struct BusinessMetricsSnapshot {
@@ -263,25 +231,21 @@ pub struct BusinessMetricsSnapshot {
     pub total_hot_reloads: u64,
     pub error_rate_percent: f64,
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_observability_system_creation() {
         let config: _ = ObservabilityConfig::default();
         let system: _ = ObservableSystem::new(config).await;
         assert!(system.is_ok());
     }
-
     #[tokio::test]
     async fn test_record_script_execution() {
         let config: _ = ObservabilityConfig::default();
         let system: _ = ObservableSystem::new(config).await.unwrap();
-
         system
             .record_script_execution("test.js", std::time::Duration::from_millis(100), true)
             .await;

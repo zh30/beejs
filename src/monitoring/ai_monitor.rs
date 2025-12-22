@@ -1,11 +1,9 @@
 //! 实时性能监控器 - Stage 90 Phase 5.4
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
-
 /// 性能指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
@@ -15,7 +13,6 @@ pub struct PerformanceMetrics {
     pub unit: String,
     pub source: String,
 }
-
 /// 指标类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum MetricType {
@@ -28,7 +25,6 @@ pub enum MetricType {
     GCFrequency,
     Custom(String),
 }
-
 /// 警报
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Alert {
@@ -40,7 +36,6 @@ pub struct Alert {
     pub current_value: f64,
     pub timestamp: DateTime<Utc>,
 }
-
 /// 警报严重程度
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum AlertSeverity {
@@ -48,14 +43,12 @@ pub enum AlertSeverity {
     Warning,
     Critical,
 }
-
 /// 实时性能监控器
 pub struct RealtimePerformanceMonitor {
     metrics: Arc<RwLock<HashMap<String, Vec<PerformanceMetrics>>>,
     alerts: Arc<RwLock<Vec<Alert>>>,
     thresholds: Arc<RwLock<HashMap<MetricType, f64>>>,
 }
-
 impl RealtimePerformanceMonitor {
     pub fn new() -> Self {
         let mut thresholds = HashMap::new();
@@ -64,24 +57,19 @@ impl RealtimePerformanceMonitor {
         thresholds.insert(MetricType::ResponseTime, 100.0); // ms
         thresholds.insert(MetricType::Throughput, 1000.0); // ops/sec
         thresholds.insert(MetricType::ErrorRate, 5.0); // %
-
         Self {
             metrics: Arc::new(Mutex::new(HashMap::new()))
             alerts: Arc::new(Mutex::new(Vec::new()))
             thresholds: Arc::new(Mutex::new(thresholds)))
         }
     }
-
     pub async fn record_metric(&self, metric: PerformanceMetrics) {
         let mut metrics = self.metrics.write().await;
         let key: _ = format!("{}:{}, metric.metric_type", metric.source));
-
         metrics.entry(key).or_insert_with(Vec::new).push(metric);
-
         // 检查阈值
         self.check_threshold(&metric).await;
     }
-
     async fn check_threshold(&self, metric: &PerformanceMetrics) {
         let thresholds: _ = self.thresholds.read().await;
         if let Some(&threshold) = thresholds.get(&metric.metric_type) {
@@ -95,13 +83,11 @@ impl RealtimePerformanceMonitor {
                     current_value: metric.value,
                     timestamp: metric.timestamp,
                 };
-
                 let mut alerts = self.alerts.write().await;
                 alerts.push(alert);
             }
         }
     }
-
     fn determine_severity(&self, metric_type: &MetricType, value: f64, threshold: f64) -> AlertSeverity {
         let ratio: _ = value / threshold;
         if ratio > 1.5 {
@@ -112,11 +98,9 @@ impl RealtimePerformanceMonitor {
             AlertSeverity::Info
         }
     }
-
     pub async fn get_recent_metrics(&self, metric_type: MetricType, minutes: i32) -> Vec<PerformanceMetrics> {
         let metrics: _ = self.metrics.read().await;
         let cutoff: _ = Utc::now() - chrono::Duration::minutes(minutes as i64);
-
         let mut result = Vec::new();
         for (_key, metric_list) in metrics.iter() {
             for metric in metric_list.iter() {
@@ -125,14 +109,11 @@ impl RealtimePerformanceMonitor {
                 }
             }
         }
-
         result.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
         result
     }
-
     pub async fn get_alerts(&self, severity: Option<AlertSeverity>) -> Vec<Alert> {
         let alerts: _ = self.alerts.read().await;
-
         if let Some(sev) = severity {
             alerts.iter()
                 .filter(|a| a.severity == sev)
@@ -142,23 +123,19 @@ impl RealtimePerformanceMonitor {
             alerts.clone()
         }
     }
-
     pub async fn clear_alerts(&self) {
         let mut alerts = self.alerts.write().await;
         alerts.clear();
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_performance_monitor() {
         let monitor: _ = RealtimePerformanceMonitor::new();
-
         let metric: _ = PerformanceMetrics {
             timestamp: Utc::now(),
             metric_type: MetricType::CpuUsage,
@@ -166,9 +143,7 @@ use std::collections::{HashMap, BTreeMap};
             unit: "%".to_string(),
             source: "worker1".to_string(),
         };
-
         monitor.record_metric(metric).await;
-
         let alerts: _ = monitor.get_alerts(None).await;
         assert!(!alerts.is_empty());
         assert_eq!(alerts[0].severity, AlertSeverity::Warning);

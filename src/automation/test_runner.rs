@@ -6,7 +6,6 @@
 //! - 并行测试执行
 //! - 测试结果收集
 //! - 错误处理和重试机制
-
 use crate::benchmarks::{
     BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig,
     // startup::StartupBenchmark,
@@ -24,20 +23,16 @@ use tokio::task::JoinHandle;
 use thiserror::Error;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 测试运行错误
 #[derive(Error, Debug)]
 pub enum TestRunnerError {
     #[error("Test execution failed: {0}")]
     ExecutionFailed(String),
-
     #[error("Test timeout: {0}")]
     Timeout(String),
-
     #[error("Invalid test configuration: {0}")]
     ConfigError(String),
 }
-
 /// 测试类型
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TestType {
@@ -47,7 +42,6 @@ pub enum TestType {
     Concurrent,
     All,
 }
-
 /// 测试状态
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TestStatus {
@@ -57,7 +51,6 @@ pub enum TestStatus {
     Failed,
     Skipped,
 }
-
 /// 测试执行结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestExecutionResult {
@@ -69,7 +62,6 @@ pub struct TestExecutionResult {
     pub execution_time: Duration,
     pub timestamp: u64,
 }
-
 /// 测试计划配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestPlanConfig {
@@ -82,7 +74,6 @@ pub struct TestPlanConfig {
     pub save_results: bool,
     pub results_directory: String,
 }
-
 impl Default for TestPlanConfig {
     fn default() -> Self {
         Self {
@@ -102,7 +93,6 @@ impl Default for TestPlanConfig {
         }
     }
 }
-
 /// 自动化测试运行器
 pub struct AutomatedTestRunner {
     config: TestPlanConfig,
@@ -110,7 +100,6 @@ pub struct AutomatedTestRunner {
     regression_detector: Arc<Mutex<PerformanceRegressionDetector>>,
     execution_results: Arc<Mutex<Vec<TestExecutionResult>>>,
 }
-
 /// 自动化测试运行器统计
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestRunnerStats {
@@ -122,7 +111,6 @@ pub struct TestRunnerStats {
     pub average_test_time: Duration,
     pub parallel_efficiency: f64, // 百分比
 }
-
 impl AutomatedTestRunner {
     /// 创建新的自动化测试运行器
     pub fn new(
@@ -137,42 +125,33 @@ impl AutomatedTestRunner {
             execution_results: Arc::new(Mutex::new(Vec::new())),
         }
     }
-
     /// 创建默认配置的运行器
     pub fn new_default(regression_detector: Arc<Mutex<PerformanceRegressionDetector>>) -> Self {
         let config: _ = TestPlanConfig::default();
         let framework: _ = BenchmarkFramework::new_default();
         Self::new(config, framework, regression_detector)
     }
-
     /// 运行完整的测试套件
     pub async fn run_full_test_suite(&self) -> Result<TestSuiteResults, TestRunnerError> {
         println!("🚀 Starting automated performance test suite...");
-
         let start_time: _ = SystemTime::now();
-
         // 创建所有测试任务
         let test_tasks: _ = self.create_test_tasks();
-
         // 执行测试
         let results: _ = if self.config.parallel_execution {
             self.run_tests_parallel(test_tasks).await?
         } else {
             self.run_tests_sequential(test_tasks).await?
         };
-
         let total_time: _ = start_time.elapsed().unwrap_or_default();
-
         // 生成统计信息
         let stats: _ = self.generate_stats(&results, total_time);
-
         println!("✅ Test suite completed in {:.2}s", total_time.as_secs_f64());
         println!("📊 Tests: {} completed, {} failed, {} skipped",
             stats.completed_tests,
             stats.failed_tests,
             stats.skipped_tests
         );
-
         Ok(TestSuiteResults {
             results,
             stats,
@@ -182,11 +161,9 @@ impl AutomatedTestRunner {
                 .as_secs(),
         })
     }
-
     /// 创建测试任务列表
     fn create_test_tasks(&self) -> Vec<ScheduledTest> {
         let mut tasks = Vec::new();
-
         for test_type in &self.config.test_types {
             match test_type {
                 TestType::Startup => {
@@ -209,10 +186,8 @@ impl AutomatedTestRunner {
                 }
             }
         }
-
         tasks
     }
-
     /// 创建启动时间测试
     fn create_startup_tests(&self) -> Vec<ScheduledTest> {
         vec![
@@ -251,7 +226,6 @@ impl AutomatedTestRunner {
             },
         ]
     }
-
     /// 创建执行速度测试
     fn create_execution_tests(&self) -> Vec<ScheduledTest> {
         vec![
@@ -290,7 +264,6 @@ impl AutomatedTestRunner {
             },
         ]
     }
-
     /// 创建内存使用测试
     fn create_memory_tests(&self) -> Vec<ScheduledTest> {
         vec![
@@ -318,7 +291,6 @@ impl AutomatedTestRunner {
             },
         ]
     }
-
     /// 创建并发性能测试
     fn create_concurrent_tests(&self) -> Vec<ScheduledTest> {
         vec![
@@ -346,7 +318,6 @@ impl AutomatedTestRunner {
             },
         ]
     }
-
     /// 并行执行测试
     async fn run_tests_parallel(
         &self,
@@ -354,24 +325,19 @@ impl AutomatedTestRunner {
     ) -> Result<Vec<TestExecutionResult>, TestRunnerError> {
         let semaphore: _ = Arc::new(Mutex::new(tokio::sync::Semaphore::new(self.config.max_concurrent_tests)));
         let mut handles: Vec<JoinHandle<Result<TestExecutionResult, TestRunnerError>>> = Vec::new();
-
         for task in tasks {
             let semaphore: _ = semaphore.clone();
-
             let handle: _ = tokio::spawn(async move {
                 let _permit: _ = semaphore.acquire().await.map_err(|e| {
                     TestRunnerError::ExecutionFailed(e.to_string())
                 })?;
-
                 // We can't easily capture self in async block, so we need to refactor
                 // For now, return an error to indicate this needs fixing
                 Err(TestRunnerError::ExecutionFailed(
                     "Async test execution needs refactoring".to_string()))
             });
-
             handles.push(handle);
         }
-
         // 等待所有测试完成
         let mut results = Vec::new();
         for handle in handles {
@@ -382,45 +348,36 @@ impl AutomatedTestRunner {
                 }
             }
         }
-
         Ok(results)
     }
-
     /// 顺序执行测试
     async fn run_tests_sequential(
         &self,
         tasks: Vec<ScheduledTest>,
     ) -> Result<Vec<TestExecutionResult>, TestRunnerError> {
         let mut results = Vec::new();
-
         for task in tasks {
             let result: _ = self.run_single_test(task).await?;
             results.push(result);
         }
-
         Ok(results)
     }
-
     /// 执行单个测试
     async fn run_single_test(
         &self,
         task: ScheduledTest,
     ) -> Result<TestExecutionResult, TestRunnerError> {
         println!("🔄 Running test: {} ({:?})", task.name, task.test_type);
-
         let start_time: _ = SystemTime::now();
         let timestamp: _ = start_time
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
-
         let mut status = TestStatus::Running;
         let mut result = None;
         let mut error = None;
-
         // 设置超时
         let timeout_duration: _ = self.config.timeout_per_test.unwrap_or(Duration::from_secs(300));
-
         // 执行测试（使用 tokio::time::timeout 实现超时）
         let test_future: _ = self.execute_test(&task);
         match tokio::time::timeout(timeout_duration, test_future).await {
@@ -440,9 +397,7 @@ impl AutomatedTestRunner {
                 println!("⏱️  Test timeout: {}", task.name);
             }
         }
-
         let execution_time: _ = start_time.elapsed().unwrap_or_default();
-
         Ok(TestExecutionResult {
             test_name: task.name,
             test_type: task.test_type,
@@ -453,7 +408,6 @@ impl AutomatedTestRunner {
             timestamp,
         })
     }
-
     /// 实际执行测试逻辑
     async fn execute_test(
         &self,
@@ -515,7 +469,6 @@ impl AutomatedTestRunner {
             }
         }
     }
-
     /// 生成测试统计信息
     fn generate_stats(
         &self,
@@ -525,25 +478,21 @@ impl AutomatedTestRunner {
         let completed_tests: _ = results.iter().filter(|r| r.status == TestStatus::Completed).count();
         let failed_tests: _ = results.iter().filter(|r| r.status == TestStatus::Failed).count();
         let skipped_tests: _ = results.iter().filter(|r| r.status == TestStatus::Skipped).count();
-
         let total_execution_time: Duration = results
             .iter()
             .map(|r| r.execution_time)
             .sum();
-
         let average_test_time: _ = if !results.is_empty() {
             Duration::from_nanos(total_execution_time.as_nanos() as u64 / results.len() as u64)
         } else {
             Duration::default()
         };
-
         // 计算并行效率
         let parallel_efficiency: _ = if total_execution_time.as_secs_f64() > 0.0 {
             (total_execution_time.as_secs_f64() / total_time.as_secs_f64()) * 100.0
         } else {
             0.0
         };
-
         TestRunnerStats {
             total_tests: results.len(),
             completed_tests,
@@ -554,12 +503,10 @@ impl AutomatedTestRunner {
             parallel_efficiency,
         }
     }
-
     /// 获取测试结果
     pub fn get_results(&self) -> Vec<TestExecutionResult> {
         self.execution_results.lock().unwrap().clone()
     }
-
     /// 运行特定类型的测试
     pub async fn run_test_type(&self, test_type: TestType) -> Result<TestSuiteResults, TestRunnerError> {
         let config: _ = TestPlanConfig {
@@ -572,17 +519,14 @@ impl AutomatedTestRunner {
             save_results: self.config.save_results,
             results_directory: self.config.results_directory.clone(),
         };
-
         let runner: _ = AutomatedTestRunner::new(
             config,
             self.framework.clone(),
             self.regression_detector.clone(),
         );
-
         runner.run_full_test_suite().await
     }
 }
-
 /// 计划中的测试
 #[derive(Debug, Clone)]
 pub struct ScheduledTest {
@@ -590,7 +534,6 @@ pub struct ScheduledTest {
     pub test_type: TestType,
     pub config: BenchmarkConfig,
 }
-
 /// 测试套件结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestSuiteResults {
@@ -598,7 +541,6 @@ pub struct TestSuiteResults {
     pub stats: TestRunnerStats,
     pub timestamp: u64,
 }
-
 impl TestSuiteResults {
     /// 生成测试套件总结报告
     pub fn generate_summary(&self) -> String {
@@ -612,25 +554,20 @@ impl TestSuiteResults {
         report.push_str(&format!("Total Execution Time: {:.2}s\n", self.stats.total_execution_time.as_secs_f64()));
         report.push_str(&format!("Average Test Time: {:.2}ms\n", self.stats.average_test_time.as_secs_f64() * 1000.0));
         report.push_str(&format!("Parallel Efficiency: {:.1}%\n\n", self.stats.parallel_efficiency));
-
         // 详细结果
         for result in &self.results {
             report.push_str(&format!("Test: {} ({:?})\n", result.test_name, result.test_type));
             report.push_str(&format!("  Status: {:?}\n", result.status));
             report.push_str(&format!("  Execution Time: {:.2}ms\n", result.execution_time.as_secs_f64() * 1000.0));
-
             if let Some(error) = &result.error {
                 report.push_str(&format!("  Error: {}\n", error));
             }
-
             if let Some(benchmark_result) = &result.result {
                 report.push_str(&format!("  Avg Duration: {:.2}μs\n", benchmark_result.avg_duration.as_secs_f64() * 1_000_000.0));
                 report.push_str(&format!("  Ops/sec: {:.0}\n", benchmark_result.operations_per_second));
             }
-
             report.push('\n');
         }
-
         report
     }
 }

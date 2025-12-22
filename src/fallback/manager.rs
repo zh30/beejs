@@ -1,6 +1,5 @@
 //! Stage 89 Phase 2: 优雅降级管理器
 //! 提供功能降级策略和自动恢复机制
-
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
@@ -9,7 +8,6 @@ use tokio::sync::RwLock;
 use crate::error::BeejsError;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 功能标识枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Feature {
@@ -30,7 +28,6 @@ pub enum Feature {
     PerformanceOptimizer,
     NetworkOptimizer,
 }
-
 impl fmt::Display for Feature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -53,7 +50,6 @@ impl fmt::Display for Feature {
         }
     }
 }
-
 /// 降级策略枚举
 #[derive(Debug, Clone)]
 pub enum FallbackStrategy {
@@ -72,7 +68,6 @@ pub enum FallbackStrategy {
     /// 记录日志并继续
     LogAndContinue,
 }
-
 /// 降级事件
 #[derive(Debug, Clone)]
 pub struct FallbackEvent {
@@ -82,7 +77,6 @@ pub struct FallbackEvent {
     pub error: Option<BeejsError>,
     pub recovery_time: Option<Duration>,
 }
-
 /// 降级统计
 #[derive(Debug, Clone, Default)]
 pub struct FallbackStats {
@@ -94,7 +88,6 @@ pub struct FallbackStats {
     pub avg_recovery_time: Duration,
     pub last_fallback_time: Option<Instant>,
 }
-
 impl FallbackStats {
     pub fn success_rate(&self) -> f64 {
         if self.total_fallbacks == 0 {
@@ -104,7 +97,6 @@ impl FallbackStats {
         }
     }
 }
-
 /// 降级管理器
 pub struct FallbackManager {
     strategies: Arc<RwLock<HashMap<Feature, Vec<FallbackStrategy>>>,
@@ -112,7 +104,6 @@ pub struct FallbackManager {
     event_history: Arc<RwLock<Vec<FallbackEvent>>>,
     active_features: Arc<RwLock<HashMap<Feature, bool>>>,
 }
-
 impl FallbackManager {
     /// 创建新的降级管理器
     pub fn new() -> Self {
@@ -122,7 +113,6 @@ impl FallbackManager {
         active_features.insert(Feature::GoRuntime, true);
         active_features.insert(Feature::RustNative, true);
         active_features.insert(Feature::WebAssembly, true);
-
         Self {
             strategies: Arc::new(Mutex::new(HashMap::new()))
             stats: Arc::new(Mutex::new(FallbackStats::default()))
@@ -130,7 +120,6 @@ impl FallbackManager {
             active_features: Arc::new(Mutex::new(active_features)))
         }
     }
-
     /// 注册降级策略
     pub async fn register_strategy(&mut self, feature: Feature, strategy: FallbackStrategy) {
         let mut strategies = self.strategies.write().await;
@@ -139,7 +128,6 @@ impl FallbackManager {
             .or_insert_with(Vec::new)
             .push(strategy);
     }
-
     /// 批量注册策略
     pub async fn register_strategies(&mut self, strategies: Vec<(Feature, FallbackStrategy)>) {
         let mut strategies_map = self.strategies.write().await;
@@ -150,11 +138,9 @@ impl FallbackManager {
                 .push(strategy);
         }
     }
-
     /// 处理功能失败
     pub async fn handle_feature_failure(&self, feature: Feature) -> Result<String, BeejsError> {
         let start_time: _ = Instant::now();
-
         // 更新统计
         {
             let mut stats = self.stats.write().await;
@@ -165,11 +151,9 @@ impl FallbackManager {
                 .or_insert(1);
             stats.last_fallback_time = Some(Instant::now());
         }
-
         // 获取策略
         let strategies: _ = self.strategies.read().await;
         let feature_strategies: _ = strategies.get(&feature);
-
         if let Some(strategies_list) = feature_strategies {
             // 按顺序尝试策略
             for strategy in strategies_list {
@@ -178,7 +162,6 @@ impl FallbackManager {
                         // 策略成功
                         let duration: _ = start_time.elapsed();
                         self.record_success(feature.clone(), strategy.clone(), duration).await;
-
                         // 记录事件
                         self.record_event(FallbackEvent {
                             feature: feature.clone(),
@@ -187,7 +170,6 @@ impl FallbackManager {
                             error: None,
                             recovery_time: Some(duration),
                         }).await;
-
                         return Ok(message);
                     }
                     Err(_) => {
@@ -197,17 +179,14 @@ impl FallbackManager {
                 }
             }
         }
-
         // 所有策略都失败
         let duration: _ = start_time.elapsed();
         self.record_failure(feature.clone(), duration).await;
-
         Err(BeejsError::RuntimeError(format!(
             "All fallback strategies failed for feature: {}",
             feature
         ))
     }
-
     /// 应用降级策略
     async fn apply_strategy(
         &self,
@@ -250,7 +229,6 @@ impl FallbackManager {
             }
         }
     }
-
     /// 记录成功
     async fn record_success(
         &self,
@@ -271,13 +249,11 @@ impl FallbackManager {
                 .or_insert(1);
         }
     }
-
     /// 记录失败
     async fn record_failure(&self, feature: Feature, duration: Duration) {
         let mut stats = self.stats.write().await;
         stats.failed_recoveries += 1;
     }
-
     /// 记录事件
     async fn record_event(&self, event: FallbackEvent) {
         let mut event_history = self.event_history.write().await;
@@ -286,47 +262,39 @@ impl FallbackManager {
             event_history.remove(0);
         }
     }
-
     /// 检查功能是否可用
     pub async fn is_feature_active(&self, feature: &Feature) -> bool {
         let active_features: _ = self.active_features.read().await;
         active_features.get(feature).copied().unwrap_or(false)
     }
-
     /// 启用功能
     pub async fn enable_feature(&self, feature: Feature) {
         let mut active_features = self.active_features.write().await;
         active_features.insert(feature, true);
     }
-
     /// 禁用功能
     pub async fn disable_feature(&self, feature: Feature) {
         let mut active_features = self.active_features.write().await;
         active_features.insert(feature, false);
     }
-
     /// 获取降级统计
     pub async fn get_stats(&self) -> FallbackStats {
         self.stats.read().await.clone()
     }
-
     /// 获取事件历史
     pub async fn get_event_history(&self) -> Vec<FallbackEvent> {
         self.event_history.read().await.clone()
     }
-
     /// 获取策略列表
     pub async fn get_strategies(&self, feature: &Feature) -> Option<Vec<FallbackStrategy> {
         let strategies: _ = self.strategies.read().await;
         strategies.get(feature).cloned()
     }
-
     /// 重置统计
     pub async fn reset_stats(&self) {
         *self.stats.write().await = FallbackStats::default();
         self.event_history.write().await.clear();
     }
-
     /// 获取降级率
     pub async fn get_fallback_rate(&self) -> f64 {
         let stats: _ = self.stats.read().await;
@@ -336,7 +304,6 @@ impl FallbackManager {
             stats.total_fallbacks as f64 / (stats.successful_recoveries + stats.failed_recoveries) as f64
         }
     }
-
     /// 自动清理过期的重试策略
     pub async fn cleanup_retry_strategies(&self) {
         let mut strategies = self.strategies.write().await;
@@ -347,7 +314,6 @@ impl FallbackManager {
         }
     }
 }
-
 impl Default for FallbackManager {
     fn default() -> Self {
         Self::new()

@@ -5,57 +5,41 @@
 //! JIT compilation, memory management, and garbage collection.
 //!
 //! Stage 69 Phase 2: V8 Engine Deep Optimization
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
 /// V8 Engine Flags Configuration
 /// Provides high-performance V8 engine configuration options
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct V8EngineFlags {
     /// Enable TurboFan optimization (highest level)
     pub turbo_optimization_level: u8,
-
     /// Enable TurboFan profiling for performance analysis
     pub turbo_profiling: bool,
-
     /// Maximum old space size in MB
     pub max_old_space_mb: usize,
-
     /// Maximum new space size in MB
     pub max_new_space_mb: usize,
-
     /// GC interval in milliseconds
     pub gc_interval_ms: u64,
-
     /// Enable Sparkplug baseline compiler for faster startup
     pub enable_sparkplug: bool,
-
     /// Enable Maglev mid-tier optimizer
     pub enable_maglev: bool,
-
     /// Maximum inline depth for function inlining
     pub max_inline_depth: u32,
-
     /// Enable JIT compilation
     pub jit_enabled: bool,
-
     /// Optimize for size vs speed (0 = speed, 1 = balance, 2 = size)
     pub optimize_for_size: u8,
-
     /// Code range size in MB (0 = auto)
     pub code_range_size_mb: usize,
-
     /// Enable concurrent garbage collection
     pub concurrent_gc: bool,
-
     /// Enable incremental marking
     pub incremental_marking: bool,
-
     /// Maximum executable size in MB (0 = auto)
     pub max_executable_size_mb: usize,
 }
-
 impl Default for V8EngineFlags {
     fn default() -> Self {
         Self {
@@ -76,7 +60,6 @@ impl Default for V8EngineFlags {
         }
     }
 }
-
 impl V8EngineFlags {
     /// High-performance configuration for maximum speed
     /// Optimized for production workloads with sustained high performance
@@ -98,7 +81,6 @@ impl V8EngineFlags {
             max_executable_size_mb: 256,        // Larger executable size limit
         }
     }
-
     /// Balanced configuration for development and moderate workloads
     pub fn balanced() -> Self {
         Self {
@@ -118,7 +100,6 @@ impl V8EngineFlags {
             max_executable_size_mb: 128,
         }
     }
-
     /// Low-memory configuration for memory-constrained environments
     pub fn low_memory() -> Self {
         Self {
@@ -138,11 +119,9 @@ impl V8EngineFlags {
             max_executable_size_mb: 64,
         }
     }
-
     /// Convert flags to V8 command-line arguments
     pub fn to_v8_flags(&self) -> Vec<String> {
         let mut flags = Vec::new();
-
         // JIT and optimization flags
         if self.jit_enabled {
             flags.push("--turbofan".to_string());
@@ -150,7 +129,6 @@ impl V8EngineFlags {
         flags.push(format!("--turbo_optimization_level={}", self.turbo_optimization_level));
         flags.push(format!("--max_old_space_size={}", self.max_old_space_mb));
         flags.push(format!("--max_new_space_size={}", self.max_new_space_mb));
-
         // Compiler flags
         if self.enable_sparkplug {
             flags.push("--sparkplug".to_string());
@@ -159,7 +137,6 @@ impl V8EngineFlags {
             flags.push("--maglev".to_string());
         }
         flags.push(format!("--max_inline_depth={}", self.max_inline_depth));
-
         // Memory flags
         if self.code_range_size_mb > 0 {
             flags.push(format!("--code_range_size={}", self.code_range_size_mb));
@@ -167,7 +144,6 @@ impl V8EngineFlags {
         if self.max_executable_size_mb > 0 {
             flags.push(format!("--max_executable_size={}", self.max_executable_size_mb));
         }
-
         // GC flags
         if self.concurrent_gc {
             flags.push("--concurrent_gc".to_string());
@@ -176,17 +152,14 @@ impl V8EngineFlags {
             flags.push("--incremental_marking".to_string());
         }
         flags.push(format!("--gc_interval={}", self.gc_interval_ms));
-
         // Profiling flags
         if self.turbo_profiling {
             flags.push("--turbo_profiling".to_string());
         }
-
         // Optimization flags
         if self.optimize_for_size > 0 {
             flags.push(format!("--optimize_for_size={}", self.optimize_for_size));
         }
-
         // Additional high-performance flags
         flags.push("--inline-js".to_string());      // Inline JavaScript
         flags.push("--inline-wasm".to_string());    // Inline WebAssembly
@@ -194,10 +167,8 @@ impl V8EngineFlags {
         flags.push("--turbo_loop_peeling".to_string()); // Loop peeling optimization
         flags.push("--turbo_loop_unrolling".to_string()); // Loop unrolling
         flags.push("--turbo_loop_variable_scheduling".to_string()); // Better loop variable scheduling
-
         flags
     }
-
     /// Get a performance profile string for logging
     pub fn profile_name(&self) -> &str {
         match (
@@ -211,13 +182,11 @@ impl V8EngineFlags {
             _ => "custom",
         }
     }
-
     /// Get estimated memory usage in MB
     pub fn estimated_memory_mb(&self) -> usize {
         self.max_old_space_mb + self.max_new_space_mb + self.code_range_size_mb
     }
 }
-
 /// V8 Engine Configuration Manager
 /// Manages multiple V8 configurations for different workloads
 #[derive(Debug)]
@@ -225,7 +194,6 @@ pub struct V8ConfigManager {
     /// Map of configuration name to flags
     configs: HashMap<String, V8EngineFlags>,
 }
-
 impl V8ConfigManager {
     /// Create a new configuration manager with default configurations
     pub fn new() -> Self {
@@ -234,25 +202,20 @@ impl V8ConfigManager {
         configs.insert("high_performance".to_string(), V8EngineFlags::high_performance());
         configs.insert("balanced".to_string(), V8EngineFlags::balanced());
         configs.insert("low_memory".to_string(), V8EngineFlags::low_memory());
-
         Self { configs }
     }
-
     /// Get a configuration by name
     pub fn get(&self, name: &str) -> Option<&V8EngineFlags> {
         self.configs.get(name)
     }
-
     /// Add or update a configuration
     pub fn add(&mut self, name: String, flags: V8EngineFlags) {
         self.configs.insert(name, flags);
     }
-
     /// Get all available configuration names
     pub fn config_names(&self) -> Vec<&str> {
         self.configs.keys().map(|k| k.as_str()).collect()
     }
-
     /// Get the best configuration for the current system
     pub fn best_for_system(&self) -> &V8EngineFlags {
         // For now, use high_performance as default
@@ -260,19 +223,16 @@ impl V8ConfigManager {
         self.configs.get("high_performance").unwrap()
     }
 }
-
 impl Default for V8ConfigManager {
     fn default() -> Self {
         Self::new()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_high_performance_config() {
         let flags: _ = V8EngineFlags::high_performance();
@@ -281,7 +241,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(flags.max_old_space_mb, 512);
         assert!(flags.jit_enabled);
     }
-
     #[test]
     fn test_v8_flags_conversion() {
         let flags: _ = V8EngineFlags::high_performance();
@@ -290,20 +249,17 @@ use std::collections::{HashMap, BTreeMap};
         assert!(v8_flags.iter().any(|f| f.contains("turbo_optimization_level=4")));
         assert!(v8_flags.contains(&"--sparkplug".to_string()));
     }
-
     #[test]
     fn test_config_manager() {
         let manager: _ = V8ConfigManager::new();
         assert!(manager.config_names().contains(&"high_performance"));
         assert!(manager.get("high_performance").is_some());
     }
-
     #[test]
     fn test_profile_name() {
         let flags: _ = V8EngineFlags::high_performance();
         assert_eq!(flags.profile_name(), "high_performance");
     }
-
     #[test]
     fn test_estimated_memory() {
         let flags: _ = V8EngineFlags::high_performance();

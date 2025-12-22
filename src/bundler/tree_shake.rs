@@ -1,14 +1,10 @@
 //! Tree shaking module
-
 use anyhow::Result;
-
 pub fn tree_shake(code: &str, exports: &[String]) -> Result<String> {
     let mut result = String::new();
-
     // Simplified tree shaking - remove unused exports
     for line in code.lines() {
         let mut keep_line = false;
-
         // Check if this line exports any of the kept functions
         for export in exports {
             if line.contains(&format!("export {{ {}", export)) ||
@@ -17,23 +13,19 @@ pub fn tree_shake(code: &str, exports: &[String]) -> Result<String> {
                 break;
             }
         }
-
         // Keep the line if it matches any exported function
         if keep_line {
             result.push_str(line);
             result.push('\n');
         }
     }
-
     Ok(result)
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_tree_shake() {
         let code: _ = r#"

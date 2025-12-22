@@ -8,7 +8,6 @@
 //! - Lock-free network I/O with io_uring
 //! - Scatter-gather I/O operations
 //! - Memory-mapped buffers for inter-process communication
-
 use std::io::{self, Read, Write};
 use std::fs::File;
 use std::os::unix::io::{AsRawFd, RawFd};
@@ -16,39 +15,32 @@ use std::sync::Arc;
 use memmap2::{Mmap, MmapOptions};
 use crossbeam::utils::CachePadded;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-
 /// Zero-copy file reader using memory mapping
 pub struct ZeroCopyFileReader {
     /// Memory-mapped file
     mmap: Arc<Mmap>,
-
     /// Current position
     position: CachePadded<AtomicUsize>,
-
     /// File size
     size: usize,
 }
-
 impl ZeroCopyFileReader {
     /// Create new zero-copy file reader
     pub fn new(file_path: &str) -> io::Result<Self> {
         let file: _ = File::open(file_path)?;
         let metadata: _ = file.metadata()?;
         let size: _ = metadata.len() as usize;
-
         // Create memory-mapped file
         let mmap: _ = unsafe {
             MmapOptions::new()
                 .map(&file)?
         };
-
         Ok(Self {
             mmap: Arc::new(std::sync::Mutex::new(mmap)),
             position: CachePadded::new(AtomicUsize::new(0)),
             size,
         })
     }
-
     /// Read data without copying (zero-copy)
     pub fn read_bytes(&self, offset: usize, length: usize) -> Option<&[u8]> {
         if offset + length <= self.size {
@@ -57,7 +49,6 @@ impl ZeroCopyFileReader {
             None
         }
     }
-
     /// Read line without copying
     pub fn read_line(&self, offset: usize) -> Option<(&[u8], usize)> {
         let start: _ = offset;
@@ -66,37 +57,30 @@ impl ZeroCopyFileReader {
             .position(|&b| b == b'\n')
             .map(|pos| offset + pos + 1)
             .unwrap_or(self.size);
-
         if start < end {
             Some((&self.mmap[start..end], end))
         } else {
             None
         }
     }
-
     /// Get file size
     pub fn size(&self) -> usize {
         self.size
     }
-
     /// Get current position
     pub fn position(&self) -> usize {
         self.position.load(Ordering::Relaxed)
     }
 }
-
 /// Zero-copy buffer for string operations
 pub struct ZeroCopyBuffer {
     /// Underlying buffer
     buffer: Vec<u8>,
-
     /// Read position
     read_pos: usize,
-
     /// Write position
     write_pos: usize,
 }
-
 impl ZeroCopyBuffer {
     /// Create new zero-copy buffer
     pub fn with_capacity(capacity: usize) -> Self {
@@ -106,11 +90,9 @@ impl ZeroCopyBuffer {
             write_pos: 0,
         }
     }
-
     /// Append data without reallocation when possible
     pub fn append(&mut self, data: &[u8]) {
         let new_write_pos: _ = self.write_pos + data.len();
-
         // Check if we need to compact the buffer
         if new_write_pos > self.buffer.capacity() && self.read_pos > 0 {
             // Compact buffer by moving unread data to the beginning
@@ -118,17 +100,14 @@ impl ZeroCopyBuffer {
             self.write_pos -= self.read_pos;
             self.read_pos = 0;
         }
-
         // Ensure capacity
         if new_write_pos > self.buffer.capacity() {
             self.buffer.resize(new_write_pos, 0);
         }
-
         // Copy data
         self.buffer[self.write_pos..new_write_pos].copy_from_slice(data);
         self.write_pos = new_write_pos;
     }
-
     /// Get slice without copying
     pub fn slice(&self, start: usize, end: usize) -> Option<&[u8]> {
         if start >= self.read_pos && end <= self.write_pos {
@@ -137,62 +116,51 @@ impl ZeroCopyBuffer {
             None
         }
     }
-
     /// Consume bytes (advance read position)
     pub fn consume(&mut self, count: usize) {
         self.read_pos = std::cmp::min(self.read_pos + count, self.write_pos);
     }
-
     /// Get available data length
     pub fn available(&self) -> usize {
         self.write_pos - self.read_pos
     }
-
     /// Clear buffer
     pub fn clear(&mut self) {
         self.read_pos = 0;
         self.write_pos = 0;
     }
 }
-
 /// High-performance network I/O with minimal copying
 pub struct ZeroCopyNetworkIO {
     /// Buffer pool for network operations
     buffer_pool: Vec<ZeroCopyBuffer>,
-
     /// Operations performed
     operations: CachePadded<AtomicU64>,
-
     /// Bytes transferred
     bytes_transferred: CachePadded<AtomicU64>,
 }
-
 impl ZeroCopyNetworkIO {
     /// Create new network I/O handler
     pub fn new(buffer_count: usize, buffer_size: usize) -> Self {
         let buffer_pool: _ = (0..buffer_count)
             .map(|_| ZeroCopyBuffer::with_capacity(buffer_size))
             .collect();
-
         Self {
             buffer_pool,
             operations: CachePadded::new(AtomicU64::new(0)),
             bytes_transferred: CachePadded::new(AtomicU64::new(0)),
         }
     }
-
     /// Get buffer from pool (non-blocking)
     pub fn get_buffer(&self) -> Option<&ZeroCopyBuffer> {
         // Simplified - in production, use a lock-free pool
         self.buffer_pool.get(0)
     }
-
     /// Record operation
     pub fn record_operation(&self, bytes: usize) {
         self.operations.fetch_add(1, Ordering::Relaxed);
         self.bytes_transferred.fetch_add(bytes as u64, Ordering::Relaxed);
     }
-
     /// Get statistics
     pub fn stats(&self) -> NetworkIOStats {
         NetworkIOStats {
@@ -208,7 +176,6 @@ impl ZeroCopyNetworkIO {
         }
     }
 }
-
 /// Network I/O statistics
 #[derive(Debug, Clone)]
 pub struct NetworkIOStats {
@@ -217,19 +184,15 @@ pub struct NetworkIOStats {
     pub buffer_count: usize,
     pub avg_bytes_per_op: f64,
 }
-
 /// Lock-free queue for zero-copy message passing
 pub struct ZeroCopyMessageQueue<T> {
     /// Crossbeam segqueue for lock-free operations
     queue: crossbeam::queue::SegQueue<Arc<T>>,
-
     /// Messages enqueued
     enqueued: CachePadded<AtomicU64>,
-
     /// Messages dequeued
     dequeued: CachePadded<AtomicU64>,
 }
-
 impl<T: Clone> ZeroCopyMessageQueue<T> {
     /// Create new message queue
     pub fn new() -> Self {
@@ -239,13 +202,11 @@ impl<T: Clone> ZeroCopyMessageQueue<T> {
             dequeued: CachePadded::new(AtomicU64::new(0)),
         }
     }
-
     /// Enqueue message (lock-free)
     pub fn enqueue(&self, message: T) {
         self.queue.push(Arc::new(std::sync::Mutex::new(message)));
         self.enqueued.fetch_add(1, Ordering::Relaxed);
     }
-
     /// Dequeue message (lock-free)
     pub fn dequeue(&self) -> Option<Arc<T>> {
         if let Some(msg) = self.queue.pop() {
@@ -255,7 +216,6 @@ impl<T: Clone> ZeroCopyMessageQueue<T> {
             None
         }
     }
-
     /// Get queue statistics
     pub fn stats(&self) -> MessageQueueStats {
         MessageQueueStats {
@@ -265,7 +225,6 @@ impl<T: Clone> ZeroCopyMessageQueue<T> {
         }
     }
 }
-
 /// Message queue statistics
 #[derive(Debug, Clone)]
 pub struct MessageQueueStats {
@@ -273,31 +232,25 @@ pub struct MessageQueueStats {
     pub messages_dequeued: u64,
     pub current_size: u64,
 }
-
 /// High-performance pipe for inter-process communication
 pub struct ZeroCopyPipe {
     /// Read end
     read_fd: RawFd,
-
     /// Write end
     write_fd: RawFd,
-
     /// Buffer for operations
     buffer: Vec<u8>,
 }
-
 impl ZeroCopyPipe {
     /// Create new pipe
     pub fn new() -> io::Result<Self> {
         let (read_fd, write_fd) = nix::unistd::pipe()?;
-
         Ok(Self {
             read_fd,
             write_fd,
             buffer: Vec::with_capacity(8192),
         })
     }
-
     /// Write data with minimal copying
     pub fn write(&mut self, data: &[u8]) -> io::Result<usize> {
         // For small writes, direct write is efficient
@@ -311,13 +264,11 @@ impl ZeroCopyPipe {
             result.map_err(|e| io::Error::from_raw_os_error(e as i32))
         }
     }
-
     /// Read data with minimal copying
     pub fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let result: _ = nix::unistd::read(self.read_fd, buf);
         result.map_err(|e| io::Error::from_raw_os_error(e as i32))
     }
-
     /// Close pipe ends
     pub fn close(self) -> io::Result<()> {
         nix::unistd::close(self.read_fd)?;
@@ -325,32 +276,25 @@ impl ZeroCopyPipe {
         Ok(())
     }
 }
-
 impl Drop for ZeroCopyPipe {
     fn drop(&mut self) {
         let _: _ = nix::unistd::close(self.read_fd);
         let _: _ = nix::unistd::close(self.write_fd);
     }
 }
-
 /// Performance monitoring for zero-copy operations
 pub struct ZeroCopyPerformanceMonitor {
     /// Total operations
     total_ops: CachePadded<AtomicU64>,
-
     /// Total bytes processed
     total_bytes: CachePadded<AtomicU64>,
-
     /// Total time spent
     total_time_ns: CachePadded<AtomicU64>,
-
     /// Cache hits
     cache_hits: CachePadded<AtomicU64>,
-
     /// Cache misses
     cache_misses: CachePadded<AtomicU64>,
 }
-
 impl ZeroCopyPerformanceMonitor {
     /// Create new performance monitor
     pub fn new() -> Self {
@@ -362,26 +306,22 @@ impl ZeroCopyPerformanceMonitor {
             cache_misses: CachePadded::new(AtomicU64::new(0)),
         }
     }
-
     /// Record operation
     pub fn record(&self, bytes: usize, time_ns: u64, cache_hit: bool) {
         self.total_ops.fetch_add(1, Ordering::Relaxed);
         self.total_bytes.fetch_add(bytes as u64, Ordering::Relaxed);
         self.total_time_ns.fetch_add(time_ns, Ordering::Relaxed);
-
         if cache_hit {
             self.cache_hits.fetch_add(1, Ordering::Relaxed);
         } else {
             self.cache_misses.fetch_add(1, Ordering::Relaxed);
         }
     }
-
     /// Get performance metrics
     pub fn metrics(&self) -> ZeroCopyMetrics {
         let ops: _ = self.total_ops.load(Ordering::Relaxed);
         let bytes: _ = self.total_bytes.load(Ordering::Relaxed);
         let time_ns: _ = self.total_time_ns.load(Ordering::Relaxed);
-
         ZeroCopyMetrics {
             total_operations: ops,
             total_bytes,
@@ -404,7 +344,6 @@ impl ZeroCopyPerformanceMonitor {
         }
     }
 }
-
 /// Zero-copy performance metrics
 #[derive(Debug, Clone)]
 pub struct ZeroCopyMetrics {
@@ -415,16 +354,13 @@ pub struct ZeroCopyMetrics {
     pub cache_hit_rate: f64,
     pub ops_per_second: f64,
 }
-
 /// Global performance monitor
 pub static ZERO_COPY_MONITOR: Lazy<ZeroCopyPerformanceMonitor> = Lazy::new(|| {
     ZeroCopyPerformanceMonitor::new()
 });
-
 /// Initialize zero-copy I/O subsystem
 pub fn initialize_zero_copy_io(buffer_pool_size: usize) {
     println!("📁 Initializing zero-copy I/O subsystem...");
-
     // Pre-allocate buffer pool
     for i in 0..buffer_pool_size {
         let _: _ = ZeroCopyBuffer::with_capacity(8192);
@@ -432,55 +368,40 @@ pub fn initialize_zero_copy_io(buffer_pool_size: usize) {
             println!("  Pre-allocated {} buffers...", i);
         }
     }
-
     println!("✅ Zero-copy I/O initialized with {} buffers", buffer_pool_size);
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_zero_copy_buffer() {
         let mut buffer = ZeroCopyBuffer::with_capacity(1024);
-
         buffer.append(b"Hello, ");
         buffer.append(b"World!");
-
         assert_eq!(buffer.available(), 13);
-
         let slice: _ = buffer.slice(0, 5).unwrap();
         assert_eq!(slice, b"Hello");
-
         buffer.consume(7);
         assert_eq!(buffer.available(), 6);
     }
-
     #[test]
     fn test_zero_copy_message_queue() {
         let queue: _ = ZeroCopyMessageQueue::new();
-
         queue.enqueue(42);
         queue.enqueue(84);
-
         assert_eq!(queue.stats().messages_enqueued, 2);
-
         if let Some(msg) = queue.dequeue() {
             assert_eq!(**msg, 42);
         }
-
         assert_eq!(queue.stats().messages_dequeued, 1);
     }
-
     #[test]
     fn test_zero_copy_performance_monitor() {
         let monitor: _ = ZeroCopyPerformanceMonitor::new();
-
         monitor.record(1024, 1000, true);
         monitor.record(2048, 2000, false);
-
         let metrics: _ = monitor.metrics();
         assert_eq!(metrics.total_operations, 2);
         assert_eq!(metrics.total_bytes, 3072);

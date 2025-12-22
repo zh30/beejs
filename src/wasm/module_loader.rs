@@ -1,12 +1,10 @@
 //! WASM 模块加载器
 //!
 //! 负责高效加载、验证和实例化 WebAssembly 模块
-
 use wasmtime::{Engine, Module, Instance, Store, Linker, Config};
 use anyhow::{Result, Context, anyhow};
 use std::sync::Arc;
 use std::time::Instant;
-
 /// WebAssembly 模块结构体
 ///
 /// 封装已加载的 WASM 模块及其元数据
@@ -21,7 +19,6 @@ pub struct WasmModule {
     /// 模块大小（字节）
     size: usize,
 }
-
 impl PartialEq for WasmModule {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
@@ -29,29 +26,24 @@ impl PartialEq for WasmModule {
             && self.size == other.size
     }
 }
-
 impl WasmModule {
     /// 获取实例引用
     pub fn instance(&self) -> &Instance {
         &self.instance
     }
-
     /// 获取模块 ID
     pub fn id(&self) -> &str {
         &self.id
     }
-
     /// 获取加载时间
     pub fn load_time(&self) -> std::time::Duration {
         self.load_time
     }
-
     /// 获取模块大小
     pub fn size(&self) -> usize {
         self.size
     }
 }
-
 /// WASM 模块加载器
 ///
 /// 提供高性能的 WASM 模块加载、验证和实例化功能
@@ -61,7 +53,6 @@ pub struct WasmModuleLoader {
     /// 加载器配置
     config: LoaderConfig,
 }
-
 #[derive(Debug, Clone)]
 struct LoaderConfig {
     /// 最大模块大小（字节）
@@ -71,7 +62,6 @@ struct LoaderConfig {
     /// 是否启用并行加载
     enable_parallel: bool,
 }
-
 impl Default for LoaderConfig {
     fn default() -> Self {
         Self {
@@ -81,7 +71,6 @@ impl Default for LoaderConfig {
         }
     }
 }
-
 impl WasmModuleLoader {
     /// 创建新的模块加载器
     ///
@@ -91,13 +80,11 @@ impl WasmModuleLoader {
         let config: _ = Config::default();
         let engine: _ = Arc::new(Mutex::new(Engine::new(&config)))
             .context("Failed to create Wasmtime engine for module loader")?;
-
         Ok(WasmModuleLoader {
             engine,
             config: LoaderConfig::default(),
         })
     }
-
     /// 创建自定义配置的加载器
     ///
     /// # 参数
@@ -115,7 +102,6 @@ impl WasmModuleLoader {
         let config: _ = Config::default();
         let engine: _ = Arc::new(Mutex::new(Engine::new(&config)))
             .context("Failed to create Wasmtime engine")?;
-
         Ok(WasmModuleLoader {
             engine,
             config: LoaderConfig {
@@ -125,7 +111,6 @@ impl WasmModuleLoader {
             },
         })
     }
-
     /// 加载 WebAssembly 模块
     ///
     /// # 参数
@@ -142,7 +127,6 @@ impl WasmModuleLoader {
     /// ```
     pub fn load_module(&self, wasm_bytes: &[u8]) -> Result<WasmModule> {
         let start: _ = Instant::now();
-
         // 检查模块大小
         if wasm_bytes.len() > self.config.max_module_size {
             return Err(anyhow!(
@@ -151,34 +135,26 @@ impl WasmModuleLoader {
                 self.config.max_module_size
             ));
         }
-
         // 验证模块
         if self.config.enable_validation {
             Module::validate(&self.engine, wasm_bytes)
                 .context("WASM module validation failed")?;
         }
-
         // 编译模块
         let module: _ = Module::new(&self.engine, wasm_bytes)
             .context("Failed to compile WASM module")?;
-
         // 创建存储（不使用 WASI，简化实现）
         let mut store: Store<()> = Store::new(&self.engine, ());
-
         // 创建链接器
         let linker: Linker<()> = Linker::new(&self.engine);
-
         // 实例化模块
         let instance: _ = linker
             .instantiate(&mut store, &module)
             .context("Failed to instantiate WASM module")?;
-
         // 生成模块 ID（基于内容哈希）
         let id: _ = self.generate_module_id(wasm_bytes)?;
-
         let load_time: _ = start.elapsed();
         let size: _ = wasm_bytes.len();
-
         Ok(WasmModule {
             instance,
             id,
@@ -186,7 +162,6 @@ impl WasmModuleLoader {
             size,
         })
     }
-
     /// 从文件加载模块
     ///
     /// # 参数
@@ -197,10 +172,8 @@ impl WasmModuleLoader {
     pub fn load_module_from_file(&self, file_path: &str) -> Result<WasmModule> {
         let wasm_bytes: _ = std::fs::read(file_path)
             .context(format!("Failed to read WASM file: {}", file_path))?;
-
         self.load_module(&wasm_bytes)
     }
-
     /// 预热模块缓存
     ///
     /// # 参数
@@ -210,20 +183,16 @@ impl WasmModuleLoader {
     /// * `Result<Vec<WasmModule>` - 预热的模块列表
     pub fn prewarm_modules(&self, wasm_bytes_list: Vec<Vec<u8>>) -> Result<Vec<WasmModule>> {
         let mut modules = Vec::with_capacity(wasm_bytes_list.len());
-
         for wasm_bytes in wasm_bytes_list {
             let module: _ = self.load_module(&wasm_bytes)?;
             modules.push(module);
         }
-
         Ok(modules)
     }
-
     /// 获取引擎引用
     pub fn engine(&self) -> &Arc<Engine> {
         &self.engine
     }
-
     /// 生成模块 ID
     ///
     /// # 参数
@@ -233,13 +202,11 @@ impl WasmModuleLoader {
     /// * `Result<String>` - 模块 ID
     fn generate_module_id(&self, wasm_bytes: &[u8]) -> Result<String> {
         use blake3::Hasher;
-
         let mut hasher = Hasher::new();
         hasher.update(wasm_bytes);
         let hash: _ = hasher.finalize();
         Ok(hash.to_hex().to_string())
     }
-
     /// 获取加载器统计信息
     ///
     /// # 返回值
@@ -253,7 +220,6 @@ impl WasmModuleLoader {
         }
     }
 }
-
 /// 模块加载器统计信息
 #[derive(Debug, Clone)]
 pub struct LoaderStats {
@@ -266,7 +232,6 @@ pub struct LoaderStats {
     /// 引擎信息
     pub engine_info: String,
 }
-
 impl std::fmt::Display for LoaderStats {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f,
@@ -282,19 +247,16 @@ impl std::fmt::Display for LoaderStats {
         )
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_loader_creation() {
         let loader: _ = WasmModuleLoader::new();
         assert!(loader.is_ok());
     }
-
     #[test]
     fn test_loader_with_config() {
         let loader: _ = WasmModuleLoader::new_with_config(
@@ -304,7 +266,6 @@ use std::collections::{HashMap, BTreeMap};
         );
         assert!(loader.is_ok());
     }
-
     #[test]
     fn test_stats() {
         let loader: _ = WasmModuleLoader::new().unwrap();
@@ -312,7 +273,6 @@ use std::collections::{HashMap, BTreeMap};
         assert!(stats.max_module_size > 0);
         assert!(stats.enable_validation);
     }
-
     /// 创建最小有效 WASM 模块的辅助函数
     fn create_minimal_wasm() -> Vec<u8> {
         // 最小有效 WASM 模块: 只有魔数和版本

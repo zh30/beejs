@@ -1,10 +1,8 @@
 //! Node.js Core Modules Polyfill
 //! Stage 56.3 - Built-in Module Implementation
-
 use rusty_v8 as v8;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 pub mod fs;
 pub mod path;
 pub mod os;
@@ -13,7 +11,6 @@ pub mod http;
 pub mod url;
 pub mod querystring;
 pub mod util;
-
 /// Register all built-in modules with the V8 context
 pub fn register_builtins<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8::Object> {
     let global: _ = v8::Object::new(scope);
@@ -30,7 +27,6 @@ pub fn register_builtins<'a>(scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v
     
     global
 }
-
 /// Check if a module name is a built-in Node.js module
 pub fn is_builtin_module(name: &str) -> bool {
     matches!(

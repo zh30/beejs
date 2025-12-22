@@ -1,6 +1,5 @@
 //! Edge Node Manager
 //! Manages and coordinates edge nodes for distributed JavaScript/TypeScript execution
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -9,11 +8,9 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// Unique identifier for an edge node
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct NodeId(pub String);
-
 /// Edge node information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EdgeNode {
@@ -24,7 +21,6 @@ pub struct EdgeNode {
     pub status: NodeStatus,
     pub last_heartbeat: std::time::SystemTime,
 }
-
 /// Node capacity configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeCapacity {
@@ -33,7 +29,6 @@ pub struct NodeCapacity {
     pub memory_mb: u64,
     pub storage_gb: u64,
 }
-
 /// Node status
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NodeStatus {
@@ -42,7 +37,6 @@ pub enum NodeStatus {
     Busy,
     Degraded,
 }
-
 /// Node health information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeHealth {
@@ -53,7 +47,6 @@ pub struct NodeHealth {
     pub active_tasks: u32,
     pub response_time_ms: u64,
 }
-
 /// Task to be executed on an edge node
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -62,7 +55,6 @@ pub struct Task {
     pub priority: TaskPriority,
     pub timeout_ms: u64,
 }
-
 /// Task priority levels
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum TaskPriority {
@@ -71,7 +63,6 @@ pub enum TaskPriority {
     High,
     Critical,
 }
-
 /// Load balancing strategies
 #[derive(Debug, Clone)]
 pub enum LoadBalancingStrategy {
@@ -80,7 +71,6 @@ pub enum LoadBalancingStrategy {
     WeightedRoundRobin,
     ResourceBased,
 }
-
 /// Node metrics for load balancing
 #[derive(Debug, Clone)]
 pub struct NodeMetrics {
@@ -90,7 +80,6 @@ pub struct NodeMetrics {
     pub memory_usage: f64,
     pub task_queue_size: u32,
 }
-
 /// Edge Node Manager
 #[derive(Debug)]
 pub struct EdgeNodeManager {
@@ -98,20 +87,17 @@ pub struct EdgeNodeManager {
     load_balancer: Arc<EdgeLoadBalancer>,
     health_checker: Arc<HealthChecker>,
 }
-
 /// Edge Load Balancer
 #[derive(Debug)]
 pub struct EdgeLoadBalancer {
     strategy: LoadBalancingStrategy,
     metrics: Arc<RwLock<HashMap<NodeId, NodeMetrics>>>,
 }
-
 /// Health Checker
 #[derive(Debug)]
 pub struct HealthChecker {
     check_interval: Duration,
 }
-
 /// Execution result from edge node
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionResult {
@@ -121,7 +107,6 @@ pub struct ExecutionResult {
     pub error: Option<String>,
     pub execution_time_ms: u64,
 }
-
 impl EdgeNodeManager {
     /// Create a new edge node manager
     pub fn new() -> Self {
@@ -131,25 +116,20 @@ impl EdgeNodeManager {
             health_checker: Arc::new(Mutex::new(HealthChecker::new(Duration::from_secs(30)))
         }
     }
-
     /// Initialize the node manager
     pub async fn initialize(&self) -> Result<()> {
         println!("Initializing Edge Node Manager...");
         Ok(())
     }
-
     /// Register a new edge node
     pub async fn register_node(&self, mut node: EdgeNode) -> Result<NodeId> {
         // Generate unique ID if not provided
         if node.id.0.is_empty() {
             node.id = NodeId(format!("edge-node-{}", uuid::Uuid::new_v4());
         }
-
         node.last_heartbeat = std::time::SystemTime::now();
-
         let mut nodes = self.nodes.write().await;
         nodes.insert(node.id.clone(), node.clone());
-
         // Initialize metrics for this node
         {
             let mut metrics = self.load_balancer.metrics.write().await;
@@ -161,39 +141,30 @@ impl EdgeNodeManager {
                 task_queue_size: 0,
             });
         }
-
         println!("Registered edge node: {} in region {}", node.id.0, node.region);
         Ok(node.id)
     }
-
     /// Discover available nodes
     pub async fn discover_nodes(&self) -> Result<Vec<EdgeNode> {
         let nodes: _ = self.nodes.read().await;
-
         let available_nodes: Vec<EdgeNode> = nodes
             .values()
             .filter(|node| node.status == NodeStatus::Online)
             .cloned()
             .collect();
-
         println!("Discovered {} available nodes", available_nodes.len());
         Ok(available_nodes)
     }
-
     /// Perform health check on a specific node
     pub async fn health_check(&self, node_id: &NodeId) -> Result<NodeHealth> {
         let nodes: _ = self.nodes.read().await;
-
         let node: _ = nodes.get(node_id)
             .ok_or_else(|| anyhow!("Node not found: {}", node_id.0))?;
-
         // Simulate health check
         let start: _ = Instant::now();
         tokio::time::sleep(Duration::from_millis(10)).await;
-
         let metrics: _ = self.load_balancer.metrics.read().await;
         let node_metrics: _ = metrics.get(node_id);
-
         let health: _ = NodeHealth {
             node_id: node_id.clone(),
             is_healthy: node.status == NodeStatus::Online,
@@ -202,22 +173,17 @@ impl EdgeNodeManager {
             active_tasks: node_metrics.map(|m| m.active_connections).unwrap_or(0),
             response_time_ms: start.elapsed().as_millis() as u64,
         };
-
         Ok(health)
     }
-
     /// Execute a task on an edge node
     pub async fn execute_task(&self, task: Task) -> Result<ExecutionResult> {
         // Select optimal node
         let node_id: _ = self.load_balancer.select_node(&task).await?;
-
         println!("Executing task {} on node {}", task.id, node_id.0);
-
         // Simulate task execution
         let start: _ = Instant::now();
         tokio::time::sleep(Duration::from_millis(task.timeout_ms.min(100)).await;
         let execution_time: _ = start.elapsed().as_millis() as u64;
-
         let result: _ = ExecutionResult {
             task_id: task.id,
             success: true,
@@ -225,35 +191,28 @@ impl EdgeNodeManager {
             error: None,
             execution_time_ms: execution_time,
         };
-
         Ok(result)
     }
-
     /// Remove a node from the manager
     pub async fn unregister_node(&self, node_id: &NodeId) -> Result<()> {
         let mut nodes = self.nodes.write().await;
         nodes.remove(node_id);
-
         let mut metrics = self.load_balancer.metrics.write().await;
         metrics.remove(node_id);
-
         println!("Unregistered node: {}", node_id.0);
         Ok(())
     }
-
     /// Get the total number of registered nodes
     pub async fn node_count(&self) -> usize {
         let nodes: _ = self.nodes.read().await;
         nodes.len()
     }
-
     /// Get online node count
     pub async fn online_node_count(&self) -> usize {
         let nodes: _ = self.nodes.read().await;
         nodes.values().filter(|n| n.status == NodeStatus::Online).count()
     }
 }
-
 impl EdgeLoadBalancer {
     /// Create a new load balancer
     pub fn new(strategy: LoadBalancingStrategy) -> Self {
@@ -262,11 +221,9 @@ impl EdgeLoadBalancer {
             metrics: Arc::new(Mutex::new(HashMap::new()))
         }
     }
-
     /// Select the optimal node for a task
     pub async fn select_node(&self, task: &Task) -> Result<NodeId> {
         let metrics: _ = self.metrics.read().await;
-
         match self.strategy {
             LoadBalancingStrategy::RoundRobin => {
                 // Simple round-robin: select first available node
@@ -299,32 +256,27 @@ impl EdgeLoadBalancer {
             _ => Err(anyhow!("Unsupported load balancing strategy")),
         }
     }
-
     /// Rebalance the load across nodes
     pub async fn rebalance(&self) -> Result<()> {
         println!("Rebalancing load across nodes...");
         Ok(())
     }
-
     /// Update node metrics
     pub async fn update_metrics(&self, node_id: &NodeId, metrics: NodeMetrics) {
         let mut metrics_map = self.metrics.write().await;
         metrics_map.insert(node_id.clone(), metrics);
     }
 }
-
 impl HealthChecker {
     /// Create a new health checker
     pub fn new(check_interval: Duration) -> Self {
         HealthChecker { check_interval }
     }
-
     /// Start periodic health checks
     pub async fn start_checks(&self, _manager: &EdgeNodeManager) {
         println!("Starting periodic health checks (interval: {:?})", self.check_interval);
     }
 }
-
 // Default implementations
 impl Default for EdgeNodeManager {
     fn default() -> Self {

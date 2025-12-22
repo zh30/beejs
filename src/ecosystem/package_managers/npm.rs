@@ -2,7 +2,6 @@
 //! Stage 91 Phase 3.1.1 - npm 兼容性实现
 //!
 //! 提供完整的 npm 包管理功能兼容
-
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -11,7 +10,6 @@ use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// npm 兼容性管理器
 #[derive(Debug)]
 pub struct NpmCompatibility {
@@ -21,7 +19,6 @@ pub struct NpmCompatibility {
     lockfile_manager: LockfileManager,
     auth_manager: AuthManager,
 }
-
 impl NpmCompatibility {
     /// 创建新的 npm 兼容管理器
     pub fn new(config: PackageManagerConfig) -> Self {
@@ -33,7 +30,6 @@ impl NpmCompatibility {
             config,
         }
     }
-
     /// 初始化项目
     pub async fn init(&self, project_name: &str) -> Result<(), Box<dyn std::error::Error>> {
         let package_json: _ = PackageJson {
@@ -73,13 +69,10 @@ impl NpmCompatibility {
             deprecated: None,
             description_map: HashMap::new(),
         };
-
         let mut file = tokio::fs::File::create("package.json").await?;
         file.write_all(&serde_json::to_string_pretty(&package_json)?.into_bytes()).await?;
-
         Ok(())
     }
-
     /// 安装包
     pub async fn install_packages(
         &self,
@@ -87,21 +80,16 @@ impl NpmCompatibility {
         options: &InstallOptions,
     ) -> Result<HashMap<String, PackageResolution>, Box<dyn std::error::Error>> {
         let mut resolutions = HashMap::new();
-
         for spec in packages {
             let resolution: _ = self.resolve_package(spec).await?;
             self.download_package(&resolution).await?;
             self.install_to_node_modules(&resolution, options).await?;
-
             resolutions.insert(resolution.package_name.clone(), resolution);
         }
-
         // 更新 lockfile
         self.lockfile_manager.update_lockfile(&resolutions).await?;
-
         Ok(resolutions)
     }
-
     /// 解析包
     pub async fn resolve_package(&self, spec: &PackageSpec) -> Result<PackageResolution, Box<dyn std::error::Error>> {
         let (package_name, version_range) = match spec {
@@ -111,16 +99,12 @@ impl NpmCompatibility {
             PackageSpec::Git(url) => return self.resolve_git_package(url).await,
             PackageSpec::Local(path) => return self.resolve_local_package(path).await,
         };
-
         // 查询注册表
         let package_info: _ = self.registry_client.get_package_info(&package_name).await?;
-
         // 选择版本
         let selected_version: _ = self.select_version(&package_info, &version_range)?;
-
         // 获取包详情
         let package_dist: _ = self.registry_client.get_package_dist(&package_name, &selected_version).await?;
-
         let resolution: _ = PackageResolution {
             package_name,
             version: selected_version,
@@ -134,10 +118,8 @@ impl NpmCompatibility {
             types: package_info.types,
             exports: package_info.exports,
         };
-
         Ok(resolution)
     }
-
     /// 选择合适的版本
     fn select_version(&self, package_info: &NpmPackageInfo, range: &VersionRange) -> Result<String, String> {
         for version in &package_info.versions {
@@ -145,17 +127,14 @@ impl NpmCompatibility {
                 return Ok(version.clone());
             }
         }
-
         Err(format!("No version found matching range: {}", range))
     }
-
     /// 解析 Git 包
     async fn resolve_git_package(&self, url: &str) -> Result<PackageResolution, Box<dyn std::error::Error>> {
         // 简化的 Git 包解析
         // 实际实现需要支持 Git URL 解析、ref 提取等
         let parts: Vec<&str> = url.split('/').collect();
         let repo_name: _ = parts.last().unwrap_or(&"unknown").replace(".git", "");
-
         Ok(PackageResolution {
             package_name: repo_name,
             version: "git".to_string(),
@@ -170,13 +149,11 @@ impl NpmCompatibility {
             exports: None,
         })
     }
-
     /// 解析本地包
     async fn resolve_local_package(&self, path: &PathBuf) -> Result<PackageResolution, Box<dyn std::error::Error>> {
         let package_json_path: _ = path.join("package.json");
         let content: _ = tokio::fs::read_to_string(&package_json_path).await?;
         let package_json: PackageJson = serde_json::from_str(&content)?;
-
         Ok(PackageResolution {
             package_name: package_json.name,
             version: package_json.version,
@@ -191,34 +168,26 @@ impl NpmCompatibility {
             exports: package_json.exports,
         })
     }
-
     /// 下载包
     async fn download_package(&self, resolution: &PackageResolution) -> Result<(), Box<dyn std::error::Error>> {
         if resolution.resolved_url.starts_with("file:") {
             return Ok(()); // 本地包无需下载
         }
-
         let cache_dir: _ = &self.config.cache_dir;
         let package_dir: _ = cache_dir.join(&resolution.package_name).join(&resolution.version);
         tokio::fs::create_dir_all(&package_dir).await?;
-
         let tarball_path: _ = package_dir.join("package.tgz");
-
         // 下载包
         let response: _ = reqwest::get(&resolution.resolved_url).await?;
         let bytes: _ = response.bytes().await?;
-
         // 验证完整性
         if !resolution.integrity.is_empty() {
             // 简化的完整性检查
             // 实际实现需要使用真正的签名验证
         }
-
         tokio::fs::write(&tarball_path, bytes).await?;
-
         Ok(())
     }
-
     /// 安装到 node_modules
     async fn install_to_node_modules(
         &self,
@@ -227,9 +196,7 @@ impl NpmCompatibility {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let node_modules_dir: _ = PathBuf::from("node_modules");
         let package_dir: _ = node_modules_dir.join(&resolution.package_name);
-
         tokio::fs::create_dir_all(&package_dir).await?;
-
         // 写入 package.json
         let package_json: _ = PackageJson {
             name: resolution.package_name.clone(),
@@ -242,26 +209,21 @@ impl NpmCompatibility {
             optional_dependencies: resolution.optional_dependencies.clone(),
             ..Default::default()
         };
-
         let package_json_path: _ = package_dir.join("package.json");
         let mut file = tokio::fs::File::create(&package_json_path).await?;
         file.write_all(&serde_json::to_string_pretty(&package_json)?.into_bytes()).await?;
-
         // 链接二进制文件
         if !resolution.bins.is_empty() {
             let bin_dir: _ = node_modules_dir.join(".bin");
             tokio::fs::create_dir_all(&bin_dir).await?;
-
             for (bin_name, bin_path) in &resolution.bins {
                 let bin_link: _ = bin_dir.join(bin_name);
                 // 在实际实现中，这里应该创建符号链接或复制文件
                 let _: _ = tokio::fs::write(&bin_link, format!("#!/bin/sh\nnode \"{}\"\n", bin_path.display());
             }
         }
-
         Ok(())
     }
-
     /// 执行 npx 命令
     pub async fn npx(
         &self,
@@ -272,16 +234,13 @@ impl NpmCompatibility {
         if let Some(builtin) = self.get_builtin_command(command) {
             return self.run_builtin_command(builtin, args).await;
         }
-
         // 临时安装包并运行
         let temp_spec: _ = PackageSpec::Name(command.to_string());
         let resolution: _ = self.resolve_package(&temp_spec).await?;
         self.download_package(&resolution).await?;
-
         // 运行包
         self.run_package_binary(&resolution, args).await
     }
-
     /// 获取内置命令
     fn get_builtin_command(&self, command: &str) -> Option<&str> {
         match command {
@@ -290,7 +249,6 @@ impl NpmCompatibility {
             _ => None,
         }
     }
-
     /// 运行内置命令
     async fn run_builtin_command(&self, command: &str, args: &[String]) -> Result<i32, Box<dyn std::error::Error>> {
         match command {
@@ -315,7 +273,6 @@ impl NpmCompatibility {
             }
         }
     }
-
     /// 运行包二进制文件
     async fn run_package_binary(
         &self,
@@ -328,19 +285,16 @@ impl NpmCompatibility {
         println!("Args: {:?}", args);
         Ok(0)
     }
-
     /// 更新依赖
     pub async fn update(&self, packages: Option<&[String]>) -> Result<(), Box<dyn std::error::Error>> {
         // 读取当前的 package.json
         if let Ok(content) = tokio::fs::read_to_string("package.json").await {
             let mut package_json: PackageJson = serde_json::from_str(&content)?;
-
             let packages_to_update: _ = if let Some(pkgs) = packages {
                 pkgs.clone()
             } else {
                 package_json.dependencies.keys().cloned().collect()
             };
-
             for pkg_name in packages_to_update {
                 if let Some(current_version) = package_json.dependencies.get(&pkg_name) {
                     // 获取最新版本
@@ -350,20 +304,16 @@ impl NpmCompatibility {
                     }
                 }
             }
-
             // 重新安装
             let mut specs = Vec::new();
             for (name, version) in &package_json.dependencies {
                 specs.push(PackageSpec::NameVersion(name.clone(), version.clone());
             }
-
             self.install_packages(&specs, &InstallOptions::default()).await?;
         }
-
         Ok(())
     }
 }
-
 /// npm 包信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NpmPackageInfo {
@@ -380,7 +330,6 @@ pub struct NpmPackageInfo {
     pub types: Option<String>,
     pub exports: Option<serde_json::Value>,
 }
-
 /// npm 包分发信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NpmPackageDist {
@@ -389,7 +338,6 @@ pub struct NpmPackageDist {
     pub shasum: String,
     pub unpacked_size: u64,
 }
-
 /// Package.json 结构
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PackageJson {
@@ -401,40 +349,32 @@ pub struct PackageJson {
     pub keywords: Vec<String>,
     pub author: Option<String>,
     pub license: String,
-
     pub dependencies: HashMap<String, String>,
     pub dev_dependencies: HashMap<String, String>,
     pub peer_dependencies: HashMap<String, String>,
     pub optional_dependencies: HashMap<String, String>,
-
     pub engines: Option<HashMap<String, String>>,
     pub os: Vec<String>,
     pub cpu: Vec<String>,
     pub private: bool,
-
     pub workspaces: Option<Vec<String>>,
     pub publish_config: Option<HashMap<String, String>>,
-
     pub exports: Option<serde_json::Value>,
     pub types: Option<String>,
     pub typesVersions: Option<serde_json::Value>,
     pub typings: Option<String>,
-
     pub files: Option<Vec<String>>,
     pub bin: Option<HashMap<String, String>>,
     pub man: Option<Vec<String>>,
     pub directories: Option<HashMap<String, String>>,
-
     pub repository: Option<serde_json::Value>,
     pub bugs: Option<serde_json::Value>,
     pub homepage: Option<String>,
     pub readme: Option<String>,
     pub funding: Option<serde_json::Value>,
-
     pub overrides: Option<serde_json::Value>,
     pub resolutions: Option<serde_json::Value>,
     pub bundle_dependencies: Option<Vec<String>>,
     pub deprecated: Option<String>,
-
     pub description_map: HashMap<String, String>,
 }

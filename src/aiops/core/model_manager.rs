@@ -1,7 +1,6 @@
 //! Model Manager
 //!
 //! Manages AI/ML models for predictions and optimizations.
-
 use crate::core::error::{AIOpsError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -9,61 +8,46 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// Model types supported by the AI Ops engine
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ModelType {
     /// Anomaly detection model
     AnomalyDetection,
-
     /// Trend prediction model
     TrendPrediction,
-
     /// Failure prediction model
     FailurePrediction,
-
     /// Performance optimization model
     PerformanceOptimization,
-
     /// Resource allocation model
     ResourceAllocation,
-
     /// Architecture adaptation model
     ArchitectureAdaptation,
 }
-
 /// Model metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelMetadata {
     /// Model type
     pub model_type: ModelType,
-
     /// Model version
     pub version: String,
-
     /// Model accuracy
     pub accuracy: Option<f64>,
-
     /// Training data size
     pub training_data_size: usize,
-
     /// Model creation timestamp
     pub created_at: std::time::SystemTime,
-
     /// Model last updated timestamp
     pub updated_at: std::time::SystemTime,
 }
-
 /// Model representation (simplified)
 #[derive(Debug, Clone)]
 pub struct Model {
     /// Model metadata
     pub metadata: ModelMetadata,
-
     /// Model data (placeholder for actual model)
     pub data: Vec<u8>,
 }
-
 /// Model Manager
 ///
 /// Manages the lifecycle of AI/ML models including:
@@ -77,7 +61,6 @@ pub struct ModelManager {
     /// Model metadata
     metadata: Arc<RwLock<HashMap<String, ModelMetadata>>>,
 }
-
 impl ModelManager {
     /// Create a new model manager
     pub fn new() -> Self {
@@ -86,7 +69,6 @@ impl ModelManager {
             metadata: Arc::new(Mutex::new(HashMap::new()))
         }
     }
-
     /// Load a model
     ///
     /// # Arguments
@@ -105,7 +87,6 @@ impl ModelManager {
         model_data: Vec<u8>,
     ) -> Result<()> {
         let now: _ = std::time::SystemTime::now();
-
         let metadata: _ = ModelMetadata {
             model_type,
             version: "1.0.0".to_string(),
@@ -114,21 +95,16 @@ impl ModelManager {
             created_at: now,
             updated_at: now,
         };
-
         let model: _ = Model {
             metadata: metadata.clone(),
             data: model_data,
         };
-
         let mut models = self.models.write().await;
         let mut metadata_map = self.metadata.write().await;
-
         models.insert(model_id.to_string(), model);
         metadata_map.insert(model_id.to_string(), metadata);
-
         Ok(())
     }
-
     /// Unload a model
     ///
     /// # Arguments
@@ -141,13 +117,10 @@ impl ModelManager {
     pub async fn unload_model(&self, model_id: &str) -> Result<()> {
         let mut models = self.models.write().await;
         let mut metadata_map = self.metadata.write().await;
-
         models.remove(model_id);
         metadata_map.remove(model_id);
-
         Ok(())
     }
-
     /// Get model metadata
     ///
     /// # Arguments
@@ -161,7 +134,6 @@ impl ModelManager {
         let metadata_map: _ = self.metadata.read().await;
         metadata_map.get(model_id).cloned()
     }
-
     /// List all model IDs
     ///
     /// # Returns
@@ -171,7 +143,6 @@ impl ModelManager {
         let models: _ = self.models.read().await;
         models.keys().cloned().collect()
     }
-
     /// Check if a model exists
     ///
     /// # Arguments
@@ -185,7 +156,6 @@ impl ModelManager {
         let models: _ = self.models.read().await;
         models.contains_key(model_id)
     }
-
     /// Validate model integrity
     ///
     /// # Arguments
@@ -197,7 +167,6 @@ impl ModelManager {
     /// Returns `Result<bool>` indicating whether the model is valid
     pub async fn validate_model(&self, model_id: &str) -> Result<bool> {
         let models: _ = self.models.read().await;
-
         match models.get(model_id) {
             Some(model) => {
                 // Basic validation: check if model has data
@@ -210,7 +179,6 @@ impl ModelManager {
         }
     }
 }
-
 impl Default for ModelManager {
     fn default() -> Self {
         Self::new()

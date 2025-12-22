@@ -1,111 +1,92 @@
 //! Node.js OS模块实现
 //! 操作系统信息
-
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::env;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 设置OS API
 pub fn setup_os_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
     context: &v8::Local<v8::Context>,
 ) -> Result<()> {
     let os_obj: _ = v8::Object::new(scope);
-
     // arch
     let arch_func: _ = v8::FunctionTemplate::new(scope, os_arch_callback);
     let arch_instance: _ = arch_func.get_function(scope).unwrap();
     let arch_key: _ = v8::String::new(scope, "arch").unwrap();
     os_obj.set(scope, arch_key.into(), arch_instance.into());
-
     // platform
     let platform_func: _ = v8::FunctionTemplate::new(scope, os_platform_callback);
     let platform_instance: _ = platform_func.get_function(scope).unwrap();
     let platform_key: _ = v8::String::new(scope, "platform").unwrap();
     os_obj.set(scope, platform_key.into(), platform_instance.into());
-
     // type
     let type_func: _ = v8::FunctionTemplate::new(scope, os_type_callback);
     let type_instance: _ = type_func.get_function(scope).unwrap();
     let type_key: _ = v8::String::new(scope, "type").unwrap();
     os_obj.set(scope, type_key.into(), type_instance.into());
-
     // release
     let release_func: _ = v8::FunctionTemplate::new(scope, os_release_callback);
     let release_instance: _ = release_func.get_function(scope).unwrap();
     let release_key: _ = v8::String::new(scope, "release").unwrap();
     os_obj.set(scope, release_key.into(), release_instance.into());
-
     // hostname
     let hostname_func: _ = v8::FunctionTemplate::new(scope, os_hostname_callback);
     let hostname_instance: _ = hostname_func.get_function(scope).unwrap();
     let hostname_key: _ = v8::String::new(scope, "hostname").unwrap();
     os_obj.set(scope, hostname_key.into(), hostname_instance.into());
-
     // loadavg
     let loadavg_func: _ = v8::FunctionTemplate::new(scope, os_loadavg_callback);
     let loadavg_instance: _ = loadavg_func.get_function(scope).unwrap();
     let loadavg_key: _ = v8::String::new(scope, "loadavg").unwrap();
     os_obj.set(scope, loadavg_key.into(), loadavg_instance.into());
-
     // uptime
     let uptime_func: _ = v8::FunctionTemplate::new(scope, os_uptime_callback);
     let uptime_instance: _ = uptime_func.get_function(scope).unwrap();
     let uptime_key: _ = v8::String::new(scope, "uptime").unwrap();
     os_obj.set(scope, uptime_key.into(), uptime_instance.into());
-
     // cpus
     let cpus_func: _ = v8::FunctionTemplate::new(scope, os_cpus_callback);
     let cpus_instance: _ = cpus_func.get_function(scope).unwrap();
     let cpus_key: _ = v8::String::new(scope, "cpus").unwrap();
     os_obj.set(scope, cpus_key.into(), cpus_instance.into());
-
     // freemem
     let freemem_func: _ = v8::FunctionTemplate::new(scope, os_freemem_callback);
     let freemem_instance: _ = freemem_func.get_function(scope).unwrap();
     let freemem_key: _ = v8::String::new(scope, "freemem").unwrap();
     os_obj.set(scope, freemem_key.into(), freemem_instance.into());
-
     // totalmem
     let totalmem_func: _ = v8::FunctionTemplate::new(scope, os_totalmem_callback);
     let totalmem_instance: _ = totalmem_func.get_function(scope).unwrap();
     let totalmem_key: _ = v8::String::new(scope, "totalmem").unwrap();
     os_obj.set(scope, totalmem_key.into(), totalmem_instance.into());
-
     // homedir
     let homedir_func: _ = v8::FunctionTemplate::new(scope, os_homedir_callback);
     let homedir_instance: _ = homedir_func.get_function(scope).unwrap();
     let homedir_key: _ = v8::String::new(scope, "homedir").unwrap();
     os_obj.set(scope, homedir_key.into(), homedir_instance.into());
-
     // tmpdir
     let tmpdir_func: _ = v8::FunctionTemplate::new(scope, os_tmpdir_callback);
     let tmpdir_instance: _ = tmpdir_func.get_function(scope).unwrap();
     let tmpdir_key: _ = v8::String::new(scope, "tmpdir").unwrap();
     os_obj.set(scope, tmpdir_key.into(), tmpdir_instance.into());
-
     // tmpDir (别名)
     let tmpdir_alias_func: _ = v8::FunctionTemplate::new(scope, os_tmpdir_callback);
     let tmpdir_alias_instance: _ = tmpdir_alias_func.get_function(scope).unwrap();
     let tmpdir_alias_key: _ = v8::String::new(scope, "tmpDir").unwrap();
     os_obj.set(scope, tmpdir_alias_key.into(), tmpdir_alias_instance.into());
-
     // networkInterfaces
     let network_interfaces_func: _ = v8::FunctionTemplate::new(scope, os_network_interfaces_callback);
     let network_interfaces_instance: _ = network_interfaces_func.get_function(scope).unwrap();
     let network_interfaces_key: _ = v8::String::new(scope, "networkInterfaces").unwrap();
     os_obj.set(scope, network_interfaces_key.into(), network_interfaces_instance.into());
-
     // constants
     let constants_obj: _ = v8::Object::new(scope);
-
     // OS常量
     let key_uv_udp_reuseaddr: _ = v8::String::new(scope, "UV_UDP_REUSEADDR").unwrap();
     let val_uv_udp_reuseaddr: _ = v8::Integer::new(scope, 4);
     constants_obj.set(scope, key_uv_udp_reuseaddr.into(), val_uv_udp_reuseaddr.into());
-
     // Signal常量
     let signals_obj: _ = v8::Object::new(scope);
     let key_sighup: _ = v8::String::new(scope, "SIGHUP").unwrap();
@@ -207,19 +188,15 @@ pub fn setup_os_api(
     let key_sigunused: _ = v8::String::new(scope, "SIGUNUSED").unwrap();
     let val_sigunused: _ = v8::Integer::new(scope, 31);
     signals_obj.set(scope, key_sigunused.into(), val_sigunused.into());
-
     let signals_key: _ = v8::String::new(scope, "signals").unwrap();
     constants_obj.set(scope, signals_key.into(), signals_obj.into());
-
     let constants_key: _ = v8::String::new(scope, "constants").unwrap();
     os_obj.set(scope, constants_key.into(), constants_obj.into());
-
     // EOL常量
     let eol: _ = if cfg!(windows) { "\r\n" } else { "\n" };
     let key_eol: _ = v8::String::new(scope, "EOL").unwrap();
     let val_eol: _ = v8::String::new(scope, eol).unwrap();
     os_obj.set(scope, key_eol.into(), val_eol.into());
-
     // arch()的常量版本
     let arch_constants_obj: _ = v8::Object::new(scope);
     let key_arm: _ = v8::String::new(scope, "arm").unwrap();
@@ -258,10 +235,8 @@ pub fn setup_os_api(
     let key_x86: _ = v8::String::new(scope, "x86").unwrap();
     let val_x86: _ = v8::String::new(scope, "x86").unwrap();
     arch_constants_obj.set(scope, key_x86.into(), val_x86.into());
-
     let arch_key: _ = v8::String::new(scope, "arch").unwrap();
     os_obj.set(scope, arch_key.into(), arch_constants_obj.into());
-
     // platform()的常量版本
     let platform_constants_obj: _ = v8::Object::new(scope);
     let key_aix: _ = v8::String::new(scope, "aix").unwrap();
@@ -294,18 +269,14 @@ pub fn setup_os_api(
     let key_netbsd: _ = v8::String::new(scope, "netbsd").unwrap();
     let val_netbsd: _ = v8::String::new(scope, "netbsd").unwrap();
     platform_constants_obj.set(scope, key_netbsd.into(), val_netbsd.into());
-
     let platform_key: _ = v8::String::new(scope, "platform").unwrap();
     os_obj.set(scope, platform_key.into(), platform_constants_obj.into());
-
     // 设置到全局
     let global: _ = context.global(scope);
     let os_key: _ = v8::String::new(scope, "os").unwrap();
     global.set(scope, os_key.into(), os_obj.into());
-
     Ok(())
 }
-
 fn os_arch_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -314,7 +285,6 @@ fn os_arch_callback(
     let arch: _ = std::env::consts::ARCH;
     retval.set(v8::String::new(scope, arch).unwrap().into());
 }
-
 fn os_platform_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -323,7 +293,6 @@ fn os_platform_callback(
     let platform: _ = std::env::consts::OS;
     retval.set(v8::String::new(scope, platform).unwrap().into());
 }
-
 fn os_type_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -338,7 +307,6 @@ fn os_type_callback(
     };
     retval.set(v8::String::new(scope, os_type).unwrap().into());
 }
-
 fn os_release_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -348,7 +316,6 @@ fn os_release_callback(
     let release: _ = "10.0.0";
     retval.set(v8::String::new(scope, release).unwrap().into());
 }
-
 fn os_hostname_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -362,7 +329,6 @@ fn os_hostname_callback(
         retval.set(v8::String::new(scope, "localhost").unwrap().into());
     }
 }
-
 fn os_loadavg_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -378,7 +344,6 @@ fn os_loadavg_callback(
     loadavg.set_index(scope, 2, val3);
     retval.set(loadavg.into());
 }
-
 fn os_uptime_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -389,10 +354,8 @@ fn os_uptime_callback(
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
-
     retval.set(v8::Number::new(scope, uptime as f64).into());
 }
-
 fn os_cpus_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -401,7 +364,6 @@ fn os_cpus_callback(
     // 获取CPU数量
     let cpu_count: _ = num_cpus::get();
     let cpus_array: _ = v8::Array::new(scope, cpu_count as i32);
-
     for i in 0..cpu_count {
         let cpu_obj: _ = v8::Object::new(scope);
         let _key_0: _ = v8::String::new(scope, "model").unwrap();
@@ -410,7 +372,6 @@ fn os_cpus_callback(
         let key_speed: _ = v8::String::new(scope, "speed").unwrap();
         let val_speed: _ = v8::Number::new(scope, 3600.0);
         cpu_obj.set(scope, key_speed.into(), val_speed.into());
-
         let times_obj: _ = v8::Object::new(scope);
         let key_user: _ = v8::String::new(scope, "user").unwrap();
         let val_user: _ = v8::Number::new(scope, 1000000.0);
@@ -427,15 +388,12 @@ fn os_cpus_callback(
         let key_irq: _ = v8::String::new(scope, "irq").unwrap();
         let val_irq: _ = v8::Number::new(scope, 0.0);
         times_obj.set(scope, key_irq.into(), val_irq.into());
-
         let _key_1: _ = v8::String::new(scope, "times").unwrap();
         cpu_obj.set(scope, _key_1.into(), times_obj.into());
         cpus_array.set_index(scope, i as u32, cpu_obj.into());
     }
-
     retval.set(cpus_array.into());
 }
-
 fn os_freemem_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -445,7 +403,6 @@ fn os_freemem_callback(
     let freemem: _ = 8u64 * 1024 * 1024 * 1024; // 8GB
     retval.set(v8::Number::new(scope, freemem as f64).into());
 }
-
 fn os_totalmem_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -455,7 +412,6 @@ fn os_totalmem_callback(
     let totalmem: _ = 16u64 * 1024 * 1024 * 1024; // 16GB
     retval.set(v8::Number::new(scope, totalmem as f64).into());
 }
-
 fn os_homedir_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -467,7 +423,6 @@ fn os_homedir_callback(
         retval.set(v8::String::new(scope, "/home/user").unwrap().into());
     }
 }
-
 fn os_tmpdir_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -480,7 +435,6 @@ fn os_tmpdir_callback(
     };
     retval.set(v8::String::new(scope, &tmpdir).unwrap().into());
 }
-
 fn os_network_interfaces_callback(
     scope: &mut v8::HandleScope,
     args: v8::FunctionCallbackArguments,
@@ -488,7 +442,6 @@ fn os_network_interfaces_callback(
 ) {
     // 简化的网络接口
     let interfaces_obj: _ = v8::Object::new(scope);
-
     // Loopback接口
     let loopback_array: _ = v8::Array::new(scope, 1);
     let loopback_obj: _ = v8::Object::new(scope);
@@ -505,11 +458,9 @@ fn os_network_interfaces_callback(
     let val_internal: _ = v8::Boolean::new(scope, true);
     loopback_obj.set(scope, key_internal.into(), val_internal.into());
     loopback_array.set_index(scope, 0, loopback_obj.into());
-
     let _key_2: _ = v8::String::new(scope, "lo").unwrap();
     interfaces_obj.set(scope, _key_2.into(), loopback_array.into());
     let _key_3: _ = v8::String::new(scope, "lo0").unwrap();
     interfaces_obj.set(scope, _key_3.into(), loopback_array.into());
-
     retval.set(interfaces_obj.into());
 }

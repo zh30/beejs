@@ -5,7 +5,6 @@
 //! - Beejs、Node.js、Bun 等多个运行时
 //! - 并行测试执行
 //! - 测试结果收集
-
 use crate::performance_comparison::{BenchmarkTestCase, PerformanceComparisonResult};
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use anyhow::{Result, Context};
@@ -15,7 +14,6 @@ use std::process::Command;
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 运行时配置
 #[derive(Debug, Clone)]
 pub struct RuntimeConfig {
@@ -25,7 +23,6 @@ pub struct RuntimeConfig {
     pub version_cmd: Option<String>, // 版本查询命令
     pub enabled: bool,          // 是否启用此运行时
 }
-
 impl RuntimeConfig {
     /// 创建新的运行时配置
     pub fn new(name: String, command: String) -> Self {
@@ -37,7 +34,6 @@ impl RuntimeConfig {
             enabled: true,
         }
     }
-
     /// 检查运行时是否可用
     pub async fn is_available(&self) -> bool {
         // 简单的命令可用性检查
@@ -47,7 +43,6 @@ impl RuntimeConfig {
             .map(|output| output.status.success())
             .unwrap_or(false)
     }
-
     /// 获取运行时版本
     pub async fn get_version(&self) -> Result<String> {
         if let Some(ref version_cmd) = self.version_cmd {
@@ -56,7 +51,6 @@ impl RuntimeConfig {
                 .arg(version_cmd)
                 .output()
                 .context("Failed to get version")?;
-
             if output.status.success() {
                 Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
             } else {
@@ -68,7 +62,6 @@ impl RuntimeConfig {
                 .arg("--version")
                 .output()
                 .context("Failed to get version")?;
-
             if output.status.success() {
                 Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
             } else {
@@ -77,7 +70,6 @@ impl RuntimeConfig {
         }
     }
 }
-
 /// 测试用例
 #[derive(Debug, Clone)]
 pub struct TestCase {
@@ -88,14 +80,12 @@ pub struct TestCase {
     pub iterations: usize,
     pub timeout: Option<Duration>,
 }
-
 impl TestCase {
     /// 创建新的测试用例
     pub fn new(test_type: BenchmarkTestCase) -> Self {
         let name: _ = test_type.name();
         let description: _ = test_type.description();
         let code: _ = test_type.generate_test_code();
-
         Self {
             name,
             description,
@@ -105,7 +95,6 @@ impl TestCase {
             timeout: Some(Duration::from_secs(60)),
         }
     }
-
     /// 创建自定义测试用例
     pub fn custom(name: String, description: String, code: String) -> Self {
         Self {
@@ -118,20 +107,17 @@ impl TestCase {
         }
     }
 }
-
 /// 基准测试运行器
 pub struct BenchmarkRunner {
     runtimes: Vec<RuntimeConfig>,
     test_cases: Vec<TestCase>,
     config: BenchmarkRunnerConfig,
 }
-
 impl Default for BenchmarkRunner {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// 基准测试运行器配置
 #[derive(Debug, Clone)]
 pub struct BenchmarkRunnerConfig {
@@ -140,7 +126,6 @@ pub struct BenchmarkRunnerConfig {
     pub compare_with_baseline: bool,
     pub output_dir: Option<PathBuf>,
 }
-
 impl Default for BenchmarkRunnerConfig {
     fn default() -> Self {
         Self {
@@ -151,12 +136,10 @@ impl Default for BenchmarkRunnerConfig {
         }
     }
 }
-
 impl BenchmarkRunner {
     /// 创建新的基准测试运行器
     pub fn new() -> Self {
         let mut runtimes = Vec::new();
-
         // 添加 Beejs 运行时（总是启用）
         runtimes.push(RuntimeConfig {
             name: "beejs".to_string(),
@@ -165,7 +148,6 @@ impl BenchmarkRunner {
             version_cmd: Some("beejs --version".to_string()),
             enabled: true,
         });
-
         // 添加 Node.js 运行时（如果可用）
         let nodejs_runtime: _ = RuntimeConfig {
             name: "nodejs".to_string(),
@@ -175,7 +157,6 @@ impl BenchmarkRunner {
             enabled: true,
         };
         runtimes.push(nodejs_runtime);
-
         // 添加 Bun 运行时（如果可用）
         let bun_runtime: _ = RuntimeConfig {
             name: "bun".to_string(),
@@ -185,18 +166,15 @@ impl BenchmarkRunner {
             enabled: true,
         };
         runtimes.push(bun_runtime);
-
         Self {
             runtimes,
             test_cases: Vec::new(),
             config: BenchmarkRunnerConfig::default(),
         }
     }
-
     /// 创建带自定义配置的运行器
     pub fn new_with_config(config: BenchmarkRunnerConfig) -> Self {
         let mut runtimes = Vec::new();
-
         // 添加 Beejs 运行时
         runtimes.push(RuntimeConfig {
             name: "beejs".to_string(),
@@ -205,7 +183,6 @@ impl BenchmarkRunner {
             version_cmd: Some("beejs --version".to_string()),
             enabled: true,
         });
-
         // 添加 Node.js 运行时
         runtimes.push(RuntimeConfig {
             name: "nodejs".to_string(),
@@ -214,7 +191,6 @@ impl BenchmarkRunner {
             version_cmd: Some("node --version".to_string()),
             enabled: true,
         });
-
         // 添加 Bun 运行时
         runtimes.push(RuntimeConfig {
             name: "bun".to_string(),
@@ -223,73 +199,56 @@ impl BenchmarkRunner {
             version_cmd: Some("bun --version".to_string()),
             enabled: true,
         });
-
         Self {
             runtimes,
             test_cases: Vec::new(),
             config,
         }
     }
-
     /// 添加运行时
     pub fn add_runtime(&mut self, runtime: RuntimeConfig) {
         self.runtimes.push(runtime);
     }
-
     /// 添加测试用例
     pub fn add_test_case(&mut self, test_case: TestCase) {
         self.test_cases.push(test_case);
     }
-
     /// 添加标准测试套件
     pub fn add_standard_test_suite(&mut self) {
         // 启动时间测试
         self.add_test_case(TestCase::new(BenchmarkTestCase::StartupTime));
-
         // 执行速度测试
         self.add_test_case(TestCase::new(BenchmarkTestCase::ExecutionSpeed));
-
         // 内存使用测试
         self.add_test_case(TestCase::new(BenchmarkTestCase::MemoryUsage));
-
         // 并发性能测试
         self.add_test_case(TestCase::new(BenchmarkTestCase::ConcurrentPerformance));
-
         // Fibonacci 测试
         self.add_test_case(TestCase::new(BenchmarkTestCase::Fibonacci { n: 30 }));
-
         // 矩阵运算测试
         self.add_test_case(TestCase::new(BenchmarkTestCase::Matrix { size: 100 }));
-
         // JSON 处理测试
         self.add_test_case(TestCase::new(BenchmarkTestCase::JsonProcessing {
             data_size: 1024,
         }));
-
         // HTTP 请求测试
         self.add_test_case(TestCase::new(BenchmarkTestCase::HttpRequests {
             request_count: 10,
         }));
     }
-
     /// 运行所有基准测试
     pub async fn run_all(&mut self) -> Result<HashMap<String, PerformanceComparisonResult>> {
         if self.test_cases.is_empty() {
             self.add_standard_test_suite();
         }
-
         let mut results = HashMap::new();
-
         for test_case in &self.test_cases {
             println!("Running benchmark: {}", test_case.name);
-
             let comparison_result: _ = self.run_single_benchmark(test_case).await?;
             results.insert(test_case.name.clone(), comparison_result);
         }
-
         Ok(results)
     }
-
     /// 运行单个基准测试
     async fn run_single_benchmark(
         &self,
@@ -298,7 +257,6 @@ impl BenchmarkRunner {
         let mut beejs_result = None;
         let mut nodejs_result = None;
         let mut bun_result = None;
-
         // 检查可用的运行时
         let mut available_runtimes = Vec::new();
         for runtime in &self.runtimes {
@@ -306,11 +264,9 @@ impl BenchmarkRunner {
                 available_runtimes.push(runtime.clone());
             }
         }
-
         // 为每个可用的运行时运行测试
         for runtime in available_runtimes {
             println!("  Testing {}...", runtime.name);
-
             match self.run_benchmark_for_runtime(&runtime, test_case) {
                 Ok(result) => match runtime.name.as_str() {
                     "beejs" => beejs_result = Some(result),
@@ -323,14 +279,12 @@ impl BenchmarkRunner {
                 }
             }
         }
-
         // 计算性能对比
         let speedup_vs_nodejs: _ = self.calculate_speedup(&beejs_result, &nodejs_result);
         let speedup_vs_bun: _ = self.calculate_speedup(&beejs_result, &bun_result);
         let memory_savings_vs_nodejs =
             self.calculate_memory_savings(&beejs_result, &nodejs_result);
         let memory_savings_vs_bun: _ = self.calculate_memory_savings(&beejs_result, &bun_result);
-
         let execution_time_comparison: _ = self.create_execution_time_comparison(
             &beejs_result,
             &nodejs_result,
@@ -338,7 +292,6 @@ impl BenchmarkRunner {
         );
         let memory_usage_comparison =
             self.create_memory_usage_comparison(&beejs_result, &nodejs_result, &bun_result);
-
         Ok(PerformanceComparisonResult {
             beejs_result,
             nodejs_result,
@@ -351,7 +304,6 @@ impl BenchmarkRunner {
             memory_usage_comparison,
         })
     }
-
     /// 为特定运行时运行基准测试
     fn run_benchmark_for_runtime(
         &self,
@@ -362,25 +314,20 @@ impl BenchmarkRunner {
         let temp_dir: _ = std::env::temp_dir();
         let test_file: _ = temp_dir.join(format!("beejs_test_{}.js", std::process::id()));
         std::fs::write(&test_file, &test_case.code)?;
-
         // 运行测试
         let start: _ = Instant::now();
         let output: _ = Command::new(&runtime.command)
             .args(&runtime.args)
             .arg(&test_file)
             .output()?;
-
         let duration: _ = start.elapsed();
-
         // 清理临时文件
         let _: _ = std::fs::remove_file(&test_file);
-
         if !output.status.success() {
             return Err(anyhow::anyhow!(
                 "Benchmark failed: {}",
                 String::from_utf8_lossy(&output.stderr)));
         }
-
         // 创建基准测试结果
         let config: _ = BenchmarkConfig {
             iterations: test_case.iterations,
@@ -389,9 +336,7 @@ impl BenchmarkRunner {
             save_raw_data: self.config.save_raw_results,
             compare_with_baseline: self.config.compare_with_baseline,
         };
-
         let _framework: _ = BenchmarkFramework::new(config);
-
         // 使用简化的时间测量（实际实现会更复杂）
         Ok(BenchmarkResult {
             name: format!("{} - {}", runtime.name, test_case.name),
@@ -415,7 +360,6 @@ impl BenchmarkRunner {
             ]),
         })
     }
-
     /// 计算速度提升倍数
     fn calculate_speedup(
         &self,
@@ -432,7 +376,6 @@ impl BenchmarkRunner {
             1.0
         }
     }
-
     /// 计算内存节省百分比
     fn calculate_memory_savings(
         &self,
@@ -453,7 +396,6 @@ impl BenchmarkRunner {
             0.0
         }
     }
-
     /// 创建执行时间对比
     fn create_execution_time_comparison(
         &self,
@@ -462,7 +404,6 @@ impl BenchmarkRunner {
         bun_result: &Option<BenchmarkResult>,
     ) -> HashMap<String, Duration> {
         let mut comparison = HashMap::new();
-
         if let Some(result) = beejs_result {
             comparison.insert("beejs".to_string(), result.avg_duration);
         }
@@ -472,10 +413,8 @@ impl BenchmarkRunner {
         if let Some(result) = bun_result {
             comparison.insert("bun".to_string(), result.avg_duration);
         }
-
         comparison
     }
-
     /// 创建内存使用对比
     fn create_memory_usage_comparison(
         &self,
@@ -484,7 +423,6 @@ impl BenchmarkRunner {
         bun_result: &Option<BenchmarkResult>,
     ) -> HashMap<String, usize> {
         let mut comparison = HashMap::new();
-
         if let Some(result) = beejs_result {
             if let Some(mem) = &result.memory_stats {
                 comparison.insert("beejs".to_string(), mem.current_rss);
@@ -500,7 +438,6 @@ impl BenchmarkRunner {
                 comparison.insert("bun".to_string(), mem.current_rss);
             }
         }
-
         comparison
     }
 }

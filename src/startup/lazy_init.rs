@@ -1,6 +1,5 @@
 //! 延迟初始化 Web系统
 //! 实现 API 的延迟加载、按需初始化等启动优化功能
-
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -8,7 +7,6 @@ use tokio::sync::{RwLock, Semaphore};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 // use crate::web_api::WebApiRegistry;
-
 /// Web API 延迟加载器
 pub struct LazyWebAPI {
     /// 已初始化的 API 集合
@@ -22,7 +20,6 @@ pub struct LazyWebAPI {
     /// 统计信息
     stats: Arc<Mutex<LazyInitStats>>,
 }
-
 /// API 初始化任务
 #[derive(Debug, Clone)]
 struct ApiInitTask {
@@ -30,7 +27,6 @@ struct ApiInitTask {
     priority: u8,
     created_at: Instant,
 }
-
 impl ApiInitTask {
     fn new(name: String) -> Self {
         Self {
@@ -39,7 +35,6 @@ impl ApiInitTask {
             created_at: Instant::now(),
         }
     }
-
     fn with_priority(name: String, priority: u8) -> Self {
         Self {
             name,
@@ -48,7 +43,6 @@ impl ApiInitTask {
         }
     }
 }
-
 /// 延迟初始化统计
 #[derive(Debug, Clone, Default)]
 pub struct LazyInitStats {
@@ -59,7 +53,6 @@ pub struct LazyInitStats {
     pub cache_hits: u64,
     pub cache_misses: u64,
 }
-
 impl LazyWebAPI {
     /// 创建新的延迟 Web API 加载器
     pub fn new() -> Self {
@@ -71,13 +64,11 @@ impl LazyWebAPI {
             stats: Arc::new(Mutex::new(LazyInitStats::default())),
         }
     }
-
     /// 检查 API 是否已初始化
     pub async fn is_initialized(&self, api_name: &str) -> bool {
         let initialized: _ = self.initialized_apis.read().await;
         initialized.contains(api_name)
     }
-
     /// 按需初始化 Web API
     pub async fn init_on_demand(&self, api_name: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // 先检查是否已经初始化
@@ -86,54 +77,40 @@ impl LazyWebAPI {
             stats.cache_hits += 1;
             return Ok(());
         }
-
         let mut stats = self.stats.lock().unwrap();
         stats.total_initializations += 1;
         stats.cache_misses += 1;
         drop(stats);
-
         // 获取信号量许可
         let _permit: _ = self.init_semaphore.acquire().await.map_err(|_| "Failed to acquire semaphore")?;
-
         // 双重检查模式
         if self.is_initialized(api_name).await {
             return Ok(());
         }
-
         let start: _ = Instant::now();
-
         // 执行实际初始化
         self.perform_initialization(api_name).await?;
-
         let elapsed: _ = start.elapsed();
-
         // 更新统计
         let mut stats = self.stats.lock().unwrap();
         stats.successful_initializations += 1;
         stats.total_init_time_ms += elapsed.as_millis() as u64;
-
         Ok(())
     }
-
     /// 执行实际的 API 初始化
     async fn perform_initialization(&self, api_name: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // 模拟 API 初始化过程
         // 实际实现中会调用 WebApiRegistry
-
         // 小延迟模拟初始化开销
         tokio::time::sleep(Duration::from_micros(100)).await;
-
         // 标记为已初始化
         let mut initialized = self.initialized_apis.write().await;
         initialized.insert(api_name.to_string());
-
         Ok(())
     }
-
     /// 批量初始化多个 API
     pub async fn init_multiple(&self, apis: &[&str]) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut tasks: Vec<String> = Vec::new();
-
         for &api in apis {
             if !self.is_initialized(api).await {
                 let api: _ = api.to_string();
@@ -143,28 +120,23 @@ impl LazyWebAPI {
                 }
             }
         }
-
         Ok(())
     }
-
     /// 获取统计信息
     pub fn get_stats(&self) -> LazyInitStats {
         self.stats.lock().unwrap().clone()
     }
-
     /// 重置统计信息
     pub fn reset_stats(&self) {
         let mut stats = self.stats.lock().unwrap();
         *stats = LazyInitStats::default();
     }
 }
-
 impl Default for LazyWebAPI {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// 通用延迟初始化器
 pub struct LazyInitializer<T> {
     /// 初始化函数
@@ -176,7 +148,6 @@ pub struct LazyInitializer<T> {
     /// 统计信息
     stats: Arc<Mutex<InitStats>>,
 }
-
 /// 初始化统计
 #[derive(Debug, Clone)]
 pub struct InitStats {
@@ -184,7 +155,6 @@ pub struct InitStats {
     pub total_init_time: Duration,
     pub last_init_time: Option<Duration>,
 }
-
 impl InitStats {
     pub fn new() -> Self {
         Self {
@@ -194,13 +164,11 @@ impl InitStats {
         }
     }
 }
-
 impl Default for InitStats {
     fn default() -> Self {
         Self::new()
     }
 }
-
 impl<T> LazyInitializer<T> {
     /// 创建新的延迟初始化器
     pub fn new<F>(init_fn: F) -> Self
@@ -214,7 +182,6 @@ impl<T> LazyInitializer<T> {
             stats: Arc::new(Mutex::new(InitStats::new())),
         }
     }
-
     /// 获取或初始化值
     pub async fn get(&self) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
     where
@@ -230,13 +197,11 @@ impl<T> LazyInitializer<T> {
                 }
             }
         }
-
         // 执行初始化
         let start: _ = Instant::now();
         let init_fn: _ = self.init_fn.clone();
         let result: _ = init_fn()?;
         let elapsed: _ = start.elapsed();
-
         // 缓存结果
         {
             let mut value = self.value.lock().unwrap();
@@ -252,10 +217,8 @@ impl<T> LazyInitializer<T> {
             stats.total_init_time += elapsed;
             stats.last_init_time = Some(elapsed);
         }
-
         Ok(result)
     }
-
     /// 强制重新初始化
     pub async fn reinit(&self) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
     where
@@ -269,21 +232,17 @@ impl<T> LazyInitializer<T> {
             let mut value = self.value.lock().unwrap();
             *value = None;
         }
-
         self.get().await
     }
-
     /// 获取统计信息
     pub fn get_stats(&self) -> InitStats {
         self.stats.lock().unwrap().clone()
     }
-
     /// 检查是否已初始化
     pub fn is_initialized(&self) -> bool {
         *self.initialized.lock().unwrap()
     }
 }
-
 /// 按需模块加载器
 pub struct OnDemandLoader {
     /// 已加载的模块
@@ -293,7 +252,6 @@ pub struct OnDemandLoader {
     /// 统计信息
     stats: Arc<Mutex<LoaderStats>>,
 }
-
 /// 已加载的模块
 #[derive(Debug, Clone)]
 struct LoadedModule {
@@ -301,15 +259,12 @@ struct LoadedModule {
     load_time: Instant,
     access_count: u64,
 }
-
 /// 模块工厂 trait
 pub trait ModuleFactory {
     fn create_module(&self, name: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>;
 }
-
 /// 简单模块工厂实现
 pub struct SimpleModuleFactory;
-
 impl ModuleFactory for SimpleModuleFactory {
     fn create_module(&self, name: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
         // 模拟模块加载
@@ -317,7 +272,6 @@ impl ModuleFactory for SimpleModuleFactory {
         Ok(module_data.into_bytes())
     }
 }
-
 /// 加载器统计
 #[derive(Debug, Clone, Default)]
 pub struct LoaderStats {
@@ -328,13 +282,11 @@ pub struct LoaderStats {
     pub cache_hits: u64,
     pub cache_misses: u64,
 }
-
 impl OnDemandLoader {
     /// 创建新的按需加载器
     pub fn new() -> Self {
         Self::with_factory(Box::new(SimpleModuleFactory))
     }
-
     /// 使用指定工厂创建加载器
     pub fn with_factory(factory: Box<dyn ModuleFactory + Send + Sync>) -> Self {
         Self {
@@ -343,7 +295,6 @@ impl OnDemandLoader {
             stats: Arc::new(Mutex::new(LoaderStats::default())),
         }
     }
-
     /// 按需加载模块
     pub async fn load_module(&self, name: &str) -> Result<Option<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>> {
         // 先检查缓存
@@ -351,30 +302,24 @@ impl OnDemandLoader {
             let modules: _ = self.loaded_modules.read().await;
             modules.get(name).map(|module| module.data.clone())
         };
-
         if let Some(data) = module_data {
             let mut stats = self.stats.lock().unwrap();
             stats.cache_hits += 1;
-
             // 更新访问计数
             let mut modules = self.loaded_modules.write().await;
             if let Some(module) = modules.get_mut(name) {
                 module.access_count += 1;
             }
-
             return Ok(Some(data));
         }
-
         let mut stats = self.stats.lock().unwrap();
         stats.total_loads += 1;
         stats.cache_misses += 1;
         drop(stats);
-
         // 加载模块
         let start: _ = Instant::now();
         let data: _ = self.module_factory.create_module(name)?;
         let elapsed: _ = start.elapsed();
-
         // 缓存模块
         {
             let mut modules = self.loaded_modules.write().await;
@@ -387,26 +332,21 @@ impl OnDemandLoader {
                 },
             );
         }
-
         // 更新统计
         let mut stats = self.stats.lock().unwrap();
         stats.successful_loads += 1;
         stats.total_load_time_ms += elapsed.as_millis() as u64;
-
         Ok(Some(data))
     }
-
     /// 获取模块统计信息
     pub fn get_stats(&self) -> LoaderStats {
         self.stats.lock().unwrap().clone()
     }
-
     /// 清理未使用的模块
     pub async fn cleanup_unused(&self, max_age: Duration) -> usize {
         let mut modules = self.loaded_modules.write().await;
         let now: _ = Instant::now();
         let mut removed = 0;
-
         modules.retain(|_, module| {
             if now.duration_since(module.load_time) > max_age && module.access_count == 0 {
                 removed += 1;
@@ -415,17 +355,14 @@ impl OnDemandLoader {
                 true
             }
         });
-
         removed
     }
 }
-
 impl Default for OnDemandLoader {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// 启动时间优化器
 pub struct StartupOptimizer {
     /// 延迟 Web API
@@ -437,7 +374,6 @@ pub struct StartupOptimizer {
     /// 优化策略
     optimization_level: OptimizationLevel,
 }
-
 /// 优化级别
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum OptimizationLevel {
@@ -450,7 +386,6 @@ pub enum OptimizationLevel {
     /// 最大优化
     Maximum,
 }
-
 impl StartupOptimizer {
     /// 创建新的启动优化器
     pub fn new(level: OptimizationLevel) -> Self {
@@ -461,29 +396,24 @@ impl StartupOptimizer {
             optimization_level: level,
         }
     }
-
     /// 开始优化
     pub fn start_optimization(&self) {
         let mut startup_time = self.startup_time.lock().unwrap();
         *startup_time = Some(Instant::now());
     }
-
     /// 获取启动时间
     pub fn get_startup_time(&self) -> Option<Duration> {
         let startup_time: _ = self.startup_time.lock().unwrap();
         startup_time.map(|start| start.elapsed())
     }
-
     /// 获取优化器
     pub fn get_lazy_web_api(&self) -> Arc<LazyWebAPI> {
         self.lazy_web_api.clone()
     }
-
     /// 获取按需加载器
     pub fn get_on_demand_loader(&self) -> Arc<OnDemandLoader> {
         self.on_demand_loader.clone()
     }
-
     /// 根据优化级别执行预优化
     pub async fn perform_pre_optimization(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         match self.optimization_level {
@@ -501,7 +431,6 @@ impl StartupOptimizer {
                 // 预初始化所有常用 API 并预加载模块
                 let apis: _ = &["console", "process", "path", "util", "buffer", "fs", "os", "url"];
                 self.lazy_web_api.init_multiple(apis).await?;
-
                 // 预加载常用模块
                 let modules: _ = &["util", "buffer", "events", "stream"];
                 for &module in modules {
@@ -509,11 +438,9 @@ impl StartupOptimizer {
                 }
             }
         }
-
         Ok(())
     }
 }
-
 impl Default for StartupOptimizer {
     fn default() -> Self {
         Self::new(OptimizationLevel::Aggressive)

@@ -1,5 +1,4 @@
 use crate::OptimizeMode;
-
 /// Code complexity metrics for JIT optimization decisions
 #[derive(Debug, Clone)]
 pub struct CodeComplexity {
@@ -9,23 +8,19 @@ pub struct CodeComplexity {
     pub condition_count: usize,
     pub complexity_score: f64,
 }
-
 /// Analyze JavaScript code complexity to determine optimal JIT strategy
 pub struct CodeAnalyzer;
-
 impl CodeAnalyzer {
     /// Analyze code and return complexity metrics
     pub fn analyze_complexity(code: &str) -> CodeComplexity {
         let lines: Vec<&str> = code.lines().collect();
         let line_count: _ = lines.len();
-
         // Count functions (enhanced heuristic)
         let function_count: _ = code.matches("function").count()
             + code.matches("=>").count()
             + code.matches("class ").count()
             + code.matches("async function").count()
             + code.matches("() =>").count();
-
         // Count loops (including nested patterns)
         let loop_count: _ = code.matches("for").count()
             + code.matches("while").count()
@@ -33,7 +28,6 @@ impl CodeAnalyzer {
             + code.matches("forEach").count()
             + code.matches("map(").count()
             + code.matches("filter(").count();
-
         // Count conditions (enhanced)
         let condition_count: _ = code.matches("if").count()
             + code.matches("else").count()
@@ -44,13 +38,11 @@ impl CodeAnalyzer {
             + code.matches("||").count()
             + code.matches("try").count()
             + code.matches("catch").count();
-
         // Calculate complexity score (enhanced metric for better JIT decisions)
         let complexity_score: _ = (line_count as f64 * 0.2)  // 增加行数权重
             + (function_count as f64 * 5.0)   // 增加函数权重
             + (loop_count as f64 * 8.0)      // 增加循环权重（循环是性能热点）
             + (condition_count as f64 * 3.0); // 增加条件权重
-
         CodeComplexity {
             line_count,
             function_count,
@@ -59,7 +51,6 @@ impl CodeAnalyzer {
             complexity_score,
         }
     }
-
     /// Determine optimal JIT strategy based on code complexity and user preference
     pub fn determine_optimization(
         user_mode: &OptimizeMode,
@@ -87,7 +78,6 @@ impl CodeAnalyzer {
             }
         }
     }
-
     /// Get optimization flags for V8 based on the selected mode
     pub fn get_optimization_flags(mode: &OptimizeMode, complexity: &CodeComplexity) -> Vec<String> {
         match mode {
@@ -118,13 +108,11 @@ impl CodeAnalyzer {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_simple_code_analysis() {
         let code: _ = "const x = 1; console.log(x);";
@@ -133,7 +121,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(complexity.function_count, 0);
         assert!(complexity.complexity_score < 10.0);
     }
-
     #[test]
     fn test_complex_code_analysis() {
         let code: _ = r#"
@@ -163,7 +150,6 @@ use std::collections::{HashMap, BTreeMap};
             "Complex code should have high complexity score"
         );
     }
-
     #[test]
     fn test_optimization_decision() {
         // Very simple code: line_count < 5, function_count < 2, loop_count == 0
@@ -174,7 +160,6 @@ use std::collections::{HashMap, BTreeMap};
             condition_count: 0,
             complexity_score: 2.0,
         };
-
         // Medium code: doesn't meet "very simple" criteria -> Speed (performance priority)
         let medium_code: _ = CodeComplexity {
             line_count: 10,
@@ -183,7 +168,6 @@ use std::collections::{HashMap, BTreeMap};
             condition_count: 2,
             complexity_score: 15.0,
         };
-
         let complex_code: _ = CodeComplexity {
             line_count: 50,
             function_count: 10,
@@ -191,27 +175,21 @@ use std::collections::{HashMap, BTreeMap};
             condition_count: 8,
             complexity_score: 60.0,
         };
-
         // Auto mode should choose Size for very simple code
         let decision: _ = CodeAnalyzer::determine_optimization(&OptimizeMode::Auto, &very_simple_code);
         assert_eq!(decision, OptimizeMode::Size);
-
         // Auto mode should choose Speed for medium code (performance priority)
         let decision: _ = CodeAnalyzer::determine_optimization(&OptimizeMode::Auto, &medium_code);
         assert_eq!(decision, OptimizeMode::Speed);
-
         // Auto mode should choose Speed for complex code
         let decision: _ = CodeAnalyzer::determine_optimization(&OptimizeMode::Auto, &complex_code);
         assert_eq!(decision, OptimizeMode::Speed);
     }
-
     #[test]
     fn test_optimization_flags() {
         let complexity: _ = CodeAnalyzer::analyze_complexity("const x = 1;");
-
         let speed_flags: _ = CodeAnalyzer::get_optimization_flags(&OptimizeMode::Speed, &complexity);
         assert!(speed_flags.contains(&"--optimize-for-speed".to_string()));
-
         let size_flags: _ = CodeAnalyzer::get_optimization_flags(&OptimizeMode::Size, &complexity);
         assert!(size_flags.contains(&"--optimize-for-size".to_string()));
     }

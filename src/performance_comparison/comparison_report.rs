@@ -6,13 +6,11 @@
 //! - Markdown 报告生成
 //! - JSON 数据导出
 //! - 图表生成
-
 use crate::performance_comparison::ComparisonResult;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 报告格式
 #[derive(Debug, Clone)]
 pub enum ReportFormat {
@@ -21,7 +19,6 @@ pub enum ReportFormat {
     Json,
     All,
 }
-
 /// 报告配置
 #[derive(Debug, Clone)]
 pub struct ReportConfig {
@@ -31,7 +28,6 @@ pub struct ReportConfig {
     pub include_raw_data: bool,
     pub template_path: Option<PathBuf>,
 }
-
 impl Default for ReportConfig {
     fn default() -> Self {
         Self {
@@ -43,18 +39,15 @@ impl Default for ReportConfig {
         }
     }
 }
-
 /// 报告生成器
 pub struct ReportGenerator {
     config: ReportConfig,
 }
-
 impl Default for ReportGenerator {
     fn default() -> Self {
         Self::new()
     }
 }
-
 impl ReportGenerator {
     /// 创建新的报告生成器
     pub fn new() -> Self {
@@ -62,19 +55,15 @@ impl ReportGenerator {
             config: ReportConfig::default(),
         }
     }
-
     /// 创建带配置的报告生成器
     pub fn new_with_config(config: ReportConfig) -> Self {
         Self { config }
     }
-
     /// 生成完整报告
     pub fn generate_report(&self, result: &ComparisonResult) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
         // 创建输出目录
         fs::create_dir_all(&self.config.output_dir)?;
-
         let mut generated_files = Vec::new();
-
         match self.config.format {
             ReportFormat::Html => {
                 let file: _ = self.generate_html_report(result)?;
@@ -97,50 +86,38 @@ impl ReportGenerator {
                 generated_files.push(json_file);
             }
         }
-
         Ok(generated_files)
     }
-
     /// 生成 HTML 报告
     fn generate_html_report(&self, result: &ComparisonResult) -> Result<PathBuf, Box<dyn std::error::Error>> {
         let timestamp: _ = chrono::Utc::now().format("%Y%m%d_%H%M%S");
         let filename: _ = format!("performance_report_{}.html", timestamp);
         let file_path: _ = self.config.output_dir.join(&filename);
-
         let html: _ = self.render_html_template(result)?;
         fs::write(&file_path, html)?;
-
         Ok(file_path)
     }
-
     /// 生成 Markdown 报告
     fn generate_markdown_report(&self, result: &ComparisonResult) -> Result<PathBuf, Box<dyn std::error::Error>> {
         let timestamp: _ = chrono::Utc::now().format("%Y%m%d_%H%M%S");
         let filename: _ = format!("performance_report_{}.md", timestamp);
         let file_path: _ = self.config.output_dir.join(&filename);
-
         let markdown: _ = self.render_markdown_template(result)?;
         fs::write(&file_path, markdown)?;
-
         Ok(file_path)
     }
-
     /// 生成 JSON 报告
     fn generate_json_report(&self, result: &ComparisonResult) -> Result<PathBuf, Box<dyn std::error::Error>> {
         let timestamp: _ = chrono::Utc::now().format("%Y%m%d_%H%M%S");
         let filename: _ = format!("performance_report_{}.json", timestamp);
         let file_path: _ = self.config.output_dir.join(&filename);
-
         let json: _ = serde_json::to_string_pretty(result)?;
         fs::write(&file_path, json)?;
-
         Ok(file_path)
     }
-
     /// 渲染 HTML 模板
     fn render_html_template(&self, result: &ComparisonResult) -> Result<String, Box<dyn std::error::Error>> {
         let mut html = String::new();
-
         // HTML 头部
         html.push_str(r#"<!DOCTYPE html>
 <html lang="zh-CN">
@@ -223,7 +200,6 @@ impl ReportGenerator {
 <body>
     <div class="container">
 "#);
-
         // 报告标题
         html.push_str(&format!(
             r#"        <h1>Beejs Performance Comparison Report</h1>
@@ -235,12 +211,10 @@ impl ReportGenerator {
             result.test_environment.cpu,
             result.test_environment.memory
         ));
-
         // 性能摘要
         html.push_str(r#"        <div class="summary">
             <h2>Performance Summary</h2>
 "#);
-
         html.push_str(&format!(
             r#"            <div class="metric">
                 <div class="metric-value">{}</div>
@@ -269,9 +243,7 @@ impl ReportGenerator {
             result.summary.average_speedup_vs_bun,
             result.summary.calculate_overall_score(),
         ));
-
         html.push_str("        </div>");
-
         // 详细结果表格
         html.push_str(r#"
         <h2>Detailed Results</h2>
@@ -289,38 +261,32 @@ impl ReportGenerator {
             </thead>
             <tbody>
 "#);
-
         for test_result in &result.test_results {
             let beejs_time: _ = test_result
                 .beejs_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))
                 .unwrap_or_else(|| "N/A".to_string());
-
             let nodejs_time: _ = test_result
                 .nodejs_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))
                 .unwrap_or_else(|| "N/A".to_string());
-
             let bun_time: _ = test_result
                 .bun_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))
                 .unwrap_or_else(|| "N/A".to_string());
-
             let speedup_nodejs_class: _ = if test_result.speedup_vs_nodejs > 1.0 {
                 "positive"
             } else {
                 "negative"
             };
-
             let speedup_bun_class: _ = if test_result.speedup_vs_bun > 1.0 {
                 "positive"
             } else {
                 "negative"
             };
-
             html.push_str(&format!(
                 r#"                <tr class="test-result {}">
                     <td>{}</td>
@@ -344,11 +310,9 @@ impl ReportGenerator {
                 test_result.speedup_vs_bun
             ));
         }
-
         html.push_str(r#"            </tbody>
         </table>
 "#);
-
         // 如果包含图表，添加图表容器
         if self.config.include_charts {
             html.push_str(r#"
@@ -360,25 +324,20 @@ impl ReportGenerator {
             <canvas id="winRateChart" width="800" height="400"></canvas>
         </div>
 "#);
-
             // 添加图表脚本
             html.push_str(&self.generate_chart_scripts(result)?);
         }
-
         // HTML 尾部
         html.push_str(r#"
     </div>
 </body>
 </html>
 "#);
-
         Ok(html)
     }
-
     /// 渲染 Markdown 模板
     fn render_markdown_template(&self, result: &ComparisonResult) -> Result<String, Box<dyn std::error::Error>> {
         let mut markdown = String::new();
-
         markdown.push_str("# Beejs Performance Comparison Report\n\n");
         markdown.push_str(&format!(
             "**Generated:** {}\n\n",
@@ -390,34 +349,28 @@ impl ReportGenerator {
             result.test_environment.cpu,
             result.test_environment.memory
         ));
-
         markdown.push_str("## Performance Summary\n\n");
         markdown.push_str(&result.summary.generate_summary());
         markdown.push_str("\n\n");
-
         markdown.push_str("## Detailed Results\n\n");
         markdown.push_str("| Test Name | Winner | Beejs Time | Node.js Time | Bun Time | Speedup vs Node.js | Speedup vs Bun |\n");
         markdown.push_str("|-----------|--------|------------|--------------|----------|-------------------|----------------|\n");
-
         for test_result in &result.test_results {
             let beejs_time: _ = test_result
                 .beejs_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))
                 .unwrap_or_else(|| "N/A".to_string());
-
             let nodejs_time: _ = test_result
                 .nodejs_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))
                 .unwrap_or_else(|| "N/A".to_string());
-
             let bun_time: _ = test_result
                 .bun_result
                 .as_ref()
                 .map(|r| format!("{:.2}ms", r.avg_duration.as_secs_f64() * 1000.0))
                 .unwrap_or_else(|| "N/A".to_string());
-
             markdown.push_str(&format!(
                 "| {} | **{}** | {} | {} | {} | {:.2}x | {:.2}x |\n",
                 test_result.test_name,
@@ -429,19 +382,15 @@ impl ReportGenerator {
                 test_result.speedup_vs_bun
             ));
         }
-
         Ok(markdown)
     }
-
     /// 生成图表脚本
     fn generate_chart_scripts(&self, result: &ComparisonResult) -> Result<String, Box<dyn std::error::Error>> {
         let mut scripts = String::new();
-
         // 准备速度提升图表数据
         let test_names: Vec<String> = result.test_results.iter().map(|r| r.test_name.clone()).collect();
         let speedup_nodejs: Vec<f64> = result.test_results.iter().map(|r| r.speedup_vs_nodejs).collect();
         let speedup_bun: Vec<f64> = result.test_results.iter().map(|r| r.speedup_vs_bun).collect();
-
         scripts.push_str(&format!(
             r#"
         <script>
@@ -478,7 +427,6 @@ impl ReportGenerator {
                     }}
                 }}
             }});
-
             // Win Rate Chart
             const winRateCtx = document.getElementById('winRateChart').getContext('2d');
             new Chart(winRateCtx, {{
@@ -519,7 +467,6 @@ impl ReportGenerator {
             result.summary.nodejs_wins,
             result.summary.bun_wins
         ));
-
         Ok(scripts)
     }
 }

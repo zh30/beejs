@@ -1,10 +1,8 @@
 //! AI 驱动智能任务调度器 - Stage 90 Phase 5.3
-
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use tokio::sync::{RwLock, Mutex};
 use serde::{Serialize, Deserialize};
-
 /// 任务
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -15,7 +13,6 @@ pub struct Task {
     pub dependencies: Vec<String>,
     pub created_at: u64,
 }
-
 /// 任务优先级
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TaskPriority {
@@ -24,7 +21,6 @@ pub enum TaskPriority {
     High,
     Critical,
 }
-
 /// 资源需求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceRequirements {
@@ -32,7 +28,6 @@ pub struct ResourceRequirements {
     pub memory_mb: usize,
     pub io_bandwidth: f64, // MB/s
 }
-
 /// 调度策略
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SchedulingStrategy {
@@ -45,7 +40,6 @@ pub enum SchedulingStrategy {
     /// AI 驱动智能调度
     AIIntelligent,
 }
-
 /// 任务执行状态
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskExecution {
@@ -55,7 +49,6 @@ pub struct TaskExecution {
     pub start_time: Option<u64>,
     pub end_time: Option<u64>,
 }
-
 /// 执行状态
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ExecutionStatus {
@@ -65,7 +58,6 @@ pub enum ExecutionStatus {
     Failed,
     Cancelled,
 }
-
 /// 调度器指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchedulerMetrics {
@@ -76,7 +68,6 @@ pub struct SchedulerMetrics {
     pub throughput: f64, // tasks per second
     pub worker_utilization: f64,
 }
-
 /// AI 驱动智能任务调度器
 pub struct IntelligentTaskScheduler {
     pending_tasks: Arc<RwLock<VecDeque<Task>>>,
@@ -86,7 +77,6 @@ pub struct IntelligentTaskScheduler {
     metrics: Arc<RwLock<SchedulerMetrics>>,
     strategy: Arc<RwLock<SchedulingStrategy>>,
 }
-
 /// 工作者信息
 #[derive(Debug, Clone)]
 struct WorkerInfo {
@@ -95,7 +85,6 @@ struct WorkerInfo {
     pub available_cores: usize,
     pub available_memory_mb: usize,
 }
-
 impl IntelligentTaskScheduler {
     /// 创建新的智能任务调度器
     pub fn new() -> Self {
@@ -115,25 +104,20 @@ impl IntelligentTaskScheduler {
             strategy: Arc::new(Mutex::new(SchedulingStrategy::AIIntelligent)))
         }
     }
-
     /// 添加任务
     pub async fn add_task(&self, task: Task) {
         let mut pending = self.pending_tasks.write().await;
         pending.push_back(task);
-
         // 更新指标
         let mut metrics = self.metrics.write().await;
         metrics.total_tasks_scheduled += 1;
     }
-
     /// 调度任务
     pub async fn schedule_task(&self, task_id: &str) -> Option<String> {
         let mut pending = self.pending_tasks.write().await;
         let task_index: _ = pending.iter().position(|t| t.task_id == task_id)?;
-
         let task: _ = pending.remove(task_index)?;
         let worker_id: _ = self.find_best_worker(&task).await?;
-
         // 开始执行任务
         let execution: _ = TaskExecution {
             task: task.clone(),
@@ -142,13 +126,11 @@ impl IntelligentTaskScheduler {
             start_time: Some(current_timestamp()),
             end_time: None,
         };
-
         // 更新运行任务
         {
             let mut running = self.running_tasks.write().await;
             running.insert(task_id.to_string(), execution);
         }
-
         // 更新工作者负载
         {
             let mut workers = self.workers.write().await;
@@ -156,10 +138,8 @@ impl IntelligentTaskScheduler {
                 worker.current_load += 1.0;
             }
         }
-
         Some(worker_id)
     }
-
     /// 完成任务
     pub async fn complete_task(&self, task_id: &str, success: bool) {
         let mut running = self.running_tasks.write().await;
@@ -175,7 +155,6 @@ impl IntelligentTaskScheduler {
                 start_time: execution.start_time,
                 end_time: Some(current_timestamp()),
             };
-
             // 更新工作者负载
             if let Some(worker_id) = &completed_execution.worker_id {
                 let mut workers = self.workers.write().await;
@@ -183,18 +162,15 @@ impl IntelligentTaskScheduler {
                     worker.current_load = (worker.current_load - 1.0).max(0.0);
                 }
             }
-
             // 添加到完成列表
             {
                 let mut completed = self.completed_tasks.write().await;
                 completed.push(completed_execution.clone());
             }
-
             // 更新指标
             {
                 let mut metrics = self.metrics.write().await;
                 metrics.total_tasks_completed += 1;
-
                 if let (Some(start), Some(end)) = (execution.start_time, completed_execution.end_time) {
                     let execution_time: _ = (end - start) as f64;
                     metrics.average_execution_time_ms =
@@ -204,63 +180,49 @@ impl IntelligentTaskScheduler {
             }
         }
     }
-
     /// 查找最佳工作者
     async fn find_best_worker(&self, task: &Task) -> Option<String> {
         let workers: _ = self.workers.read().await;
-
         // AI 驱动的智能选择
         let mut best_worker = None;
         let mut best_score = f64::MIN;
-
         for (worker_id, worker) in workers.iter() {
             // 计算负载评分（越低越好）
             let load_score: _ = 1.0 / (1.0 + worker.current_load);
-
             // 计算资源匹配度
             let resource_score: _ = calculate_resource_match_score(&worker, task);
-
             // 计算综合评分
             let score: _ = load_score * 0.6 + resource_score * 0.4;
-
             if score > best_score {
                 best_score = score;
                 best_worker = Some(worker_id.clone());
             }
         }
-
         best_worker
     }
-
     /// 获取调度器指标
     pub async fn get_metrics(&self) -> SchedulerMetrics {
         self.metrics.read().await.clone()
     }
-
     /// 获取任务状态
     pub async fn get_task_status(&self, task_id: &str) -> Option<ExecutionStatus> {
         let running: _ = self.running_tasks.read().await;
         if let Some(execution) = running.get(task_id) {
             return Some(execution.status.clone());
         }
-
         let completed: _ = self.completed_tasks.read().await;
         if let Some(execution) = completed.iter().find(|e| e.task.task_id == task_id) {
             return Some(execution.status.clone());
         }
-
         None
     }
 }
-
 /// 计算资源匹配度
 fn calculate_resource_match_score(worker: &WorkerInfo, task: &Task) -> f64 {
     let cpu_match: _ = (worker.available_cores as f64 / task.resource_requirements.cpu_cores).min(1.0);
     let memory_match: _ = (worker.available_memory_mb as f64 / task.resource_requirements.memory_mb as f64).min(1.0);
-
     (cpu_match + memory_match) / 2.0
 }
-
 /// 获取当前时间戳
 fn current_timestamp() -> u64 {
     std::time::SystemTime::now()
@@ -268,17 +230,14 @@ fn current_timestamp() -> u64 {
         .unwrap()
         .as_millis() as u64
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_intelligent_task_scheduler() {
         let scheduler: _ = IntelligentTaskScheduler::new();
-
         // 添加工作者
         let mut workers = scheduler.workers.write().await;
         workers.insert("worker1".to_string(), WorkerInfo {
@@ -287,7 +246,6 @@ use std::collections::{HashMap, BTreeMap};
             available_cores: 4,
             available_memory_mb: 8192,
         });
-
         // 创建任务
         let task: _ = Task {
             task_id: "task1".to_string(),
@@ -301,16 +259,12 @@ use std::collections::{HashMap, BTreeMap};
             dependencies: vec![],
             created_at: current_timestamp(),
         };
-
         scheduler.add_task(task).await;
-
         // 调度任务
         let worker_id: _ = scheduler.schedule_task("task1").await;
         assert!(worker_id.is_some());
-
         // 完成任务
         scheduler.complete_task("task1", true).await;
-
         // 检查状态
         let status: _ = scheduler.get_task_status("task1").await;
         assert_eq!(status, Some(ExecutionStatus::Completed));

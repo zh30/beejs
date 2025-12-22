@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 // 手部追踪系统
-
 /// 手势类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Gesture {
@@ -24,13 +23,11 @@ pub enum Gesture {
     /// 抓取
     Grab,
 }
-
 impl Default for Gesture {
     fn default() -> Self {
         Self::Unknown
     }
 }
-
 /// 手部追踪配置
 #[derive(Debug, Clone)]
 pub struct HandTrackingConfig {
@@ -41,7 +38,6 @@ pub struct HandTrackingConfig {
     /// 预测延迟补偿 (ms)
     pub prediction_latency_ms: u32,
 }
-
 impl Default for HandTrackingConfig {
     fn default() -> Self {
         Self {
@@ -51,7 +47,6 @@ impl Default for HandTrackingConfig {
         }
     }
 }
-
 /// 模拟手部数据
 #[derive(Debug, Clone)]
 pub struct MockHandData {
@@ -60,7 +55,6 @@ pub struct MockHandData {
     /// 置信度
     pub confidence: f32,
 }
-
 impl Default for MockHandData {
     fn default() -> Self {
         Self {
@@ -69,7 +63,6 @@ impl Default for MockHandData {
         }
     }
 }
-
 /// 手部姿态
 #[derive(Debug, Clone)]
 pub struct HandPose {
@@ -82,7 +75,6 @@ pub struct HandPose {
     /// 当前手势
     pub gesture: Gesture,
 }
-
 impl HandPose {
     /// 创建模拟捏合姿态
     pub fn mock_pinch() -> Self {
@@ -94,7 +86,6 @@ impl HandPose {
         }
     }
 }
-
 /// 手部追踪系统
 pub struct HandTracking {
     /// 配置
@@ -102,7 +93,6 @@ pub struct HandTracking {
     /// 当前姿态
     current_pose: Option<HandPose>,
 }
-
 impl HandTracking {
     /// 创建手部追踪系统
     pub fn new(config: HandTrackingConfig) -> Result<Self, HandTrackingError> {
@@ -111,12 +101,10 @@ impl HandTracking {
             current_pose: None,
         })
     }
-
     /// 手势识别是否启用
     pub fn gesture_recognition_enabled(&self) -> bool {
         self.config.enable_gesture_recognition
     }
-
     /// 处理帧数据
     pub fn process_frame(&mut self, data: &MockHandData) -> Result<HandPose, HandTrackingError> {
         let pose: _ = HandPose {
@@ -128,7 +116,6 @@ impl HandTracking {
         self.current_pose = Some(pose.clone());
         Ok(pose)
     }
-
     /// 同步处理帧数据
     pub fn process_frame_sync(&self, _data: &MockHandData) -> Result<HandPose, HandTrackingError> {
         Ok(HandPose {
@@ -138,18 +125,15 @@ impl HandTracking {
             gesture: Gesture::Unknown,
         })
     }
-
     /// 识别手势
     pub fn recognize_gesture(&self, pose: &HandPose) -> Result<Gesture, HandTrackingError> {
         Ok(pose.gesture)
     }
-
     /// 获取当前姿态
     pub fn current_pose(&self) -> Option<&HandPose> {
         self.current_pose.as_ref()
     }
 }
-
 /// 手部追踪错误
 #[derive(Debug, Clone)]
 pub enum HandTrackingError {
@@ -160,7 +144,6 @@ pub enum HandTrackingError {
     /// 设备未找到
     DeviceNotFound,
 }
-
 impl std::fmt::Display for HandTrackingError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -170,5 +153,4 @@ impl std::fmt::Display for HandTrackingError {
         }
     }
 }
-
 impl std::error::Error for HandTrackingError {}

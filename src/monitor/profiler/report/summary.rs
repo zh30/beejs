@@ -1,12 +1,9 @@
 //! 性能摘要报告生成模块
-
 use std::time::Duration;
 use chrono::{DateTime, Utc};
-
 use crate::monitor::profiler::{
     Hotspot, analyzer::stack_analyzer::{Bottleneck, CallStackAnalysis},
 };
-
 /// 性能摘要报告
 #[derive(Debug, Clone)]
 pub struct PerformanceSummary {
@@ -29,7 +26,6 @@ pub struct PerformanceSummary {
     /// 优化建议
     pub optimization_recommendations: Vec<OptimizationRecommendation>,
 }
-
 /// 内存使用摘要
 #[derive(Debug, Clone)]
 pub struct MemorySummary {
@@ -42,7 +38,6 @@ pub struct MemorySummary {
     /// 内存使用热点
     pub memory_hotspots: Vec<String>,
 }
-
 /// 优化建议
 #[derive(Debug, Clone)]
 pub struct OptimizationRecommendation {
@@ -59,7 +54,6 @@ pub struct OptimizationRecommendation {
     /// 实施难度
     pub difficulty: Difficulty,
 }
-
 /// 建议类型
 #[derive(Debug, Clone, PartialEq)]
 pub enum RecommendationType {
@@ -76,7 +70,6 @@ pub enum RecommendationType {
     /// 代码重构
     CodeRefactoring,
 }
-
 /// 优先级
 #[derive(Debug, Clone, PartialEq)]
 pub enum Priority {
@@ -89,7 +82,6 @@ pub enum Priority {
     /// 低
     Low,
 }
-
 /// 实施难度
 #[derive(Debug, Clone, PartialEq)]
 pub enum Difficulty {
@@ -102,7 +94,6 @@ pub enum Difficulty {
     /// 非常困难
     VeryHard,
 }
-
 impl PerformanceSummary {
     /// 创建新的性能摘要
     pub fn new() -> Self {
@@ -123,11 +114,9 @@ impl PerformanceSummary {
             optimization_recommendations: Vec::new(),
         }
     }
-
     /// 生成 JSON 格式报告
     pub fn to_json(&self) -> String {
         use serde_json::json;
-
         let hotspots_json: _ = self
             .hotspots
             .iter()
@@ -142,7 +131,6 @@ impl PerformanceSummary {
                 })
             })
             .collect::<Vec<_>>();
-
         let recommendations_json: _ = self
             .optimization_recommendations
             .iter()
@@ -157,7 +145,6 @@ impl PerformanceSummary {
                 })
             })
             .collect::<Vec<_>>();
-
         let json: _ = json!({
             "generated_at": self.generated_at.to_rfc3339(),
             "total_execution_time_ms": self.total_execution_time.as_millis(),
@@ -172,20 +159,16 @@ impl PerformanceSummary {
             },
             "optimization_recommendations": recommendations_json,
         });
-
         serde_json::to_string_pretty(&json).unwrap_or_else(|_| "{}".to_string())
     }
-
     /// 生成人类可读的文本报告
     pub fn to_text(&self) -> String {
         let mut report = String::new();
-
         report.push_str("=== 性能分析摘要报告 ===\n\n");
         report.push_str(&format!("生成时间: {}\n", self.generated_at));
         report.push_str(&format!("总执行时间: {:?}\n", self.total_execution_time));
         report.push_str(&format!("分析函数数: {}\n", self.function_count));
         report.push_str(&format!("总调用次数: {}\n\n", self.total_calls));
-
         // 热点函数
         if !self.hotspots.is_empty() {
             report.push_str("=== 性能热点函数 ===\n");
@@ -210,7 +193,6 @@ impl PerformanceSummary {
                 ));
             }
         }
-
         // 性能瓶颈
         if !self.bottlenecks.is_empty() {
             report.push_str("=== 性能瓶颈 ===\n");
@@ -227,7 +209,6 @@ impl PerformanceSummary {
                 ));
             }
         }
-
         // 内存使用摘要
         report.push_str("=== 内存使用摘要 ===\n");
         report.push_str(&format!(
@@ -239,7 +220,6 @@ impl PerformanceSummary {
         report.push_str(&format!(
             "平均内存使用: {:.2} MB\n\n",
             self.memory_summary.avg_memory / (1024.0 * 1024.0)));
-
         // 优化建议
         if !self.optimization_recommendations.is_empty() {
             report.push_str("=== 优化建议 ===\n");
@@ -261,14 +241,11 @@ impl PerformanceSummary {
                 ));
             }
         }
-
         report
     }
-
     /// 生成 HTML 格式报告
     pub fn to_html(&self) -> String {
         let mut html = String::new();
-
         html.push_str("<!DOCTYPE html>\n");
         html.push_str("<html>\n<head>\n");
         html.push_str("<title>性能分析报告</title>\n");
@@ -280,7 +257,6 @@ impl PerformanceSummary {
         html.push_str(".bottleneck { border-left: 4px solid #ffa500; padding: 10px; margin: 10px 0; }\n");
         html.push_str(".recommendation { border-left: 4px solid #4caf50; padding: 10px; margin: 10px 0; }\n");
         html.push_str("</style>\n</head>\n<body>\n");
-
         html.push_str(&format!("<h1>性能分析报告</h1>\n"));
         html.push_str(&format!(
             "<div class='metric'><strong>生成时间:</strong> {}</div>\n",
@@ -298,7 +274,6 @@ impl PerformanceSummary {
             "<div class='metric'><strong>总调用次数:</strong> {}</div>\n\n",
             self.total_calls
         ));
-
         // 热点函数
         if !self.hotspots.is_empty() {
             html.push_str("<h2>性能热点函数</h2>\n");
@@ -322,7 +297,6 @@ impl PerformanceSummary {
                 ));
             }
         }
-
         // 性能瓶颈
         if !self.bottlenecks.is_empty() {
             html.push_str("<h2>性能瓶颈</h2>\n");
@@ -338,7 +312,6 @@ impl PerformanceSummary {
                 ));
             }
         }
-
         // 优化建议
         if !self.optimization_recommendations.is_empty() {
             html.push_str("<h2>优化建议</h2>\n");
@@ -359,32 +332,26 @@ impl PerformanceSummary {
                 ));
             }
         }
-
         html.push_str("</body>\n</html>\n");
-
         html
     }
 }
-
 impl Default for PerformanceSummary {
     fn default() -> Self {
         Self::new()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_performance_summary_creation() {
         let summary: _ = PerformanceSummary::new();
         assert_eq!(summary.function_count, 0);
         assert!(summary.hotspots.is_empty());
     }
-
     #[test]
     fn test_to_json() {
         let summary: _ = PerformanceSummary::new();
@@ -392,7 +359,6 @@ use std::collections::{HashMap, BTreeMap};
         assert!(json.contains("generated_at"));
         assert!(json.contains("function_count"));
     }
-
     #[test]
     fn test_to_text() {
         let summary: _ = PerformanceSummary::new();
@@ -400,7 +366,6 @@ use std::collections::{HashMap, BTreeMap};
         assert!(text.contains("性能分析摘要报告"));
         assert!(text.contains("总执行时间"));
     }
-
     #[test]
     fn test_to_html() {
         let summary: _ = PerformanceSummary::new();

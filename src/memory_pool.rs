@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-
 /// 智能内存池 - 管理V8对象的生命周期以减少内存分配开销
 /// 通过预分配和复用对象来减少GC压力和内存碎片
 pub struct SmartMemoryPool {
@@ -14,7 +13,6 @@ pub struct SmartMemoryPool {
     /// 内存统计信息
     stats: Arc<Mutex<MemoryStats>>,
 }
-
 /// 字符串缓冲区池
 #[derive(Debug)]
 pub struct StringBuffer {
@@ -23,7 +21,6 @@ pub struct StringBuffer {
     last_used: Instant,
     usage_count: usize,
 }
-
 /// 对象缓冲区池
 #[derive(Debug)]
 pub struct ObjectBuffer {
@@ -32,7 +29,6 @@ pub struct ObjectBuffer {
     last_used: Instant,
     usage_count: usize,
 }
-
 /// 池配置
 #[derive(Debug, Clone)]
 pub struct PoolConfig {
@@ -45,7 +41,6 @@ pub struct PoolConfig {
     /// 最小使用次数阈值（低于此阈值的缓冲区会被回收）
     pub min_usage_threshold: usize,
 }
-
 impl Default for PoolConfig {
     fn default() -> Self {
         Self {
@@ -56,7 +51,6 @@ impl Default for PoolConfig {
         }
     }
 }
-
 /// 内存统计信息
 #[derive(Debug, Clone, Default)]
 pub struct MemoryStats {
@@ -67,7 +61,6 @@ pub struct MemoryStats {
     pub total_memory_saved: usize,
     pub gc_pressure_reduced: f64,
 }
-
 impl SmartMemoryPool {
     /// 创建新的智能内存池
     pub fn new(config: PoolConfig) -> Self {
@@ -77,13 +70,10 @@ impl SmartMemoryPool {
             config: config.clone(),
             stats: Arc::new(Mutex::new(MemoryStats::default())),
         };
-
         // 预热池 - 预分配一些缓冲区
         pool.pre_warm();
-
         pool
     }
-
     /// 预热池 - 预分配缓冲区
     fn pre_warm(&self) {
         // 预分配字符串缓冲区
@@ -97,7 +87,6 @@ impl SmartMemoryPool {
                 });
             }
         }
-
         // 预分配对象缓冲区
         {
             let mut pool = self.object_buffers.lock().unwrap();
@@ -110,52 +99,42 @@ impl SmartMemoryPool {
             }
         }
     }
-
     /// 获取或创建字符串缓冲区
     #[allow(dead_code)]
     pub fn get_string_buffer(&self, min_capacity: usize) -> StringBuffer {
         let mut pool = self.string_buffers.lock().unwrap();
-
         // 尝试找到一个合适的缓冲区
         for i in (0..pool.len()).rev() {
             if pool[i].buffer.capacity() >= min_capacity {
                 let buffer: _ = pool.remove(i).unwrap();
-
                 // 更新统计
                 {
                     let mut stats = self.stats.lock().unwrap();
                     stats.strings_reused += 1;
                 }
-
                 return buffer;
             }
         }
-
         // 没有找到合适的缓冲区，创建新的
         {
             let mut stats = self.stats.lock().unwrap();
             stats.strings_allocated += 1;
         }
-
         StringBuffer {
             buffer: String::with_capacity(min_capacity.max(1024)),
             last_used: Instant::now(),
             usage_count: 0,
         }
     }
-
     /// 归还字符串缓冲区到池中
     #[allow(dead_code)]
     pub fn return_string_buffer(&self, mut buffer: StringBuffer) {
         // 更新使用统计
         buffer.usage_count += 1;
         buffer.last_used = Instant::now();
-
         let mut pool = self.string_buffers.lock().unwrap();
-
         // 清理超时或低使用的缓冲区
         self.cleanup_string_pool(&mut pool);
-
         // 如果池未满，加入新缓冲区
         if pool.len() < self.config.string_pool_size {
             pool.push_back(buffer);
@@ -166,52 +145,42 @@ impl SmartMemoryPool {
             stats.total_memory_saved += saved_memory;
         }
     }
-
     /// 获取或创建对象缓冲区
     #[allow(dead_code)]
     pub fn get_object_buffer(&self, min_capacity: usize) -> ObjectBuffer {
         let mut pool = self.object_buffers.lock().unwrap();
-
         // 尝试找到一个合适的缓冲区
         for i in (0..pool.len()).rev() {
             if pool[i].buffer.capacity() >= min_capacity {
                 let buffer: _ = pool.remove(i).unwrap();
-
                 // 更新统计
                 {
                     let mut stats = self.stats.lock().unwrap();
                     stats.objects_reused += 1;
                 }
-
                 return buffer;
             }
         }
-
         // 没有找到合适的缓冲区，创建新的
         {
             let mut stats = self.stats.lock().unwrap();
             stats.objects_allocated += 1;
         }
-
         ObjectBuffer {
             buffer: Vec::with_capacity(min_capacity.max(4096)),
             last_used: Instant::now(),
             usage_count: 0,
         }
     }
-
     /// 归还对象缓冲区到池中
     #[allow(dead_code)]
     pub fn return_object_buffer(&self, mut buffer: ObjectBuffer) {
         // 更新使用统计
         buffer.usage_count += 1;
         buffer.last_used = Instant::now();
-
         let mut pool = self.object_buffers.lock().unwrap();
-
         // 清理超时或低使用的缓冲区
         self.cleanup_object_pool(&mut pool);
-
         // 如果池未满，加入新缓冲区
         if pool.len() < self.config.object_pool_size {
             pool.push_back(buffer);
@@ -222,11 +191,9 @@ impl SmartMemoryPool {
             stats.total_memory_saved += saved_memory;
         }
     }
-
     /// 清理字符串池中的过期缓冲区
     fn cleanup_string_pool(&self, pool: &mut VecDeque<StringBuffer>) {
         let mut to_remove = Vec::new();
-
         for (i, buffer) in pool.iter().enumerate() {
             if buffer.last_used.elapsed() > self.config.buffer_timeout
                 || buffer.usage_count < self.config.min_usage_threshold
@@ -234,17 +201,14 @@ impl SmartMemoryPool {
                 to_remove.push(i);
             }
         }
-
         // 从后往前删除，避免索引偏移
         for &i in to_remove.iter().rev() {
             pool.remove(i);
         }
     }
-
     /// 清理对象池中的过期缓冲区
     fn cleanup_object_pool(&self, pool: &mut VecDeque<ObjectBuffer>) {
         let mut to_remove = Vec::new();
-
         for (i, buffer) in pool.iter().enumerate() {
             if buffer.last_used.elapsed() > self.config.buffer_timeout
                 || buffer.usage_count < self.config.min_usage_threshold
@@ -252,31 +216,26 @@ impl SmartMemoryPool {
                 to_remove.push(i);
             }
         }
-
         // 从后往前删除，避免索引偏移
         for &i in to_remove.iter().rev() {
             pool.remove(i);
         }
     }
-
     /// 获取内存统计信息
     pub fn get_stats(&self) -> MemoryStats {
         self.stats.lock().unwrap().clone()
     }
-
     /// 计算GC压力减少百分比
     pub fn calculate_gc_pressure_reduction(&self) -> f64 {
         let stats: _ = self.get_stats();
         let total_allocations: _ = stats.strings_allocated + stats.objects_allocated;
         let total_reuses: _ = stats.strings_reused + stats.objects_reused;
-
         if total_allocations == 0 {
             0.0
         } else {
             (total_reuses as f64 / total_allocations as f64) * 100.0
         }
     }
-
     /// 强制清理所有过期缓冲区
     pub fn force_cleanup(&self) {
         {
@@ -288,23 +247,18 @@ impl SmartMemoryPool {
             self.cleanup_object_pool(&mut pool);
         }
     }
-
     /// Allocate an object buffer for the memory optimization manager
     pub fn allocate_object_buffer(&self, size: usize) -> Option<super::memory::AllocationHandle> {
         // Try to get a buffer from the pool
         let _buffer: _ = self.get_object_buffer(size);
-
         // Allocate memory for the buffer
         let layout: _ = std::alloc::Layout::from_size_align(size, 8).ok()?;
         let ptr: _ = unsafe { std::alloc::alloc(layout) };
-
         if ptr.is_null() {
             return None;
         }
-
         Some(super::memory::AllocationHandle { ptr, size })
     }
-
     /// Try to deallocate an object buffer back to the pool
     pub fn try_deallocate_object_buffer(&self, ptr: *mut u8, size: usize) -> bool {
         // For simplicity, we'll just deallocate directly
@@ -318,14 +272,12 @@ impl SmartMemoryPool {
         true
     }
 }
-
 /// V8对象包装器，使用内存池优化
 #[allow(dead_code)]
 pub struct PooledV8String {
     string: String,
     _pool: Arc<SmartMemoryPool>, // 保持池的引用
 }
-
 impl PooledV8String {
     #[allow(dead_code)]
     pub fn new(pool: Arc<SmartMemoryPool>, value: &str) -> Self {
@@ -333,29 +285,24 @@ impl PooledV8String {
         let string: _ = std::mem::take(&mut buffer.buffer);
         // 立即归还缓冲区到池中（空缓冲区）
         pool.return_string_buffer(buffer);
-
         let mut result = Self {
             string,
             _pool: pool,
         };
-
         // 填充字符串
         result.string.push_str(value);
         result
     }
-
     #[allow(dead_code)]
     pub fn as_str(&self) -> &str {
         &self.string
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_memory_pool_creation() {
         let pool: _ = SmartMemoryPool::new(PoolConfig::default());
@@ -363,7 +310,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(stats.strings_allocated, 0);
         assert_eq!(stats.objects_allocated, 0);
     }
-
     #[test]
     fn test_string_buffer_reuse() {
         let pool: _ = SmartMemoryPool::new(PoolConfig {
@@ -372,21 +318,17 @@ use std::collections::{HashMap, BTreeMap};
             buffer_timeout: Duration::from_secs(60),
             min_usage_threshold: 1,
         });
-
         // 获取并归还字符串缓冲区
         let buffer1: _ = pool.get_string_buffer(100);
         pool.return_string_buffer(buffer1);
-
         let stats: _ = pool.get_stats();
         assert_eq!(stats.strings_allocated, 0); // 池中有预分配，所以不会分配新的
         assert_eq!(stats.strings_reused, 1); // 重用了预分配的缓冲区
-
         // 再次获取应该重用之前的缓冲区
         let _buffer2: _ = pool.get_string_buffer(100);
         let stats: _ = pool.get_stats();
         assert_eq!(stats.strings_reused, 2);
     }
-
     #[test]
     fn test_memory_stats() {
         let pool: _ = SmartMemoryPool::new(PoolConfig {
@@ -395,14 +337,11 @@ use std::collections::{HashMap, BTreeMap};
             buffer_timeout: Duration::from_secs(60),
             min_usage_threshold: 1,
         });
-
         let buffer: _ = pool.get_string_buffer(1024);
         pool.return_string_buffer(buffer);
-
         let stats: _ = pool.get_stats();
         assert!(stats.strings_allocated > 0);
     }
-
     #[test]
     fn test_gc_pressure_reduction() {
         let pool: _ = SmartMemoryPool::new(PoolConfig {
@@ -411,13 +350,11 @@ use std::collections::{HashMap, BTreeMap};
             buffer_timeout: Duration::from_secs(60),
             min_usage_threshold: 1,
         });
-
         // 执行几次分配和归还
         for _ in 0..5 {
             let buffer: _ = pool.get_string_buffer(100);
             pool.return_string_buffer(buffer);
         }
-
         let reduction: _ = pool.calculate_gc_pressure_reduction();
         assert!(reduction >= 0.0);
     }

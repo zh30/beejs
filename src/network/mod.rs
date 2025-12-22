@@ -2,7 +2,6 @@
 //! Stage 30.3: 网络 I/O 零拷贝优化
 //!
 //! 提供高性能网络 I/O 功能，包括 epoll 事件驱动、零拷贝传输、批处理等
-
 pub mod epoll_manager;
 pub mod zero_copy_io;
 pub mod batch_processor;
@@ -17,29 +16,23 @@ pub mod http2_server;  // HTTP/2 服务器
 pub mod http3_server;  // HTTP/3 服务器
 pub mod zero_copy;  // Stage 39.0: 零拷贝 I/O 优化
 pub mod memory_mapper;  // Stage 39.0: 内存映射管理器
-
 // Stage 92 Phase 3: 网络 I/O 极致优化
 pub mod zero_copy_network;
 pub mod batch_io;
 pub mod async_zero_copy;
 pub mod network_buffer;
 pub mod io_uring;
-
 // Stage 93 Phase 1.3: 网络极致优化
 pub mod stage93_intelligent_prefetch;
 pub mod stage93_network_topology;
-
 // 重新导出主要类型
 pub use batch_processor::BatchProcessor;
 pub use buffer_pool::NetworkBufferPool;
 pub use connection_pool::ConnectionPool;
-
 // 扩展类型
 pub use http3_server::Http3Server;
-
 // 网络缓冲区和统计类型
 pub use statistics::NetworkIoStatistics;
-
 // Stage 92 Phase 3: 导出优化模块
 pub use zero_copy_network::{
     ZeroCopySocket, ZeroCopyListener, ZeroCopyStream,
@@ -61,7 +54,6 @@ pub use io_uring::{
     IoUringEngine, UringSubmission, UringCompletion,
     UringConfig, UringStats
 };
-
 // Stage 93 Phase 1.3: 导出优化组件
 pub use stage93_intelligent_prefetch::{
     Stage93IntelligentPrefetcher, PrefetchConfig, PrefetchStats,
@@ -71,11 +63,9 @@ pub use stage93_network_topology::{
     Stage93TopologyDiscoverer, TopologyConfig, NetworkTopology,
     NetworkNode, NetworkPath, NodeType
 };
-
 use std::time::Duration;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 网络配置
 #[derive(Debug, Clone)]
 pub struct NetworkConfig {
@@ -96,7 +86,6 @@ pub struct NetworkConfig {
     /// UDP 缓冲区大小
     pub udp_buffer_size: usize,
 }
-
 impl Default for NetworkConfig {
     fn default() -> Self {
         Self {
@@ -111,7 +100,6 @@ impl Default for NetworkConfig {
         }
     }
 }
-
 /// 网络统计信息
 #[derive(Debug, Clone)]
 pub struct NetworkStats {
@@ -132,7 +120,6 @@ pub struct NetworkStats {
     /// 内存使用 (字节)
     pub memory_usage: usize,
 }
-
 /// 网络事件类型
 #[derive(Debug, Clone, PartialEq)]
 pub enum NetworkEvent {
@@ -145,37 +132,29 @@ pub enum NetworkEvent {
     /// 错误
     Error(String),
 }
-
 /// 网络错误类型
 #[derive(Debug, thiserror::Error)]
 pub enum NetworkError {
     #[error("I/O 错误: {0}")]
     Io(#[from] std::io::Error),
-
     #[error("超时错误")]
     Timeout,
-
     #[error("连接错误: {0}")]
     Connection(String),
-
     #[error("协议错误: {0}")]
     Protocol(String),
-
     #[error("资源不足")]
     ResourceExhausted,
 }
-
 /// 网络事件处理程序
 pub trait NetworkEventHandler: Send + Sync {
     /// 处理网络事件
     fn handle_event(&self, event: NetworkEvent) -> Result<(), NetworkError>;
 }
-
 /// 网络性能监控器
 pub struct NetworkMonitor {
     stats: std::sync::Arc<std::sync::Mutex<NetworkStats>>,
 }
-
 impl NetworkMonitor {
     pub fn new() -> Self {
         Self {
@@ -191,20 +170,17 @@ impl NetworkMonitor {
             })),
         }
     }
-
     /// 更新统计信息
     pub fn update_stats(&self, updater: fn(&mut NetworkStats)) {
         if let Ok(mut stats) = self.stats.lock() {
             updater(&mut stats);
         }
     }
-
     /// 获取统计信息快照
     pub fn get_stats_snapshot(&self) -> NetworkStats {
         self.stats.lock().unwrap().clone()
     }
 }
-
 impl Default for NetworkMonitor {
     fn default() -> Self {
         Self::new()

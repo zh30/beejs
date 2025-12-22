@@ -4,14 +4,11 @@
 //!
 //! 该模块提供了高性能的零拷贝数据传输功能，通过 sendfile 和 splice 系统调用
 //! 实现文件到网络套接字的零拷贝传输，最小化数据在内核空间和用户空间之间的拷贝。
-
 use std::fs::File;
 use std::io::{self, Write, Seek};use std::os::unix::io::{AsRawFd, RawFd};use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-
 use crate::network::sendfile::SendFile;
 use crate::network::splice::Splice;
-
 /// 零拷贝发送方向
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ZeroCopyDirection {
@@ -22,7 +19,6 @@ pub enum ZeroCopyDirection {
     /// 网络套接字到文件
     SocketToFile,
 }
-
 /// 零拷贝传输配置
 #[derive(Debug, Clone)]
 pub struct ZeroCopySenderConfig {
@@ -37,7 +33,6 @@ pub struct ZeroCopySenderConfig {
     /// 压缩级别 (0-9)
     pub compression_level: u8,
 }
-
 impl Default for ZeroCopySenderConfig {
     fn default() -> Self {
         Self {
@@ -49,7 +44,6 @@ impl Default for ZeroCopySenderConfig {
         }
     }
 }
-
 /// 零拷贝传输统计信息
 #[derive(Debug, Clone, Default)]
 pub struct ZeroCopySenderStats {
@@ -72,7 +66,6 @@ pub struct ZeroCopySenderStats {
     /// 最后传输时间
     pub last_transfer: Option<Instant>,
 }
-
 impl std::fmt::Display for ZeroCopySenderStats {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f,
@@ -89,7 +82,6 @@ impl std::fmt::Display for ZeroCopySenderStats {
         )
     }
 }
-
 /// 零拷贝发送器
 ///
 /// 该结构体统一了 sendfile 和 splice 的接口，提供：
@@ -110,7 +102,6 @@ pub struct ZeroCopySender {
     /// 当前传输位置
     current_pos: u64,
 }
-
 impl ZeroCopySender {
     /// 创建新的零拷贝发送器
     ///
@@ -122,7 +113,6 @@ impl ZeroCopySender {
     pub fn new(config: Option<ZeroCopySenderConfig>) -> io::Result<Self> {
         let config: _ = config.unwrap_or_default();
         let splice: _ = Splice::new();
-
         Ok(Self {
             config,
             stats: Arc::new(Mutex::new(ZeroCopySenderStats::default())),
@@ -131,7 +121,6 @@ impl ZeroCopySender {
             current_pos: 0,
         })
     }
-
     /// 从文件路径创建零拷贝发送器
     ///
     /// # 参数
@@ -146,7 +135,6 @@ impl ZeroCopySender {
         sender.sendfile = Some(SendFile::new(file)?);
         Ok(sender)
     }
-
     /// 零拷贝传输文件到网络套接字
     ///
     /// 使用 sendfile 系统调用实现真正的零拷贝传输
@@ -164,7 +152,6 @@ impl ZeroCopySender {
     ) -> io::Result<u64> {
         let start_time: _ = Instant::now();
         let mut total_sent = 0u64;
-
         // 确保 sendfile 已初始化
         if self.sendfile.is_none() {
             return Err(io::Error::new(
@@ -172,21 +159,16 @@ impl ZeroCopySender {
                 "sendfile not initialized",
             ));
         }
-
         let sendfile: _ = self.sendfile.as_mut().unwrap();
-
         // 设置起始位置
         sendfile.current_pos = self.current_pos;
-
         // 执行零拷贝传输
         match sendfile.send_to(socket, max_bytes) {
             Ok(bytes_sent) => {
                 total_sent = bytes_sent;
                 self.current_pos += bytes_sent;
-
                 // 更新统计信息
                 self.update_stats_on_success(bytes_sent, &start_time);
-
                 println!("✅ 零拷贝传输成功: {} bytes", bytes_sent);
                 Ok(bytes_sent)
             }
@@ -197,7 +179,6 @@ impl ZeroCopySender {
             }
         }
     }
-
     /// 零拷贝传输管道数据到网络套接字
     ///
     /// 使用 splice 系统调用实现管道到套接字的零拷贝传输
@@ -216,9 +197,7 @@ impl ZeroCopySender {
         max_bytes: usize,
     ) -> io::Result<u64> {
         let start_time: _ = Instant::now();
-
         let out_fd: _ = socket.as_raw_fd();
-
         // 使用 splice 进行零拷贝传输
         match self.splice.pipe_to_fd(pipe, out_fd, max_bytes) {
             Ok(bytes_sent) => {
@@ -233,7 +212,6 @@ impl ZeroCopySender {
             }
         }
     }
-
     /// 设置文件位置
     ///
     /// # 参数
@@ -244,7 +222,6 @@ impl ZeroCopySender {
             sendfile.current_pos = pos;
         }
     }
-
     /// 获取当前文件位置
     ///
     /// # 返回值
@@ -252,19 +229,16 @@ impl ZeroCopySender {
     pub fn position(&self) -> u64 {
         self.current_pos
     }
-
     /// 重置传输状态
     pub fn reset(&mut self) {
         self.current_pos = 0;
         if let Some(sendfile) = &mut self.sendfile {
             sendfile.reset();
         }
-
         // 重置统计信息
         let mut stats = self.stats.lock().unwrap();
         *stats = ZeroCopySenderStats::default();
     }
-
     /// 获取传输统计信息
     ///
     /// # 返回值
@@ -272,7 +246,6 @@ impl ZeroCopySender {
     pub fn get_stats(&self) -> ZeroCopySenderStats {
         self.stats.lock().unwrap().clone()
     }
-
     /// 计算传输进度百分比
     ///
     /// # 返回值
@@ -286,7 +259,6 @@ impl ZeroCopySender {
         }
         0.0
     }
-
     /// 获取传输速度 (bytes/sec)
     ///
     /// # 返回值
@@ -295,7 +267,6 @@ impl ZeroCopySender {
         let stats: _ = self.stats.lock().unwrap();
         stats.avg_speed
     }
-
     /// 检查是否可以继续传输
     ///
     /// # 返回值
@@ -307,28 +278,22 @@ impl ZeroCopySender {
             false
         }
     }
-
     /// 更新成功传输的统计信息
     fn update_stats_on_success(&self, bytes: u64, start_time: &Instant) {
         let mut stats = self.stats.lock().unwrap();
-
         stats.total_bytes += bytes;
         stats.success_count += 1;
         stats.last_transfer = Some(Instant::now());
-
         let elapsed: _ = start_time.elapsed();
         stats.total_duration += elapsed;
-
         if elapsed.as_secs_f64() > 0.0 {
             let current_speed: _ = bytes as f64 / elapsed.as_secs_f64();
             stats.avg_speed = (stats.avg_speed * (stats.success_count - 1) as f64 + current_speed)
                 / stats.success_count as f64;
-
             if current_speed > stats.peak_speed {
                 stats.peak_speed = current_speed;
             }
         }
-
         // 增加 sendfile 或 splice 调用计数
         if self.sendfile.is_some() {
             stats.sendfile_count += 1;
@@ -336,7 +301,6 @@ impl ZeroCopySender {
             stats.splice_count += 1;
         }
     }
-
     /// 更新失败传输的统计信息
     fn update_stats_on_error(&self, start_time: &Instant) {
         let mut stats = self.stats.lock().unwrap();
@@ -344,33 +308,28 @@ impl ZeroCopySender {
         stats.total_duration += start_time.elapsed();
     }
 }
-
 impl Default for ZeroCopySender {
     fn default() -> Self {
         Self::new(None).expect("Failed to create default ZeroCopySender")
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Cursor;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     /// 测试创建零拷贝发送器
     #[test]
     fn test_zero_copy_sender_creation() {
         let config: _ = ZeroCopySenderConfig::default();
         let sender: _ = ZeroCopySender::new(Some(config)).expect("创建发送器失败");
-
         let stats: _ = sender.get_stats();
         assert_eq!(stats.total_bytes, 0);
         assert_eq!(stats.success_count, 0);
         assert_eq!(stats.error_count, 0);
         println!("✅ 测试通过: 零拷贝发送器创建");
     }
-
     /// 测试文件位置设置
     #[test]
     fn test_position_setting() {
@@ -379,7 +338,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(sender.position(), 1024);
         println!("✅ 测试通过: 文件位置设置");
     }
-
     /// 测试进度计算
     #[test]
     fn test_progress_calculation() {
@@ -387,37 +345,28 @@ use std::collections::{HashMap, BTreeMap};
         let test_file_path: _ = "/tmp/beejs_zero_copy_test.bin";
         let test_data: _ = vec![42u8; 1024];
         std::fs::write(test_file_path, &test_data).expect("写入测试文件失败");
-
         let mut sender =
             ZeroCopySender::from_file(test_file_path, None).expect("创建发送器失败");
-
         // 设置位置为文件中间
         sender.set_position(512);
         let progress: _ = sender.progress();
-
         assert!(progress > 0.0 && progress < 100.0);
         println!("进度: {:.1}%", progress);
-
         // 清理
         std::fs::remove_file(test_file_path).ok();
-
         println!("✅ 测试通过: 进度计算");
     }
-
     /// 测试传输统计
     #[test]
     fn test_transfer_stats() {
         let sender: _ = ZeroCopySender::new(None).expect("创建发送器失败");
-
         // 模拟成功传输
         let start_time: _ = Instant::now();
         sender.update_stats_on_success(1024, &start_time);
-
         let stats: _ = sender.get_stats();
         assert_eq!(stats.total_bytes, 1024);
         assert_eq!(stats.success_count, 1);
         assert_eq!(stats.error_count, 0);
-
         println!("✅ 测试通过: 传输统计");
     }
 }

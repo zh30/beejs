@@ -1,13 +1,11 @@
 //! 智能调度器
 //! AI 驱动的任务调度系统，实现动态负载均衡和预测性资源分配
-
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::sync::{RwLock, mpsc};
 use serde::{Deserialize, Serialize};
 use crate::ai::ai_performance_engine::{PerformanceMetrics, AiPerformanceEngine, AiPerformanceEngineConfig};
-
 /// 任务
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -28,7 +26,6 @@ pub struct Task {
     /// 依赖任务
     pub dependencies: Vec<String>,
 }
-
 /// 任务类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TaskType {
@@ -43,7 +40,6 @@ pub enum TaskType {
     /// 混合型
     Mixed,
 }
-
 /// 资源需求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceRequirements {
@@ -54,7 +50,6 @@ pub struct ResourceRequirements {
     /// 并发度
     pub concurrency: u32,
 }
-
 /// 调度决策
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchedulingDecision {
@@ -69,7 +64,6 @@ pub struct SchedulingDecision {
     /// 分配的资源
     pub allocated_resources: ResourceAllocation,
 }
-
 /// 资源分配
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceAllocation {
@@ -80,7 +74,6 @@ pub struct ResourceAllocation {
     /// 线程数
     pub thread_count: u32,
 }
-
 /// 工作线程状态
 #[derive(Debug, Clone)]
 pub struct WorkerState {
@@ -99,7 +92,6 @@ pub struct WorkerState {
     /// 最后活动时间
     pub last_active: Instant,
 }
-
 /// 智能调度器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IntelligentSchedulerConfig {
@@ -120,7 +112,6 @@ pub struct IntelligentSchedulerConfig {
     /// 任务超时时间 (ms)
     pub task_timeout_ms: u64,
 }
-
 impl Default for IntelligentSchedulerConfig {
     fn default() -> Self {
         Self {
@@ -135,7 +126,6 @@ impl Default for IntelligentSchedulerConfig {
         }
     }
 }
-
 /// 智能调度器
 pub struct IntelligentScheduler {
     /// 配置
@@ -155,7 +145,6 @@ pub struct IntelligentScheduler {
     /// 调度统计
     stats: Arc<Mutex<SchedulerStats>>,
 }
-
 /// 调度统计
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SchedulerStats {
@@ -174,7 +163,6 @@ pub struct SchedulerStats {
     /// 自动扩缩容次数
     pub auto_scaling_events: u64,
 }
-
 impl Default for SchedulerStats {
     fn default() -> Self {
         Self {
@@ -188,7 +176,6 @@ impl Default for SchedulerStats {
         }
     }
 }
-
 impl IntelligentScheduler {
     /// 创建新的智能调度器
     pub fn new(
@@ -196,7 +183,6 @@ impl IntelligentScheduler {
         ai_config: AiPerformanceEngineConfig,
     ) -> Self {
         let (task_completion_tx, task_completion_rx) = mpsc::unbounded_channel();
-
         // 初始化工作线程
         let mut workers = Vec::with_capacity(config.worker_count);
         for i in 0..config.worker_count {
@@ -210,7 +196,6 @@ impl IntelligentScheduler {
                 last_active: std::time::Instant::now(),
             });
         }
-
         Self {
             config: config.clone(),
             ai_engine: Arc::new(AiPerformanceEngine::new(ai_config)),
@@ -222,33 +207,25 @@ impl IntelligentScheduler {
             stats: Arc::new(Mutex::new(SchedulerStats::default())),
         }
     }
-
     /// 提交任务
     pub async fn submit_task(&self, task: Task) -> Result<(), Box<dyn std::error::Error>> {
         let mut queue = self.task_queue.write().await;
-
         if queue.len() >= self.config.max_queue_length {
             return Err("任务队列已满".into());
         }
-
         queue.push_back(task.clone());
         println!("任务已提交: {}, 队列长度: {}", task.id, queue.len());
-
         // 尝试立即调度
         self.schedule_tasks().await;
-
         Ok(())
     }
-
     /// 调度任务
     pub async fn schedule_tasks(&self) {
         let mut queue = self.task_queue.write().await;
         let mut workers = self.workers.write().await;
-
         if queue.is_empty() {
             return;
         }
-
         // 使用 AI 预测最佳调度策略
         let ai_prediction: _ = self.ai_engine.predict_performance().await.unwrap_or_else(|_| {
             // 如果预测失败，使用默认预测
@@ -260,22 +237,18 @@ impl IntelligentScheduler {
                 optimization_suggestions: Vec::new(),
             }
         });
-
         // 按优先级排序队列
         let mut tasks: Vec<Task> = queue.drain(..).collect();
         tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
-
         // 贪心调度算法
         for task in tasks {
             if let Some(worker_idx) = self.select_best_worker(&workers, &task, &ai_prediction).await {
                 // 分配任务
                 let decision: _ = self.create_scheduling_decision(&task, worker_idx, &workers[worker_idx]);
-
                 // 更新工作线程状态
                 workers[worker_idx].current_load += self.calculate_task_load(&task);
                 workers[worker_idx].active_tasks += 1;
                 workers[worker_idx].last_active = std::time::Instant::now();
-
                 // 记录调度决策
                 {
                     let mut history = self.decision_history.write().await;
@@ -284,15 +257,12 @@ impl IntelligentScheduler {
                         history.pop_front();
                     }
                 }
-
                 // 更新统计
                 {
                     let mut stats = self.stats.lock().unwrap();
                     stats.total_scheduled += 1;
                 }
-
                 println!("任务 {} 已调度到工作线程 {}", task.id, worker_idx);
-
                 // 模拟异步任务执行
                 let completion_tx = self.task_completion_tx.clone();
                 let _worker_id = worker_idx;
@@ -307,7 +277,6 @@ impl IntelligentScheduler {
             }
         }
     }
-
     /// 选择最佳工作线程
     async fn select_best_worker(
         &self,
@@ -317,11 +286,9 @@ impl IntelligentScheduler {
     ) -> Option<usize> {
         let mut best_worker = None;
         let mut best_score = f64::MIN;
-
         for (idx, worker) in workers.iter().enumerate() {
             // 计算负载分数
             let load_score: _ = 1.0 - worker.current_load;
-
             // 计算资源匹配分数
             let resource_score: _ = match task.task_type {
                 TaskType::CpuIntensive => 1.0 - (worker.cpu_usage / 100.0),
@@ -330,19 +297,15 @@ impl IntelligentScheduler {
                 TaskType::NetworkIntensive => 0.7,
                 TaskType::Mixed => 0.5,
             };
-
             // AI 预测影响
             let ai_score: _ = ai_prediction.confidence;
-
             // 综合评分
             let score: _ = load_score * 0.4 + resource_score * 0.4 + ai_score * 0.2;
-
             if score > best_score {
                 best_score = score;
                 best_worker = Some(idx);
             }
         }
-
         // 检查是否超过负载阈值
         if let Some(idx) = best_worker {
             if workers[idx].current_load < self.config.load_balance_threshold {
@@ -354,7 +317,6 @@ impl IntelligentScheduler {
             None
         }
     }
-
     /// 创建调度决策
     fn create_scheduling_decision(
         &self,
@@ -365,7 +327,6 @@ impl IntelligentScheduler {
         let now: _ = chrono::Utc::now().timestamp() as u64;
         let estimated_start_time: _ = now;
         let estimated_completion_time: _ = now + task.estimated_duration as u64;
-
         SchedulingDecision {
             task_id: task.id.clone(),
             assigned_worker: worker_idx,
@@ -378,7 +339,6 @@ impl IntelligentScheduler {
             },
         }
     }
-
     /// 计算任务负载
     fn calculate_task_load(&self, task: &Task) -> f64 {
         match task.task_type {
@@ -389,11 +349,9 @@ impl IntelligentScheduler {
             TaskType::Mixed => 0.7,
         }
     }
-
     /// 处理任务完成
     pub async fn process_task_completions(&self) {
         let mut completion_rx = self.task_completion_rx.lock().unwrap();
-
         while let Ok((task_id, result)) = completion_rx.try_recv() {
             // 更新工作线程状态
             {
@@ -404,7 +362,6 @@ impl IntelligentScheduler {
                     }
                 }
             }
-
             // 更新统计
             {
                 let mut stats = self.stats.lock().unwrap();
@@ -413,22 +370,17 @@ impl IntelligentScheduler {
                     Err(_) => stats.timeout_tasks += 1,
                 }
             }
-
             println!("任务完成: {}", task_id);
         }
     }
-
     /// 自动扩缩容
     pub async fn auto_scaling(&self) {
         let workers: _ = self.workers.read().await;
         let queue: _ = self.task_queue.read().await;
-
         let avg_load: f64 = workers.iter().map(|w| w.current_load).sum::<f64>() / workers.len() as f64;
         let queue_ratio: _ = queue.len() as f64 / self.config.max_queue_length as f64;
-
         drop(workers);
         drop(queue);
-
         // 扩容条件：队列长度超过 80% 或平均负载超过 80%
         if (queue_ratio > 0.8 || avg_load > 0.8) && self.should_scale_up().await {
             self.scale_up().await;
@@ -438,24 +390,20 @@ impl IntelligentScheduler {
             self.scale_down().await;
         }
     }
-
     /// 判断是否可以扩容
     async fn should_scale_up(&self) -> bool {
         let workers: _ = self.workers.read().await;
         workers.len() < self.config.max_workers
     }
-
     /// 判断是否可以缩容
     async fn should_scale_down(&self) -> bool {
         let workers: _ = self.workers.read().await;
         workers.len() > self.config.min_workers
     }
-
     /// 扩容
     async fn scale_up(&self) {
         let mut workers = self.workers.write().await;
         let new_worker_id: _ = workers.len();
-
         workers.push(WorkerState {
             id: new_worker_id,
             current_load: 0.0,
@@ -465,19 +413,15 @@ impl IntelligentScheduler {
             avg_task_duration: 0,
             last_active: std::time::Instant::now(),
         });
-
         {
             let mut stats = self.stats.lock().unwrap();
             stats.auto_scaling_events += 1;
         }
-
         println!("扩容: 添加工作线程 {}", new_worker_id);
     }
-
     /// 缩容
     async fn scale_down(&self) {
         let mut workers = self.workers.write().await;
-
         // 找到负载最低的工作线程
         let min_load_idx: _ = workers
             .iter()
@@ -485,43 +429,34 @@ impl IntelligentScheduler {
             .min_by(|(_, a), (_, b)| a.current_load.partial_cmp(&b.current_load).unwrap())
             .map(|(idx, _)| idx)
             .unwrap();
-
         workers.remove(min_load_idx);
-
         {
             let mut stats = self.stats.lock().unwrap();
             stats.auto_scaling_events += 1;
         }
-
         println!("缩容: 移除工作线程 {}", min_load_idx);
     }
-
     /// 获取调度统计
     pub fn get_stats(&self) -> SchedulerStats {
         self.stats.lock().unwrap().clone()
     }
-
     /// 获取队列长度
     pub async fn get_queue_length(&self) -> usize {
         let queue: _ = self.task_queue.read().await;
         queue.len()
     }
-
     /// 获取工作线程数量
     pub async fn get_worker_count(&self) -> usize {
         let workers: _ = self.workers.read().await;
         workers.len()
     }
-
     /// 启动调度器后台任务
     pub fn start_background_tasks(self: Arc<Self>) {
         // TODO: 修复异步任务的 Send 问题
         let _self_clone: _ = Arc::clone(self);
-
         // tokio::spawn(async move {
         //     let scheduler1: _ = Arc::clone(scheduler);
         //     let scheduler2: _ = Arc::clone(scheduler);
-
         //     // 任务完成处理
         //     tokio::spawn(async move {
         //         let scheduler: _ = Arc::clone(scheduler1);
@@ -530,7 +465,6 @@ impl IntelligentScheduler {
         //             tokio::time::sleep(Duration::from_millis(100)).await;
         //         }
         //     });
-
         //     // 自动扩缩容
         //     tokio::spawn(async move {
         //         let scheduler: _ = Arc::clone(scheduler2);
@@ -542,19 +476,16 @@ impl IntelligentScheduler {
         // });
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_submit_and_schedule_task() {
         let config = IntelligentSchedulerConfig::default();
         let ai_config = AiPerformanceEngineConfig::default();
         let scheduler = Arc::new(Mutex::new(IntelligentScheduler::new(config, ai_config)));
-
         // 提交任务
         let task = Task {
             id: "task-1".to_string(),
@@ -570,20 +501,15 @@ use std::collections::{HashMap, BTreeMap};
             deadline: None,
             dependencies: Vec::new(),
         };
-
         scheduler.submit_task(task).await.unwrap();
-
         // 检查队列长度
         let queue_length: _ = scheduler.get_queue_length().await;
         assert!(queue_length > 0);
-
         // 启动后台任务 (克隆一个引用)
         let scheduler_clone: _ = Arc::clone(scheduler);
         scheduler_clone.start_background_tasks();
-
         // 等待任务完成
         tokio::time::sleep(Duration::from_millis(200)).await;
-
         // 检查统计
         let stats: _ = scheduler.get_stats();
         println!("调度统计: {:?}", stats);

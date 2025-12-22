@@ -1,52 +1,38 @@
 //! Stage 89 Phase 2: 统一错误处理类型定义
 //! 提供完整的错误分类、上下文信息和恢复建议
-
 use std::collections::HashMap;
 use std::fmt;
 use thiserror::Error;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 错误类型枚举 - 统一所有可能的错误
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum BeejsError {
     #[error("V8 Error: {0}")]
     V8Error(String),
-
     #[error("JavaScript Execution Error: {0}")]
     JsExecutionError(String),
-
     #[error("Multi-language Error: {0}")]
     MultiLanguageError(String),
-
     #[error("Platform Error: {0}")]
     PlatformError(String),
-
     #[error("Compilation Error: {0}")]
     CompilationError(String),
-
     #[error("Runtime Error: {0}")]
     RuntimeError(String),
-
     #[error("Security Error: {0}")]
     SecurityError(String),
-
     #[error("Performance Error: {0}")]
     PerformanceError(String),
-
     #[error("Network Error: {0}")]
     NetworkError(String),
-
     #[error("IO Error: {0}")]
     IoError(String),
-
     #[error("Configuration Error: {0}")]
     ConfigurationError(String),
-
     #[error("Resource Error: {0}")]
     ResourceError(String),
 }
-
 /// 源代码位置信息
 #[derive(Debug, Clone, PartialEq)]
 pub struct SourceLocation {
@@ -55,7 +41,6 @@ pub struct SourceLocation {
     pub column: Option<u32>,
     pub function: String,
 }
-
 impl SourceLocation {
     pub fn new(file: String, line: u32, function: String) -> Self {
         Self {
@@ -65,12 +50,10 @@ impl SourceLocation {
             function,
         }
     }
-
     pub fn with_column(mut self, column: u32) -> Self {
         self.column = Some(column);
         self
     }
-
     pub fn to_string(&self) -> String {
         if let Some(col) = self.column {
             format!("{}:{}:{}", self.file, self.line, col)
@@ -79,7 +62,6 @@ impl SourceLocation {
         }
     }
 }
-
 /// 栈帧信息
 #[derive(Debug, Clone, PartialEq)]
 pub struct StackFrame {
@@ -88,7 +70,6 @@ pub struct StackFrame {
     pub line: u32,
     pub column: Option<u32>,
 }
-
 /// 错误严重级别
 #[derive(Debug, Clone, PartialEq)]
 pub enum ErrorSeverity {
@@ -97,7 +78,6 @@ pub enum ErrorSeverity {
     High,       // 严重错误，主要功能受影响
     Critical,   // 关键错误，系统可能崩溃
 }
-
 impl fmt::Display for ErrorSeverity {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -108,7 +88,6 @@ impl fmt::Display for ErrorSeverity {
         }
     }
 }
-
 /// 错误上下文 - 提供完整的错误上下文信息
 #[derive(Debug, Clone)]
 pub struct ErrorContext {
@@ -120,7 +99,6 @@ pub struct ErrorContext {
     pub recovery_suggestions: Vec<String>,
     pub metadata: HashMap<String, String>,
 }
-
 impl ErrorContext {
     /// 创建新的错误上下文
     pub fn new(
@@ -131,7 +109,6 @@ impl ErrorContext {
     ) -> Self {
         let source_location: _ = Some(SourceLocation::new(file, line, function));
         let recovery_suggestions: _ = Self::generate_recovery_suggestions(&error_type);
-
         Self {
             error_type,
             source_location,
@@ -142,11 +119,9 @@ impl ErrorContext {
             metadata: HashMap::new(),
         }
     }
-
     /// 创建无源位置的错误上下文
     pub fn new_without_location(error_type: BeejsError) -> Self {
         let recovery_suggestions: _ = Self::generate_recovery_suggestions(&error_type);
-
         Self {
             error_type,
             source_location: None,
@@ -157,7 +132,6 @@ impl ErrorContext {
             metadata: HashMap::new(),
         }
     }
-
     /// 根据错误类型确定严重级别
     fn determine_severity(error: &BeejsError) -> ErrorSeverity {
         match error {
@@ -170,7 +144,6 @@ impl ErrorContext {
             BeejsError::ResourceError(_) => ErrorSeverity::Medium,
         }
     }
-
     /// 生成恢复建议
     fn generate_recovery_suggestions(error: &BeejsError) -> Vec<String> {
         match error {
@@ -236,28 +209,23 @@ impl ErrorContext {
             ],
         }
     }
-
     /// 添加栈帧信息
     pub fn add_stack_frame(&mut self, frame: StackFrame) {
         self.stack_trace.push(frame);
     }
-
     /// 添加元数据
     pub fn add_metadata(&mut self, key: String, value: String) {
         self.metadata.insert(key, value);
     }
-
     /// 获取恢复建议
     pub fn get_recovery_suggestions(&self) -> Vec<String> {
         self.recovery_suggestions.clone()
     }
-
     /// 获取错误持续时间
     pub fn get_duration(&self) -> std::time::Duration {
         self.timestamp.elapsed()
     }
 }
-
 impl fmt::Display for ErrorContext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Error: {} (Severity: {})", self.error_type, self.severity)?;

@@ -1,11 +1,9 @@
 //! 性能自适应优化器 - Stage 78 Phase 4
 //!
 //! 提供动态优化策略、自动调优和机器学习驱动的性能优化能力
-
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 代码特征
 #[derive(Debug, Clone)]
 pub struct CodeFeatures {
@@ -15,7 +13,6 @@ pub struct CodeFeatures {
     pub branch_count: usize,
     pub vectorization_potential: f64,
 }
-
 /// 优化策略
 #[derive(Debug, Clone)]
 pub enum OptimizationPolicy {
@@ -24,14 +21,12 @@ pub enum OptimizationPolicy {
     Balanced,
     Conservative,
 }
-
 /// 性能历史
 #[derive(Debug, Clone)]
 pub struct PerformanceHistory {
     pub records: Vec<PerformanceRecord>,
     pub max_records: usize,
 }
-
 #[derive(Debug, Clone)]
 pub struct PerformanceRecord {
     pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
@@ -39,7 +34,6 @@ pub struct PerformanceRecord {
     pub memory_usage_mb: f64,
     pub optimization_applied: String,
 }
-
 impl PerformanceHistory {
     pub fn new(max_records: usize) -> Self {
         PerformanceHistory {
@@ -47,7 +41,6 @@ impl PerformanceHistory {
             max_records,
         }
     }
-
     pub fn add_record(&mut self, record: PerformanceRecord) {
         if self.records.len() >= self.max_records {
             self.records.remove(0);
@@ -55,7 +48,6 @@ impl PerformanceHistory {
         self.records.push(record);
     }
 }
-
 /// 优化提示
 #[derive(Debug, Clone)]
 pub struct OptimizationHints {
@@ -66,14 +58,12 @@ pub struct OptimizationHints {
     pub vectorization_suggested: bool,
     pub confidence: f64,
 }
-
 /// WebAssembly 代码
 #[derive(Debug, Clone)]
 pub struct WasmCode {
     pub features: CodeFeatures,
     pub size_bytes: usize,
 }
-
 /// 优化结果
 #[derive(Debug, Clone)]
 pub struct OptimizedCode {
@@ -82,19 +72,16 @@ pub struct OptimizedCode {
     pub optimization_applied: Vec<String>,
     pub performance_improvement: f64,
 }
-
 /// 自适应优化器
 #[derive(Debug, Clone)]
 pub struct AdaptiveOptimizer {
     pub stats: OptimizerStats,
 }
-
 #[derive(Debug, Clone)]
 pub struct OptimizerStats {
     pub total_optimizations: u64,
     pub successful_optimizations: u64,
 }
-
 impl AdaptiveOptimizer {
     pub fn new() -> Self {
         AdaptiveOptimizer {
@@ -104,25 +91,19 @@ impl AdaptiveOptimizer {
             },
         }
     }
-
     pub fn auto_tune(&self, code: &WasmCode) -> OptimizedCode {
         let mut optimizations = Vec::new();
         let features: _ = &code.features;
-
         if features.vectorization_potential > 0.7 {
             optimizations.push("SIMD Vectorization".to_string());
         }
-
         if features.loop_density > 0.5 {
             optimizations.push("Loop Unrolling".to_string());
         }
-
         if features.branch_count > features.instruction_count / 3 {
             optimizations.push("Branch Prediction".to_string());
         }
-
         let performance_improvement: _ = optimizations.len() as f64 * 10.0;
-
         OptimizedCode {
             original_size: code.size_bytes,
             optimized_size: code.size_bytes.saturating_sub(optimizations.len() * 8),
@@ -130,7 +111,6 @@ impl AdaptiveOptimizer {
             performance_improvement,
         }
     }
-
     pub fn ml_optimize(&self, features: &CodeFeatures) -> OptimizationHints {
         let recommended_policy: _ = if features.vectorization_potential > 0.7 {
             OptimizationPolicy::Performance
@@ -141,7 +121,6 @@ impl AdaptiveOptimizer {
         } else {
             OptimizationPolicy::Balanced
         };
-
         OptimizationHints {
             recommended_policy,
             simd_optimization: features.vectorization_potential > 0.6,
@@ -151,7 +130,6 @@ impl AdaptiveOptimizer {
             confidence: 0.8,
         }
     }
-
     pub fn optimize_code(&mut self, code: &WasmCode) -> Result<OptimizedCode, String> {
         let result: _ = self.auto_tune(code);
         self.stats.total_optimizations += 1;
@@ -159,7 +137,6 @@ impl AdaptiveOptimizer {
         Ok(result)
     }
 }
-
 impl Default for AdaptiveOptimizer {
     fn default() -> Self {
         Self::new()

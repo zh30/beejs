@@ -1,13 +1,11 @@
 //! Global Distribution Router
 //! Intelligent routing across global edge locations
-
 use super::cdn_provider::{CdnEndpoint, EndpointStatus, CdnProviderType};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::{Result, Context};
 use tokio::time::{Duration, Instant};
-
 /// Global Router for edge distribution
 #[derive(Debug)]
 pub struct GlobalRouter {
@@ -15,7 +13,6 @@ pub struct GlobalRouter {
     geo_mapping: Arc<RwLock<HashMap<String, String>, // IP to region mapping
     routing_rules: Arc<RwLock<Vec<RoutingRule>>>,
 }
-
 #[derive(Debug, Clone)]
 struct EdgeNode {
     id: String,
@@ -28,21 +25,18 @@ struct EdgeNode {
     current_load: f64,
     status: NodeStatus,
 }
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum NodeStatus {
     Online,
     Degraded,
     Offline,
 }
-
 #[derive(Debug, Clone)]
 struct RoutingRule {
     pattern: String,
     target_region: String,
     priority: u8,
 }
-
 impl GlobalRouter {
     /// Create a new global router
     pub fn new() -> Self {
@@ -115,21 +109,18 @@ impl GlobalRouter {
                 status: NodeStatus::Online,
             },
         ];
-
         GlobalRouter {
             edge_nodes: Arc::new(Mutex::new(default_nodes)))
             geo_mapping: Arc::new(Mutex::new(HashMap::new()))
             routing_rules: Arc::new(Mutex::new(Vec::new()))
         }
     }
-
     /// Add an edge node to the network
     pub async fn add_edge_node(&self, node: EdgeNode) -> Result<()> {
         let mut nodes = self.edge_nodes.write().await;
         nodes.push(node);
         Ok(())
     }
-
     /// Get available routes
     pub async fn get_available_routes(&self) -> Result<Vec<String> {
         let nodes: _ = self.edge_nodes.read().await;
@@ -137,15 +128,12 @@ impl GlobalRouter {
             .filter(|node| node.status == NodeStatus::Online)
             .map(|node| node.region.clone())
             .collect();
-
         Ok(routes)
     }
-
     /// Ping a region and measure latency
     pub async fn ping_region(&self, region: &str) -> Result<Duration> {
         let nodes: _ = self.edge_nodes.read().await;
         let node: _ = nodes.iter().find(|n| n.region == region);
-
         if let Some(node) = node {
             // Simulate network ping
             let start: _ = Instant::now();
@@ -155,30 +143,24 @@ impl GlobalRouter {
             Err(anyhow::anyhow!("Region not found: {}", region))
         }
     }
-
     /// Resolve domain to best edge node using Anycast DNS
     pub async fn resolve_anycast(&self, domain: &str) -> Result<Vec<String> {
         let nodes: _ = self.edge_nodes.read().await;
         let online_nodes: Vec<_> = nodes.iter()
             .filter(|node| node.status == NodeStatus::Online)
             .collect();
-
         // Return IPs of all online nodes (Anycast DNS will route to nearest)
         let ips: Vec<String> = online_nodes.iter()
             .map(|node| node.ip.clone())
             .collect();
-
         Ok(ips)
     }
-
     /// Resolve domain with geographic awareness (GeoDNS)
     pub async fn resolve_geo_aware(&self, domain: &str, client_ip: &str) -> Result<CdnEndpoint> {
         let nodes: _ = self.edge_nodes.read().await;
-
         // In real implementation, would use GeoIP database
         // For now, simulate based on client IP
         let region: _ = self.guess_region_from_ip(client_ip).await?;
-
         // Find best node in that region
         let best_node: _ = nodes.iter()
             .filter(|node| node.region == region && node.status == NodeStatus::Online)
@@ -188,7 +170,6 @@ impl GlobalRouter {
                 score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
             })
             .context("No healthy nodes in region")?;
-
         Ok(CdnEndpoint {
             id: best_node.id.clone(),
             region: best_node.region.clone(),
@@ -200,15 +181,12 @@ impl GlobalRouter {
             provider: CdnProviderType::Cloudflare,
         })
     }
-
     /// Guess region from IP address (simplified)
     async fn guess_region_from_ip(&self, client_ip: &str) -> Result<String> {
         let geo_mapping: _ = self.geo_mapping.read().await;
-
         if let Some(region) = geo_mapping.get(client_ip) {
             return Ok(region.clone());
         }
-
         // Fallback: simple heuristics based on IP ranges
         // In real implementation, use GeoIP database like MaxMind
         let region: _ = match client_ip.chars().next() {
@@ -217,21 +195,17 @@ impl GlobalRouter {
             Some('3') => "ap-southeast",
             _ => "us-west",
         };
-
         Ok(region.to_string())
     }
-
     /// Check health of all edge nodes
     pub async fn check_node_health(&self) -> Result<HashMap<String, bool> {
         let mut nodes = self.edge_nodes.write().await;
         let mut health_status = HashMap::new();
-
         for node in nodes.iter_mut() {
             // Simulate health check
             let start: _ = Instant::now();
             tokio::time::sleep(Duration::from_millis(10)).await; // Quick ping
             let elapsed: _ = start.elapsed();
-
             // Node is healthy if ping returns quickly
             if elapsed.as_millis() < 100 && node.current_load < 0.9 {
                 if node.status != NodeStatus::Online {
@@ -243,21 +217,17 @@ impl GlobalRouter {
                 health_status.insert(node.id.clone(), false);
             }
         }
-
         Ok(health_status)
     }
-
     /// Automatic failover for failed nodes
     pub async fn trigger_automatic_failover(&self, failed_node_id: &str) -> Result<String> {
         let mut nodes = self.edge_nodes.write().await;
-
         // Find the failed node and fallback in one immutable pass
         let (failed_node_region, fallback_id) = {
             let nodes_ref: _ = &*nodes;
             let failed_node: _ = nodes_ref.iter()
                 .find(|n| n.id == failed_node_id)
                 .context("Failed node not found")?;
-
             // Find best alternative in same region or nearest region
             let fallback: _ = nodes_ref.iter()
                 .filter(|n| n.id != failed_node_id && n.status == NodeStatus::Online)
@@ -273,24 +243,18 @@ impl GlobalRouter {
                     }
                 })
                 .context("No fallback node available")?;
-
             (failed_node.region.clone(), fallback.id.clone())
         };
-
         // Update failed node status
         if let Some(node) = nodes.iter_mut().find(|n| n.id == failed_node_id) {
             node.status = NodeStatus::Offline;
         }
-
         println!("Automatic failover: {} -> {}", failed_node_id, fallback_id);
-
         Ok(fallback_id)
     }
-
     /// Get network topology
     pub async fn get_topology(&self) -> Result<NetworkTopology> {
         let nodes: _ = self.edge_nodes.read().await;
-
         let topology: _ = NetworkTopology {
             total_nodes: nodes.len(),
             online_nodes: nodes.iter().filter(|n| n.status == NodeStatus::Online).count(),
@@ -298,21 +262,16 @@ impl GlobalRouter {
             offline_nodes: nodes.iter().filter(|n| n.status == NodeStatus::Offline).count(),
             regions: nodes.iter().map(|n| n.region.clone()).collect(),
         };
-
         Ok(topology)
     }
-
     /// Update node load
     pub async fn update_node_load(&self, node_id: &str, load: f64) -> Result<()> {
         let mut nodes = self.edge_nodes.write().await;
-
         if let Some(node) = nodes.iter_mut().find(|n| n.id == node_id) {
             node.current_load = load;
         }
-
         Ok(())
     }
-
     /// Intelligent routing algorithm - core Stage 33.0 feature
     /// Routes request to optimal edge node based on:
     /// - Geographic proximity
@@ -322,16 +281,13 @@ impl GlobalRouter {
     /// - Capacity utilization
     pub async fn route_request(&self, client_latitude: f64, client_longitude: f64) -> Result<RouteResult> {
         let nodes: _ = self.edge_nodes.read().await;
-
         // Filter healthy nodes
         let healthy_nodes: Vec<_> = nodes.iter()
             .filter(|node| node.status == NodeStatus::Online && node.current_load < 0.95)
             .collect();
-
         if healthy_nodes.is_empty() {
             return Err(anyhow::anyhow!("No healthy edge nodes available"));
         }
-
         // Calculate routing score for each node
         let mut scored_nodes: Vec<(f64, &EdgeNode)> = healthy_nodes.iter()
             .map(|node| {
@@ -344,7 +300,6 @@ impl GlobalRouter {
                 let latency_score: _ = node.latency;
                 let load_score: _ = node.current_load * 100.0;
                 let capacity_score: _ = (1.0 - (node.current_load / node.capacity as f64)) * 50.0;
-
                 // Weighted routing score (lower is better)
                 // 40% geographic distance, 35% latency, 20% load, 5% capacity
                 let total_score =
@@ -352,19 +307,14 @@ impl GlobalRouter {
                     latency_score * 0.35 +
                     load_score * 0.20 +
                     capacity_score * 0.05;
-
                 (total_score, *node)
             })
             .collect();
-
         // Sort by score (best first)
         scored_nodes.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
-
         let (best_score, best_node) = &scored_nodes[0];
-
         // Calculate expected latency
         let expected_latency: _ = best_node.latency + (best_node.current_load * 50.0);
-
         Ok(RouteResult {
             selected_node_id: best_node.id.clone(),
             selected_region: best_node.region.clone(),
@@ -387,48 +337,38 @@ impl GlobalRouter {
             }).collect(),
         })
     }
-
     /// Calculate geographic distance using Haversine formula
     fn calculate_geographic_distance(&self, lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
         let r: _ = 6371.0; // Earth's radius in kilometers
         let dlat: _ = (lat2 - lat1).to_radians();
         let dlon: _ = (lon2 - lon1).to_radians();
-
         let a: _ = (dlat / 2.0).sin().powi(2) +
             lat1.to_radians().cos() *
             lat2.to_radians().cos() *
             (dlon / 2.0).sin().powi(2);
-
         let c: _ = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
         r * c
     }
-
     /// Batch route requests for high-throughput scenarios
     pub async fn batch_route_requests(
         &self,
         clients: &[(f64, f64)],
     ) -> Result<Vec<RouteResult> {
         let mut results = Vec::with_capacity(clients.len());
-
         for (lat, lon) in clients {
             let route: _ = self.route_request(*lat, *lon).await?;
             results.push(route);
         }
-
         Ok(results)
     }
-
     /// Get routing statistics
     pub async fn get_routing_stats(&self) -> Result<RoutingStats> {
         let nodes: _ = self.edge_nodes.read().await;
-
         let total_capacity: u64 = nodes.iter().map(|n| n.capacity).sum();
         let total_load: f64 = nodes.iter().map(|n| n.current_load).sum();
         let avg_load: _ = if nodes.is_empty() { 0.0 } else { total_load / nodes.len() as f64 };
-
         let healthy_nodes: _ = nodes.iter().filter(|n| n.status == NodeStatus::Online).count();
         let degraded_nodes: _ = nodes.iter().filter(|n| n.status == NodeStatus::Degraded).count();
-
         Ok(RoutingStats {
             total_nodes: nodes.len(),
             healthy_nodes,
@@ -443,7 +383,6 @@ impl GlobalRouter {
         })
     }
 }
-
 /// Network topology information
 #[derive(Debug, Clone)]
 pub struct NetworkTopology {
@@ -453,7 +392,6 @@ pub struct NetworkTopology {
     pub offline_nodes: usize,
     pub regions: Vec<String>,
 }
-
 /// Result of intelligent routing
 #[derive(Debug, Clone)]
 pub struct RouteResult {
@@ -465,7 +403,6 @@ pub struct RouteResult {
     pub distance_km: f64,
     pub alternatives: Vec<AlternativeRoute>,
 }
-
 /// Alternative route for failover
 #[derive(Debug, Clone)]
 pub struct AlternativeRoute {
@@ -474,7 +411,6 @@ pub struct AlternativeRoute {
     pub routing_score: f64,
     pub expected_latency: f64,
 }
-
 /// Routing statistics
 #[derive(Debug, Clone)]
 pub struct RoutingStats {
@@ -485,14 +421,11 @@ pub struct RoutingStats {
     pub total_capacity: u64,
     pub capacity_utilization: f64,
 }
-
-
 /// Anycast DNS implementation
 #[derive(Debug)]
 pub struct AnycastDns {
     router: GlobalRouter,
 }
-
 impl AnycastDns {
     /// Create a new Anycast DNS resolver
     pub fn new() -> Self {
@@ -500,19 +433,16 @@ impl AnycastDns {
             router: GlobalRouter::new(),
         }
     }
-
     /// Resolve domain using Anycast DNS
     pub async fn resolve(&self, domain: &str) -> Result<Vec<String> {
         self.router.resolve_anycast(domain).await
     }
 }
-
 /// GeoDNS implementation
 #[derive(Debug)]
 pub struct GeoDns {
     router: GlobalRouter,
 }
-
 impl GeoDns {
     /// Create a new GeoDNS resolver
     pub fn new() -> Self {
@@ -520,26 +450,22 @@ impl GeoDns {
             router: GlobalRouter::new(),
         }
     }
-
     /// Resolve domain with geographic routing
     pub async fn resolve_with_region(&self, domain: &str, client_ip: &str) -> Result<CdnEndpoint> {
         self.router.resolve_geo_aware(domain, client_ip).await
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_global_router_initialization() {
         let router: _ = GlobalRouter::new();
         let is_initialized: _ = router.get_available_routes().await.is_ok();
         assert!(is_initialized);
     }
-
     #[tokio::test]
     async fn test_add_edge_node() {
         let router: _ = GlobalRouter::new();
@@ -554,69 +480,55 @@ use std::collections::{HashMap, BTreeMap};
             current_load: 0.0,
             status: NodeStatus::Online,
         };
-
         let result: _ = router.add_edge_node(node).await;
         assert!(result.is_ok());
     }
-
     #[tokio::test]
     async fn test_anycast_dns() {
         let anycast: _ = AnycastDns::new();
         let ips: _ = anycast.resolve("beejs-edge.com").await;
         assert!(ips.is_ok());
-
         let result: _ = ips.unwrap();
         assert!(!result.is_empty());
     }
-
     #[tokio::test]
     async fn test_geo_dns() {
         let geo_dns: _ = GeoDns::new();
         let endpoint: _ = geo_dns.resolve_with_region("beejs-edge.com", "203.0.113.1").await;
         assert!(endpoint.is_ok());
-
         let result: _ = endpoint.unwrap();
         assert!(!result.region.is_empty());
     }
-
     #[tokio::test]
     async fn test_ping_region() {
         let router: _ = GlobalRouter::new();
         let latency: _ = router.ping_region("us-west").await;
         assert!(latency.is_ok());
-
         let duration: _ = latency.unwrap();
         assert!(duration.as_millis() > 0);
     }
-
     #[tokio::test]
     async fn test_node_health_check() {
         let router: _ = GlobalRouter::new();
         let health: _ = router.check_node_health().await;
         assert!(health.is_ok());
-
         let status: _ = health.unwrap();
         assert!(!status.is_empty());
     }
-
     #[tokio::test]
     async fn test_automatic_failover() {
         let router: _ = GlobalRouter::new();
-
         // First, mark a node as online
         router.update_node_load("us-west-1", 0.5).await.unwrap();
-
         // Simulate failover
         let fallback: _ = router.trigger_automatic_failover("nonexistent-node").await;
         // Will fail because node doesn't exist, but that's ok for this test
     }
-
     #[tokio::test]
     async fn test_network_topology() {
         let router: _ = GlobalRouter::new();
         let topology: _ = router.get_topology().await;
         assert!(topology.is_ok());
-
         let topo: _ = topology.unwrap();
         assert!(topo.total_nodes > 0);
     }

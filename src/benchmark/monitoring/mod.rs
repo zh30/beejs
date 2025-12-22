@@ -1,14 +1,12 @@
 //! 性能监控模块
 //!
 //! 提供实时性能监控和仪表板功能
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use super::{BenchmarkResult, Runtime, MetricType};
-
 /// 实时监控器
 #[derive(Debug)]
 pub struct RealTimeMonitor {
@@ -17,7 +15,6 @@ pub struct RealTimeMonitor {
     /// 监控配置
     pub config: MonitorConfig,
 }
-
 impl RealTimeMonitor {
     /// 创建新的实时监控器
     pub fn new(config: MonitorConfig) -> Self {
@@ -26,15 +23,12 @@ impl RealTimeMonitor {
             config,
         }
     }
-
     /// 启动监控
     pub async fn start(&self) -> Result<(), super::BenchmarkError> {
         let metrics_collector: _ = self.metrics_collector.clone();
-
         // 启动定期指标收集
         let interval: _ = self.config.collection_interval;
         let mut interval_timer = tokio::time::interval(interval);
-
         tokio::spawn(async move {
             loop {
                 interval_timer.tick().await;
@@ -42,23 +36,19 @@ impl RealTimeMonitor {
                 collector.collect_system_metrics().await;
             }
         });
-
         Ok(())
     }
-
     /// 记录基准测试结果
     pub async fn record_benchmark_result(&self, result: &BenchmarkResult) {
         let mut collector = self.metrics_collector.write().await;
         collector.record_benchmark_result(result).await;
     }
-
     /// 获取当前指标
     pub async fn get_current_metrics(&self) -> CurrentMetrics {
         let collector: _ = self.metrics_collector.read().await;
         collector.get_current_metrics().await
     }
 }
-
 /// 监控配置
 #[derive(Debug, Clone)]
 pub struct MonitorConfig {
@@ -69,7 +59,6 @@ pub struct MonitorConfig {
     /// 启用详细指标
     pub enable_detailed_metrics: bool,
 }
-
 impl Default for MonitorConfig {
     fn default() -> Self {
         Self {
@@ -79,32 +68,27 @@ impl Default for MonitorConfig {
         }
     }
 }
-
 impl MonitorConfig {
     /// 创建新的配置
     pub fn new() -> Self {
         Self::default()
     }
-
     /// 设置收集间隔
     pub fn collection_interval(mut self, interval: Duration) -> Self {
         self.collection_interval = interval;
         self
     }
-
     /// 设置最大历史记录数
     pub fn max_history_size(mut self, size: usize) -> Self {
         self.max_history_size = size;
         self
     }
-
     /// 启用详细指标
     pub fn enable_detailed_metrics(mut self, enable: bool) -> Self {
         self.enable_detailed_metrics = enable;
         self
     }
 }
-
 /// 指标收集器
 #[derive(Debug, Default)]
 pub struct MetricsCollector {
@@ -117,30 +101,23 @@ pub struct MetricsCollector {
     /// 收集时间
     pub last_collection: Instant,
 }
-
 impl MetricsCollector {
     /// 创建新的指标收集器
     pub fn new() -> Self {
         Self::default()
     }
-
     /// 收集系统指标
     pub async fn collect_system_metrics(&mut self) {
         // 收集 CPU 使用率
         self.system_metrics.cpu_usage = self.get_cpu_usage().await;
-
         // 收集内存使用情况
         self.system_metrics.memory_usage = self.get_memory_usage().await;
-
         // 收集磁盘 I/O
         self.system_metrics.disk_io = self.get_disk_io().await;
-
         // 收集网络 I/O
         self.system_metrics.network_io = self.get_network_io().await;
-
         self.last_collection = Instant::now();
     }
-
     /// 记录基准测试结果
     pub async fn record_benchmark_result(&mut self, result: &BenchmarkResult) {
         let metrics: _ = BenchmarkMetrics {
@@ -152,15 +129,12 @@ impl MetricsCollector {
             cpu_usage: result.metrics.cpu_usage_percent,
             timestamp: Instant::now(),
         };
-
         self.benchmark_metrics.push(metrics);
-
         // 限制历史记录大小
         if self.benchmark_metrics.len() > 1000 {
             self.benchmark_metrics.remove(0);
         }
     }
-
     /// 获取当前指标
     pub async fn get_current_metrics(&self) -> CurrentMetrics {
         CurrentMetrics {
@@ -174,13 +148,11 @@ impl MetricsCollector {
             collection_time: self.last_collection.elapsed(),
         }
     }
-
     /// 获取 CPU 使用率
     async fn get_cpu_usage(&self) -> f64 {
         // 简化实现 - 实际应该使用系统 API
         50.0 // 模拟值
     }
-
     /// 获取内存使用情况
     async fn get_memory_usage(&self) -> MemoryUsage {
         MemoryUsage {
@@ -189,7 +161,6 @@ impl MetricsCollector {
             available: 4 * 1024 * 1024 * 1024, // 4GB
         }
     }
-
     /// 获取磁盘 I/O
     async fn get_disk_io(&self) -> DiskIo {
         DiskIo {
@@ -199,7 +170,6 @@ impl MetricsCollector {
             write_ops: 50,
         }
     }
-
     /// 获取网络 I/O
     async fn get_network_io(&self) -> NetworkIo {
         NetworkIo {
@@ -210,7 +180,6 @@ impl MetricsCollector {
         }
     }
 }
-
 /// 当前指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CurrentMetrics {
@@ -221,7 +190,6 @@ pub struct CurrentMetrics {
     /// 收集时间
     pub collection_time: Duration,
 }
-
 /// 系统指标
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SystemMetrics {
@@ -240,7 +208,6 @@ pub struct SystemMetrics {
     /// 线程数
     pub thread_count: u32,
 }
-
 /// 内存使用情况
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryUsage {
@@ -251,7 +218,6 @@ pub struct MemoryUsage {
     /// 可用内存 (字节)
     pub available: u64,
 }
-
 /// 磁盘 I/O
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DiskIo {
@@ -264,7 +230,6 @@ pub struct DiskIo {
     /// 写入操作数
     pub write_ops: u64,
 }
-
 /// 网络 I/O
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkIo {
@@ -277,7 +242,6 @@ pub struct NetworkIo {
     /// 接收包数
     pub packets_received: u64,
 }
-
 /// 基准测试指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkMetrics {
@@ -296,7 +260,6 @@ pub struct BenchmarkMetrics {
     /// 时间戳
     pub timestamp: Instant,
 }
-
 /// 历史指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoricalMetrics {
@@ -307,14 +270,12 @@ pub struct HistoricalMetrics {
     /// 基准测试指标
     pub benchmark_metrics: Vec<BenchmarkMetrics>,
 }
-
 /// 性能仪表板
 #[derive(Debug)]
 pub struct PerformanceDashboard {
     /// 监控器
     pub monitor: RealTimeMonitor,
 }
-
 impl PerformanceDashboard {
     /// 创建新的性能仪表板
     pub fn new(config: MonitorConfig) -> Self {
@@ -322,17 +283,14 @@ impl PerformanceDashboard {
             monitor: RealTimeMonitor::new(config),
         }
     }
-
     /// 启动仪表板
     pub async fn start(&self) -> Result<(), super::BenchmarkError> {
         self.monitor.start().await?;
         Ok(())
     }
-
     /// 生成 HTML 报告
     pub async fn generate_html_report(&self) -> Result<String, super::BenchmarkError> {
         let metrics: _ = self.monitor.get_current_metrics().await;
-
         let html: _ = format!(r#"
 <!DOCTYPE html>
 <html>
@@ -347,22 +305,18 @@ impl PerformanceDashboard {
 </head>
 <body>
     <h1>Beejs Performance Dashboard</h1>
-
     <div class="metric">
         <h3>CPU Usage</h3>
         <div class="value">{:.2}%</div>
     </div>
-
     <div class="metric">
         <h3>Memory Usage</h3>
         <div class="value">{} / {}</div>
     </div>
-
     <div class="metric">
         <h3>Collection Time</h3>
         <div class="value">{{:?}}</div>
     </div>
-
     <h2>Latest Benchmarks</h2>
     <table>
         <tr>
@@ -392,55 +346,44 @@ impl PerformanceDashboard {
                 .collect::<Vec<_>()
                 .join("\n")
         );
-
         Ok(html)
     }
 }
-
 /// 格式化字节数
 fn format_bytes(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = bytes as f64;
     let mut unit_index = 0;
-
     while size >= 1024.0 && unit_index < UNITS.len() - 1 {
         size /= 1024.0;
         unit_index += 1;
     }
-
     format!("{:.2} {}", size, UNITS[unit_index])
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::time::Duration;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_real_time_monitor() {
         let config: _ = MonitorConfig::new();
         let monitor: _ = RealTimeMonitor::new(config);
-
         // 创建测试结果
         let mut result = super::super::result::BenchmarkResult::new("test", Runtime::Beejs);
         result.add_iteration(Duration::from_millis(100));
         result.finish();
-
         // 记录结果
         monitor.record_benchmark_result(&result).await;
-
         // 获取当前指标
         let metrics: _ = monitor.get_current_metrics().await;
         println!("Metrics: {:?}", metrics);
     }
-
     #[tokio::test]
     async fn test_performance_dashboard() {
         let config: _ = MonitorConfig::new();
         let dashboard: _ = PerformanceDashboard::new(config);
-
         let html: _ = dashboard.generate_html_report().await.unwrap();
         println!("HTML Report:\n{}", html);
     }

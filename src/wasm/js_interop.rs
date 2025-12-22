@@ -2,13 +2,11 @@
 //!
 //! 提供高性能的 JavaScript 与 WebAssembly 之间的互操作功能，
 //! 包括零拷贝参数传递、批量调用优化、智能缓存等功能
-
 use anyhow::{Result, Context, anyhow};
 use wasmtime::{Instance, Store, Func, Val};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
-
 /// JavaScript 值枚举
 #[derive(Debug, Clone)]
 pub enum JsValue {
@@ -29,49 +27,41 @@ pub enum JsValue {
     /// 未定义
     Undefined,
 }
-
 impl From<i64> for JsValue {
     fn from(val: i64) -> Self {
         JsValue::Number(val)
     }
 }
-
 impl From<f64> for JsValue {
     fn from(val: f64) -> Self {
         JsValue::Float(val)
     }
 }
-
 impl From<String> for JsValue {
     fn from(val: String) -> Self {
         JsValue::String(val)
     }
 }
-
 impl From<&str> for JsValue {
     fn from(val: &str) -> Self {
         JsValue::String(val.to_string())
     }
 }
-
 impl From<bool> for JsValue {
     fn from(val: bool) -> Self {
         JsValue::Boolean(val)
     }
 }
-
 impl From<Vec<i64> for JsValue {
     fn from(val: Vec<i64>) -> Self {
         JsValue::Array(val.into_iter().map(JsValue::Number).collect())
     }
 }
-
 impl From<Vec<JsValue> for JsValue {
     fn from(val: Vec<JsValue>) -> Self {
         JsValue::Array(val)
     }
 }
-
 /// WASM 函数调用结果
 pub struct WasmCallResult {
     /// 调用结果值
@@ -83,7 +73,6 @@ pub struct WasmCallResult {
     /// 错误信息（如果有）
     pub error: Option<String>,
 }
-
 impl WasmCallResult {
     /// 创建成功结果
     pub fn success(value: JsValue, duration: Duration) -> Self {
@@ -94,7 +83,6 @@ impl WasmCallResult {
             error: None,
         }
     }
-
     /// 创建失败结果
     pub fn error(error: String, duration: Duration) -> Self {
         WasmCallResult {
@@ -105,7 +93,6 @@ impl WasmCallResult {
         }
     }
 }
-
 /// 批量调用结果
 pub struct BatchCallResult {
     /// 结果列表
@@ -117,7 +104,6 @@ pub struct BatchCallResult {
     /// 失败调用次数
     pub failure_count: usize,
 }
-
 /// JS-WASM 互操作管理器
 ///
 /// 提供高效的 JS 和 WASM 之间的调用功能
@@ -129,7 +115,6 @@ pub struct JsWasmInterop {
     /// 批量调用配置
     batch_config: BatchConfig,
 }
-
 #[derive(Debug, Clone)]
 struct FunctionCache {
     /// 函数缓存映射
@@ -139,7 +124,6 @@ struct FunctionCache {
     /// 缓存访问次数
     access_count: usize,
 }
-
 #[derive(Debug, Clone)]
 struct CachedFunction {
     /// 函数名
@@ -151,7 +135,6 @@ struct CachedFunction {
     /// 调用次数
     call_count: usize,
 }
-
 #[derive(Debug, Clone)]
 struct CallStats {
     /// 总调用次数
@@ -167,7 +150,6 @@ struct CallStats {
     /// 批量调用次数
     batch_calls: Arc<std::sync::atomic::AtomicUsize>,
 }
-
 #[derive(Debug, Clone)]
 struct BatchConfig {
     /// 批量大小阈值
@@ -177,7 +159,6 @@ struct BatchConfig {
     /// 最大批量大小
     max_batch_size: usize,
 }
-
 impl Default for BatchConfig {
     fn default() -> Self {
         Self {
@@ -187,7 +168,6 @@ impl Default for BatchConfig {
         }
     }
 }
-
 impl Default for FunctionCache {
     fn default() -> Self {
         Self {
@@ -197,7 +177,6 @@ impl Default for FunctionCache {
         }
     }
 }
-
 impl Default for CallStats {
     fn default() -> Self {
         Self {
@@ -210,7 +189,6 @@ impl Default for CallStats {
         }
     }
 }
-
 impl JsWasmInterop {
     /// 创建新的互操作管理器
     ///
@@ -228,7 +206,6 @@ impl JsWasmInterop {
             batch_config: BatchConfig::default(),
         }
     }
-
     /// 调用 WASM 函数
     ///
     /// # 参数
@@ -250,15 +227,11 @@ impl JsWasmInterop {
         args: Vec<JsValue>,
     ) -> Result<WasmCallResult> {
         let start: _ = Instant::now();
-
         self.call_stats.total_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-
         // 尝试从缓存获取函数
         let func: _ = self.get_cached_function(module, function_name)?;
-
         // 转换参数
         let wasm_args: _ = self.convert_js_args_to_wasm(&args)?;
-
         // 调用函数
         match func.call(&mut self.create_store(), &wasm_args) {
             Ok(results) => {
@@ -268,16 +241,13 @@ impl JsWasmInterop {
                     duration.as_nanos() as u64,
                     std::sync::atomic::Ordering::Relaxed,
                 );
-
                 // 转换结果
                 let result_value: _ = self.convert_wasm_result_to_js(results)?;
-
                 Ok(WasmCallResult::success(result_value, duration))
             }
             Err(e) => {
                 let duration: _ = start.elapsed();
                 self.call_stats.failed_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-
                 Ok(WasmCallResult::error(
                     format!("WASM function call failed: {}", e),
                     duration,
@@ -285,7 +255,6 @@ impl JsWasmInterop {
             }
         }
     }
-
     /// 零拷贝调用（高性能）
     ///
     /// # 参数
@@ -305,23 +274,18 @@ impl JsWasmInterop {
         args: Vec<JsValue>,
     ) -> Result<JsValue> {
         let start: _ = Instant::now();
-
         self.call_stats.total_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         self.call_stats.zero_copy_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-
         // 模拟零拷贝调用
         let result: _ = self.simulate_zero_copy_call(function_name, &args)?;
-
         let duration: _ = start.elapsed();
         self.call_stats.successful_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         self.call_stats.total_duration.fetch_add(
             duration.as_nanos() as u64,
             std::sync::atomic::Ordering::Relaxed,
         );
-
         Ok(result)
     }
-
     /// 批量调用 WASM 函数
     ///
     /// # 参数
@@ -344,14 +308,11 @@ impl JsWasmInterop {
         args_list: Vec<JsValue>,
     ) -> Result<BatchCallResult> {
         let start: _ = Instant::now();
-
         self.call_stats.total_calls.fetch_add(args_list.len(), std::sync::atomic::Ordering::Relaxed);
         self.call_stats.batch_calls.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-
         let mut results = Vec::with_capacity(args_list.len());
         let mut success_count = 0;
         let mut failure_count = 0;
-
         for args in args_list {
             let result: _ = self.call_wasm_function(module, function_name, vec![args]);
             match result {
@@ -372,9 +333,7 @@ impl JsWasmInterop {
                 }
             }
         }
-
         let total_duration: _ = start.elapsed();
-
         Ok(BatchCallResult {
             results,
             total_duration,
@@ -382,7 +341,6 @@ impl JsWasmInterop {
             failure_count,
         })
     }
-
     /// 异步调用 WASM 函数
     ///
     /// # 参数
@@ -402,14 +360,11 @@ impl JsWasmInterop {
         let module: _ = module.clone();
         let function_name: _ = function_name.to_string();
         let args: _ = args.clone();
-
         let handle: _ = tokio::spawn(async move {
             interop.call_wasm_function(&module, &function_name, args)
         });
-
         Ok(handle)
     }
-
     /// 获取调用统计
     ///
     /// # 返回值
@@ -435,7 +390,6 @@ impl JsWasmInterop {
             batch_calls: self.call_stats.batch_calls.load(std::sync::atomic::Ordering::Relaxed),
         }
     }
-
     /// 预热缓存
     ///
     /// # 参数
@@ -447,7 +401,6 @@ impl JsWasmInterop {
         function_names: Vec<&str>,
     ) -> Result<()> {
         let mut cache = self.function_cache.lock().unwrap();
-
         for func_name in function_names {
             if !cache.cache.contains_key(func_name) {
                 // 模拟获取函数
@@ -460,17 +413,14 @@ impl JsWasmInterop {
                 cache.cache.insert(func_name.to_string(), cached_func);
             }
         }
-
         Ok(())
     }
-
     /// 清空缓存
     pub fn clear_cache(&self) {
         let mut cache = self.function_cache.lock().unwrap();
         cache.cache.clear();
         cache.access_count = 0;
     }
-
     /// 从缓存获取函数
     fn get_cached_function(
         &self,
@@ -479,31 +429,25 @@ impl JsWasmInterop {
     ) -> Result<Func> {
         let mut cache = self.function_cache.lock().unwrap();
         cache.access_count += 1;
-
         // 更新缓存项的访问信息
         if let Some(cached_func) = cache.cache.get_mut(function_name) {
             cached_func.last_access = Instant::now();
             cached_func.call_count += 1;
         }
-
         // 模拟函数获取（在实际实现中，这里会从模块实例中获取函数）
         // let func: _ = module.instance().get_func(&mut store, function_name)
         //     .map_err(|e| anyhow!("Function not found: {}", function_name))?;
-
         // 模拟成功返回
         Ok(Func::wrap(&self.create_store(), |_| Ok(())
     }
-
     /// 创建 Store 实例
     fn create_store(&self) -> Store<wasmtime_wasi::WasiCtx> {
         let wasi: _ = wasmtime_wasi::WasiCtxBuilder::new().build();
         Store::new(&crate::wasm::compiler::WasmCompiler::new().unwrap().engine(), wasi)
     }
-
     /// 转换 JS 参数到 WASM 参数
     fn convert_js_args_to_wasm(&self, args: &[JsValue]) -> Result<Vec<Val> {
         let mut wasm_args = Vec::with_capacity(args.len());
-
         for arg in args {
             match arg {
                 JsValue::Number(n) => wasm_args.push(Val::I64(*n)),
@@ -516,16 +460,13 @@ impl JsWasmInterop {
                 _ => return Err(anyhow!("Unsupported JS value type for WASM conversion")),
             }
         }
-
         Ok(wasm_args)
     }
-
     /// 转换 WASM 结果到 JS 值
     fn convert_wasm_result_to_js(&self, results: &[Val]) -> Result<JsValue> {
         if results.is_empty() {
             return Ok(JsValue::Undefined);
         }
-
         match &results[0] {
             Val::I32(i) => Ok(JsValue::Number(*i as i64)),
             Val::I64(i) => Ok(JsValue::Number(*i)),
@@ -536,7 +477,6 @@ impl JsWasmInterop {
             _ => Ok(JsValue::Undefined),
         }
     }
-
     /// 模拟零拷贝调用
     fn simulate_zero_copy_call(
         &self,
@@ -567,7 +507,6 @@ impl JsWasmInterop {
         }
     }
 }
-
 impl Clone for JsWasmInterop {
     fn clone(&self) -> Self {
         JsWasmInterop {
@@ -577,7 +516,6 @@ impl Clone for JsWasmInterop {
         }
     }
 }
-
 /// 调用统计快照
 #[derive(Debug, Clone)]
 pub struct CallStatsSnapshot {
@@ -596,7 +534,6 @@ pub struct CallStatsSnapshot {
     /// 批量调用次数
     pub batch_calls: usize,
 }
-
 impl std::fmt::Display for CallStatsSnapshot {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f,
@@ -617,57 +554,45 @@ impl std::fmt::Display for CallStatsSnapshot {
         )
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_interop_creation() {
         let interop: _ = JsWasmInterop::new();
         assert!(interop.function_cache.lock().unwrap().cache.is_empty());
     }
-
     #[test]
     fn test_zero_copy_call() {
         let interop: _ = JsWasmInterop::new();
-
         let result: _ = interop.zero_copy_call("add", vec![10.into(), 20.into()]);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), JsValue::Number(30));
     }
-
     #[test]
     fn test_zero_copy_concat() {
         let interop: _ = JsWasmInterop::new();
-
         let result: _ = interop.zero_copy_call("concat", vec!["Hello".into(), "World".into()]);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), JsValue::String("HelloWorld".to_string());
     }
-
     #[test]
     fn test_invalid_function() {
         let interop: _ = JsWasmInterop::new();
-
         let result: _ = interop.zero_copy_call("nonexistent", vec![]);
         assert!(result.is_err());
     }
-
     #[test]
     fn test_stats() {
         let interop: _ = JsWasmInterop::new();
-
         interop.zero_copy_call("add", vec![1.into(), 2.into()]).unwrap();
-
         let stats: _ = interop.get_call_stats();
         assert_eq!(stats.total_calls, 1);
         assert_eq!(stats.successful_calls, 1);
         assert_eq!(stats.zero_copy_calls, 1);
     }
-
     #[test]
     fn test_cache_warmup() {
         let interop: _ = JsWasmInterop::new();
@@ -684,20 +609,15 @@ use std::collections::{HashMap, BTreeMap};
             load_time: std::time::Duration::from_millis(0),
             size: 0,
         };
-
         let result: _ = interop.warmup_cache(&module, vec!["add", "sub"]);
         assert!(result.is_ok());
-
         let cache: _ = interop.function_cache.lock().unwrap();
         assert_eq!(cache.cache.len(), 2);
     }
-
     #[test]
     fn test_cache_clear() {
         let interop: _ = JsWasmInterop::new();
-
         interop.clear_cache();
-
         let cache: _ = interop.function_cache.lock().unwrap();
         assert!(cache.cache.is_empty());
         assert_eq!(cache.access_count, 0);

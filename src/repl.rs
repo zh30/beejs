@@ -2,11 +2,9 @@
 //!
 //! This module provides an interactive shell that maintains V8 context
 //! across commands, enabling maximum performance for repeated executions.
-
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::io::{self, Write};
-
 /// REPL configuration
 #[derive(Clone)]
 pub struct ReplConfig {
@@ -23,7 +21,6 @@ pub struct ReplConfig {
     /// Maximum history size
     pub max_history: usize,
 }
-
 impl Default for ReplConfig {
     fn default() -> Self {
         Self {
@@ -36,14 +33,12 @@ impl Default for ReplConfig {
         }
     }
 }
-
 /// REPL session state
 pub struct Repl {
     config: ReplConfig,
     history: Vec<String>,
     execution_count: usize,
 }
-
 impl Repl {
     /// Create a new REPL session
     pub fn new(config: ReplConfig) -> Self {
@@ -53,28 +48,22 @@ impl Repl {
             execution_count: 0,
         }
     }
-
     /// Create with default configuration
     pub fn with_defaults() -> Self {
         Self::new(ReplConfig::default())
     }
-
     /// Run the REPL main loop
     pub fn run(&mut self, verbose: bool) -> Result<()> {
         // Initialize V8
         crate::initialize_v8();
-
         if !crate::is_v8_initialized() {
             return Err(anyhow::anyhow!("Failed to initialize V8 engine"));
         }
-
         // Create persistent isolate and context for the session
         let mut isolate = v8::Isolate::new(v8::CreateParams::default());
-
         // Run REPL within the isolate scope
         self.run_repl_loop(&mut isolate, verbose)
     }
-
     fn run_repl_loop(
         &mut self,
         isolate: &mut v8::OwnedIsolate,
@@ -83,19 +72,15 @@ impl Repl {
         let handle_scope: _ = &mut v8::HandleScope::new(isolate);
         let context: _ = v8::Context::new(handle_scope);
         let context_scope: _ = &mut v8::ContextScope::new(handle_scope, context);
-
         // Set up console and Node.js APIs
         self.setup_repl_environment(context_scope, &context)?;
-
         // Print welcome message
         self.print_welcome();
-
         // Main REPL loop
         loop {
             // Print prompt
             print!("{}", self.config.prompt);
             io::stdout().flush()?;
-
             // Read input
             let mut input = String::new();
             match io::stdin().read_line(&mut input) {
@@ -110,9 +95,7 @@ impl Repl {
                     continue;
                 }
             }
-
             let trimmed: _ = input.trim();
-
             // Handle special commands
             if trimmed.starts_with('.') {
                 if self.handle_special_command(trimmed) {
@@ -120,30 +103,24 @@ impl Repl {
                 }
                 continue;
             }
-
             // Skip empty lines
             if trimmed.is_empty() {
                 continue;
             }
-
             // Handle multi-line input
             let code: _ = self.collect_multiline_input(trimmed)?;
-
             // Add to history
             if self.config.enable_history && !code.is_empty() {
                 self.add_to_history(&code);
             }
-
             // Execute the code
             let start: _ = std::time::Instant::now();
             match self.execute_in_context(context_scope, &code) {
                 Ok(result) => {
                     self.execution_count += 1;
-
                     if self.config.show_result && !result.is_empty() && result != "undefined" {
                         println!("{}", result);
                     }
-
                     if self.config.show_time || verbose {
                         let elapsed: _ = start.elapsed();
                         println!("⏱  {:.3}ms", elapsed.as_secs_f64() * 1000.0);
@@ -154,10 +131,8 @@ impl Repl {
                 }
             }
         }
-
         Ok(())
     }
-
     /// Set up REPL environment with console and Node.js APIs
     fn setup_repl_environment(
         &self,
@@ -166,54 +141,45 @@ impl Repl {
     ) -> Result<()> {
         // Set up console API
         let console: _ = v8::Object::new(scope);
-
         // console.log
         let log_func: _ = v8::FunctionTemplate::new(scope, crate::console_log_callback);
         if let Some(log_instance) = log_func.get_function(scope) {
             let log_key: _ = v8::String::new(scope, "log").unwrap();
             console.set(scope, log_key.into(), log_instance.into());
         }
-
         // console.error
         let error_func: _ = v8::FunctionTemplate::new(scope, crate::console_error_callback);
         if let Some(error_instance) = error_func.get_function(scope) {
             let error_key: _ = v8::String::new(scope, "error").unwrap();
             console.set(scope, error_key.into(), error_instance.into());
         }
-
         // console.warn
         let warn_func: _ = v8::FunctionTemplate::new(scope, crate::console_warn_callback);
         if let Some(warn_instance) = warn_func.get_function(scope) {
             let warn_key: _ = v8::String::new(scope, "warn").unwrap();
             console.set(scope, warn_key.into(), warn_instance.into());
         }
-
         // console.info
         let info_func: _ = v8::FunctionTemplate::new(scope, crate::console_info_callback);
         if let Some(info_instance) = info_func.get_function(scope) {
             let info_key: _ = v8::String::new(scope, "info").unwrap();
             console.set(scope, info_key.into(), info_instance.into());
         }
-
         // console.debug
         let debug_func: _ = v8::FunctionTemplate::new(scope, crate::console_debug_callback);
         if let Some(debug_instance) = debug_func.get_function(scope) {
             let debug_key: _ = v8::String::new(scope, "debug").unwrap();
             console.set(scope, debug_key.into(), debug_instance.into());
         }
-
         // Set console on global
         let global: _ = context.global(scope);
         let console_key: _ = v8::String::new(scope, "console").unwrap();
         global.set(scope, console_key.into(), console.into());
-
         // Set up Node.js APIs
         // Temporarily disabled for Stage 60 - V8 API compatibility issues
         // crate::nodejs::setup_nodejs_apis(scope, None, context, None)?;
-
         Ok(())
     }
-
     /// Execute code in the persistent context
     fn execute_in_context(
         &self,
@@ -222,18 +188,15 @@ impl Repl {
     ) -> Result<String> {
         // Create try-catch for error handling
         let try_catch: _ = &mut v8::TryCatch::new(scope);
-
         // Compile the code
         let source: _ = v8::String::new(try_catch, code)
             .ok_or_else(|| anyhow::anyhow!("Failed to create source string"))?;
-
         let script: _ = match v8::Script::compile(try_catch, source, None) {
             Some(s) => s,
             None => {
                 return self.format_exception(try_catch);
             }
         };
-
         // Run the script
         match script.run(try_catch) {
             Some(result) => {
@@ -246,7 +209,6 @@ impl Repl {
             None => self.format_exception(try_catch),
         }
     }
-
     /// Format a V8 exception as an error message
     fn format_exception(&self, try_catch: &mut v8::TryCatch<v8::HandleScope>) -> Result<String> {
         if let Some(exception) = try_catch.exception() {
@@ -267,14 +229,12 @@ impl Repl {
             Err(anyhow::anyhow!("Unknown execution error"))
         }
     }
-
     /// Print welcome message
     fn print_welcome(&self) {
         println!("Beejs {} REPL", env!("CARGO_PKG_VERSION"));
         println!("Type .help for available commands");
         println!();
     }
-
     /// Handle special REPL commands (starting with .)
     /// Returns true if REPL should exit
     fn handle_special_command(&self, cmd: &str) -> bool {
@@ -312,7 +272,6 @@ impl Repl {
             }
         }
     }
-
     /// Print help message
     fn print_help(&self) {
         println!("REPL Commands:");
@@ -328,14 +287,12 @@ impl Repl {
         println!("  - Press Ctrl+D to exit");
         println!("  - Multi-line input: leave braces/parens open");
     }
-
     /// Print command history
     fn print_history(&self) {
         if self.history.is_empty() {
             println!("No history yet.");
             return;
         }
-
         for (i, cmd) in self.history.iter().enumerate() {
             let display: _ = if cmd.len() > 60 {
                 format!("{}...", &cmd[..57])
@@ -345,7 +302,6 @@ impl Repl {
             println!("{:4}: {}", i + 1, display.replace('\n', "↵"));
         }
     }
-
     /// Load and display file content (actual execution would be done in main loop)
     fn load_file(&self, path: &str) {
         match std::fs::read_to_string(path) {
@@ -364,11 +320,9 @@ impl Repl {
             }
         }
     }
-
     /// Collect multi-line input for incomplete expressions
     fn collect_multiline_input(&self, first_line: &str) -> Result<String> {
         let mut code = first_line.to_string();
-
         // Simple heuristic: count braces/brackets/parens
         loop {
             let open_braces: _ = code.matches('{').count();
@@ -377,7 +331,6 @@ impl Repl {
             let close_parens: _ = code.matches(')').count();
             let open_brackets: _ = code.matches('[').count();
             let close_brackets: _ = code.matches(']').count();
-
             // Check if expression is complete
             if open_braces <= close_braces
                 && open_parens <= close_parens
@@ -385,11 +338,9 @@ impl Repl {
             {
                 break;
             }
-
             // Need more input
             print!("{}", self.config.continuation_prompt);
             io::stdout().flush()?;
-
             let mut line = String::new();
             match io::stdin().read_line(&mut line) {
                 Ok(0) => break, // EOF
@@ -400,42 +351,34 @@ impl Repl {
                 Err(_) => break,
             }
         }
-
         Ok(code)
     }
-
     /// Add command to history
     fn add_to_history(&mut self, cmd: &str) {
         // Don't add duplicates of the last command
         if self.history.last().map(|s| s.as_str()) == Some(cmd) {
             return;
         }
-
         self.history.push(cmd.to_string());
-
         // Limit history size
         if self.history.len() > self.config.max_history {
             self.history.remove(0);
         }
     }
-
     /// Get execution count
     pub fn execution_count(&self) -> usize {
         self.execution_count
     }
-
     /// Get history
     pub fn history(&self) -> &[String] {
         &self.history
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_repl_config_default() {
         let config: _ = ReplConfig::default();
@@ -444,31 +387,26 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(config.prompt, "beejs> ");
         assert!(config.enable_history);
     }
-
     #[test]
     fn test_repl_creation() {
         let repl: _ = Repl::with_defaults();
         assert_eq!(repl.execution_count(), 0);
         assert!(repl.history().is_empty());
     }
-
     #[test]
     fn test_repl_history() {
         let mut repl = Repl::with_defaults();
         repl.add_to_history("console.log('hello')");
         repl.add_to_history("1 + 1");
-
         assert_eq!(repl.history().len(), 2);
         assert_eq!(repl.history()[0], "console.log('hello')");
         assert_eq!(repl.history()[1], "1 + 1");
     }
-
     #[test]
     fn test_repl_history_no_duplicates() {
         let mut repl = Repl::with_defaults();
         repl.add_to_history("test");
         repl.add_to_history("test");
-
         assert_eq!(repl.history().len(), 1);
     }
 }

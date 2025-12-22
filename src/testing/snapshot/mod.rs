@@ -6,15 +6,12 @@
 //! - Inline snapshots
 //! - Update mode support
 //! - Pretty-print formatting
-
 pub mod snapshot_manager;
 pub mod snapshot_renderer;
-
 pub use snapshot_manager::*;
 pub use snapshot_renderer::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// Snapshot metadata
 #[derive(Debug, Clone, PartialEq)]
 pub struct SnapshotMetadata {
@@ -25,7 +22,6 @@ pub struct SnapshotMetadata {
     pub line_count: usize,
     pub size_bytes: usize,
 }
-
 /// Snapshot comparison result
 #[derive(Debug, Clone)]
 pub struct SnapshotComparison {
@@ -39,7 +35,6 @@ pub struct SnapshotComparison {
     pub removed: Vec<String>,
     pub changed: Vec<(String, String, String)>, // (key, old_value, new_value)
 }
-
 impl SnapshotComparison {
     pub fn new_match(name: String, received: String) -> Self {
         SnapshotComparison {
@@ -54,7 +49,6 @@ impl SnapshotComparison {
             changed: Vec::new(),
         }
     }
-
     pub fn new_mismatch(
         name: String,
         received: String,
@@ -72,12 +66,10 @@ impl SnapshotComparison {
             changed: Vec::new(),
         }
     }
-
     pub fn with_diff(mut self, diff: String) -> Self {
         self.diff = Some(diff);
         self
     }
-
     pub fn with_changes(
         mut self,
         added: Vec<String>,
@@ -90,30 +82,25 @@ impl SnapshotComparison {
         self
     }
 }
-
 /// Snapshot serializer trait
 pub trait SnapshotSerializer {
     fn serialize(&self, value: &dyn std::fmt::Display) -> String;
     fn deserialize(&self, snapshot: &str) -> Result<String, SnapshotError>;
 }
-
 /// JSON snapshot serializer
 pub struct JsonSnapshotSerializer {
     pub pretty: bool,
 }
-
 impl JsonSnapshotSerializer {
     pub fn new(pretty: bool) -> Self {
         JsonSnapshotSerializer { pretty }
     }
 }
-
 impl Default for JsonSnapshotSerializer {
     fn default() -> Self {
         JsonSnapshotSerializer { pretty: true }
     }
 }
-
 impl SnapshotSerializer for JsonSnapshotSerializer {
     fn serialize(&self, value: &dyn std::fmt::Display) -> String {
         // Try to format as JSON, fallback to plain string
@@ -127,37 +114,30 @@ impl SnapshotSerializer for JsonSnapshotSerializer {
             value.to_string()
         }
     }
-
     fn deserialize(&self, snapshot: &str) -> Result<String, SnapshotError> {
         Ok(snapshot.to_string())
     }
 }
-
 /// Plain text snapshot serializer
 pub struct PlainSnapshotSerializer;
-
 impl PlainSnapshotSerializer {
     pub fn new() -> Self {
         PlainSnapshotSerializer
     }
 }
-
 impl Default for PlainSnapshotSerializer {
     fn new() -> Self {
         Self::new()
     }
 }
-
 impl SnapshotSerializer for PlainSnapshotSerializer {
     fn serialize(&self, value: &dyn std::fmt::Display) -> String {
         value.to_string()
     }
-
     fn deserialize(&self, snapshot: &str) -> Result<String, SnapshotError> {
         Ok(snapshot.to_string())
     }
 }
-
 /// Snapshot error types
 #[derive(Debug)]
 pub enum SnapshotError {
@@ -167,7 +147,6 @@ pub enum SnapshotError {
     SerializationError(String),
     UpdateMode(String),
 }
-
 impl std::fmt::Display for SnapshotError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -179,15 +158,12 @@ impl std::fmt::Display for SnapshotError {
         }
     }
 }
-
 impl std::error::Error for SnapshotError {}
-
 impl From<std::io::Error> for SnapshotError {
     fn from(err: std::io::Error) -> Self {
         SnapshotError::IoError(err)
     }
 }
-
 /// Snapshot configuration
 #[derive(Debug, Clone)]
 pub struct SnapshotConfig {
@@ -197,7 +173,6 @@ pub struct SnapshotConfig {
     pub file_extension: String,
     pub pretty_print: bool,
 }
-
 impl Default for SnapshotConfig {
     fn default() -> Self {
         SnapshotConfig {
@@ -209,32 +184,26 @@ impl Default for SnapshotConfig {
         }
     }
 }
-
 impl SnapshotConfig {
     pub fn new() -> Self {
         Self::default()
     }
-
     pub fn with_update_mode(mut self, update: bool) -> Self {
         self.update_snapshots = update;
         self
     }
-
     pub fn with_inline_snapshots(mut self, inline: bool) -> Self {
         self.inline_snapshots = inline;
         self
     }
-
     pub fn with_serializer(mut self, serializer: Box<dyn SnapshotSerializer + Send + Sync>) -> Self {
         self.serializer = serializer;
         self
     }
-
     pub fn with_file_extension(mut self, ext: String) -> Self {
         self.file_extension = ext;
         self
     }
-
     pub fn with_pretty_print(mut self, pretty: bool) -> Self {
         self.pretty_print = pretty;
         self

@@ -2,12 +2,10 @@
 //!
 //! 这个模块提供了基于 AI 的任务调度功能，能够根据任务优先级、资源需求
 //! 和系统状态智能决定任务调度顺序和分配策略。
-
 use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Reverse;
 use tokio::time::{Duration, Instant};
-
 /// 任务优先级
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum TaskPriority {
@@ -22,7 +20,6 @@ pub enum TaskPriority {
     /// 后台任务 - 最低优先级
     Background,
 }
-
 impl TaskPriority {
     /// 获取优先级数值 (数值越高优先级越高)
     pub fn to_numeric(&self) -> u8 {
@@ -35,7 +32,6 @@ impl TaskPriority {
         }
     }
 }
-
 /// 任务结构
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Task {
@@ -60,7 +56,6 @@ pub struct Task {
     /// 是否可抢占
     pub preemptible: bool,
 }
-
 /// 调度决策
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SchedulingDecision {
@@ -77,7 +72,6 @@ pub struct SchedulingDecision {
     /// 调度策略
     pub strategy: SchedulingStrategy,
 }
-
 /// 调度策略枚举
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum SchedulingStrategy {
@@ -94,7 +88,6 @@ pub enum SchedulingStrategy {
     /// AI 智能调度
     IntelligentAI,
 }
-
 /// 调度结果
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScheduleResult {
@@ -113,7 +106,6 @@ pub struct ScheduleResult {
     /// 消息
     pub message: String,
 }
-
 /// 工作负载特征
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WorkloadProfile {
@@ -128,7 +120,6 @@ pub struct WorkloadProfile {
     /// 优先级分布
     pub priority_distribution: HashMap<TaskPriority, f64>,
 }
-
 /// 调度器状态
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SchedulerState {
@@ -143,7 +134,6 @@ pub struct SchedulerState {
     /// 系统负载
     pub system_load: f64,
 }
-
 /// 智能调度器
 #[derive(Debug, Clone)]
 pub struct Scheduler {
@@ -156,28 +146,23 @@ pub struct Scheduler {
     /// 任务执行跟踪
     task_tracking: HashMap<String, TaskExecution>,
 }
-
 /// 任务优先级包装器 (实现优先级队列比较)
 #[derive(Debug, Clone)]
 struct TaskWithPriority {
     task: Task,
     insertion_order: usize,
 }
-
 impl PartialEq for TaskWithPriority {
     fn eq(&self, other: &Self) -> bool {
         self.task.id == other.task.id
     }
 }
-
 impl Eq for TaskWithPriority {}
-
 impl PartialOrd for TaskWithPriority {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
-
 impl Ord for TaskWithPriority {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         // 优先级高的排在前面
@@ -186,7 +171,6 @@ impl Ord for TaskWithPriority {
             .priority
             .to_numeric()
             .cmp(&self.task.priority.to_numeric());
-
         if priority_cmp == std::cmp::Ordering::Equal {
             // 优先级相同时，按创建时间排序
             self.task.created_at.cmp(&other.task.created_at)
@@ -195,7 +179,6 @@ impl Ord for TaskWithPriority {
         }
     }
 }
-
 /// 任务执行跟踪
 #[derive(Debug, Clone)]
 struct TaskExecution {
@@ -203,7 +186,6 @@ struct TaskExecution {
     start_time: Instant,
     allocated_resources: HashMap<String, f64>,
 }
-
 /// 调度器配置
 #[derive(Debug, Clone)]
 pub struct SchedulerConfig {
@@ -218,7 +200,6 @@ pub struct SchedulerConfig {
     /// 资源预留百分比
     pub resource_reservation_percent: f64,
 }
-
 impl Default for SchedulerConfig {
     fn default() -> Self {
         Self {
@@ -230,7 +211,6 @@ impl Default for SchedulerConfig {
         }
     }
 }
-
 impl Scheduler {
     /// 创建新的调度器
     pub fn new(config: SchedulerConfig) -> Self {
@@ -241,12 +221,10 @@ impl Scheduler {
             task_tracking: HashMap::new(),
         }
     }
-
     /// 创建默认配置的调度器
     pub fn new_with_defaults() -> Self {
         Self::new(SchedulerConfig::default())
     }
-
     /// 添加任务到调度队列
     ///
     /// # 参数
@@ -259,16 +237,13 @@ impl Scheduler {
         if !self.check_dependencies(&task) {
             return false;
         }
-
         let task_with_priority: _ = TaskWithPriority {
             task,
             insertion_order: self.task_queue.len(),
         };
-
         self.task_queue.push(Reverse(task_with_priority));
         true
     }
-
     /// 执行一次调度
     ///
     /// # 参数
@@ -286,45 +261,36 @@ impl Scheduler {
         let mut rejected_tasks = Vec::new();
         let mut total_wait_time = 0u64;
         let mut scheduled_count = 0;
-
         let start_time: _ = Instant::now();
-
         // 调度多个任务直到资源不足或队列为空
         for _ in 0..self.config.max_concurrent_tasks {
             if self.task_queue.is_empty() {
                 break;
             }
-
             // 尝试获取下一个可调度的任务
             if let Some(Reverse(task_with_priority)) = self.task_queue.peek() {
                 let task: _ = &task_with_priority.task;
-
                 // 检查依赖是否满足
                 if !self.check_dependencies(task) {
                     // 依赖未满足，跳过
                     continue;
                 }
-
                 // 检查资源是否足够
                 if self.has_sufficient_resources(task, available_resources) {
                     // 移除任务并调度
                     self.task_queue.pop();
-
                     // 分配资源
                     let allocated_resources =
                         self.allocate_resources_for_task(task, available_resources);
-
                     // 计算调度决策
                     let decision: _ = self.create_scheduling_decision(
                         task,
                         &allocated_resources,
                         strategy.clone(),
                     );
-
                     scheduled_tasks.push(decision.clone());
                     self.scheduling_history.push(decision);
                     scheduled_count += 1;
-
                     // 记录执行跟踪
                     self.task_tracking.insert(
                         task.id.clone(),
@@ -334,7 +300,6 @@ impl Scheduler {
                             allocated_resources: allocated_resources.clone(),
                         },
                     );
-
                     // 计算等待时间
                     let wait_time: _ = Instant::now()
                         .duration_since(task.created_at)
@@ -348,25 +313,21 @@ impl Scheduler {
                 break;
             }
         }
-
         // 计算效率分数
         let efficiency_score: _ = self.calculate_efficiency_score(
             scheduled_count,
             rejected_tasks.len(),
             available_resources,
         );
-
         // 计算资源利用率
         let resource_utilization =
             self.calculate_resource_utilization(available_resources, &scheduled_tasks);
-
         // 计算平均等待时间
         let avg_wait_time_ms: _ = if scheduled_count > 0 {
             total_wait_time / scheduled_count as u64
         } else {
             0
         };
-
         ScheduleResult {
             success: scheduled_count > 0,
             scheduled_tasks,
@@ -381,7 +342,6 @@ impl Scheduler {
             ),
         }
     }
-
     /// 获取调度器状态
     pub async fn get_state(&self) -> SchedulerState {
         let avg_latency: _ = if !self.scheduling_history.is_empty() {
@@ -398,7 +358,6 @@ impl Scheduler {
         } else {
             0.0
         };
-
         SchedulerState {
             queued_tasks: self.task_queue.len(),
             running_tasks: self.task_tracking.len(),
@@ -407,7 +366,6 @@ impl Scheduler {
             system_load: self.calculate_system_load(),
         }
     }
-
     /// 获取调度统计信息
     pub async fn get_statistics(&self) -> SchedulerStatistics {
         let mut priority_counts = HashMap::new();
@@ -416,7 +374,6 @@ impl Scheduler {
                 .entry(task.task.priority.clone())
                 .or_insert(0) += 1;
         }
-
         SchedulerStatistics {
             total_tasks_queued: self.task_queue.len(),
             total_tasks_scheduled: self.scheduling_history.len(),
@@ -425,7 +382,6 @@ impl Scheduler {
             total_resource_usage: self.calculate_total_resource_usage(),
         }
     }
-
     /// 检查任务依赖
     fn check_dependencies(&self, task: &Task) -> bool {
         // 检查所有依赖是否都已完成
@@ -435,16 +391,13 @@ impl Scheduler {
                 .task_queue
                 .iter()
                 .any(|t| t.task.id == *dep_id);
-
             let in_tracking: _ = self.task_tracking.contains_key(dep_id);
-
             if in_queue || in_tracking {
                 return false;
             }
         }
         true
     }
-
     /// 检查资源是否足够
     fn has_sufficient_resources(
         &self,
@@ -453,14 +406,12 @@ impl Scheduler {
     ) -> bool {
         for (resource_type, required) in &task.resource_requirements {
             let available: _ = available_resources.get(resource_type).copied().unwrap_or(0.0);
-
             if available < *required {
                 return false;
             }
         }
         true
     }
-
     /// 为任务分配资源
     fn allocate_resources_for_task(
         &self,
@@ -468,21 +419,16 @@ impl Scheduler {
         available_resources: &HashMap<String, f64>,
     ) -> HashMap<String, f64> {
         let mut allocated = HashMap::new();
-
         for (resource_type, required) in &task.resource_requirements {
             let available: _ = available_resources.get(resource_type).copied().unwrap_or(0.0);
-
             // 预留资源 (考虑优先级)
             let reservation_factor: _ = 1.0 + (task.priority.to_numeric() as f64 / 100.0) * 0.1;
             let reserved_required: _ = required * reservation_factor;
-
             let to_allocate: _ = available.min(*required).min(reserved_required);
             allocated.insert(resource_type.clone(), to_allocate);
         }
-
         allocated
     }
-
     /// 创建调度决策
     fn create_scheduling_decision(
         &self,
@@ -492,7 +438,6 @@ impl Scheduler {
     ) -> SchedulingDecision {
         let now: _ = Instant::now();
         let estimated_completion: _ = now + Duration::from_millis(task.estimated_duration_ms);
-
         let reason: _ = match strategy {
             SchedulingStrategy::PriorityFirst => {
                 format!("使用优先级优先策略调度任务 (优先级: {:?})", task.priority)
@@ -502,7 +447,6 @@ impl Scheduler {
             }
             _ => "使用 AI 智能调度策略".to_string(),
         };
-
         SchedulingDecision {
             scheduled_task_id: task.id.clone(),
             allocated_resources: allocated_resources.clone(),
@@ -512,7 +456,6 @@ impl Scheduler {
             strategy,
         }
     }
-
     /// 计算效率分数
     fn calculate_efficiency_score(
         &self,
@@ -523,19 +466,15 @@ impl Scheduler {
         if scheduled_count == 0 && rejected_count == 0 {
             return 100.0;
         }
-
         let total_tasks: _ = scheduled_count + rejected_count;
         let success_rate: _ = scheduled_count as f64 / total_tasks as f64;
-
         // 考虑资源利用率的效率分数
         let resource_efficiency: _ = available_resources
             .values()
             .map(|&r| if r > 0.0 { 1.0 } else { 0.0 })
             .sum::<f64>() / available_resources.len() as f64;
-
         (success_rate * 70.0 + resource_efficiency * 30.0).min(100.0)
     }
-
     /// 计算资源利用率
     fn calculate_resource_utilization(
         &self,
@@ -544,19 +483,16 @@ impl Scheduler {
     ) -> f64 {
         let mut total_allocated = HashMap::new();
         let mut total_available = 0.0;
-
         // 累计分配的资源
         for decision in scheduled_tasks {
             for (resource_type, &amount) in &decision.allocated_resources {
                 *total_allocated.entry(resource_type.clone()).or_insert(0.0) += amount;
             }
         }
-
         // 计算总可用资源
         for &amount in available_resources.values() {
             total_available += amount;
         }
-
         if total_available > 0.0 {
             let total_allocated_sum: f64 = total_allocated.values().sum();
             (total_allocated_sum / total_available) * 100.0
@@ -564,25 +500,20 @@ impl Scheduler {
             0.0
         }
     }
-
     /// 计算系统负载
     fn calculate_system_load(&self) -> f64 {
         let queued_ratio: _ = self.task_queue.len() as f64 / self.config.max_concurrent_tasks as f64;
         let running_ratio: _ = self.task_tracking.len() as f64 / self.config.max_concurrent_tasks as f64;
-
         (queued_ratio + running_ratio) / 2.0 * 100.0
     }
-
     /// 计算平均效率分数
     fn calculate_average_efficiency(&self) -> f64 {
         if self.scheduling_history.is_empty() {
             return 0.0;
         }
-
         // 这里简化计算，实际应该基于历史数据计算
         75.0
     }
-
     /// 计算总资源使用量
     fn calculate_total_resource_usage(&self) -> f64 {
         self.task_tracking
@@ -590,7 +521,6 @@ impl Scheduler {
             .flat_map(|exec| exec.allocated_resources.values())
             .sum()
     }
-
     /// 取消任务
     pub async fn cancel_task(&mut self, task_id: &str) -> bool {
         // 从队列中移除任务
@@ -599,7 +529,6 @@ impl Scheduler {
             .iter()
             .find(|t| t.task.id == *task_id)
             .cloned();
-
         if let Some(Reverse(task)) = task_to_remove {
             self.task_queue.retain(|t| t.task.id != *task_id);
             true
@@ -607,7 +536,6 @@ impl Scheduler {
             false
         }
     }
-
     /// 获取等待队列中的任务
     pub async fn get_queued_tasks(&self) -> Vec<Task> {
         self.task_queue
@@ -616,7 +544,6 @@ impl Scheduler {
             .collect()
     }
 }
-
 /// 调度统计信息
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SchedulerStatistics {
@@ -631,17 +558,14 @@ pub struct SchedulerStatistics {
     /// 总资源使用量
     pub total_resource_usage: f64,
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_add_task() {
         let mut scheduler = Scheduler::new_with_defaults();
-
         let task: _ = Task {
             id: "task-1".to_string(),
             name: "Test Task".to_string(),
@@ -658,15 +582,12 @@ use std::collections::{HashMap, BTreeMap};
             tags: vec![],
             preemptible: true,
         };
-
         let result: _ = scheduler.add_task(task).await;
         assert!(result);
     }
-
     #[tokio::test]
     async fn test_schedule_next() {
         let mut scheduler = Scheduler::new_with_defaults();
-
         let task: _ = Task {
             id: "task-1".to_string(),
             name: "Test Task".to_string(),
@@ -683,28 +604,22 @@ use std::collections::{HashMap, BTreeMap};
             tags: vec![],
             preemptible: true,
         };
-
         scheduler.add_task(task).await;
-
         let available_resources: _ = {
             let mut map = HashMap::new();
             map.insert("cpu".to_string(), 100.0);
             map
         };
-
         let result: _ = scheduler
             .schedule_next(&available_resources, SchedulingStrategy::PriorityFirst)
             .await;
-
         assert!(result.success);
         assert!(!result.scheduled_tasks.is_empty());
     }
-
     #[tokio::test]
     async fn test_task_priority_ordering() {
         let high: _ = TaskPriority::High;
         let low: _ = TaskPriority::Low;
-
         assert!(high > low);
         assert_eq!(high.to_numeric(), 75);
         assert_eq!(low.to_numeric(), 25);

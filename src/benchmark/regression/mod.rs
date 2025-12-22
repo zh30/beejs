@@ -1,13 +1,11 @@
 //! 性能回归检测模块
 //!
 //! 提供性能回归自动检测功能
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 use super::{BenchmarkResultSet, BenchmarkResult, Runtime, MetricType};
-
 /// 性能历史记录
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceHistory {
@@ -22,7 +20,6 @@ pub struct PerformanceHistory {
     /// 构建信息
     pub build_info: BuildInfo,
 }
-
 impl PerformanceHistory {
     /// 创建新的历史记录
     pub fn new(
@@ -39,7 +36,6 @@ impl PerformanceHistory {
         }
     }
 }
-
 /// 构建信息
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct BuildInfo {
@@ -52,7 +48,6 @@ pub struct BuildInfo {
     /// 优化级别
     pub optimization_level: String,
 }
-
 /// 回归检测器
 #[derive(Debug)]
 pub struct RegressionDetector {
@@ -63,7 +58,6 @@ pub struct RegressionDetector {
     /// 回归阈值 (百分比)
     pub regression_threshold: f64,
 }
-
 impl RegressionDetector {
     /// 创建新的回归检测器
     pub fn new(history_path: PathBuf) -> Self {
@@ -73,7 +67,6 @@ impl RegressionDetector {
             regression_threshold: 10.0, // 10% 回归视为显著
         }
     }
-
     /// 检测回归
     pub async fn detect_regressions(
         &self,
@@ -81,7 +74,6 @@ impl RegressionDetector {
         baseline_results: &BenchmarkResultSet,
     ) -> Result<RegressionReport, super::BenchmarkError> {
         let mut report = RegressionReport::new();
-
         // 对比每个测试结果
         for current_result in &current_results.results {
             if let Some(baseline_result) = Self::find_baseline_result(
@@ -93,10 +85,8 @@ impl RegressionDetector {
                 report.add_analysis(analysis);
             }
         }
-
         Ok(report)
     }
-
     /// 分析回归
     fn analyze_regression(
         &self,
@@ -110,7 +100,6 @@ impl RegressionDetector {
             baseline,
             self.significance_threshold,
         );
-
         RegressionAnalysis {
             test_name: current.name.clone(),
             runtime: current.runtime,
@@ -122,19 +111,16 @@ impl RegressionDetector {
             confidence_level: if is_significant { 0.95 } else { 0.0 },
         }
     }
-
     /// 计算性能变化
     fn calculate_performance_change(&self, current: &BenchmarkResult, baseline: &BenchmarkResult) -> f64 {
         let baseline_ns: _ = baseline.average_duration().as_nanos() as f64;
         let current_ns: _ = current.average_duration().as_nanos() as f64;
-
         if baseline_ns == 0.0 {
             0.0
         } else {
             ((baseline_ns - current_ns) / baseline_ns) * 100.0
         }
     }
-
     /// 检查统计显著性
     fn is_statistically_significant(
         current: &BenchmarkResult,
@@ -143,7 +129,6 @@ impl RegressionDetector {
     ) -> bool {
         current.is_statistically_significant(baseline, alpha)
     }
-
     /// 查找基线结果
     fn find_baseline_result(
         baseline_results: &BenchmarkResultSet,
@@ -154,61 +139,47 @@ impl RegressionDetector {
             r.name == test_name && r.runtime == runtime
         })
     }
-
     /// 保存历史记录
     pub async fn save_history(
         &self,
         history: &PerformanceHistory,
     ) -> Result<(), super::BenchmarkError> {
         use super::super::utils::{create_dir_if_not_exists, write_file};
-
         create_dir_if_not_exists(&self.history_path)?;
-
         let filename: _ = format!(
             "{}_{}.json",
             history.commit_hash,
             history.timestamp.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()
         );
         let filepath: _ = self.history_path.join(filename);
-
         let json: _ = serde_json::to_string_pretty(history)
             .map_err(super::BenchmarkError::JsonError)?;
-
         write_file(&filepath, &json)?;
-
         Ok(())
     }
-
     /// 加载历史记录
     pub async fn load_history(
         &self,
         commit_hash: &str,
     ) -> Result<PerformanceHistory, super::BenchmarkError> {
         use super::super::utils::read_file;
-
         // 查找匹配的历史文件
         let entries: _ = tokio::fs::read_dir(&self.history_path).await?;
-
         for entry in entries {
             let entry: _ = entry?;
             let filename: _ = entry.file_name().to_string_lossy().to_string();
-
             if filename.starts_with(commit_hash) {
                 let filepath: _ = self.history_path.join(&filename);
                 let content: _ = read_file(&filepath)?;
-
                 let history: PerformanceHistory = serde_json::from_str(&content)
                     .map_err(super::BenchmarkError::JsonError)?;
-
                 return Ok(history);
             }
         }
-
         Err(super::BenchmarkError::ConfigError(
             format!("History not found for commit: {}", commit_hash))
     }
 }
-
 /// 回归报告
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct RegressionReport {
@@ -217,19 +188,16 @@ pub struct RegressionReport {
     /// 总结
     pub summary: RegressionSummary,
 }
-
 impl RegressionReport {
     /// 创建新的报告
     pub fn new() -> Self {
         Self::default()
     }
-
     /// 添加分析
     pub fn add_analysis(&mut self, analysis: RegressionAnalysis) {
         self.analyses.push(analysis.clone());
         self.update_summary();
     }
-
     /// 更新总结
     fn update_summary(&mut self) {
         let total_tests: _ = self.analyses.len();
@@ -238,7 +206,6 @@ impl RegressionReport {
             .iter()
             .filter(|a| a.is_regression && a.is_significant)
             .count();
-
         self.summary = RegressionSummary {
             total_tests,
             regressions,
@@ -255,23 +222,19 @@ impl RegressionReport {
                 .fold(0.0, f64::max),
         };
     }
-
     /// 检查是否有回归
     pub fn has_regressions(&self) -> bool {
         self.analyses.iter().any(|a| a.is_regression)
     }
-
     /// 检查是否有显著回归
     pub fn has_significant_regressions(&self) -> bool {
         self.analyses.iter().any(|a| a.is_regression && a.is_significant)
     }
-
     /// 获取回归列表
     pub fn get_regressions(&self) -> Vec<&RegressionAnalysis> {
         self.analyses.iter().filter(|a| a.is_regression).collect()
     }
 }
-
 /// 回归分析
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegressionAnalysis {
@@ -292,7 +255,6 @@ pub struct RegressionAnalysis {
     /// 置信度
     pub confidence_level: f64,
 }
-
 impl RegressionAnalysis {
     /// 获取性能变化描述
     pub fn get_change_description(&self) -> String {
@@ -304,15 +266,12 @@ impl RegressionAnalysis {
             "性能无变化".to_string()
         }
     }
-
     /// 获取严重程度
     pub fn get_severity(&self) -> RegressionSeverity {
         if !self.is_regression {
             return RegressionSeverity::None;
         }
-
         let decline: _ = self.performance_change_percent.abs();
-
         if decline >= 50.0 {
             RegressionSeverity::Critical
         } else if decline >= 20.0 {
@@ -324,7 +283,6 @@ impl RegressionAnalysis {
         }
     }
 }
-
 /// 回归严重程度
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum RegressionSeverity {
@@ -339,7 +297,6 @@ pub enum RegressionSeverity {
     /// 关键回归
     Critical,
 }
-
 impl std::fmt::Display for RegressionSeverity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -351,7 +308,6 @@ impl std::fmt::Display for RegressionSeverity {
         }
     }
 }
-
 /// 回归总结
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RegressionSummary {
@@ -366,13 +322,11 @@ pub struct RegressionSummary {
     /// 最大性能下降
     pub max_performance_decline: f64,
 }
-
 impl RegressionSummary {
     /// 检查是否通过
     pub fn is_pass(&self) -> bool {
         self.significant_regressions == 0
     }
-
     /// 获取状态
     pub fn get_status(&self) -> String {
         if self.is_pass() {
@@ -382,29 +336,23 @@ impl RegressionSummary {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::time::Duration;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_regression_analysis() {
         let current: _ = super::super::result::BenchmarkResult::new("test", Runtime::Beejs);
         let baseline: _ = super::super::result::BenchmarkResult::new("test", Runtime::Beejs);
-
         let detector: _ = RegressionDetector::new(PathBuf::from("/tmp/test"));
         let analysis: _ = detector.analyze_regression(&current, &baseline);
-
         println!("Analysis: {:?}", analysis);
     }
-
     #[test]
     fn test_regression_summary() {
         let mut report = RegressionReport::new();
-
         // 添加一些分析
         for i in 0..5 {
             let mut analysis = RegressionAnalysis {
@@ -419,7 +367,6 @@ use std::collections::{HashMap, BTreeMap};
             };
             report.add_analysis(analysis);
         }
-
         println!("Summary: {:?}", report.summary);
         println!("Has regressions: {}", report.has_regressions());
         println!("Has significant regressions: {}", report.has_significant_regressions());

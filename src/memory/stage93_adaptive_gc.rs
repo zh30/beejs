@@ -1,16 +1,13 @@
 //! Stage 93 Phase 1.2: 自适应垃圾回收策略
 //! 在 Stage 92 基础上，进一步优化 GC 性能和暂停时间
 //! 目标: GC 暂停时间减少 30%+, 吞吐量提升 20%+
-
 use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{RwLock, Mutex};
 use serde::{Serialize, Deserialize};
 use anyhow::{Result, anyhow};
-
 use crate::memory_optimizer::adaptive_gc::{AdaptiveGCController, GCStrategy};
-
 /// Stage 93 自适应 GC 配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stage93GCConfig {
@@ -27,7 +24,6 @@ pub struct Stage93GCConfig {
     /// GC 触发延迟 (ms)
     pub gc_trigger_delay_ms: u64,
 }
-
 impl Default for Stage93GCConfig {
     fn default() -> Self {
         Self {
@@ -40,7 +36,6 @@ impl Default for Stage93GCConfig {
         }
     }
 }
-
 /// GC 预测结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GCPrediction {
@@ -55,7 +50,6 @@ pub struct GCPrediction {
     /// 置信度 (0-1)
     pub confidence: f64,
 }
-
 /// Stage 93 自适应 GC 控制器
 #[derive(Debug)]
 pub struct Stage93AdaptiveGC {
@@ -72,7 +66,6 @@ pub struct Stage93AdaptiveGC {
     /// 统计信息
     stats: Arc<Stage93GCStats>,
 }
-
 /// GC 预测引擎
 #[derive(Debug)]
 struct GCPredictor {
@@ -83,7 +76,6 @@ struct GCPredictor {
     /// 预测窗口大小
     window_size: usize,
 }
-
 impl GCPredictor {
     pub fn new(window_size: usize) -> Self {
         Self {
@@ -92,31 +84,25 @@ impl GCPredictor {
             window_size,
         }
     }
-
     /// 记录分配事件
     pub fn record_allocation(&mut self, size: usize) {
         self.allocation_history.push((Instant::now(), size));
-
         if self.allocation_history.len() > self.window_size {
             self.allocation_history.remove(0);
         }
     }
-
     /// 记录 GC 事件
     pub fn record_gc_event(&mut self, event: GCEventData) {
         self.gc_history.push(event);
-
         if self.gc_history.len() > self.window_size {
             self.gc_history.remove(0);
         }
     }
-
     /// 预测下一次 GC
     pub fn predict_next_gc(&self) -> Option<GCPrediction> {
         if self.allocation_history.len() < 10 {
             return None;
         }
-
         // 计算分配率
         let recent_allocations: _ = &self.allocation_history[self.allocation_history.len().saturating_sub(100)..];
         let total_size: usize = recent_allocations.iter().map(|(_, size)| *size).sum();
@@ -126,25 +112,21 @@ impl GCPredictor {
         } else {
             0.0
         };
-
         // 计算平均 GC 间隔
         let mut gc_intervals = Vec::new();
         for i in 1..self.gc_history.len() {
             let interval: _ = self.gc_history[i].timestamp.duration_since(self.gc_history[i-1].timestamp);
             gc_intervals.push(interval);
         }
-
         let avg_gc_interval: _ = if !gc_intervals.is_empty() {
             let total: Duration = gc_intervals.iter().sum();
             total / gc_intervals.len() as u32
         } else {
             Duration::from_millis(100)
         };
-
         // 预测下一次 GC 时间
         let last_gc: _ = self.gc_history.last().map(|e| e.timestamp).unwrap_or_else(|| Instant::now());
         let predicted_gc_time: _ = last_gc + avg_gc_interval;
-
         // 估算 GC 持续时间
         let avg_gc_duration: _ = if !self.gc_history.is_empty() {
             let total_duration: Duration = self.gc_history.iter()
@@ -154,7 +136,6 @@ impl GCPredictor {
         } else {
             Duration::from_millis(10)
         };
-
         // 计算存活对象比例
         let survivor_ratio: _ = if !self.gc_history.is_empty() {
             let total_survivors: usize = self.gc_history.iter()
@@ -171,7 +152,6 @@ impl GCPredictor {
         } else {
             0.5
         };
-
         Some(GCPrediction {
             predicted_gc_time,
             allocation_rate_mb_s: allocation_rate / (1024.0 * 1024.0),
@@ -180,7 +160,6 @@ impl GCPredictor {
             confidence: self.calculate_confidence(),
         })
     }
-
     fn calculate_confidence(&self) -> f64 {
         // 基于历史数据计算置信度
         let history_size: _ = self.allocation_history.len();
@@ -195,7 +174,6 @@ impl GCPredictor {
         }
     }
 }
-
 /// GC 事件数据
 #[derive(Debug, Clone)]
 struct GCEventData {
@@ -205,7 +183,6 @@ struct GCEventData {
     survivor_objects: usize,
     memory_freed: usize,
 }
-
 /// 增量 GC 调度器
 #[derive(Debug)]
 struct IncrementalGCS {
@@ -216,7 +193,6 @@ struct IncrementalGCS {
     /// 总批次数
     total_batches: usize,
 }
-
 impl IncrementalGCS {
     pub fn new() -> Self {
         Self {
@@ -225,34 +201,27 @@ impl IncrementalGCS {
             total_batches: 0,
         }
     }
-
     /// 开始增量 GC
     pub fn start_incremental(&mut self, total_work: usize, batch_size: usize) {
         self.running = true;
         self.total_batches = (total_work + batch_size - 1) / batch_size;
         self.current_batch = 0;
     }
-
     /// 执行下一个批次
     pub fn next_batch(&mut self) -> bool {
         if !self.running {
             return false;
         }
-
         self.current_batch += 1;
-
         if self.current_batch >= self.total_batches {
             self.running = false;
             return false;
         }
-
         true
     }
-
     pub fn is_running(&self) -> bool {
         self.running
     }
-
     pub fn progress(&self) -> f64 {
         if self.total_batches == 0 {
             0.0
@@ -261,7 +230,6 @@ impl IncrementalGCS {
         }
     }
 }
-
 /// GC 性能分析器
 #[derive(Debug)]
 struct GCProfiler {
@@ -278,7 +246,6 @@ struct GCProfiler {
     /// GC 效率 (释放内存 / GC 时间)
     gc_efficiency: f64,
 }
-
 impl Default for GCProfiler {
     fn default() -> Self {
         Self {
@@ -291,38 +258,31 @@ impl Default for GCProfiler {
         }
     }
 }
-
 impl GCProfiler {
     /// 记录 GC 事件
     pub fn record_gc_event(&mut self, duration: Duration, memory_freed: usize, allocation_rate: f64) {
         self.gc_count += 1;
         self.total_gc_time += duration;
-
         if duration > self.max_gc_time {
             self.max_gc_time = duration;
         }
-
         if duration < self.min_gc_time {
             self.min_gc_time = duration;
         }
-
         // 更新平均分配率 (指数移动平均)
         let alpha: _ = 0.1;
         self.avg_allocation_rate = self.avg_allocation_rate * (1.0 - alpha) + allocation_rate * alpha;
-
         // 计算 GC 效率 (MB/s)
         if duration.as_secs() > 0 {
             self.gc_efficiency = (memory_freed as f64 / (1024.0 * 1024.0)) / duration.as_secs() as f64;
         }
     }
-
     pub fn get_stats(&self) -> GCProfilerStats {
         let avg_gc_time: _ = if self.gc_count > 0 {
             self.total_gc_time / self.gc_count as u32
         } else {
             Duration::from_secs(0)
         };
-
         GCProfilerStats {
             gc_count: self.gc_count,
             total_gc_time_ms: self.total_gc_time.as_millis() as u64,
@@ -338,7 +298,6 @@ impl GCProfiler {
         }
     }
 }
-
 /// GC 统计信息
 #[derive(Debug, Default)]
 pub struct Stage93GCStats {
@@ -355,7 +314,6 @@ pub struct Stage93GCStats {
     /// 内存释放总量 (bytes)
     pub total_memory_freed: AtomicUsize,
 }
-
 /// GC 性能统计
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GCProfilerStats {
@@ -367,7 +325,6 @@ pub struct GCProfilerStats {
     pub avg_allocation_rate_mb_s: f64,
     pub gc_efficiency_mb_s: f64,
 }
-
 impl Stage93AdaptiveGC {
     /// 创建新的 Stage 93 自适应 GC
     pub fn new(
@@ -383,22 +340,18 @@ impl Stage93AdaptiveGC {
             stats: Arc::new(Mutex::new(Stage93GCStats::default()))
         }
     }
-
     /// 执行预测性 GC
     pub async fn predictive_gc(&self) -> Result<()> {
         let prediction: _ = {
             let predictor: _ = self.predictor.read().await;
             predictor.predict_next_gc()
         };
-
         if let Some(pred) = prediction {
             // 如果置信度足够高且预测时间接近，执行预测性 GC
             if pred.confidence > 0.7 {
                 self.stats.prediction_hits.fetch_add(1, Ordering::Relaxed);
-
                 // 触发预测性 GC
                 self.trigger_predictive_gc(&pred).await?;
-
                 // 记录 GC 事件
                 let mut predictor = self.predictor.write().await;
                 predictor.record_gc_event(GCEventData {
@@ -410,45 +363,34 @@ impl Stage93AdaptiveGC {
                 });
             }
         }
-
         Ok(())
     }
-
     /// 触发预测性 GC
     async fn trigger_predictive_gc(&self, prediction: &GCPrediction) -> Result<()> {
         // 执行基础 GC
         // self.base.trigger_gc().await?;
-
         // 记录统计
         self.stats.total_gc_runs.fetch_add(1, Ordering::Relaxed);
-
         Ok(())
     }
-
     /// 执行增量 GC
     pub async fn incremental_gc(&self, total_work: usize) -> Result<bool> {
         let mut scheduler = self.incremental_scheduler.lock().await;
-
         if !scheduler.is_running() {
             scheduler.start_incremental(total_work, self.config.incremental_batch_size);
             self.stats.incremental_gc_runs.fetch_add(1, Ordering::Relaxed);
         }
-
         // 执行当前批次
         let has_more: _ = scheduler.next_batch();
-
         if !has_more {
             // GC 完成
             return Ok(false);
         }
-
         Ok(true)
     }
-
     /// 获取 GC 性能报告
     pub async fn get_gc_report(&self) -> Stage93GCReport {
         let profiler_stats: _ = self.gc_profiler.read().await.get_stats();
-
         Stage93GCReport {
             total_gc_runs: self.stats.total_gc_runs.load(Ordering::Relaxed),
             prediction_hits: self.stats.prediction_hits.load(Ordering::Relaxed),
@@ -468,7 +410,6 @@ impl Stage93AdaptiveGC {
         }
     }
 }
-
 /// Stage 93 GC 性能报告
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Stage93GCReport {
@@ -481,47 +422,38 @@ pub struct Stage93GCReport {
     pub total_memory_freed_mb: f64,
     pub profiler_stats: GCProfilerStats,
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_stage93_gc_creation() {
         let base: _ = AdaptiveGCController::new();
         let config: _ = Stage93GCConfig::default();
         let gc: _ = Stage93AdaptiveGC::new(base, config);
-
         assert!(config.enable_predictive_gc);
     }
-
     #[tokio::test]
     async fn test_predictive_gc() {
         let base: _ = AdaptiveGCController::new();
         let gc: _ = Stage93AdaptiveGC::new(base, Stage93GCConfig::default());
-
         // 执行预测性 GC
         let result: _ = gc.predictive_gc().await;
         assert!(result.is_ok());
     }
-
     #[tokio::test]
     async fn test_incremental_gc() {
         let base: _ = AdaptiveGCController::new();
         let gc: _ = Stage93AdaptiveGC::new(base, Stage93GCConfig::default());
-
         // 执行增量 GC
         let has_more: _ = gc.incremental_gc(10000).await.unwrap();
         assert!(has_more || !has_more); // 应该返回 true 或 false
     }
-
     #[tokio::test]
     async fn test_gc_report() {
         let base: _ = AdaptiveGCController::new();
         let gc: _ = Stage93AdaptiveGC::new(base, Stage93GCConfig::default());
-
         let report: _ = gc.get_gc_report().await;
         assert!(report.total_gc_runs >= 0);
         assert!(report.prediction_hit_rate >= 0.0);

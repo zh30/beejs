@@ -1,9 +1,7 @@
 //! 语音识别系统
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 语音配置
 #[derive(Debug, Clone)]
 pub struct VoiceConfig {
@@ -16,7 +14,6 @@ pub struct VoiceConfig {
     /// 启用持续识别
     pub enable_continuous: bool,
 }
-
 impl Default for VoiceConfig {
     fn default() -> Self {
         Self {
@@ -27,7 +24,6 @@ impl Default for VoiceConfig {
         }
     }
 }
-
 /// 语音命令
 #[derive(Debug, Clone)]
 pub struct VoiceCommand {
@@ -36,7 +32,6 @@ pub struct VoiceCommand {
     /// 动作
     pub action: String,
 }
-
 /// 语音识别结果
 #[derive(Debug, Clone)]
 pub struct SpeechResult {
@@ -47,7 +42,6 @@ pub struct SpeechResult {
     /// 匹配的命令
     pub matched_command: Option<String>,
 }
-
 /// 语音识别系统
 pub struct VoiceRecognition {
     /// 配置
@@ -57,7 +51,6 @@ pub struct VoiceRecognition {
     /// 是否正在监听
     listening: bool,
 }
-
 impl VoiceRecognition {
     /// 创建语音识别系统
     pub fn new(config: VoiceConfig) -> Result<Self, VoiceError> {
@@ -67,50 +60,41 @@ impl VoiceRecognition {
             listening: false,
         })
     }
-
     /// 唤醒词是否启用
     pub fn wake_word_enabled(&self) -> bool {
         self.config.enable_wake_word
     }
-
     /// 注册命令
     pub fn register_command(&mut self, command: VoiceCommand) {
         self.commands.insert(command.phrase.clone(), command);
     }
-
     /// 取消注册命令
     pub fn unregister_command(&mut self, phrase: &str) {
         self.commands.remove(phrase);
     }
-
     /// 处理音频数据
     pub fn process_audio(&mut self, audio: &[f32]) -> Result<Option<SpeechResult>, VoiceError> {
         // 简化实现
         Ok(None)
     }
-
     /// 开始监听
     pub fn start_listening(&mut self) -> Result<(), VoiceError> {
         self.listening = true;
         Ok(())
     }
-
     /// 停止监听
     pub fn stop_listening(&mut self) {
         self.listening = false;
     }
-
     /// 是否正在监听
     pub fn is_listening(&self) -> bool {
         self.listening
     }
-
     /// 获取已注册命令数量
     pub fn command_count(&self) -> usize {
         self.commands.len()
     }
 }
-
 /// 语音识别错误
 #[derive(Debug, Clone)]
 pub enum VoiceError {
@@ -121,7 +105,6 @@ pub enum VoiceError {
     /// 音频处理失败
     AudioProcessingFailed(String),
 }
-
 impl std::fmt::Display for VoiceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -131,5 +114,4 @@ impl std::fmt::Display for VoiceError {
         }
     }
 }
-
 impl std::error::Error for VoiceError {}

@@ -7,19 +7,15 @@
 //! - 对象操作性能测试
 //! - 数组操作性能测试
 //! - 循环性能测试
-
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use std::time::Duration;
-
 /// 执行速度基准测试套件
 pub struct ExecutionBenchmark;
-
 impl ExecutionBenchmark {
     /// 创建新的执行速度基准测试套件
     pub fn new() -> Self {
         Self
     }
-
     /// 简单表达式执行测试
     pub fn simple_expression_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -29,7 +25,6 @@ impl ExecutionBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "simple_expression",
@@ -44,7 +39,6 @@ impl ExecutionBenchmark {
             },
         )
     }
-
     /// 复杂计算性能测试
     pub fn complex_calculation_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -54,7 +48,6 @@ impl ExecutionBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "complex_calculation",
@@ -69,7 +62,6 @@ impl ExecutionBenchmark {
             },
         )
     }
-
     /// 函数调用性能测试
     pub fn function_call_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -79,7 +71,6 @@ impl ExecutionBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "function_call",
@@ -90,7 +81,6 @@ impl ExecutionBenchmark {
             },
         )
     }
-
     /// 递归函数性能测试
     pub fn recursive_function_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -100,7 +90,6 @@ impl ExecutionBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "recursive_function",
@@ -111,7 +100,6 @@ impl ExecutionBenchmark {
             },
         )
     }
-
     /// 对象操作性能测试
     pub fn object_operations_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -121,7 +109,6 @@ impl ExecutionBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "object_operations",
@@ -140,7 +127,6 @@ impl ExecutionBenchmark {
             },
         )
     }
-
     /// 数组操作性能测试
     pub fn array_operations_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -150,7 +136,6 @@ impl ExecutionBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "array_operations",
@@ -166,7 +151,6 @@ impl ExecutionBenchmark {
             },
         )
     }
-
     /// 字符串操作性能测试
     pub fn string_operations_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -176,7 +160,6 @@ impl ExecutionBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "string_operations",
@@ -191,7 +174,6 @@ impl ExecutionBenchmark {
             },
         )
     }
-
     /// 循环性能测试
     pub fn loop_performance_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -201,7 +183,6 @@ impl ExecutionBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "loop_performance",
@@ -220,7 +201,6 @@ impl ExecutionBenchmark {
             },
         )
     }
-
     /// JSON 解析性能测试
     pub fn json_parsing_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -230,7 +210,6 @@ impl ExecutionBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "json_parsing",
@@ -243,7 +222,6 @@ impl ExecutionBenchmark {
             },
         )
     }
-
     /// 正则表达式性能测试
     pub fn regex_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -253,7 +231,6 @@ impl ExecutionBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark(
             "regex",
@@ -267,7 +244,6 @@ impl ExecutionBenchmark {
             },
         )
     }
-
     /// 运行所有执行速度基准测试
     pub fn run_all_benchmarks(&self) -> Vec<BenchmarkResult> {
         vec![
@@ -283,25 +259,20 @@ impl ExecutionBenchmark {
             self.regex_benchmark(),
         ]
     }
-
     /// 生成执行速度性能报告
     pub fn generate_report(&self, results: &[BenchmarkResult]) -> String {
         let mut report = String::new();
         report.push_str("=== Execution Speed Performance Report ===\n\n");
-
         for result in results {
             report.push_str(&result.format_summary());
             report.push_str("\n\n");
         }
-
         // 统计分析
         let total_ops_per_second: f64 = results
             .iter()
             .map(|r| r.operations_per_second)
             .sum();
-
         let avg_ops_per_second: _ = total_ops_per_second / results.len() as f64;
-
         report.push_str(&format!(
             "Total Operations/Second: {:.0}\n",
             total_ops_per_second
@@ -310,17 +281,14 @@ impl ExecutionBenchmark {
             "Average Operations/Second: {:.0}\n",
             avg_ops_per_second
         ));
-
         report
     }
 }
-
 impl Default for ExecutionBenchmark {
     fn default() -> Self {
         Self::new()
     }
 }
-
 // 辅助函数
 fn fibonacci(n: u32) -> u64 {
     match n {
@@ -329,31 +297,25 @@ fn fibonacci(n: u32) -> u64 {
         _ => fibonacci(n - 1) + fibonacci(n - 2),
     }
 }
-
 fn factorial(n: u64) -> u64 {
     match n {
         0 | 1 => 1,
         _ => n * factorial(n - 1),
     }
 }
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 执行速度优化建议
 pub struct ExecutionOptimizationSuggestions {
     pub suggestions: Vec<String>,
 }
-
 impl ExecutionOptimizationSuggestions {
     /// 基于基准测试结果生成优化建议
     pub fn generate(results: &[BenchmarkResult]) -> Self {
         let mut suggestions = Vec::new();
-
         for result in results {
             let ops_per_sec: _ = result.operations_per_second;
-
             match result.name.as_str() {
                 "simple_expression" => {
                     if ops_per_sec < 100000.0 {
@@ -386,20 +348,16 @@ impl ExecutionOptimizationSuggestions {
                 _ => {}
             }
         }
-
         // 通用建议
         let avg_ops: _ = results.iter().map(|r| r.operations_per_second).sum::<f64>()
             / results.len() as f64;
-
         if avg_ops < 50000.0 {
             suggestions.push(
                 "Overall execution speed is below target. Consider implementing more aggressive JIT optimizations.".to_string()
             );
         }
-
         Self { suggestions }
     }
-
     /// 格式化优化建议
     pub fn format(&self) -> String {
         if self.suggestions.is_empty() {

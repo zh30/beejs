@@ -2,14 +2,12 @@
 //! Stage 91 Phase 3.3.1 - React 框架集成
 //!
 //! 提供 React 应用完整支持，包括 JSX 转换、组件渲染、水合等
-
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// React 运行时
 #[derive(Debug)]
 pub struct ReactRuntime {
@@ -20,7 +18,6 @@ pub struct ReactRuntime {
     hooks_manager: HooksManager,
     config: ReactConfig,
 }
-
 impl ReactRuntime {
     /// 创建新的 React 运行时
     pub fn new(config: ReactConfig) -> Self {
@@ -33,7 +30,6 @@ impl ReactRuntime {
             config,
         }
     }
-
     /// 渲染组件
     pub async fn render_component(
         &self,
@@ -43,19 +39,14 @@ impl ReactRuntime {
     ) -> Result<RenderResult, Box<dyn std::error::Error>> {
         // 1. 转换 JSX
         let jsx_code: _ = self.jsx_transformer.transform_jsx(&component.source_code)?;
-
         // 2. 编译组件
         let compiled_component: _ = self.compile_component(&jsx_code, component)?;
-
         // 3. 创建 Fiber 节点
         let fiber_root: _ = self.fiber_reconciler.create_fiber_root(&compiled_component, props)?;
-
         // 4. 渲染到虚拟 DOM
         let vdom: _ = self.fiber_reconciler.render_fiber_tree(fiber_root)?;
-
         // 5. 生成 HTML
         let html: _ = self.generate_html(&vdom, container)?;
-
         let render_result: _ = RenderResult {
             html,
             head: self.generate_head(&compiled_component),
@@ -63,10 +54,8 @@ impl ReactRuntime {
             scripts: self.generate_scripts(&compiled_component)?,
             data: Some(self.extract_data(&vdom)?),
         };
-
         Ok(render_result)
     }
-
     /// 水合应用
     pub async fn hydrate_app(
         &self,
@@ -75,19 +64,14 @@ impl ReactRuntime {
     ) -> Result<(), Box<dyn std::error::Error>> {
         // 1. 从服务器获取 HTML
         let server_html: _ = self.get_server_rendered_html(app_id)?;
-
         // 2. 绑定事件监听器
         self.hydration_engine.bind_event_listeners(app_id, &server_html)?;
-
         // 3. 恢复组件状态
         self.hydration_engine.restore_component_state(initial_data)?;
-
         // 4. 启动增量渲染
         self.concurrent_scheduler.start();
-
         Ok(())
     }
-
     /// 服务端渲染 (SSR)
     pub async fn render_to_string(
         &self,
@@ -98,7 +82,6 @@ impl ReactRuntime {
         let render_result: _ = self.render_component(component, props, "root")?;
         Ok(render_result.html)
     }
-
     /// 编译组件
     fn compile_component(
         &self,
@@ -107,7 +90,6 @@ impl ReactRuntime {
     ) -> Result<CompiledComponent, Box<dyn std::error::Error>> {
         // 简化的编译过程
         // 实际实现需要完整的 Babel/TypeScript 编译
-
         let compiled: _ = CompiledComponent {
             name: component.name.clone(),
             code: jsx_code.to_string(),
@@ -115,22 +97,17 @@ impl ReactRuntime {
             dependencies: component.dependencies.clone(),
             exports: HashMap::new(),
         };
-
         Ok(compiled)
     }
-
     /// 生成 HTML
     fn generate_html(&self, vdom: &VirtualDom, container: &str) -> Result<String, Box<dyn std::error::Error>> {
         let mut html = String::new();
         html.push_str(&format!("<div id=\"{}\">", container));
-
         // 遍历虚拟 DOM 树生成 HTML
         html.push_str(&self.node_to_html(&vdom.root)?);
-
         html.push_str("</div>");
         Ok(html)
     }
-
     /// 将节点转换为 HTML
     fn node_to_html(&self, node: &VNode) -> Result<String, Box<dyn std::error::Error>> {
         match node.node_type {
@@ -138,19 +115,15 @@ impl ReactRuntime {
             VNodeType::Element(ref element) => {
                 let mut html = String::new();
                 html.push_str(&format!("<{}", element.tag_name));
-
                 // 添加属性
                 for (key, value) in &element.props {
                     html.push_str(&format!(" {}=\"{}\"", key, value));
                 }
-
                 html.push('>');
-
                 // 添加子元素
                 for child in &element.children {
                     html.push_str(&self.node_to_html(child)?);
                 }
-
                 html.push_str(&format!("</{}>", element.tag_name));
                 html
             }
@@ -163,40 +136,31 @@ impl ReactRuntime {
             }
         }
     }
-
     /// 生成头部
     fn generate_head(&self, component: &CompiledComponent) -> Option<String> {
         // 简化的头部生成
         Some(format!("<title>{}</title>", component.name))
     }
-
     /// 生成样式
     fn generate_styles(&self, vdom: &VirtualDom) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         let mut styles = Vec::new();
-
         // 提取样式信息
         for node in &vdom.styles {
             styles.push(node.clone());
         }
-
         Ok(styles)
     }
-
     /// 生成脚本
     fn generate_scripts(&self, component: &CompiledComponent) -> Result<Vec<String>, Box<dyn std::error::Error>> {
         let mut scripts = Vec::new();
-
         // 添加水合脚本
         scripts.push(self.hydration_engine.get_hydration_script()?);
-
         // 添加组件脚本
         scripts.push(format!(
             "<script>window.ReactComponents = window.ReactComponents || {{}};</script>"
         ));
-
         Ok(scripts)
     }
-
     /// 提取数据
     fn extract_data(&self, vdom: &VirtualDom) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
         // 提取组件状态和 props
@@ -205,21 +169,18 @@ impl ReactRuntime {
             "props": vdom.props
         }))
     }
-
     /// 获取服务器渲染的 HTML
     fn get_server_rendered_html(&self, app_id: &str) -> Result<String, Box<dyn std::error::Error>> {
         // 从服务器获取预渲染的 HTML
         // 简化实现
         Ok(format!("<div id=\"{}\"></div>", app_id))
     }
-
     /// 批量渲染组件
     pub async fn batch_render(
         &self,
         components: &[ReactComponent],
     ) -> Result<Vec<RenderResult>, Box<dyn std::error::Error>> {
         let mut results = Vec::new();
-
         // 并发渲染多个组件
         for component in components {
             match self.render_component(component, None, "root").await {
@@ -236,11 +197,9 @@ impl ReactRuntime {
                 }
             }
         }
-
         Ok(results)
     }
 }
-
 /// React 配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReactConfig {
@@ -251,7 +210,6 @@ pub struct ReactConfig {
     pub development_mode: bool,
     pub enable_source_maps: bool,
 }
-
 impl Default for ReactConfig {
     fn default() -> Self {
         Self {
@@ -264,14 +222,12 @@ impl Default for ReactConfig {
         }
     }
 }
-
 /// JSX 运行时
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JsxRuntime {
     Classic,
     Automatic,
 }
-
 /// React 组件
 #[derive(Debug, Clone)]
 pub struct ReactComponent {
@@ -281,7 +237,6 @@ pub struct ReactComponent {
     pub state_type: Option<String>,
     pub dependencies: Vec<String>,
 }
-
 /// 编译后的组件
 #[derive(Debug, Clone)]
 pub struct CompiledComponent {
@@ -291,7 +246,6 @@ pub struct CompiledComponent {
     pub dependencies: Vec<String>,
     pub exports: HashMap<String, String>,
 }
-
 /// 虚拟 DOM
 #[derive(Debug, Clone)]
 pub struct VirtualDom {
@@ -300,13 +254,11 @@ pub struct VirtualDom {
     pub props: serde_json::Value,
     pub styles: Vec<String>,
 }
-
 /// 虚拟节点
 #[derive(Debug, Clone)]
 pub struct VNode {
     pub node_type: VNodeType,
 }
-
 /// 节点类型
 #[derive(Debug, Clone)]
 pub enum VNodeType {
@@ -314,7 +266,6 @@ pub enum VNodeType {
     Element(VElement),
     Fragment(Vec<VNode>),
 }
-
 /// 虚拟元素
 #[derive(Debug, Clone)]
 pub struct VElement {
@@ -322,79 +273,65 @@ pub struct VElement {
     pub props: HashMap<String, String>,
     pub children: Vec<VNode>,
 }
-
 /// JSX 转换器
 #[derive(Debug)]
 pub struct JsxTransformer {
     // 转换器配置
 }
-
 impl JsxTransformer {
     /// 创建新的 JSX 转换器
     pub fn new() -> Self {
         Self {}
     }
-
     /// 转换 JSX
     pub fn transform_jsx(&self, source: &str) -> Result<String, Box<dyn std::error::Error>> {
         // 简化的 JSX 转换
         // 实际实现需要完整的 JSX 解析和转换
-
         let transformed: _ = source
             .replace("React.createElement", "h")
             .replace("__jsx", "h");
-
         Ok(transformed)
     }
 }
-
 /// 并发调度器
 #[derive(Debug)]
 pub struct ConcurrentScheduler {
     // 调度器状态
 }
-
 impl ConcurrentScheduler {
     /// 创建新的并发调度器
     pub fn new() -> Self {
         Self {}
     }
-
     /// 启动调度器
     pub fn start(&self) {
         // 启动并发渲染
     }
-
     /// 停止调度器
     pub fn stop(&self) {
         // 停止并发渲染
     }
 }
-
 /// 水合引擎
 #[derive(Debug)]
 pub struct HydrationEngine {
     // 水合引擎状态
 }
-
 impl HydrationEngine {
     /// 创建新的水合引擎
     pub fn new() -> Self {
         Self {}
     }
-
     /// 绑定事件监听器
     pub fn bind_event_listeners(&self, app_id: &str, html: &str) -> Result<(), Box<dyn std::error::Error>> {
         // 在 HTML 中绑定事件监听器
         Ok(())
     }
-
     /// 恢复组件状态
     pub fn restore_component_state(&self, initial_data: &serde_json::Value) -> Result<(), Box<dyn std::error::Error>> {
         // 从初始数据恢复组件状态
         Ok(())
     }
-
     /// 获取水合脚本
     pub fn get_hydration_script(&self) -> Result<String, Box<dyn std::error::Error>> {
         Ok(r#"<script>
@@ -405,19 +342,16 @@ impl HydrationEngine {
 </script>"#.to_string())
     }
 }
-
 /// Fiber 协调器
 #[derive(Debug)]
 pub struct FiberReconciler {
     // 协调器状态
 }
-
 impl FiberReconciler {
     /// 创建新的 Fiber 协调器
     pub fn new() -> Self {
         Self {}
     }
-
     /// 创建 Fiber 根节点
     pub fn create_fiber_root(
         &self,
@@ -431,7 +365,6 @@ impl FiberReconciler {
             "props": props
         }))
     }
-
     /// 渲染 Fiber 树
     pub fn render_fiber_tree(
         &self,
@@ -450,28 +383,23 @@ impl FiberReconciler {
             props: serde_json::json!({}),
             styles: Vec::new(),
         };
-
         Ok(vdom)
     }
 }
-
 /// Hooks 管理器
 #[derive(Debug)]
 pub struct HooksManager {
     // Hooks 管理器状态
 }
-
 impl HooksManager {
     /// 创建新的 Hooks 管理器
     pub fn new() -> Self {
         Self {}
     }
-
     /// 注册 Hook
     pub fn register_hook(&self, hook_name: &str, hook_impl: &str) {
         // 注册 Hook 实现
     }
-
     /// 获取 Hook
     pub fn get_hook(&self, hook_name: &str) -> Option<String> {
         // 获取 Hook 实现

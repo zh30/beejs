@@ -2,10 +2,8 @@
 //!
 //! 这个模块提供了性能指标分析功能，能够分析各种性能指标
 //! 并生成优化建议。
-
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
-
 /// 性能指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PerformanceMetricType {
@@ -32,7 +30,6 @@ pub enum PerformanceMetricType {
     /// 自定义指标
     Custom(String),
 }
-
 /// 单个性能指标
 #[derive(Debug, Clone)]
 pub struct PerformanceMetric {
@@ -45,7 +42,6 @@ pub struct PerformanceMetric {
     /// 标签
     pub labels: HashMap<String, String>,
 }
-
 /// 性能指标集合
 #[derive(Debug, Clone)]
 pub struct PerformanceMetrics {
@@ -54,7 +50,6 @@ pub struct PerformanceMetrics {
     /// 时间范围
     pub time_range: (SystemTime, SystemTime),
 }
-
 /// 优化目标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum OptimizationTarget {
@@ -77,7 +72,6 @@ pub enum OptimizationTarget {
     /// 自定义目标
     Custom(String),
 }
-
 /// 优化类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum OptimizationType {
@@ -100,7 +94,6 @@ pub enum OptimizationType {
     /// 自定义优化
     Custom(String),
 }
-
 /// 优化建议
 #[derive(Debug, Clone)]
 pub struct OptimizationSuggestion {
@@ -121,7 +114,6 @@ pub struct OptimizationSuggestion {
     /// 详细描述
     pub description: String,
 }
-
 /// 优化计划
 #[derive(Debug, Clone)]
 pub struct OptimizationPlan {
@@ -138,7 +130,6 @@ pub struct OptimizationPlan {
     /// 风险等级 (0.0 - 1.0)
     pub risk_level: f64,
 }
-
 /// 性能分析器
 ///
 /// 分析性能指标并生成优化建议
@@ -148,7 +139,6 @@ pub struct PerformanceAnalyzer {
     /// 异常阈值
     pub anomaly_threshold: f64,
 }
-
 impl PerformanceAnalyzer {
     /// 创建新的性能分析器
     pub fn new() -> Self {
@@ -157,7 +147,6 @@ impl PerformanceAnalyzer {
             anomaly_threshold: 2.0, // 2-sigma 阈值
         }
     }
-
     /// 创建自定义性能分析器
     pub fn with_config(window_size: usize, anomaly_threshold: f64) -> Self {
         Self {
@@ -165,7 +154,6 @@ impl PerformanceAnalyzer {
             anomaly_threshold,
         }
     }
-
     /// 分析性能指标并生成优化计划
     pub fn analyze_performance(&self, metrics: &PerformanceMetrics) -> OptimizationPlan {
         if metrics.metrics.is_empty() {
@@ -178,11 +166,9 @@ impl PerformanceAnalyzer {
                 risk_level: 0.0,
             };
         }
-
         // 计算各类指标的平均值
         let (avg_cpu, avg_memory, avg_gc, avg_jit, avg_cache) =
             self.calculate_average_metrics(metrics);
-
         // 计算当前性能分数
         let current_score: _ = self.calculate_performance_score(
             avg_cpu,
@@ -191,7 +177,6 @@ impl PerformanceAnalyzer {
             avg_jit,
             avg_cache,
         );
-
         // 生成优化建议
         let suggestions: _ = self.generate_optimization_suggestions(
             avg_cpu,
@@ -200,7 +185,6 @@ impl PerformanceAnalyzer {
             avg_jit,
             avg_cache,
         );
-
         // 计算预期改进
         let estimated_improvement: _ = if !suggestions.is_empty() {
             suggestions.iter()
@@ -209,13 +193,10 @@ impl PerformanceAnalyzer {
         } else {
             0.0
         };
-
         // 计算目标分数
         let target_score: _ = current_score * (1.0 - estimated_improvement / 100.0);
-
         // 计算风险等级
         let risk_level: _ = self.calculate_risk_level(&suggestions);
-
         OptimizationPlan {
             target: OptimizationTarget::Latency,
             current_score,
@@ -225,7 +206,6 @@ impl PerformanceAnalyzer {
             risk_level,
         }
     }
-
     /// 计算各类指标的平均值
     fn calculate_average_metrics(
         &self,
@@ -236,7 +216,6 @@ impl PerformanceAnalyzer {
         let mut gc_values = Vec::new();
         let mut jit_values = Vec::new();
         let mut cache_values = Vec::new();
-
         for metric in &metrics.metrics {
             match metric.metric_type {
                 PerformanceMetricType::CpuUtilization => cpu_values.push(metric.value),
@@ -247,16 +226,13 @@ impl PerformanceAnalyzer {
                 _ => {}
             }
         }
-
         let avg_cpu: _ = self.safe_average(&cpu_values);
         let avg_memory: _ = self.safe_average(&memory_values);
         let avg_gc: _ = self.safe_average(&gc_values);
         let avg_jit: _ = self.safe_average(&jit_values);
         let avg_cache: _ = self.safe_average(&cache_values);
-
         (avg_cpu, avg_memory, avg_gc, avg_jit, avg_cache)
     }
-
     /// 安全计算平均值（避免除零）
     fn safe_average(&self, values: &[f64]) -> f64 {
         if values.is_empty() {
@@ -265,7 +241,6 @@ impl PerformanceAnalyzer {
             values.iter().sum::<f64>() / values.len() as f64
         }
     }
-
     /// 计算性能分数
     fn calculate_performance_score(
         &self,
@@ -277,24 +252,18 @@ impl PerformanceAnalyzer {
     ) -> f64 {
         // CPU 使用率权重 0.3（越低越好）
         let cpu_score: _ = (100.0 - avg_cpu).max(0.0) / 100.0;
-
         // 内存使用率权重 0.3（越低越好）
         let memory_score: _ = (100.0 - avg_memory).max(0.0) / 100.0;
-
         // GC 时间权重 0.2（越低越好，基准 20ms）
         let gc_score: _ = (20.0 - avg_gc).max(0.0) / 20.0;
-
         // JIT 编译时间权重 0.1（越低越好，基准 100ms）
         let jit_score: _ = (100.0 - avg_jit).max(0.0) / 100.0;
-
         // 缓存命中率权重 0.1（越高越好）
         let cache_score: _ = avg_cache;
-
         // 加权平均
         (cpu_score * 0.3 + memory_score * 0.3 + gc_score * 0.2
             + jit_score * 0.1 + cache_score * 0.1) * 100.0
     }
-
     /// 生成优化建议
     fn generate_optimization_suggestions(
         &self,
@@ -305,7 +274,6 @@ impl PerformanceAnalyzer {
         avg_cache: f64,
     ) -> Vec<OptimizationSuggestion> {
         let mut suggestions = Vec::new();
-
         // CPU 优化建议
         if avg_cpu > 70.0 {
             suggestions.push(OptimizationSuggestion {
@@ -318,7 +286,6 @@ impl PerformanceAnalyzer {
                 confidence: 0.8,
                 description: "增加 WebAssembly 内联函数大小可以减少函数调用开销，提高 CPU 效率".to_string(),
             });
-
             suggestions.push(OptimizationSuggestion {
                 optimization_type: OptimizationType::InlineOptimization,
                 target: OptimizationTarget::CpuUsage,
@@ -330,7 +297,6 @@ impl PerformanceAnalyzer {
                 description: "提高内联阈值可以减少函数调用开销".to_string(),
             });
         }
-
         // 内存优化建议
         if avg_memory > 80.0 {
             suggestions.push(OptimizationSuggestion {
@@ -343,7 +309,6 @@ impl PerformanceAnalyzer {
                 confidence: 0.9,
                 description: "增加堆初始大小可以减少内存重新分配和碎片".to_string(),
             });
-
             suggestions.push(OptimizationSuggestion {
                 optimization_type: OptimizationType::EscapeAnalysisOptimization,
                 target: OptimizationTarget::MemoryUsage,
@@ -355,7 +320,6 @@ impl PerformanceAnalyzer {
                 description: "启用逃逸分析可以优化对象分配".to_string(),
             });
         }
-
         // GC 优化建议
         if avg_gc > 15.0 {
             suggestions.push(OptimizationSuggestion {
@@ -368,7 +332,6 @@ impl PerformanceAnalyzer {
                 confidence: 0.85,
                 description: "提高 GC 阈值可以减少 GC 频率，提高吞吐量".to_string(),
             });
-
             suggestions.push(OptimizationSuggestion {
                 optimization_type: OptimizationType::GcTuning,
                 target: OptimizationTarget::GcTime,
@@ -380,7 +343,6 @@ impl PerformanceAnalyzer {
                 description: "增加 GC 并行线程数可以加速垃圾回收".to_string(),
             });
         }
-
         // JIT 优化建议
         if avg_jit > 100.0 {
             suggestions.push(OptimizationSuggestion {
@@ -393,7 +355,6 @@ impl PerformanceAnalyzer {
                 confidence: 0.85,
                 description: "启用分层编译可以平衡启动速度和峰值性能".to_string(),
             });
-
             suggestions.push(OptimizationSuggestion {
                 optimization_type: OptimizationType::JitOptimization,
                 target: OptimizationTarget::JitPerformance,
@@ -405,7 +366,6 @@ impl PerformanceAnalyzer {
                 description: "增加代码缓存大小可以减少代码回收".to_string(),
             });
         }
-
         // 缓存优化建议
         if avg_cache < 0.8 {
             suggestions.push(OptimizationSuggestion {
@@ -419,52 +379,43 @@ impl PerformanceAnalyzer {
                 description: "增加代码缓存大小可以提高缓存命中率".to_string(),
             });
         }
-
         suggestions
     }
-
     /// 计算风险等级
     fn calculate_risk_level(&self, suggestions: &[OptimizationSuggestion]) -> f64 {
         if suggestions.is_empty() {
             return 0.0;
         }
-
         // 基于置信度计算风险
         let avg_confidence: f64 = suggestions.iter()
             .map(|s| s.confidence)
             .sum::<f64>() / suggestions.len() as f64;
-
         // 风险与置信度成反比
         1.0 - avg_confidence
     }
 }
-
 impl Default for PerformanceAnalyzer {
     fn default() -> Self {
         Self::new()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_performance_analyzer_creation() {
         let analyzer: _ = PerformanceAnalyzer::new();
         assert_eq!(analyzer.window_size, 100);
         assert_eq!(analyzer.anomaly_threshold, 2.0);
     }
-
     #[test]
     fn test_performance_analyzer_with_config() {
         let analyzer: _ = PerformanceAnalyzer::with_config(200, 3.0);
         assert_eq!(analyzer.window_size, 200);
         assert_eq!(analyzer.anomaly_threshold, 3.0);
     }
-
     #[test]
     fn test_safe_average() {
         let analyzer: _ = PerformanceAnalyzer::new();
@@ -472,7 +423,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(analyzer.safe_average(&[]), 0.0);
         assert_eq!(analyzer.safe_average(&[5.0]), 5.0);
     }
-
     #[test]
     fn test_analyze_empty_metrics() {
         let analyzer: _ = PerformanceAnalyzer::new();
@@ -480,7 +430,6 @@ use std::collections::{HashMap, BTreeMap};
             metrics: Vec::new(),
             time_range: (SystemTime::now(), SystemTime::now()),
         };
-
         let plan: _ = analyzer.analyze_performance(&empty_metrics);
         assert_eq!(plan.suggestions.len(), 0);
         assert_eq!(plan.current_score, 0.0);

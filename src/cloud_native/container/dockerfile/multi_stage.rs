@@ -1,20 +1,15 @@
 //! Multi-stage Dockerfile builder for Beejs
 //! Generates optimized multi-stage Docker builds
-
 use std::collections::HashMap;
-
 /// Multi-stage Dockerfile generator
 pub struct MultiStageBuilder {
     /// Builder stage configuration
     builder_stage: BuilderStage,
-
     /// Runtime stage configuration
     runtime_stage: RuntimeStage,
-
     /// Optimization options
     optimizations: Vec<Box<dyn Optimization>>,
 }
-
 impl MultiStageBuilder {
     /// Create a new multi-stage builder
     pub fn new() -> Self {
@@ -24,46 +19,36 @@ impl MultiStageBuilder {
             optimizations: Vec::new(),
         }
     }
-
     /// Set builder stage configuration
     pub fn builder_stage(mut self, stage: BuilderStage) -> Self {
         self.builder_stage = stage;
         self
     }
-
     /// Set runtime stage configuration
     pub fn runtime_stage(mut self, stage: RuntimeStage) -> Self {
         self.runtime_stage = stage;
         self
     }
-
     /// Add optimization
     pub fn add_optimization(mut self, optimization: Box<dyn Optimization>) -> Self {
         self.optimizations.push(optimization);
         self
     }
-
     /// Generate the Dockerfile
     pub fn generate(&self) -> Result<String, Error> {
         let mut dockerfile = String::new();
-
         // Add header comment
         dockerfile.push_str(&self.generate_header()?);
-
         // Add builder stage
         dockerfile.push_str(&self.generate_builder_stage()?);
-
         // Add runtime stage
         dockerfile.push_str(&self.generate_runtime_stage()?);
-
         // Apply optimizations
         for optimization in &self.optimizations {
             dockerfile = optimization.apply(dockerfile)?;
         }
-
         Ok(dockerfile)
     }
-
     /// Generate header comment
     fn generate_header(&self) -> Result<String, Error> {
         let header: _ = format!(
@@ -83,73 +68,56 @@ impl MultiStageBuilder {
                 .collect::<Vec<&str>>()
                 .join(", ")
         );
-
         Ok(header)
     }
-
     /// Generate builder stage
     fn generate_builder_stage(&self) -> Result<String, Error> {
         let mut stage = String::new();
-
         stage.push_str(&format!("# Stage 1: Builder\n"));
         stage.push_str(&format!(
             "FROM {} as builder\n",
             self.builder_stage.base_image
         ));
-
         // Set environment variables
         stage.push_str(&format!(
             "ENV RUST_VERSION={}\n",
             self.builder_stage.rust_version
         ));
-
         // Add labels
         if !self.builder_stage.labels.is_empty() {
             for (key, value) in &self.builder_stage.labels {
                 stage.push_str(&format!("LABEL {}={}\n", key, value));
             }
         }
-
         // Set working directory
         stage.push_str("WORKDIR /app\n");
-
         // Copy dependencies first (for better layer caching)
         stage.push_str("COPY Cargo.toml Cargo.lock ./\n");
         stage.push_str("RUN mkdir src && echo 'fn main() {{}}' > src/main.rs\n");
-
         // Build dependencies
         stage.push_str("RUN cargo fetch\n");
-
         // Copy source code
         stage.push_str("COPY src ./src\n");
-
         // Build the application
         stage.push_str("RUN cargo build --release");
-
         // Add target-specific optimizations
         if self.builder_stage.strip_binaries {
             stage.push_str(" && strip target/release/beejs");
         }
-
         if self.builder_stage.optimize_for_size {
             stage.push_str(" && objcopy --only-keep-debug beejs beejs.debug && strip beejs && objcopy --add-gnu-debuglink=beejs.debug beejs");
         }
-
         stage.push_str("\n\n");
-
         Ok(stage)
     }
-
     /// Generate runtime stage
     fn generate_runtime_stage(&self) -> Result<String, Error> {
         let mut stage = String::new();
-
         stage.push_str(&format!("# Stage 2: Runtime\n"));
         stage.push_str(&format!(
             "FROM {}\n",
             self.runtime_stage.base_image
         ));
-
         // Create non-root user
         if self.runtime_stage.create_user {
             stage.push_str(&format!(
@@ -157,17 +125,13 @@ impl MultiStageBuilder {
                 self.runtime_stage.user_group, self.runtime_stage.user_group, self.runtime_stage.username
             ));
         }
-
         // Copy binary from builder stage
         stage.push_str("COPY --from=builder /app/target/release/beejs /usr/local/bin/");
-
         // Set permissions
         if self.builder_stage.strip_binaries {
             stage.push_str(" && chmod +x /usr/local/bin/beejs");
         }
-
         stage.push_str("\n");
-
         // Set ownership
         if self.runtime_stage.create_user {
             stage.push_str(&format!(
@@ -175,7 +139,6 @@ impl MultiStageBuilder {
                 self.runtime_stage.username, self.runtime_stage.user_group
             ));
         }
-
         // Add labels
         if !self.runtime_stage.labels.is_empty() {
             stage.push_str("\n");
@@ -183,49 +146,37 @@ impl MultiStageBuilder {
                 stage.push_str(&format!("LABEL {}={}\n", key, value));
             }
         }
-
         // Switch to non-root user
         if self.runtime_stage.create_user {
             stage.push_str(&format!("USER {}\n", self.runtime_stage.username));
         }
-
         // Set entrypoint
         stage.push_str("ENTRYPOINT [\"beejs\"]\n");
-
         Ok(stage)
     }
 }
-
 /// Builder stage configuration
 #[derive(Debug, Clone)]
 pub struct BuilderStage {
     /// Base image for builder
     pub base_image: String,
-
     /// Rust version
     pub rust_version: String,
-
     /// Labels to add
     pub labels: HashMap<String, String>,
-
     /// Strip binaries
     pub strip_binaries: bool,
-
     /// Optimize for size
     pub optimize_for_size: bool,
-
     /// Additional build args
     pub build_args: HashMap<String, String>,
 }
-
 impl Default for BuilderStage {
     fn default() -> Self {
         let mut labels = HashMap::new();
         labels.insert("builder".to_string(), "rust".to_string());
-
         let mut build_args = HashMap::new();
         build_args.insert("RUSTFLAGS".to_string(), "-C target-cpu=native".to_string());
-
         Self {
             base_image: "rust:1.70".to_string(),
             rust_version: "1.70".to_string(),
@@ -236,35 +187,27 @@ impl Default for BuilderStage {
         }
     }
 }
-
 /// Runtime stage configuration
 #[derive(Debug, Clone)]
 pub struct RuntimeStage {
     /// Base image for runtime
     pub base_image: String,
-
     /// Create non-root user
     pub create_user: bool,
-
     /// Username
     pub username: String,
-
     /// User group
     pub user_group: String,
-
     /// Labels to add
     pub labels: HashMap<String, String>,
-
     /// Additional packages to install
     pub packages: Vec<String>,
 }
-
 impl Default for RuntimeStage {
     fn default() -> Self {
         let mut labels = HashMap::new();
         labels.insert("maintainer".to_string(), "Beejs Team".to_string());
         labels.insert("version".to_string(), "1.0.0".to_string());
-
         Self {
             base_image: "debian:bookworm-slim".to_string(),
             create_user: true,
@@ -275,30 +218,24 @@ impl Default for RuntimeStage {
         }
     }
 }
-
 /// Optimization trait
 pub trait Optimization {
     /// Get optimization name
     fn name(&self) -> &str;
-
     /// Apply optimization to Dockerfile
     fn apply(&self, dockerfile: String) -> Result<String, Error>;
 }
-
 /// Base image optimization
 pub struct BaseImageOptimization {
     /// Preferred base image
     pub base_image: String,
-
     /// Use distroless
     pub use_distroless: bool,
 }
-
 impl Optimization for BaseImageOptimization {
     fn name(&self) -> &str {
         "base-image-optimization"
     }
-
     fn apply(&self, mut dockerfile: String) -> Result<String, Error> {
         if self.use_distroless {
             // Replace with distroless image
@@ -307,40 +244,32 @@ impl Optimization for BaseImageOptimization {
                 "gcr.io/distroless/base-debian12:latest"
             );
         }
-
         Ok(dockerfile)
     }
 }
-
 /// Layer caching optimization
 pub struct LayerCachingOptimization;
-
 impl Optimization for LayerCachingOptimization {
     fn name(&self) -> &str {
         "layer-caching"
     }
-
     fn apply(&self, dockerfile: String) -> Result<String, Error> {
         // Dockerfile already optimized for layer caching
         // This is a no-op optimization
         Ok(dockerfile)
     }
 }
-
 /// Security hardening optimization
 pub struct SecurityHardeningOptimization {
     /// Add security labels
     pub add_security_labels: bool,
-
     /// Use read-only root filesystem
     pub read_only_root: bool,
 }
-
 impl Optimization for SecurityHardeningOptimization {
     fn name(&self) -> &str {
         "security-hardening"
     }
-
     fn apply(&self, mut dockerfile: String) -> Result<String, Error> {
         if self.add_security_labels {
             let security_labels: _ = r#"
@@ -349,26 +278,21 @@ LABEL security.compliance="CIS-Docker"
 "#;
             dockerfile.push_str(security_labels);
         }
-
         if self.read_only_root {
             dockerfile.push_str("RUN chmod -R u-w,go-w,go+r /usr/local/bin\n");
         }
-
         Ok(dockerfile)
     }
 }
-
 /// Multi-architecture optimization
 pub struct MultiArchOptimization {
     /// Target architectures
     pub architectures: Vec<String>,
 }
-
 impl Optimization for MultiArchOptimization {
     fn name(&self) -> &str {
         "multi-architecture"
     }
-
     fn apply(&self, mut dockerfile: String) -> Result<String, Error> {
         // Add buildx integration comment
         let arch_comment: _ = format!(
@@ -376,43 +300,34 @@ impl Optimization for MultiArchOptimization {
             self.architectures.join(", "),
             self.architectures.join(",")
         );
-
         dockerfile.insert_str(0, &arch_comment);
-
         Ok(dockerfile)
     }
 }
-
 /// Error type
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Invalid configuration: {0}")]
     InvalidConfig(String),
-
     #[error("Generation error: {0}")]
     Generation(String),
-
     #[error("Other error: {0}")]
     Other(String),
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_basic_dockerfile_generation() {
         let builder: _ = MultiStageBuilder::new();
         let dockerfile: _ = builder.generate().unwrap();
-
         assert!(dockerfile.contains("FROM rust:1.70 as builder"));
         assert!(dockerfile.contains("FROM debian:bookworm-slim"));
         assert!(dockerfile.contains("COPY --from=builder"));
         assert!(dockerfile.contains("ENTRYPOINT"));
     }
-
     #[test]
     fn test_builder_stage_configuration() {
         let builder_stage: _ = BuilderStage {
@@ -425,14 +340,11 @@ use std::collections::{HashMap, BTreeMap};
             optimize_for_size: false,
             build_args: HashMap::new(),
         };
-
         let builder: _ = MultiStageBuilder::new().builder_stage(builder_stage);
         let dockerfile: _ = builder.generate().unwrap();
-
         assert!(dockerfile.contains("FROM rust:1.75 as builder"));
         assert!(dockerfile.contains("LABEL custom.label=value"));
     }
-
     #[test]
     fn test_runtime_stage_configuration() {
         let runtime_stage: _ = RuntimeStage {
@@ -443,50 +355,39 @@ use std::collections::{HashMap, BTreeMap};
             labels: HashMap::new(),
             packages: Vec::new(),
         };
-
         let builder: _ = MultiStageBuilder::new().runtime_stage(runtime_stage);
         let dockerfile: _ = builder.generate().unwrap();
-
         assert!(dockerfile.contains("FROM alpine:3.18"));
         assert!(!dockerfile.contains("useradd"));
     }
-
     #[test]
     fn test_base_image_optimization() {
         let optimization: _ = BaseImageOptimization {
             base_image: "gcr.io/distroless/base-debian12:latest".to_string(),
             use_distroless: true,
         };
-
         let dockerfile: _ = "FROM debian:bookworm-slim\n".to_string();
         let optimized: _ = optimization.apply(dockerfile).unwrap();
-
         assert!(optimized.contains("distroless"));
     }
-
     #[test]
     fn test_security_hardening_optimization() {
         let optimization: _ = SecurityHardeningOptimization {
             add_security_labels: true,
             read_only_root: true,
         };
-
         let dockerfile: _ = "FROM debian:bookworm-slim\n".to_string();
         let optimized: _ = optimization.apply(dockerfile).unwrap();
-
         assert!(optimized.contains("security.scan"));
         assert!(optimized.contains("chmod -R u-w,go-w,go+r"));
     }
-
     #[test]
     fn test_multi_arch_optimization() {
         let optimization: _ = MultiArchOptimization {
             architectures: vec!["linux/amd64".to_string(), "linux/arm64".to_string()],
         };
-
         let dockerfile: _ = "FROM debian:bookworm-slim\n".to_string();
         let optimized: _ = optimization.apply(dockerfile).unwrap();
-
         assert!(optimized.contains("linux/amd64"));
         assert!(optimized.contains("linux/arm64"));
     }

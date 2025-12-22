@@ -2,14 +2,11 @@
 //!
 //! Provides a command-line interface for debugging JavaScript/TypeScript code
 //! with support for breakpoints, stepping, and variable inspection.
-
 use anyhow::Result;
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
-
 use crate::debugger::DebuggerEngine;
 use crate::RuntimeLite;
-
 /// Interactive debug command
 #[derive(Debug, Clone)]
 pub enum DebugCliCommand {
@@ -48,14 +45,12 @@ pub enum DebugCliCommand {
     /// Exit debugger
     Quit,
 }
-
 /// Interactive debug console
 pub struct DebugConsole {
     debugger: Arc<Mutex<DebuggerEngine>>,
     runtime: Arc<Mutex<RuntimeLite>>,
     history: Vec<String>,
 }
-
 impl DebugConsole {
     /// Create a new debug console
     pub fn new(debugger: Arc<Mutex<DebuggerEngine>>, runtime: Arc<Mutex<RuntimeLite>>) -> Self {
@@ -65,16 +60,13 @@ impl DebugConsole {
             history: Vec::new(),
         }
     }
-
     /// Start the interactive debug session
     pub async fn run(&mut self) -> Result<()> {
         println!("🐛 Beejs Debugger - Interactive Mode");
         println!("Type 'help' for available commands\n");
-
         loop {
             // Read command
             let command: _ = self.read_command()?;
-
             // Parse and execute
             match self.execute_command(command).await {
                 Ok(DebugCliCommand::Quit) => {
@@ -87,33 +79,26 @@ impl DebugConsole {
                 }
             }
         }
-
         Ok(())
     }
-
     /// Read a command from stdin
     fn read_command(&mut self) -> Result<String> {
         print!("(beejs-debug) ");
         io::stdout().flush()?;
-
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
-
         let command: _ = input.trim().to_string();
         if !command.is_empty() {
             self.history.push(command.clone());
         }
-
         Ok(command)
     }
-
     /// Parse command string
     fn parse_command(&self, input: &str) -> Result<DebugCliCommand> {
         let parts: Vec<&str> = input.split_whitespace().collect();
         if parts.is_empty() {
             return Err(anyhow::anyhow!("Empty command"));
         }
-
         match parts[0] {
             "continue" | "c" | "cont" => Ok(DebugCliCommand::Continue),
             "next" | "n" => Ok(DebugCliCommand::Next),
@@ -181,11 +166,9 @@ impl DebugConsole {
             _ => Err(anyhow::anyhow!("Unknown command: {}. Type 'help' for available commands", parts[0])),
         }
     }
-
     /// Execute a debug command
     async fn execute_command(&mut self, input: String) -> Result<DebugCliCommand> {
         let command: _ = self.parse_command(&input)?;
-
         // Execute based on command type
         match &command {
             DebugCliCommand::Help => {
@@ -220,10 +203,8 @@ impl DebugConsole {
                 // These are: Continue, Next, Step, Finish, Pause
             }
         }
-
         Ok(command)
     }
-
     /// Print help information
     fn print_help(&self) {
         println!("\n🐛 Beejs Debugger Commands:");
@@ -250,7 +231,6 @@ impl DebugConsole {
         println!("  quit (q, exit)      - Exit debugger");
         println!();
     }
-
     /// List all breakpoints
     fn list_breakpoints(&self) {
         let _debugger: _ = self.debugger.lock().unwrap();
@@ -259,14 +239,12 @@ impl DebugConsole {
         println!("   (No breakpoints set)");
         println!();
     }
-
     /// Show current code
     fn show_current_code(&self) {
         println!("\n📄 Current Code:");
         println!("   (Code viewer not yet implemented)");
         println!();
     }
-
     /// Show backtrace
     async fn show_backtrace(&self) -> Result<()> {
         println!("\n📚 Call Stack:");
@@ -275,7 +253,6 @@ impl DebugConsole {
         println!();
         Ok(())
     }
-
     /// Set breakpoint
     fn set_breakpoint(&self, line: u32, file: Option<String>) -> Result<()> {
         println!("✅ Breakpoint set at line {}", line);
@@ -285,21 +262,18 @@ impl DebugConsole {
         // TODO: Implement actual breakpoint setting
         Ok(())
     }
-
     /// Set function breakpoint
     fn set_function_breakpoint(&self, func: &str) -> Result<()> {
         println!("✅ Breakpoint set at function {}", func);
         // TODO: Implement actual function breakpoint setting
         Ok(())
     }
-
     /// Delete breakpoint
     fn delete_breakpoint(&self, id: u32) -> Result<()> {
         println!("✅ Breakpoint {} deleted", id);
         // TODO: Implement actual breakpoint deletion
         Ok(())
     }
-
     /// Evaluate expression
     async fn evaluate_expression(&self, expr: &str) -> Result<()> {
         println!("\n🔍 Evaluating: {}", expr);
@@ -309,13 +283,11 @@ impl DebugConsole {
         Ok(())
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_parse_continue_command() {
         let console: _ = DebugConsole::new(
@@ -325,7 +297,6 @@ use std::collections::{HashMap, BTreeMap};
         assert!(matches!(console.parse_command("continue").unwrap(), DebugCliCommand::Continue));
         assert!(matches!(console.parse_command("c").unwrap(), DebugCliCommand::Continue));
     }
-
     #[test]
     fn test_parse_break_command() {
         let console: _ = DebugConsole::new(
@@ -335,7 +306,6 @@ use std::collections::{HashMap, BTreeMap};
         assert!(matches!(console.parse_command("break 10").unwrap(), DebugCliCommand::Break(10)));
         assert!(matches!(console.parse_command("b 20").unwrap(), DebugCliCommand::Break(20)));
     }
-
     #[test]
     fn test_parse_print_command() {
         let console: _ = DebugConsole::new(

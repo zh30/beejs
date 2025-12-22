@@ -1,7 +1,6 @@
 //! 实时协作引擎
 //! 
 //! 实现多人实时协作编辑，支持操作广播和版本管理
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -11,7 +10,6 @@ use tracing::info;
 use serde::{Serialize, Deserialize};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Participant {
     pub id: String,
@@ -19,13 +17,11 @@ pub struct Participant {
     pub email: String,
     pub role: String,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Operation {
     Insert { position: usize, text: String, participant_id: String },
     Delete { position: usize, length: usize, participant_id: String },
 }
-
 pub struct CollaborationSession {
     session_id: String,
     document_id: String,
@@ -33,7 +29,6 @@ pub struct CollaborationSession {
     operations: Arc<Mutex<Vec<Operation>>>,
     version: Arc<AtomicU64>,
 }
-
 impl CollaborationSession {
     pub fn new(session_id: String, document_id: String) -> Self {
         info!("🚀 创建协作会话: {} (文档: {})", session_id, document_id);
@@ -45,7 +40,6 @@ impl CollaborationSession {
             version: Arc::new(Mutex::new(AtomicU64::new(0))),
         }
     }
-
     pub async fn join(&self, participant: Participant) -> Result<()> {
         let participant_id: _ = participant.id.clone();
         let participant_name: _ = participant.name.clone();
@@ -59,21 +53,17 @@ impl CollaborationSession {
         
         Ok(())
     }
-
     pub async fn get_participants(&self) -> Vec<Participant> {
         let participants: _ = self.participants.read().await;
         participants.values().cloned().collect()
     }
-
     pub fn get_version(&self) -> u64 {
         self.version.load(Ordering::SeqCst)
     }
 }
-
 pub struct RealtimeCollaboration {
     sessions: HashMap<String, CollaborationSession>,
 }
-
 impl RealtimeCollaboration {
     pub fn new() -> Self {
         info!("🚀 初始化实时协作引擎");
@@ -81,7 +71,6 @@ impl RealtimeCollaboration {
             sessions: HashMap::new(),
         }
     }
-
     pub async fn create_session(&self, document_id: &str) -> Result<CollaborationSession> {
         let session_id: _ = format!("session_{}", document_id);
         let session: _ = CollaborationSession::new(session_id, document_id.to_string());

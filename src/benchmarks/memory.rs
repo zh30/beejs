@@ -6,23 +6,18 @@
 //! - 内存使用量测试
 //! - 内存泄漏检测
 //! - 垃圾回收性能测试
-
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use std::time::Duration;
-use std::sync::{Arc, Mutex};
 use tokio::task;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 内存使用基准测试套件
 pub struct MemoryBenchmark;
-
 impl MemoryBenchmark {
     /// 创建新的内存使用基准测试套件
     pub fn new() -> Self {
         Self
     }
-
     /// 内存分配性能测试
     pub fn allocation_performance_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -32,7 +27,6 @@ impl MemoryBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "allocation_performance",
@@ -47,7 +41,6 @@ impl MemoryBenchmark {
             },
         )
     }
-
     /// 大对象分配测试
     pub fn large_object_allocation_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -57,7 +50,6 @@ impl MemoryBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "large_object_allocation",
@@ -72,7 +64,6 @@ impl MemoryBenchmark {
             },
         )
     }
-
     /// 内存碎片化测试
     pub fn memory_fragmentation_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -82,7 +73,6 @@ impl MemoryBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_fragmentation",
@@ -100,7 +90,6 @@ impl MemoryBenchmark {
             },
         )
     }
-
     /// 内存池性能测试
     pub fn memory_pool_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -110,7 +99,6 @@ impl MemoryBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_pool",
@@ -126,7 +114,6 @@ impl MemoryBenchmark {
             },
         )
     }
-
     /// 字符串内存使用测试
     pub fn string_memory_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -136,7 +123,6 @@ impl MemoryBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "string_memory",
@@ -151,7 +137,6 @@ impl MemoryBenchmark {
             },
         )
     }
-
     /// 递归数据结构内存测试
     pub fn recursive_data_structure_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -161,7 +146,6 @@ impl MemoryBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "recursive_data_structure",
@@ -182,7 +166,6 @@ impl MemoryBenchmark {
             },
         )
     }
-
     /// 异步内存使用测试
     pub fn async_memory_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -192,7 +175,6 @@ impl MemoryBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "async_memory",
@@ -209,7 +191,6 @@ impl MemoryBenchmark {
             },
         )
     }
-
     /// 内存泄漏检测测试
     pub fn memory_leak_detection_benchmark(&self) -> BenchmarkResult {
         let config: _ = BenchmarkConfig {
@@ -219,7 +200,6 @@ impl MemoryBenchmark {
             save_raw_data: true,
             compare_with_baseline: true,
         };
-
         let framework: _ = BenchmarkFramework::new(config);
         framework.run_benchmark_with_memory(
             "memory_leak_detection",
@@ -236,7 +216,6 @@ impl MemoryBenchmark {
             },
         )
     }
-
     /// 运行所有内存使用基准测试
     pub fn run_all_benchmarks(&self) -> Vec<BenchmarkResult> {
         vec![
@@ -250,30 +229,25 @@ impl MemoryBenchmark {
             self.memory_leak_detection_benchmark(),
         ]
     }
-
     /// 生成内存使用性能报告
     pub fn generate_report(&self, results: &[BenchmarkResult]) -> String {
         let mut report = String::new();
         report.push_str("=== Memory Usage Performance Report ===\n\n");
-
         for result in results {
             report.push_str(&result.format_summary());
             report.push_str("\n\n");
         }
-
         // 统计分析
         let total_memory: _ = results
             .iter()
             .filter_map(|r| r.memory_stats.as_ref())
             .map(|stats| stats.current_rss)
             .sum::<usize>();
-
         let avg_memory: _ = if !results.is_empty() {
             total_memory / results.len()
         } else {
             0
         };
-
         report.push_str(&format!(
             "Total Memory Usage: {} bytes\n",
             total_memory
@@ -282,40 +256,33 @@ impl MemoryBenchmark {
             "Average Memory Usage: {} bytes\n",
             avg_memory
         ));
-
         report
     }
 }
-
 impl Default for MemoryBenchmark {
     fn default() -> Self {
         Self::new()
     }
 }
-
 // 辅助数据结构
 #[derive(Debug, Clone)]
 struct Node {
     value: i32,
     children: Vec<Node>,
 }
-
 /// 获取当前内存使用量（简化实现）
 fn get_current_memory() -> usize {
     // 简化实现 - 在实际应用中会使用平台特定的 API
     0
 }
-
 /// 内存使用优化建议
 pub struct MemoryOptimizationSuggestions {
     pub suggestions: Vec<String>,
 }
-
 impl MemoryOptimizationSuggestions {
     /// 基于基准测试结果生成优化建议
     pub fn generate(results: &[BenchmarkResult]) -> Self {
         let mut suggestions = Vec::new();
-
         for result in results {
             if let Some(stats) = &result.memory_stats {
                 match result.name.as_str() {
@@ -340,7 +307,6 @@ impl MemoryOptimizationSuggestions {
                 }
             }
         }
-
         // 通用建议
         let avg_memory: usize = results
             .iter()
@@ -348,16 +314,13 @@ impl MemoryOptimizationSuggestions {
             .map(|stats| stats.current_rss)
             .sum::<usize>()
             / results.len().max(1);
-
         if avg_memory > 10000000 {
             suggestions.push(
                 "Overall memory usage is high. Consider implementing more aggressive memory optimization strategies.".to_string()
             );
         }
-
         Self { suggestions }
     }
-
     /// 格式化优化建议
     pub fn format(&self) -> String {
         if self.suggestions.is_empty() {

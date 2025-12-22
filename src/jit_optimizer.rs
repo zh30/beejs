@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-
 /// JIT编译阈值配置
 #[derive(Debug, Clone)]
 pub struct JITThresholds {
@@ -18,7 +17,6 @@ pub struct JITThresholds {
     #[allow(dead_code)]
     pub max_compile_time_ms: u64,
 }
-
 impl Default for JITThresholds {
     fn default() -> Self {
         Self {
@@ -30,7 +28,6 @@ impl Default for JITThresholds {
         }
     }
 }
-
 /// 代码复杂度级别
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CodeComplexity {
@@ -41,7 +38,6 @@ pub enum CodeComplexity {
     /// 复杂代码：多个函数，嵌套循环，递归
     Complex,
 }
-
 /// JIT编译决策
 #[derive(Debug, Clone)]
 pub struct JITDecision {
@@ -50,7 +46,6 @@ pub struct JITDecision {
     pub estimated_benefit: f64,
     pub reason: String,
 }
-
 /// JIT优化级别
 #[derive(Debug, Clone, PartialEq)]
 pub enum OptimizationLevel {
@@ -63,7 +58,6 @@ pub enum OptimizationLevel {
     /// 激进优化
     Aggressive,
 }
-
 /// 自定义JIT策略
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -77,7 +71,6 @@ pub enum JITStrategy {
     /// 自适应策略
     Adaptive,
 }
-
 /// JIT优化器
 pub struct JITOptimizer {
     thresholds: JITThresholds,
@@ -85,7 +78,6 @@ pub struct JITOptimizer {
     execution_stats: Arc<Mutex<HashMap<String, ExecutionStat>>>,
     compile_history: Arc<Mutex<Vec<CompileEvent>>>,
 }
-
 /// 代码执行统计
 #[derive(Debug, Clone)]
 pub struct ExecutionStat {
@@ -98,7 +90,6 @@ pub struct ExecutionStat {
     #[allow(dead_code)]
     pub complexity: CodeComplexity,
 }
-
 /// 编译事件
 #[derive(Debug, Clone)]
 pub struct CompileEvent {
@@ -111,7 +102,6 @@ pub struct CompileEvent {
     pub compile_time: Duration,
     pub success: bool,
 }
-
 impl JITOptimizer {
     /// 创建新的JIT优化器
     pub fn new(thresholds: JITThresholds, strategy: JITStrategy) -> Self {
@@ -122,12 +112,10 @@ impl JITOptimizer {
             compile_history: Arc::new(Mutex::new(Vec::new())),
         }
     }
-
     /// 使用默认配置创建优化器
     pub fn new_default() -> Self {
         Self::new(JITThresholds::default(), JITStrategy::Adaptive)
     }
-
     /// 分析代码复杂度（超级优化版）
     pub fn analyze_code_complexity(code: &str) -> CodeComplexity {
         // 优化：使用一次性扫描而不是多次matches调用
@@ -136,11 +124,9 @@ impl JITOptimizer {
         let mut condition_score = 0;
         let mut async_score = 0;
         let mut object_score = 0;
-
         // 一次性遍历计算所有指标
         let bytes: _ = code.as_bytes();
         let mut i = 0;
-
         while i < bytes.len() {
             // 检查函数定义
             if bytes[i] == b'f' {
@@ -155,14 +141,12 @@ impl JITOptimizer {
                     continue;
                 }
             }
-
             // 检查箭头函数
             if bytes[i] == b'=' && i + 1 < bytes.len() && bytes[i + 1] == b'>' {
                 fn_score += 1;
                 i += 2;
                 continue;
             }
-
             // 检查循环
             if bytes[i] == b'f' {
                 if i + 3 < bytes.len() && &bytes[i..i+3] == b"for" {
@@ -171,7 +155,6 @@ impl JITOptimizer {
                     continue;
                 }
             }
-
             if bytes[i] == b'w' {
                 if i + 5 < bytes.len() && &bytes[i..i+5] == b"while" {
                     loop_score += 2;
@@ -179,7 +162,6 @@ impl JITOptimizer {
                     continue;
                 }
             }
-
             // 检查条件
             if bytes[i] == b'i' {
                 if i + 2 < bytes.len() && &bytes[i..i+2] == b"if" {
@@ -188,7 +170,6 @@ impl JITOptimizer {
                     continue;
                 }
             }
-
             // 检查async
             if bytes[i] == b'a' {
                 if i + 5 < bytes.len() && &bytes[i..i+5] == b"async" {
@@ -197,22 +178,18 @@ impl JITOptimizer {
                     continue;
                 }
             }
-
             // 检查对象
             if bytes[i] == b'{' {
                 object_score += 1;
             }
-
             i += 1;
         }
-
         // 计算复杂度分数（更激进的权重）
         let complexity_score: _ = (fn_score * 5)        // 函数权重提升
             + (loop_score * 10)      // 循环权重大幅提升
             + (condition_score * 3)  // 条件语句权重提升
             + (async_score * 4)      // async 权重提升
             + (object_score / 2);    // 对象权重适中提升
-
         // 更激进的阈值，确保所有代码都被积极优化
         // Simple: fn=1, loop=1, condition=1 -> (1*5)+(1*10)+(1*3)=18 -> Simple if < 20
         if complexity_score < 20 {
@@ -223,11 +200,9 @@ impl JITOptimizer {
             CodeComplexity::Complex
         }
     }
-
     /// 更新执行统计
     pub fn update_execution_stats(&self, code_hash: &str, code: &str, execution_time: Duration) {
         let mut stats = self.execution_stats.lock().unwrap();
-
         if let Some(stat) = stats.get_mut(code_hash) {
             stat.execution_count += 1;
             stat.total_time += execution_time;
@@ -248,24 +223,20 @@ impl JITOptimizer {
             );
         }
     }
-
     /// 做出JIT编译决策
     pub fn make_jit_decision(&self, code_hash: &str, code: &str) -> JITDecision {
         let stats: _ = self.execution_stats.lock().unwrap();
         let complexity: _ = Self::analyze_code_complexity(code);
-
         // 根据复杂度确定阈值
         let threshold: _ = match complexity {
             CodeComplexity::Simple => self.thresholds.simple_threshold,
             CodeComplexity::Medium => self.thresholds.medium_threshold,
             CodeComplexity::Complex => self.thresholds.complex_threshold,
         };
-
         if let Some(stat) = stats.get(code_hash) {
             let should_compile: _ = stat.execution_count >= threshold;
             let optimization_level: _ = self.determine_optimization_level(&complexity, stat);
             let estimated_benefit: _ = self.calculate_benefit(stat, &complexity);
-
             JITDecision {
                 should_compile,
                 optimization_level,
@@ -284,7 +255,6 @@ impl JITOptimizer {
             }
         }
     }
-
     /// 确定优化级别（超级激进版）
     fn determine_optimization_level(
         &self,
@@ -312,7 +282,6 @@ impl JITOptimizer {
             }
         }
     }
-
     /// 计算优化收益（超激进版）
     fn calculate_benefit(&self, stat: &ExecutionStat, complexity: &CodeComplexity) -> f64 {
         // 收益 = 执行次数 * 平均执行时间 * 复杂度因子 * 性能因子
@@ -321,10 +290,8 @@ impl JITOptimizer {
             CodeComplexity::Medium => 10.0,  // 超级激进的中等代码收益权重
             CodeComplexity::Complex => 8.0,  // 超级激进的复杂代码收益权重
         };
-
         let performance_factor: _ = 8.0; // 超级激进的性能因子
         let time_factor: _ = stat.avg_time.as_secs_f64().max(0.0001); // 避免除零，最小0.0001ms
-
         // 超级激进的收益计算，确保所有代码都被优化
         stat.execution_count as f64
             * time_factor
@@ -332,36 +299,28 @@ impl JITOptimizer {
             * performance_factor
             + (stat.execution_count as f64 * 20.0) // 额外奖励频繁执行的代码
     }
-
     /// 记录代码执行（Stage 25.2 新增）
     pub fn record_execution(&self, code: &str, execution_time: Duration) {
         // 使用代码的简单哈希作为键
         use std::hash::{Hash, Hasher};
         use std::collections::hash_map::DefaultHasher;
-
         let mut hasher = DefaultHasher::new();
         code.hash(&mut hasher);
         let code_hash: _ = format!("{:x}", hasher.finish());
-
         self.update_execution_stats(&code_hash, code, execution_time);
     }
-
     /// 判断是否应该编译（Stage 25.2 新增）
     pub fn should_compile(&self, code: &str, complexity: CodeComplexity) -> JITDecision {
         // 使用代码的简单哈希作为键
         use std::hash::{Hash, Hasher};
         use std::collections::hash_map::DefaultHasher;
-
         let mut hasher = DefaultHasher::new();
         code.hash(&mut hasher);
         let code_hash: _ = format!("{:x}", hasher.finish());
-
         // 首先记录执行（因为阈值是1，立即编译）
         self.record_execution(code, Duration::from_micros(100));
-
         // 然后做出决策
         let mut decision = self.make_jit_decision(&code_hash, code);
-
         // 根据复杂度调整决策
         if complexity == CodeComplexity::Simple && self.thresholds.simple_threshold == 1 {
             decision.should_compile = true;
@@ -373,10 +332,8 @@ impl JITOptimizer {
             decision.should_compile = true;
             decision.optimization_level = OptimizationLevel::Aggressive;
         }
-
         decision
     }
-
     /// 记录编译事件
     pub fn record_compile_event(
         &self,
@@ -393,13 +350,11 @@ impl JITOptimizer {
             compile_time,
             success,
         });
-
         // 保持历史记录在合理大小
         if history.len() > 1000 {
             history.drain(0..100);
         }
     }
-
     /// 获取编译统计
     pub fn get_compile_stats(&self) -> CompileStats {
         let history: _ = self.compile_history.lock().unwrap();
@@ -411,7 +366,6 @@ impl JITOptimizer {
         } else {
             Duration::from_secs(0)
         };
-
         CompileStats {
             total_compiles,
             successful_compiles,
@@ -423,14 +377,12 @@ impl JITOptimizer {
             avg_compile_time,
         }
     }
-
     /// 重置统计
     pub fn reset_stats(&self) {
         self.execution_stats.lock().unwrap().clear();
         self.compile_history.lock().unwrap().clear();
     }
 }
-
 /// 编译统计
 #[derive(Debug, Clone)]
 pub struct CompileStats {
@@ -439,24 +391,20 @@ pub struct CompileStats {
     pub success_rate: f64,
     pub avg_compile_time: Duration,
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn test_jit_optimizer_creation() {
         let optimizer: _ = JITOptimizer::new_default();
         // Optimized threshold: simple code compiles immediately (threshold=1)
         assert_eq!(optimizer.thresholds.simple_threshold, 1);
     }
-
     #[test]
     fn test_code_complexity_analysis() {
         let simple_code: _ = "let x: _ = 1; let y: _ = 2;";
         let complex_code =
             "function fib(n) { for(let i=0; i<n; i++) { if(i > 10) { while(true) {}}} }";
-
         assert_eq!(
             JITOptimizer::analyze_code_complexity(simple_code),
             CodeComplexity::Simple
@@ -467,19 +415,16 @@ mod tests {
             CodeComplexity::Medium
         );
     }
-
     #[test]
     fn test_jit_decision_making() {
         let optimizer: _ = JITOptimizer::new_default();
         let code: _ = "let x: _ = 1;";
         let code_hash: _ = "test_code";
-
         // 第一次决策：不编译
         let decision: _ = optimizer.make_jit_decision(code_hash, code);
         assert!(!decision.should_compile);
         assert_eq!(decision.optimization_level, OptimizationLevel::None);
     }
-
     #[test]
     fn test_benefit_calculation() {
         let optimizer: _ = JITOptimizer::new_default();
@@ -491,15 +436,12 @@ mod tests {
             last_execution: Instant::now(),
             complexity: CodeComplexity::Medium,
         };
-
         let benefit: _ = optimizer.calculate_benefit(&stat, &CodeComplexity::Medium);
         assert!(benefit > 0.0);
     }
-
     #[test]
     fn test_compile_stats() {
         let optimizer: _ = JITOptimizer::new_default();
-
         // 记录一些编译事件
         optimizer.record_compile_event(
             "code1",
@@ -519,37 +461,30 @@ mod tests {
             Duration::from_millis(20),
             false,
         );
-
         let stats: _ = optimizer.get_compile_stats();
         assert_eq!(stats.total_compiles, 3);
         assert_eq!(stats.successful_compiles, 2);
         assert_eq!(stats.success_rate, 2.0 / 3.0);
     }
-
     #[test]
     fn test_execution_stats_update() {
         let optimizer: _ = JITOptimizer::new_default();
         let code_hash: _ = "test_code";
         let code: _ = "let x: _ = 1; let y: _ = 2;";
         let exec_time: _ = Duration::from_millis(10);
-
         optimizer.update_execution_stats(code_hash, code, exec_time);
-
         let stats: _ = optimizer.get_compile_stats();
         // 验证统计已更新 - usize类型确保了值不为负数
         debug_assert!(stats.total_compiles <= usize::MAX); // 验证值在合理范围内
     }
 }
-
 // ============================================================================
 // Stage 90 Phase 5.1: AI 驱动 JIT 优化器扩展
 // ============================================================================
-
 use std::collections::BTreeMap;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
-
 /// AI 驱动的 JIT 优化器扩展
 pub struct AIDrivenJITExtension {
     /// 代码执行模式分析器
@@ -561,14 +496,12 @@ pub struct AIDrivenJITExtension {
     /// 性能指标
     pub metrics: Arc<RwLock<Vec<JITMetrics>>>,
 }
-
 /// 代码执行模式分析器
 #[derive(Debug, Clone)]
 pub struct ProfileAnalyzer {
     profiles: Arc<RwLock<HashMap<String, ExecutionProfile>>>,
     config: HotspotConfig,
 }
-
 /// 执行配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionProfile {
@@ -583,7 +516,6 @@ pub struct ExecutionProfile {
     pub memory_usage: Option<u64>,
     pub cpu_usage: Option<f64>,
 }
-
 /// 热点检测配置
 #[derive(Debug, Clone)]
 pub struct HotspotConfig {
@@ -592,7 +524,6 @@ pub struct HotspotConfig {
     pub hotspot_threshold: f64,
     pub time_window: Duration,
 }
-
 impl Default for HotspotConfig {
     fn default() -> Self {
         Self {
@@ -603,7 +534,6 @@ impl Default for HotspotConfig {
         }
     }
 }
-
 /// 热点信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HotspotDetection {
@@ -613,7 +543,6 @@ pub struct HotspotDetection {
     pub suggested_optimizations: Vec<OptimizationSuggestion>,
     pub confidence: f64,
 }
-
 /// 优化建议
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationSuggestion {
@@ -623,7 +552,6 @@ pub struct OptimizationSuggestion {
     pub implementation_effort: EffortLevel,
     pub confidence: f64,
 }
-
 /// 建议类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum SuggestionType {
@@ -634,7 +562,6 @@ pub enum SuggestionType {
     PreallocateMemory,
     Other(String),
 }
-
 /// 实施难度
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum EffortLevel {
@@ -642,14 +569,12 @@ pub enum EffortLevel {
     Medium,
     High,
 }
-
 /// 自适应编译策略
 #[derive(Debug, Clone)]
 pub struct AdaptiveCompilationStrategy {
     config: CompilationStrategyConfig,
     strategy_cache: Arc<RwLock<HashMap<String, CompilationStrategy>>>,
 }
-
 /// 编译策略配置
 #[derive(Debug, Clone)]
 pub struct CompilationStrategyConfig {
@@ -660,7 +585,6 @@ pub struct CompilationStrategyConfig {
     pub inline_threshold: u32,
     pub max_inline_depth: u32,
 }
-
 impl Default for CompilationStrategyConfig {
     fn default() -> Self {
         Self {
@@ -673,7 +597,6 @@ impl Default for CompilationStrategyConfig {
         }
     }
 }
-
 /// 代码特征
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CodeFeatures {
@@ -688,7 +611,6 @@ pub struct CodeFeatures {
     pub arithmetic_operations: u32,
     pub memory_allocs: u32,
 }
-
 /// 编译策略
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilationStrategy {
@@ -698,7 +620,6 @@ pub struct CompilationStrategy {
     pub confidence: f64,
     pub timestamp: DateTime<Utc>,
 }
-
 /// 编译模式
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CompilationMode {
@@ -707,7 +628,6 @@ pub enum CompilationMode {
     Optimized,
     PeakOptimized,
 }
-
 /// 优化提示
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationHints {
@@ -719,7 +639,6 @@ pub struct OptimizationHints {
     pub recommended_mode: CompilationMode,
     pub inlining_recommended: bool,
 }
-
 /// 复杂度级别
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ComplexityLevel {
@@ -728,7 +647,6 @@ pub enum ComplexityLevel {
     High,
     VeryHigh,
 }
-
 /// 调用频率
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CallFrequency {
@@ -737,7 +655,6 @@ pub enum CallFrequency {
     Hot,
     VeryHot,
 }
-
 /// JIT 性能指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JITMetrics {
@@ -750,7 +667,6 @@ pub struct JITMetrics {
     pub average_optimization_gain: f64,
     pub active_optimizations: usize,
 }
-
 impl AIDrivenJITExtension {
     /// 创建新的 AI 驱动 JIT 扩展
     pub fn new() -> Self {
@@ -761,13 +677,11 @@ impl AIDrivenJITExtension {
             metrics: Arc::new(Mutex::new(Vec::new())),
         }
     }
-
     /// 记录函数执行
     pub async fn record_execution(&self, profile: ExecutionProfile) -> Result<(), Box<dyn std::error::Error>> {
         self.profile_analyzer.record_execution(profile).await;
         Ok(())
     }
-
     /// 分析代码并生成编译策略
     pub async fn analyze_and_optimize(
         &self,
@@ -777,27 +691,21 @@ impl AIDrivenJITExtension {
         let strategy: _ = self.compilation_strategy
             .analyze_and_strategy(features, execution_count)
             .await;
-
         // 缓存策略
         {
             let mut cache = self.optimization_cache.write().await;
             cache.insert(strategy.function_name.clone(), strategy.clone());
         }
-
         Ok(strategy)
     }
-
     /// 获取优化建议
     pub async fn get_optimization_suggestions(&self) -> Result<Vec<OptimizationSuggestion>, Box<dyn std::error::Error>> {
         let report: _ = self.profile_analyzer.generate_report().await?;
         let report: _ = &report;
-
         let mut suggestions = Vec::new();
-
         // 从热点生成建议
         for hotspot in &report.hotspots {
             let function_name: _ = hotspot.profile.function_name.clone();
-
             if hotspot.hotspot_score > 7.0 {
                 suggestions.push(OptimizationSuggestion {
                     suggestion_type: SuggestionType::InlineFunction,
@@ -807,7 +715,6 @@ impl AIDrivenJITExtension {
                     implementation_effort: EffortLevel::Medium,
                 });
             }
-
             if hotspot.optimization_potential > 0.5 {
                 suggestions.push(OptimizationSuggestion {
                     suggestion_type: SuggestionType::CacheResults,
@@ -818,14 +725,11 @@ impl AIDrivenJITExtension {
                 });
             }
         }
-
         Ok(suggestions)
     }
-
     /// 生成性能报告
     pub async fn generate_performance_report(&self) -> Result<AIPerformanceReport, Box<dyn std::error::Error>> {
         let profile_report: _ = self.profile_analyzer.generate_report().await?;
-
         Ok(AIPerformanceReport {
             timestamp: Utc::now(),
             profile_report,
@@ -833,7 +737,6 @@ impl AIDrivenJITExtension {
             optimization_suggestions: self.get_optimization_suggestions().await?,
         })
     }
-
     /// 获取执行次数
     async fn get_execution_count(&self, function_name: &str) -> Result<u64, Box<dyn std::error::Error>> {
         let profiles: _ = self.profile_analyzer.profiles.read().await;
@@ -843,7 +746,6 @@ impl AIDrivenJITExtension {
             Ok(0)
         }
     }
-
     /// 获取最新指标
     async fn get_latest_metrics(&self) -> Result<JITMetrics, Box<dyn std::error::Error>> {
         let metrics: _ = self.metrics.read().await;
@@ -863,7 +765,6 @@ impl AIDrivenJITExtension {
         }
     }
 }
-
 impl ProfileAnalyzer {
     pub fn new() -> Self {
         Self {
@@ -871,10 +772,8 @@ impl ProfileAnalyzer {
             config: HotspotConfig::default(),
         }
     }
-
     pub async fn record_execution(&self, profile: ExecutionProfile) {
         let mut profiles = self.profiles.write().await;
-
         if let Some(existing) = profiles.get_mut(&profile.function_name) {
             existing.call_count += profile.call_count;
             existing.total_time_ns += profile.total_time_ns;
@@ -882,13 +781,11 @@ impl ProfileAnalyzer {
             profiles.insert(profile.function_name.clone(), profile);
         }
     }
-
     pub async fn generate_report(&self) -> Result<ProfileReport, Box<dyn std::error::Error>> {
         let profiles: _ = self.profiles.read().await;
         let total_functions: _ = profiles.len();
         let total_calls: u64 = profiles.values().map(|p| p.call_count).sum();
         let total_time_ns: u64 = profiles.values().map(|p| p.total_time_ns).sum();
-
         // 简化的热点检测
         let mut hotspots = Vec::new();
         for (name, profile) in profiles.iter() {
@@ -903,7 +800,6 @@ impl ProfileAnalyzer {
                 });
             }
         }
-
         Ok(ProfileReport {
             timestamp: Utc::now(),
             total_functions,
@@ -921,7 +817,6 @@ impl ProfileAnalyzer {
         })
     }
 }
-
 impl AdaptiveCompilationStrategy {
     pub fn new() -> Self {
         Self {
@@ -929,7 +824,6 @@ impl AdaptiveCompilationStrategy {
             strategy_cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
-
     pub async fn analyze_and_strategy(
         &self,
         features: CodeFeatures,
@@ -938,7 +832,6 @@ impl AdaptiveCompilationStrategy {
         let complexity_level: _ = self.analyze_complexity_level(&features);
         let call_frequency: _ = self.analyze_call_frequency(execution_count);
         let recommended_mode: _ = self.select_compilation_mode(&complexity_level, &call_frequency, execution_count);
-
         let hints: _ = OptimizationHints {
             function_name: features.function_name.clone(),
             complexity_level,
@@ -948,7 +841,6 @@ impl AdaptiveCompilationStrategy {
             recommended_mode: recommended_mode.clone(),
             inlining_recommended: features.line_count < 50,
         };
-
         CompilationStrategy {
             function_name: features.function_name.clone(),
             recommended_mode,
@@ -957,12 +849,10 @@ impl AdaptiveCompilationStrategy {
             timestamp: Utc::now(),
         }
     }
-
     fn analyze_complexity_level(&self, features: &CodeFeatures) -> ComplexityLevel {
         let complexity_score: _ = features.cyclomatic_complexity
             + features.nested_loops * 2
             + features.function_calls / 10;
-
         match complexity_score {
             0..=5 => ComplexityLevel::Low,
             6..=15 => ComplexityLevel::Medium,
@@ -970,7 +860,6 @@ impl AdaptiveCompilationStrategy {
             _ => ComplexityLevel::VeryHigh,
         }
     }
-
     fn analyze_call_frequency(&self, execution_count: u64) -> CallFrequency {
         match execution_count {
             0..=99 => CallFrequency::Cold,
@@ -979,7 +868,6 @@ impl AdaptiveCompilationStrategy {
             _ => CallFrequency::VeryHot,
         }
     }
-
     fn select_compilation_mode(
         &self,
         complexity_level: &ComplexityLevel,
@@ -989,24 +877,19 @@ impl AdaptiveCompilationStrategy {
         if (execution_count as u32) < self.config.baseline_threshold {
             return CompilationMode::Interpreted;
         }
-
         if matches!(complexity_level, ComplexityLevel::VeryHigh)
             && matches!(call_frequency, CallFrequency::VeryHot) {
             return CompilationMode::PeakOptimized;
         }
-
         if matches!(complexity_level, ComplexityLevel::High | ComplexityLevel::VeryHigh) {
             return CompilationMode::Optimized;
         }
-
         if (execution_count as u32) >= self.config.baseline_threshold {
             return CompilationMode::Baseline;
         }
-
         CompilationMode::Interpreted
     }
 }
-
 /// AI 性能报告
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AIPerformanceReport {
@@ -1015,7 +898,6 @@ pub struct AIPerformanceReport {
     pub metrics: JITMetrics,
     pub optimization_suggestions: Vec<OptimizationSuggestion>,
 }
-
 /// 简化版 ProfileReport
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProfileReport {
@@ -1028,7 +910,6 @@ pub struct ProfileReport {
     pub pattern_stats: Vec<()>,
     pub optimization_summary: OptimizationSummary,
 }
-
 /// 优化总结
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationSummary {
@@ -1037,18 +918,15 @@ pub struct OptimizationSummary {
     pub estimated_total_improvement: f64,
     pub top_optimizations: Vec<OptimizationSuggestion>,
 }
-
 #[cfg(test)]
 mod ai_jit_tests {
     use super::*;
     use chrono::Utc;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_ai_driven_jit_extension() {
         let ai_jit: _ = AIDrivenJITExtension::new();
-
         let profile: _ = ExecutionProfile {
             function_name: "test_function".to_string(),
             file_path: Some("test.js".to_string()),
@@ -1061,9 +939,7 @@ use std::collections::{HashMap, BTreeMap};
             memory_usage: Some(100_000),
             cpu_usage: Some(50.0),
         };
-
         ai_jit.record_execution(profile).await.unwrap();
-
         let features: _ = CodeFeatures {
             function_name: "test_function".to_string(),
             line_count: 20,
@@ -1076,7 +952,6 @@ use std::collections::{HashMap, BTreeMap};
             arithmetic_operations: 20,
             memory_allocs: 5,
         };
-
         let strategy: _ = ai_jit.analyze_and_optimize(features).await.unwrap();
         assert_eq!(strategy.function_name, "test_function");
         assert!(strategy.confidence > 0.0);

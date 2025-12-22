@@ -1,10 +1,8 @@
 //! 状态同步系统
-
 use std::collections::HashMap;
 use std::time::SystemTime;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 同步模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SyncMode {
@@ -15,13 +13,11 @@ pub enum SyncMode {
     /// 因果一致性
     Causal,
 }
-
 impl Default for SyncMode {
     fn default() -> Self {
         Self::Eventual
     }
 }
-
 /// 冲突解决策略
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConflictResolution {
@@ -34,13 +30,11 @@ pub enum ConflictResolution {
     /// 向量时钟
     VectorClock,
 }
-
 impl Default for ConflictResolution {
     fn default() -> Self {
         Self::LastWriterWins
     }
 }
-
 /// 同步配置
 #[derive(Debug, Clone)]
 pub struct SyncConfig {
@@ -53,7 +47,6 @@ pub struct SyncConfig {
     /// 最大延迟 (ms)
     pub max_latency_ms: u64,
 }
-
 impl Default for SyncConfig {
     fn default() -> Self {
         Self {
@@ -64,7 +57,6 @@ impl Default for SyncConfig {
         }
     }
 }
-
 /// 状态变化
 #[derive(Debug, Clone)]
 pub struct StateChange {
@@ -77,7 +69,6 @@ pub struct StateChange {
     /// 版本号
     pub version: u64,
 }
-
 /// 状态同步系统
 pub struct StateSync {
     /// 配置
@@ -87,7 +78,6 @@ pub struct StateSync {
     /// 版本计数器
     version_counter: u64,
 }
-
 impl StateSync {
     /// 创建状态同步系统
     pub fn new(config: SyncConfig) -> Result<Self, SyncError> {
@@ -97,36 +87,30 @@ impl StateSync {
             version_counter: 0,
         })
     }
-
     /// 发布状态变化
     pub fn publish_change(&mut self, change: StateChange) -> Result<(), SyncError> {
         self.version_counter += 1;
         self.state.insert(change.key.clone(), change);
         Ok(())
     }
-
     /// 获取状态
     pub fn get_state(&self, key: &str) -> Option<&StateChange> {
         self.state.get(key)
     }
-
     /// 与区域同步
     pub fn sync_with_region(&self, _region: &str) -> Result<(), SyncError> {
         // 模拟同步
         Ok(())
     }
-
     /// 获取状态数量
     pub fn state_count(&self) -> usize {
         self.state.len()
     }
-
     /// 获取当前版本
     pub fn current_version(&self) -> u64 {
         self.version_counter
     }
 }
-
 /// 同步错误
 #[derive(Debug, Clone)]
 pub enum SyncError {
@@ -139,7 +123,6 @@ pub enum SyncError {
     /// 超时
     Timeout,
 }
-
 impl std::fmt::Display for SyncError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -150,5 +133,4 @@ impl std::fmt::Display for SyncError {
         }
     }
 }
-
 impl std::error::Error for SyncError {}

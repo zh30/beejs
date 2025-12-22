@@ -1,6 +1,5 @@
 //! Kubernetes Operator for Beejs Cluster Management
 //! 实现 Beejs 集群的 Kubernetes Operator，提供自动化集群管理能力
-
 use anyhow::{Result, Context};
 use kube::{
     api::{Api, ListParams, PatchParams, Patch},
@@ -37,7 +36,6 @@ use std::{
 use tokio::time::sleep;
 use tracing::{info, warn, error, debug};
 use uuid::Uuid;
-
 /// Custom Resource Definition for BeejsCluster
 #[derive(CustomResource, Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[kube(
@@ -58,7 +56,6 @@ pub struct BeejsClusterSpec {
     /// Resource requirements
     pub resources: ResourceRequirements,
 }
-
 /// Cluster configuration
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ClusterConfig {
@@ -77,7 +74,6 @@ pub struct ClusterConfig {
     /// Tolerations
     pub tolerations: Option<Vec<Toleration>>,
 }
-
 /// Resource requirements
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ResourceRequirements {
@@ -85,7 +81,6 @@ pub struct ResourceRequirements {
     pub memory: Option<String>,
     pub storage: Option<String>,
 }
-
 /// Toleration configuration
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct Toleration {
@@ -94,7 +89,6 @@ pub struct Toleration {
     pub value: Option<String>,
     pub effect: String,
 }
-
 /// BeejsCluster status
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 pub struct BeejsClusterStatus {
@@ -119,7 +113,6 @@ pub struct BeejsClusterStatus {
     /// Node statuses
     pub node_statuses: Vec<NodeStatus>,
 }
-
 /// Upgrade progress information
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct UpgradeProgress {
@@ -134,7 +127,6 @@ pub struct UpgradeProgress {
     /// Estimated completion time
     pub estimated_completion: Option<Time>,
 }
-
 /// Health status
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 pub struct HealthStatus {
@@ -147,7 +139,6 @@ pub struct HealthStatus {
     /// Health check details
     pub checks: Vec<HealthCheck>,
 }
-
 /// Health states
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum HealthState {
@@ -160,7 +151,6 @@ pub enum HealthState {
     /// Health check failed
     Unknown,
 }
-
 /// Individual node status
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct NodeStatus {
@@ -175,7 +165,6 @@ pub struct NodeStatus {
     /// Restart count
     pub restart_count: u32,
 }
-
 /// Node phases
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum NodePhase {
@@ -190,7 +179,6 @@ pub enum NodePhase {
     /// Node has failed
     Failed,
 }
-
 /// Health check details
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct HealthCheck {
@@ -203,7 +191,6 @@ pub struct HealthCheck {
     /// Last check time
     pub last_check: Option<Time>,
 }
-
 /// Cluster phases
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub enum ClusterPhase {
@@ -222,13 +209,11 @@ pub enum ClusterPhase {
     /// Cluster is terminating
     Terminating,
 }
-
 impl Default for ClusterPhase {
     fn default() -> Self {
         ClusterPhase::Creating
     }
 }
-
 /// Cluster conditions
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct ClusterCondition {
@@ -238,7 +223,6 @@ pub struct ClusterCondition {
     pub status: String,
     pub type_: String,
 }
-
 /// Operator configuration
 #[derive(Debug, Clone)]
 pub struct OperatorConfig {
@@ -257,7 +241,6 @@ pub struct OperatorConfig {
     /// Enable auto-healing
     pub auto_healing: bool,
 }
-
 /// BeejsOperator main struct
 #[derive(Debug)]
 pub struct BeejsOperator {
@@ -278,13 +261,11 @@ pub struct BeejsOperator {
     /// Event recorder
     recorder: Recorder,
 }
-
 impl BeejsOperator {
     /// Create a new BeejsOperator
     pub fn new(client: Client, config: OperatorConfig) -> Self {
         let namespaces: _ = client.clone();
         let recorder: _ = EventRecorder::new(client.clone(), "beejs-operator".to_string());
-
         Self {
             client: client.clone(),
             config,
@@ -296,7 +277,6 @@ impl BeejsOperator {
             recorder,
         }
     }
-
     /// Get default operator configuration
     pub fn default_config() -> OperatorConfig {
         OperatorConfig {
@@ -309,11 +289,9 @@ impl BeejsOperator {
             auto_healing: true,
         }
     }
-
     /// Run the operator
     pub async fn run(&self) -> Result<()> {
         info!("Starting Beejs Kubernetes Operator");
-
         let controller: _ = Controller::new(self.clusters.clone(), ListParams::default())
             .run(
                 self.reconcile(),
@@ -322,12 +300,9 @@ impl BeejsOperator {
             )
             .await
             .context("Failed to start controller")?;
-
         info!("Beejs Operator started successfully");
-
         Ok(()))
     }
-
     /// Reconciliation logic
     fn reconcile(&self) -> Arc<dyn Fn(BeejsCluster) -> Action + Send + Sync + 'static> {
         Arc::new(Mutex::new(move |beejs_cluster: BeejsCluster| {)),
@@ -338,13 +313,10 @@ impl BeejsOperator {
             let services: _ = self.services.clone();
             let configmaps: _ = self.configmaps.clone();
             let recorder: _ = self.recorder.clone();
-
             async move {
                 let name: _ = beejs_cluster.name_any();
                 let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
-
                 info!("Reconciling BeejsCluster: {}/{}", namespace, name);
-
                 // Apply finalizer
                 let finalizer_action: _ = finalizer(
                     &clusters,
@@ -380,7 +352,6 @@ impl BeejsOperator {
                     },
                 )
                 .await;
-
                 match finalizer_action {
                     Ok(action) => action,
                     Err(e) => {
@@ -391,7 +362,6 @@ impl BeejsOperator {
             }
         })
     }
-
     /// Error policy
     fn error_policy(&self) -> Arc<dyn Fn(&kube::Error, &BeejsCluster) -> Action + Send + Sync + 'static> {
         Arc::new(Mutex::new(move |_error, _beejs_cluster| {)),
@@ -399,7 +369,6 @@ impl BeejsOperator {
             Action::requeue(Duration::from_secs(60))
         })
     }
-
     /// Apply reconciliation
     async fn reconcile_apply(
         client: Client,
@@ -412,11 +381,9 @@ impl BeejsOperator {
     ) -> Result<Action> {
         let name: _ = beejs_cluster.name_any();
         let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
-
         // Check if upgrade is needed
         let status: _ = beejs_cluster.status.clone().unwrap_or_default();
         let needs_upgrade: _ = Self::check_upgrade_needed(&beejs_cluster, &status);
-
         if needs_upgrade {
             info!("Initiating upgrade for BeejsCluster: {}/{}", namespace, name);
             return Self::perform_upgrade(
@@ -430,7 +397,6 @@ impl BeejsOperator {
             )
             .await;
         }
-
         // Create or update ConfigMap
         let configmap: _ = Self::create_configmap(&beejs_cluster)?;
         configmaps
@@ -441,7 +407,6 @@ impl BeejsOperator {
             )
             .await
             .context("Failed to patch ConfigMap")?;
-
         // Create or update StatefulSet for the cluster
         let statefulset: _ = Self::create_statefulset(&beejs_cluster)?;
         statefulsets
@@ -452,7 +417,6 @@ impl BeejsOperator {
             )
             .await
             .context("Failed to patch StatefulSet")?;
-
         // Create or update Service
         let service: _ = Self::create_service(&beejs_cluster)?;
         services
@@ -463,7 +427,6 @@ impl BeejsOperator {
             )
             .await
             .context("Failed to patch Service")?;
-
         // Perform health check
         let health_status: _ = Self::perform_health_check(
             client.clone(),
@@ -471,7 +434,6 @@ impl BeejsOperator {
             statefulsets.clone(),
         )
         .await;
-
         // Update status
         let mut new_status = beejs_cluster.status.clone().unwrap_or_default();
         new_status.phase = ClusterPhase::Running;
@@ -480,17 +442,14 @@ impl BeejsOperator {
         new_status.current_version = Some(beejs_cluster.spec.version.clone());
         new_status.health_status = health_status;
         new_status.last_update = Some(Time(Utc::now());
-
         let _: _ = recorder
             .publish(Event::normal(
                 &beejs_cluster,
                 &format!("BeejsCluster {} reconciled successfully", name),
             ))
             .await;
-
         Ok(Action::requeue(Duration::from_secs(30))
     }
-
     /// Cleanup reconciliation
     async fn reconcile_cleanup(
         client: Client,
@@ -503,14 +462,11 @@ impl BeejsOperator {
     ) -> Result<Action> {
         let name: _ = beejs_cluster.name_any();
         let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
-
         info!("Cleaning up BeejsCluster: {}/{}", namespace, name);
-
         // Delete StatefulSet
         if let Err(e) = statefulsets.delete(&name, &Default::default()).await {
             warn!("Failed to delete StatefulSet: {}", e);
         }
-
         // Delete Service
         if let Err(e) = services
             .delete(&format!("{}-svc", name), &Default::default())
@@ -518,7 +474,6 @@ impl BeejsOperator {
         {
             warn!("Failed to delete Service: {}", e);
         }
-
         // Delete ConfigMap
         if let Err(e) = configmaps
             .delete(&format!("{}-config", name), &Default::default())
@@ -526,29 +481,24 @@ impl BeejsOperator {
         {
             warn!("Failed to delete ConfigMap: {}", e);
         }
-
         let _: _ = recorder
             .publish(Event::normal(
                 &beejs_cluster,
                 &format!("BeejsCluster {} deleted", name),
             ))
             .await;
-
         Ok(Action::await())
     }
-
     /// Create ConfigMap for the cluster
     fn create_configmap(beejs_cluster: &BeejsCluster) -> Result<ConfigMap> {
         let name: _ = beejs_cluster.name_any();
         let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
-
         let mut data = BTreeMap::new();
         data.insert("version".to_string(), beejs_cluster.spec.version.clone());
         data.insert(
             "nodes".to_string(),
             beejs_cluster.spec.nodes.to_string(),
         );
-
         Ok(ConfigMap {
             metadata: kube::api::ObjectMeta {
                 name: Some(format!("{}-config", name)),
@@ -560,16 +510,13 @@ impl BeejsOperator {
             ..Default::default()
         })
     }
-
     /// Create StatefulSet for the cluster
     fn create_statefulset(beejs_cluster: &BeejsCluster) -> Result<StatefulSet> {
         let name: _ = beejs_cluster.name_any();
         let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
         let spec: _ = &beejs_cluster.spec;
-
         let mut labels = Self::labels_for_cluster(name);
         labels.insert("app".to_string(), "beejs".to_string());
-
         Ok(StatefulSet {
             metadata: kube::api::ObjectMeta {
                 name: Some(name.clone()),
@@ -614,14 +561,11 @@ impl BeejsOperator {
             ..Default::default()
         })
     }
-
     /// Create Service for the cluster
     fn create_service(beejs_cluster: &BeejsCluster) -> Result<Service> {
         let name: _ = beejs_cluster.name_any();
         let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
-
         let labels: _ = Self::labels_for_cluster(name);
-
         Ok(Service {
             metadata: kube::api::ObjectMeta {
                 name: Some(format!("{}-svc", name)),
@@ -649,7 +593,6 @@ impl BeejsOperator {
             ..Default::default()
         })
     }
-
     /// Generate labels for cluster resources
     fn labels_for_cluster(name: &str) -> BTreeMap<String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String, String> {
         let mut labels = BTreeMap::new();
@@ -657,7 +600,6 @@ impl BeejsOperator {
         labels.insert("beejs.io/component".to_string(), "cluster".to_string());
         labels
     }
-
     /// Check if cluster needs upgrade
     fn check_upgrade_needed(
         beejs_cluster: &BeejsCluster,
@@ -670,7 +612,6 @@ impl BeejsOperator {
         }
         false
     }
-
     /// Perform rolling upgrade
     async fn perform_upgrade(
         client: Client,
@@ -683,13 +624,10 @@ impl BeejsOperator {
     ) -> Result<Action> {
         let name: _ = beejs_cluster.name_any();
         let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
-
         info!("Starting rolling upgrade for BeejsCluster: {}/{}", namespace, name);
-
         // Get current StatefulSet
         let current_ss: _ = statefulsets.get(&name).await
             .context("Failed to get StatefulSet for upgrade")?;
-
         // Create new StatefulSet with updated image
         let mut new_ss = current_ss.clone();
         if let Some(spec) = &mut new_ss.spec {
@@ -701,7 +639,6 @@ impl BeejsOperator {
                 }
             }
         }
-
         // Apply rolling update strategy
         if let Some(spec) = &mut new_ss.spec {
             spec.update_strategy = Some(k8s_openapi::api::apps::v1::StatefulSetUpdateStrategy {
@@ -716,7 +653,6 @@ impl BeejsOperator {
                 ),
             });
         }
-
         // Patch the StatefulSet
         statefulsets
             .patch(
@@ -726,7 +662,6 @@ impl BeejsOperator {
             )
             .await
             .context("Failed to patch StatefulSet for upgrade")?;
-
         // Update status to upgrading
         let mut status = beejs_cluster.status.clone().unwrap_or_default();
         status.phase = ClusterPhase::Upgrading;
@@ -738,17 +673,14 @@ impl BeejsOperator {
             started_at: Some(Time(Utc::now()),
             estimated_completion: None,
         });
-
         let _: _ = recorder
             .publish(Event::normal(
                 &beejs_cluster,
                 &format!("Started upgrade to version {}", beejs_cluster.spec.version),
             ))
             .await;
-
         Ok(Action::requeue(Duration::from_secs(10))
     }
-
     /// Perform health check on cluster
     async fn perform_health_check(
         client: Client,
@@ -757,17 +689,14 @@ impl BeejsOperator {
     ) -> HealthStatus {
         let name: _ = beejs_cluster.name_any();
         let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
-
         let mut checks = Vec::new();
         let mut healthy_nodes = 0;
-
         // Check StatefulSet status
         match statefulsets.get(&name).await {
             Ok(ss) => {
                 if let Some(status) = &ss.status {
                     let ready_replicas: _ = status.ready_replicas.unwrap_or(0);
                     let replicas: _ = status.replicas.unwrap_or(0);
-
                     checks.push(HealthCheck {
                         name: "StatefulSet Ready".to_string(),
                         status: ready_replicas == replicas,
@@ -779,7 +708,6 @@ impl BeejsOperator {
                         ),
                         last_check: Some(Time(Utc::now()),
                     });
-
                     healthy_nodes = ready_replicas as usize;
                 }
             }
@@ -792,7 +720,6 @@ impl BeejsOperator {
                 });
             }
         }
-
         // Determine overall health
         let overall_status: _ = if healthy_nodes == beejs_cluster.spec.nodes {
             HealthState::Healthy
@@ -801,7 +728,6 @@ impl BeejsOperator {
         } else {
             HealthState::Unhealthy
         };
-
         HealthStatus {
             status: overall_status,
             last_check: Some(Time(Utc::now()),
@@ -809,7 +735,6 @@ impl BeejsOperator {
             checks,
         }
     }
-
     /// Perform auto-healing if enabled
     async fn perform_auto_healing(
         client: Client,
@@ -819,24 +744,18 @@ impl BeejsOperator {
     ) -> Result<Action> {
         let name: _ = beejs_cluster.name_any();
         let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
-
         // Get current StatefulSet
         let ss: _ = statefulsets.get(&name).await
             .context("Failed to get StatefulSet for healing")?;
-
         let mut needs_healing = false;
         let mut healing_actions = Vec::new();
-
         if let Some(status) = &ss.status {
             let ready: _ = status.ready_replicas.unwrap_or(0) as usize;
             let total: _ = status.replicas.unwrap_or(0) as usize;
-
             if ready < total {
                 info!("Auto-healing triggered for {}/{}: {}/{} pods ready",
                     namespace, name, ready, total);
-
                 needs_healing = true;
-
                 // Force restart of failed pods by patching the StatefulSet
                 let mut patched_ss = ss.clone();
                 if let Some(spec) = &mut patched_ss.spec {
@@ -855,7 +774,6 @@ impl BeejsOperator {
                         }
                     }
                 }
-
                 statefulsets
                     .patch(
                         &name,
@@ -864,9 +782,7 @@ impl BeejsOperator {
                     )
                     .await
                     .context("Failed to patch StatefulSet for healing")?;
-
                 healing_actions.push("Restarted failed pods".to_string());
-
                 let _: _ = recorder
                     .publish(Event::normal(
                         beejs_cluster,
@@ -875,14 +791,12 @@ impl BeejsOperator {
                     .await;
             }
         }
-
         if needs_healing {
             Ok(Action::requeue(Duration::from_secs(30))
         } else {
             Ok(Action::requeue(Duration::from_secs(60))
         }
     }
-
     /// Get cluster metrics
     pub async fn get_cluster_metrics(
         &self,
@@ -891,7 +805,6 @@ impl BeejsOperator {
         let mut metrics = BTreeMap::new();
         let name: _ = beejs_cluster.name_any();
         let namespace: _ = beejs_cluster.namespace().unwrap_or_default();
-
         // Get StatefulSet metrics
         if let Ok(ss) = self.statefulsets.get(&name).await {
             if let Some(status) = ss.status {
@@ -905,17 +818,14 @@ impl BeejsOperator {
                     status.available_replicas.unwrap_or(0).to_string());
             }
         }
-
         Ok(metrics)
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_create_operator() {
         let client: _ = Client::try_default().await.unwrap();
@@ -924,11 +834,9 @@ use std::collections::{HashMap, BTreeMap};
             max_concurrent: 10,
             leader_election: true,
         };
-
         let operator: _ = BeejsOperator::new(client, config);
         assert_eq!(operator.config.reconcile_interval, Duration::from_secs(30));
     }
-
     #[test]
     fn test_create_configmap() {
         let cluster: _ = BeejsCluster::new(
@@ -952,11 +860,9 @@ use std::collections::{HashMap, BTreeMap};
                 },
             },
         );
-
         let configmap: _ = BeejsOperator::create_configmap(&cluster).unwrap();
         assert_eq!(configmap.metadata.name, Some("test-cluster-config".to_string());
     }
-
     #[test]
     fn test_labels_for_cluster() {
         let labels: _ = BeejsOperator::labels_for_cluster("test-cluster");
@@ -967,7 +873,6 @@ use std::collections::{HashMap, BTreeMap};
             labels.get("beejs.io/component"),
             Some(&"cluster".to_string());
     }
-
     #[test]
     fn test_check_upgrade_needed() {
         let cluster: _ = BeejsCluster::new(
@@ -991,7 +896,6 @@ use std::collections::{HashMap, BTreeMap};
                 },
             },
         );
-
         let old_status: _ = BeejsClusterStatus {
             phase: ClusterPhase::Running,
             ready_nodes: 3,
@@ -1004,17 +908,13 @@ use std::collections::{HashMap, BTreeMap};
             health_status: HealthStatus::default(),
             node_statuses: vec![],
         };
-
         assert!(BeejsOperator::check_upgrade_needed(&cluster, &old_status));
-
         let current_status: _ = BeejsClusterStatus {
             current_version: Some("v2.0.0".to_string()),
             ..old_status
         };
-
         assert!(!BeejsOperator::check_upgrade_needed(&cluster, &current_status));
     }
-
     #[test]
     fn test_default_config() {
         let config: _ = BeejsOperator::default_config();
@@ -1024,7 +924,6 @@ use std::collections::{HashMap, BTreeMap};
         assert!(config.monitoring_enabled);
         assert!(config.auto_healing);
     }
-
     #[test]
     fn test_health_status_determination() {
         let mut checks = Vec::new();
@@ -1034,14 +933,12 @@ use std::collections::{HashMap, BTreeMap};
             message: "All pods ready".to_string(),
             last_check: Some(Time(Utc::now()),
         });
-
         let health_status: _ = HealthStatus {
             status: HealthState::Healthy,
             last_check: Some(Time(Utc::now()),
             healthy_nodes: 3,
             checks,
         };
-
         assert_eq!(health_status.status, HealthState::Healthy);
         assert_eq!(health_status.healthy_nodes, 3);
     }

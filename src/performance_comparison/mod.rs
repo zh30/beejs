@@ -5,23 +5,18 @@
 //! - 多运行时测试执行器
 //! - 结果收集和分析
 //! - 性能对比报告生成
-
 pub mod benchmark_runner;
 pub mod result_collector;
 pub mod comparison_report;
-
 pub use benchmark_runner::{BenchmarkRunner, RuntimeConfig, TestCase};
 pub use result_collector::{ResultCollector, ComparisonResult, BenchmarkComparison};
 pub use comparison_report::{ReportGenerator, ReportFormat, ReportConfig};
-
 // use crate::benchmarks;  // Unused import
 use serde::{Deserialize, Serialize};
-
 use std::collections::HashMap;
 use std::time::Duration;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 性能对比结果
 #[derive(Debug, Clone)]
 pub struct PerformanceComparisonResult {
@@ -35,7 +30,6 @@ pub struct PerformanceComparisonResult {
     pub execution_time_comparison: HashMap<String, Duration>,
     pub memory_usage_comparison: HashMap<String, usize>,
 }
-
 /// 性能对比摘要
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceSummary {
@@ -48,17 +42,14 @@ pub struct PerformanceSummary {
     pub memory_efficiency_improvement: f64,
     pub overall_score: f64,
 }
-
 impl PerformanceSummary {
     /// 计算整体性能评分 (0-100)
     pub fn calculate_overall_score(&self) -> f64 {
         let speedup_score: _ = ((self.average_speedup_vs_nodejs + self.average_speedup_vs_bun) / 2.0 - 1.0) * 20.0;
         let win_rate: _ = (self.beejs_wins as f64 / self.total_tests as f64) * 40.0;
         let memory_score: _ = self.memory_efficiency_improvement * 0.4;
-
         (speedup_score + win_rate + memory_score).clamp(0.0, 100.0)
     }
-
     /// 生成摘要报告
     pub fn generate_summary(&self) -> String {
         format!(
@@ -85,7 +76,6 @@ impl PerformanceSummary {
         )
     }
 }
-
 /// 性能测试用例类型
 #[derive(Debug, Clone)]
 pub enum BenchmarkTestCase {
@@ -106,7 +96,6 @@ pub enum BenchmarkTestCase {
         request_count: usize,
     },
 }
-
 impl BenchmarkTestCase {
     /// 获取测试用例名称
     pub fn name(&self) -> String {
@@ -125,7 +114,6 @@ impl BenchmarkTestCase {
             }
         }
     }
-
     /// 获取测试用例描述
     pub fn description(&self) -> String {
         match self {
@@ -147,7 +135,6 @@ impl BenchmarkTestCase {
             }
         }
     }
-
     /// 生成测试代码
     pub fn generate_test_code(&self) -> String {
         match self {
@@ -195,15 +182,12 @@ impl BenchmarkTestCase {
         }
     }
 }
-
 /// 生成 JSON 测试数据
 fn generate_json_data(size: usize) -> String {
     let mut json = String::with_capacity(size);
     json.push('{');
-
     let mut current_size = 1;
     let mut counter = 0;
-
     while current_size < size - 2 {
         let entry: _ = format!("\"key_{}\": \"value_{}\"", counter, counter);
         if current_size + entry.len() + 2 < size {
@@ -217,7 +201,6 @@ fn generate_json_data(size: usize) -> String {
             break;
         }
     }
-
     json.push('}');
     json
 }

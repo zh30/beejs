@@ -1,13 +1,11 @@
 //! Local Istio CRD type definitions
 //! These are simplified versions of Istio CRDs for use with kube-rs
-
 use kube::CustomResource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// DestinationRule defines policies for traffic to a service
 #[derive(CustomResource, Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[kube(
@@ -26,7 +24,6 @@ pub struct DestinationRuleSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subsets: Option<Vec<Subset>>,
 }
-
 /// Traffic policy for a destination
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct TrafficPolicy {
@@ -40,7 +37,6 @@ pub struct TrafficPolicy {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub outlier_detection: Option<OutlierDetection>,
 }
-
 /// Load balancer settings
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct LoadBalancerSettings {
@@ -48,7 +44,6 @@ pub struct LoadBalancerSettings {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub simple: Option<String>,
 }
-
 /// Connection pool settings
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct ConnectionPoolSettings {
@@ -59,7 +54,6 @@ pub struct ConnectionPoolSettings {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub http: Option<HttpSettings>,
 }
-
 /// TCP connection settings
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct TcpSettings {
@@ -70,7 +64,6 @@ pub struct TcpSettings {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub connect_timeout: Option<String>,
 }
-
 /// HTTP connection settings
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct HttpSettings {
@@ -81,7 +74,6 @@ pub struct HttpSettings {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_requests_per_connection: Option<i32>,
 }
-
 /// Outlier detection settings
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct OutlierDetection {
@@ -98,7 +90,6 @@ pub struct OutlierDetection {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max_ejection_percent: Option<i32>,
 }
-
 /// Subset of a service
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct Subset {
@@ -108,7 +99,6 @@ pub struct Subset {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub labels: Option<HashMap<String, String>>,
 }
-
 /// VirtualService defines traffic routing rules
 #[derive(CustomResource, Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[kube(
@@ -127,7 +117,6 @@ pub struct VirtualServiceSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub http: Option<Vec<HttpRoute>>,
 }
-
 /// HTTP route
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct HttpRoute {
@@ -147,7 +136,6 @@ pub struct HttpRoute {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub retries: Option<HttpRetry>,
 }
-
 /// HTTP match request
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct HttpMatchRequest {
@@ -158,7 +146,6 @@ pub struct HttpMatchRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub headers: Option<HashMap<String, StringMatch>>,
 }
-
 /// String match
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct StringMatch {
@@ -172,7 +159,6 @@ pub struct StringMatch {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub regex: Option<String>,
 }
-
 /// HTTP route destination
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct HttpRouteDestination {
@@ -182,7 +168,6 @@ pub struct HttpRouteDestination {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub weight: Option<i32>,
 }
-
 /// Destination
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct Destination {
@@ -195,7 +180,6 @@ pub struct Destination {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub port: Option<PortSelector>,
 }
-
 /// Port selector
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct PortSelector {
@@ -203,7 +187,6 @@ pub struct PortSelector {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub number: Option<u32>,
 }
-
 /// HTTP fault injection
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct HttpFaultInjection {
@@ -214,7 +197,6 @@ pub struct HttpFaultInjection {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub abort: Option<Abort>,
 }
-
 /// Delay injection
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct Delay {
@@ -225,7 +207,6 @@ pub struct Delay {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub percentage: Option<Percent>,
 }
-
 /// Abort injection
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct Abort {
@@ -236,14 +217,12 @@ pub struct Abort {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub percentage: Option<Percent>,
 }
-
 /// Percentage
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct Percent {
     /// Value (0-100)
     pub value: f64,
 }
-
 /// HTTP retry policy
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct HttpRetry {
@@ -257,7 +236,6 @@ pub struct HttpRetry {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub retry_on: Option<String>,
 }
-
 /// Gateway defines an entry point into the mesh
 #[derive(CustomResource, Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[kube(
@@ -272,7 +250,6 @@ pub struct GatewaySpec {
     /// Servers
     pub servers: Vec<Server>,
 }
-
 /// Server in a gateway
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct Server {
@@ -284,7 +261,6 @@ pub struct Server {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tls: Option<TlsSettings>,
 }
-
 /// Port
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct Port {
@@ -295,7 +271,6 @@ pub struct Port {
     /// Name
     pub name: String,
 }
-
 /// TLS settings
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct TlsSettings {
@@ -306,7 +281,6 @@ pub struct TlsSettings {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub credential_name: Option<String>,
 }
-
 /// PeerAuthentication defines mTLS settings
 #[derive(CustomResource, Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[kube(
@@ -323,7 +297,6 @@ pub struct PeerAuthenticationSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mtls: Option<MutualTls>,
 }
-
 /// Workload selector
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct WorkloadSelector {
@@ -331,7 +304,6 @@ pub struct WorkloadSelector {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub match_labels: Option<HashMap<String, String>>,
 }
-
 /// Mutual TLS settings
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct MutualTls {
@@ -339,7 +311,6 @@ pub struct MutualTls {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<String>,
 }
-
 /// AuthorizationPolicy defines access control rules
 #[derive(CustomResource, Clone, Debug, Deserialize, Serialize, JsonSchema)]
 #[kube(
@@ -359,7 +330,6 @@ pub struct AuthorizationPolicySpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rules: Option<Vec<AuthorizationRule>>,
 }
-
 /// Authorization rule
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct AuthorizationRule {
@@ -370,7 +340,6 @@ pub struct AuthorizationRule {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub to: Option<Vec<Operation>>,
 }
-
 /// Source of a request
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct Source {
@@ -381,7 +350,6 @@ pub struct Source {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub namespaces: Option<Vec<String>>,
 }
-
 /// Operation on a target
 #[derive(Clone, Debug, Default, Deserialize, Serialize, JsonSchema)]
 pub struct Operation {

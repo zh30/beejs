@@ -24,13 +24,10 @@
 //! # Ok(())
 //! # }
 //! ```
-
 pub mod manager;
 pub mod renderer;
-
 pub use manager::*;
 pub use renderer::*;
-
 pub use renderer::{
     ChartRenderer, GraphRenderer, TemplateEngine, WebSocketClient,
     ChartInstance, ChartConfig, ChartData, SeriesData, RenderStats,
@@ -38,10 +35,8 @@ pub use renderer::{
     LayoutConfig, LayoutType, InteractionConfig, LayoutEngine,
     ForceParams, HierarchicalParams, Template, TemplateFunction
 };
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
 /// Dashboard panel configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PanelConfig {
@@ -62,7 +57,6 @@ pub struct PanelConfig {
     /// Panel options
     pub options: PanelOptions,
 }
-
 /// Grid position for panels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GridPos {
@@ -71,7 +65,6 @@ pub struct GridPos {
     pub w: i32,
     pub h: i32,
 }
-
 /// Query target for panels
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueryTarget {
@@ -82,7 +75,6 @@ pub struct QueryTarget {
     /// Query legend format
     pub legend_format: String,
 }
-
 /// Field configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FieldConfig {
@@ -96,20 +88,17 @@ pub struct FieldConfig {
     /// Thresholds
     pub thresholds: Option<ThresholdsConfig>,
 }
-
 /// Thresholds configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThresholdsConfig {
     pub steps: Vec<ThresholdStep>,
 }
-
 /// Threshold step
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ThresholdStep {
     pub color: String,
     pub value: Option<f64>,
 }
-
 /// Panel options
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PanelOptions {
@@ -120,47 +109,40 @@ pub struct PanelOptions {
     /// Time range
     pub time: TimeRangeConfig,
 }
-
 /// Legend configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LegendConfig {
     pub show: bool,
     pub position: String,
 }
-
 /// Tooltip configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TooltipConfig {
     pub mode: String,
     pub sort: String,
 }
-
 /// Time range configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimeRangeConfig {
     pub from: String,
     pub to: String,
 }
-
 /// Dashboard tags
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DashboardTags {
     pub tags: Vec<String>,
 }
-
 /// Dashboard version
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DashboardVersion {
     pub version: i32,
 }
-
 /// Dashboard refresh interval
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RefreshConfig {
     pub interval: String,
     pub pause: bool,
 }
-
 /// Custom chart types for visualization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChartType {
@@ -171,7 +153,6 @@ pub enum ChartType {
     StatChart,
     Table,
 }
-
 /// Custom graph types for topology and dependencies
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GraphType {
@@ -180,7 +161,6 @@ pub enum GraphType {
     TraceGraph,
     NetworkGraph,
 }
-
 /// Template variable for dynamic dashboards
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TemplateVariable {
@@ -189,7 +169,6 @@ pub struct TemplateVariable {
     pub query: String,
     pub options: Vec<VariableOption>,
 }
-
 /// Variable option
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VariableOption {
@@ -197,13 +176,11 @@ pub struct VariableOption {
     pub value: String,
     pub selected: bool,
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_panel_config_creation() {
         let config: _ = PanelConfig {
@@ -226,19 +203,16 @@ use std::collections::{HashMap, BTreeMap};
                 time: TimeRangeConfig { from: "now-1h".to_string(), to: "now".to_string() },
             },
         };
-
         assert_eq!(config.id, "panel-1");
         assert_eq!(config.title, "CPU Usage");
         assert_eq!(config.panel_type, "graph");
     }
-
     #[test]
     fn test_grid_pos_validation() {
         let pos: _ = GridPos { x: 0, y: 0, w: 24, h: 12 };
         assert!(pos.w > 0);
         assert!(pos.h > 0);
     }
-
     #[test]
     fn test_threshold_config() {
         let thresholds: _ = ThresholdsConfig {
@@ -248,7 +222,6 @@ use std::collections::{HashMap, BTreeMap};
                 ThresholdStep { color: "red".to_string(), value: Some(80.0) },
             ],
         };
-
         assert_eq!(thresholds.steps.len(), 3);
         assert_eq!(thresholds.steps[1].color, "yellow");
     }

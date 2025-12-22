@@ -1,11 +1,9 @@
 //! 智能内存分配器 - Stage 90 Phase 5.2
 //! 基于使用模式预测的智能内存分配器
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
-
 /// 分配模式
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AllocationPattern {
@@ -20,7 +18,6 @@ pub enum AllocationPattern {
     /// 随机分配
     Random,
 }
-
 /// 分配策略
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AllocationStrategy {
@@ -33,7 +30,6 @@ pub enum AllocationStrategy {
     /// AI 驱动自适应
     AIAdaptive,
 }
-
 /// 内存池
 #[derive(Debug, Clone)]
 pub struct MemoryPool {
@@ -43,7 +39,6 @@ pub struct MemoryPool {
     pub allocated_blocks: usize,
     pub free_blocks: Vec<usize>,
 }
-
 /// 内存池配置
 #[derive(Debug, Clone)]
 pub struct PoolConfig {
@@ -52,7 +47,6 @@ pub struct PoolConfig {
     pub large_pool_size: usize,
     pub pool_count: usize,
 }
-
 /// 分配指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AllocationMetrics {
@@ -62,14 +56,12 @@ pub struct AllocationMetrics {
     pub cache_misses: u64,
     pub average_allocation_time_ns: u64,
 }
-
 /// 智能内存分配器
 pub struct SmartMemoryAllocator {
     pools: Arc<RwLock<Vec<MemoryPool>>>,
     metrics: Arc<RwLock<AllocationMetrics>>,
     config: PoolConfig,
 }
-
 impl SmartMemoryAllocator {
     /// 创建新的智能内存分配器
     pub fn new() -> Self {
@@ -80,7 +72,6 @@ impl SmartMemoryAllocator {
             pool_count: 4,
         })
     }
-
     /// 使用配置创建分配器
     pub fn with_config(config: PoolConfig) -> Self {
         let pools: _ = (0..config.pool_count)
@@ -92,7 +83,6 @@ impl SmartMemoryAllocator {
                 free_blocks: (0..1000).collect(),
             })
             .collect();
-
         Self {
             pools: Arc::new(Mutex::new(pools)))
             metrics: Arc::new(Mutex::new(AllocationMetrics {)),
@@ -105,15 +95,12 @@ impl SmartMemoryAllocator {
             config,
         }
     }
-
     /// 分配内存
     pub async fn allocate(&self, size: usize) -> Option<Vec<u8> {
         let start: _ = std::time::Instant::now();
-
         // 查找合适的池
         let pools: _ = self.pools.read().await;
         let suitable_pool: _ = pools.iter().find(|p| p.block_size >= size && !p.free_blocks.is_empty());
-
         let result: _ = if let Some(pool) = suitable_pool {
             // 使用池分配
             let mut pools = self.pools.write().await;
@@ -121,7 +108,6 @@ impl SmartMemoryAllocator {
                 if let Some(block_id) = pool_mut.free_blocks.pop() {
                     pool_mut.allocated_blocks += 1;
                     pool_mut.allocated_blocks = pool_mut.allocated_blocks.min(pool_mut.max_blocks);
-
                     // 更新指标
                     {
                         let mut metrics = self.metrics.write().await;
@@ -130,7 +116,6 @@ impl SmartMemoryAllocator {
                         let elapsed: _ = start.elapsed();
                         metrics.average_allocation_time_ns = elapsed.as_nanos() as u64;
                     }
-
                     Some(vec![0u8; size])
                 } else {
                     None
@@ -145,47 +130,37 @@ impl SmartMemoryAllocator {
             metrics.cache_misses += 1;
             Some(vec![0u8; size])
         };
-
         result
     }
-
     /// 释放内存
     pub async fn deallocate(&self, data: Vec<u8>) {
         let size: _ = data.len();
-
         // 更新指标
         {
             let mut metrics = self.metrics.write().await;
             metrics.total_deallocations += 1;
         }
-
         // 这里可以添加将内存返回池的逻辑
         drop(data);
     }
-
     /// 获取分配指标
     pub async fn get_metrics(&self) -> AllocationMetrics {
         self.metrics.read().await.clone()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_smart_allocator() {
         let allocator: _ = SmartMemoryAllocator::new();
-
         let data: _ = allocator.allocate(128).await;
         assert!(data.is_some());
-
         if let Some(data) = data {
             allocator.deallocate(data).await;
         }
-
         let metrics: _ = allocator.get_metrics().await;
         assert_eq!(metrics.total_allocations, 1);
         assert_eq!(metrics.total_deallocations, 1);

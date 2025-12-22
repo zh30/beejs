@@ -2,14 +2,12 @@
 //!
 //! This module provides tools to generate visualizations of performance data,
 //! including charts, graphs, and HTML reports.
-
 use crate::performance_analyzer::{PerformanceReport};
 use crate::analysis::bottleneck_detector::{Bottleneck, BottleneckSeverity};
 use crate::analysis::optimizer::OptimizationSuggestion;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
-
 /// Chart types for visualization
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChartType {
@@ -26,7 +24,6 @@ pub enum ChartType {
     /// Heatmap for matrix data
     Heatmap,
 }
-
 /// Output format for visualizations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OutputFormat {
@@ -41,7 +38,6 @@ pub enum OutputFormat {
     /// Markdown report
     Markdown,
 }
-
 /// Visualization configuration
 #[derive(Debug, Clone)]
 pub struct VisualizationConfig {
@@ -58,7 +54,6 @@ pub struct VisualizationConfig {
     /// Output format
     pub output_format: OutputFormat,
 }
-
 impl Default for VisualizationConfig {
     fn default() -> Self {
         Self {
@@ -71,12 +66,10 @@ impl Default for VisualizationConfig {
         }
     }
 }
-
 /// Performance visualizer
 pub struct PerformanceVisualizer {
     config: VisualizationConfig,
 }
-
 impl PerformanceVisualizer {
     /// Create a new performance visualizer with default configuration
     pub fn new() -> Self {
@@ -84,12 +77,10 @@ impl PerformanceVisualizer {
             config: VisualizationConfig::default(),
         }
     }
-
     /// Create a new performance visualizer with custom configuration
     pub fn with_config(config: VisualizationConfig) -> Self {
         Self { config }
     }
-
     /// Generate an HTML performance report
     pub fn generate_html_report(
         &self,
@@ -98,7 +89,6 @@ impl PerformanceVisualizer {
         suggestions: &[OptimizationSuggestion],
     ) -> String {
         let mut html = String::new();
-
         // HTML header
         html.push_str(r#"<!DOCTYPE html>
 <html lang="en">
@@ -211,12 +201,10 @@ impl PerformanceVisualizer {
     <div class="container">
         <h1>🚀 Beejs Performance Report</h1>
         <p>Generated at: "#);
-
         // Add timestamp
         html.push_str(&chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string());
         html.push_str(r#"</p>
     </div>
-
     <div class="container">
         <h2>📊 Key Metrics</h2>
         <div class="metric">
@@ -250,17 +238,14 @@ impl PerformanceVisualizer {
             <div class="metric-label">Max Time (ms)</div>
         </div>
     </div>
-
     <div class="container">
         <h2>📈 Performance Timeline</h2>
         <div class="chart-container">
             <canvas id="performanceChart"></canvas>
         </div>
     </div>
-
     <div class="container">
         <h2>⚠️ Detected Bottlenecks</h2>"#);
-
         // Add bottlenecks
         if bottlenecks.is_empty() {
             html.push_str("<p>✅ No bottlenecks detected!</p>");
@@ -287,13 +272,10 @@ impl PerformanceVisualizer {
                 ));
             }
         }
-
         html.push_str(r#"
     </div>
-
     <div class="container">
         <h2>💡 Optimization Suggestions</h2>"#);
-
         // Add suggestions
         if suggestions.is_empty() {
             html.push_str("<p>✅ No suggestions at this time.</p>");
@@ -322,13 +304,10 @@ impl PerformanceVisualizer {
                         crate::analysis::optimizer::OptimizationPriority::Low => "low",
                     }
                 ));
-
                 for step in &suggestion.steps {
                     html.push_str(&format!("<li>{}</li>", step));
                 }
-
                 html.push_str("</ol>");
-
                 if !suggestion.code_examples.is_empty() {
                     html.push_str("<h4>Code Example:</h4>");
                     for example in &suggestion.code_examples {
@@ -338,21 +317,17 @@ impl PerformanceVisualizer {
                         ));
                     }
                 }
-
                 html.push_str("</div>");
             }
         }
-
         html.push_str(r#"
     </div>
-
     <div class="container">
         <h2>📊 Cache Hit Rate Distribution</h2>
         <div class="chart-container">
             <canvas id="cacheChart"></canvas>
         </div>
     </div>
-
     <script>
         // Performance Timeline Chart
         const ctx1 = document.getElementById('performanceChart').getContext('2d');
@@ -360,7 +335,6 @@ impl PerformanceVisualizer {
             type: 'line',
             data: {
                 labels: ["#);
-
         // Add sample data
         for i in 0..report.total_executions.min(20) {
             if i > 0 {
@@ -368,12 +342,10 @@ impl PerformanceVisualizer {
             }
             html.push_str(&format!("{}", i + 1));
         }
-
         html.push_str(r#"],
                 datasets: [{
                     label: 'Execution Time (ms)',
                     data: ["#);
-
         // Add sample execution times
         for i in 0..report.total_executions.min(20) {
             if i > 0 {
@@ -384,7 +356,6 @@ impl PerformanceVisualizer {
             let time: _ = report.average_time_ms + (i as f64 - 10.0) * variance / 10.0;
             html.push_str(&format!("{:.2}", time.max(report.min_time_ms).min(report.max_time_ms)));
         }
-
         html.push_str(r#"],
                     borderColor: '#4CAF50',
                     backgroundColor: 'rgba(76, 175, 80, 0.1)',
@@ -411,7 +382,6 @@ impl PerformanceVisualizer {
                 }
             }
         });
-
         // Cache Hit Rate Chart
         const ctx2 = document.getElementById('cacheChart').getContext('2d');
         new Chart(ctx2, {
@@ -420,9 +390,7 @@ impl PerformanceVisualizer {
                 labels: ['Cache Hits', 'Cache Misses'],
                 datasets: [{
                     data: ["#);
-
         html.push_str(&format!("{:.2}, {:.2}", report.cache_hit_rate, 100.0 - report.cache_hit_rate));
-
         html.push_str(r#"],
                     backgroundColor: [
                         '#4CAF50',
@@ -443,10 +411,8 @@ impl PerformanceVisualizer {
     </script>
 </body>
 </html>"#);
-
         html
     }
-
     /// Generate a Markdown report
     pub fn generate_markdown_report(
         &self,
@@ -455,11 +421,9 @@ impl PerformanceVisualizer {
         suggestions: &[OptimizationSuggestion],
     ) -> String {
         let mut md = String::new();
-
         // Title
         md.push_str("# 🚀 Beejs Performance Report\n\n");
         md.push_str(&format!("**Generated at:** {}\n\n", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC")));
-
         // Key Metrics
         md.push_str("## 📊 Key Metrics\n\n");
         md.push_str(&format!("- **Average Execution Time:** {:.2} ms\n", report.average_time_ms));
@@ -467,7 +431,6 @@ impl PerformanceVisualizer {
         md.push_str(&format!("- **Total Executions:** {}\n", report.total_executions));
         md.push_str(&format!("- **Min Time:** {:.2} ms\n", report.min_time_ms));
         md.push_str(&format!("- **Max Time:** {:.2} ms\n\n", report.max_time_ms));
-
         // Bottlenecks
         md.push_str("## ⚠️ Detected Bottlenecks\n\n");
         if bottlenecks.is_empty() {
@@ -483,7 +446,6 @@ impl PerformanceVisualizer {
                 ));
             }
         }
-
         // Suggestions
         md.push_str("## 💡 Optimization Suggestions\n\n");
         if suggestions.is_empty() {
@@ -499,7 +461,6 @@ impl PerformanceVisualizer {
                     suggestion.estimated_improvement,
                     suggestion.implementation_effort
                 ));
-
                 if !suggestion.steps.is_empty() {
                     md.push_str("**Implementation Steps:**\n");
                     for step in &suggestion.steps {
@@ -507,7 +468,6 @@ impl PerformanceVisualizer {
                     }
                     md.push('\n');
                 }
-
                 if !suggestion.code_examples.is_empty() {
                     md.push_str("**Code Example:**\n```\n");
                     for example in &suggestion.code_examples {
@@ -517,17 +477,14 @@ impl PerformanceVisualizer {
                 }
             }
         }
-
         md
     }
-
     /// Save report to file
     pub fn save_report(&self, report: &str, filename: &str) -> std::io::Result<()> {
         let mut file = File::create(filename)?;
         file.write_all(report.as_bytes())?;
         Ok(())
     }
-
     /// Convert severity to string
     fn severity_to_string(&self, severity: &BottleneckSeverity) -> String {
         match severity {
@@ -538,7 +495,6 @@ impl PerformanceVisualizer {
             BottleneckSeverity::Info => "Info".to_string(),
         }
     }
-
     /// Convert priority to string
     fn priority_to_string(&self, priority: &crate::analysis::optimizer::OptimizationPriority) -> String {
         match priority {
@@ -549,26 +505,22 @@ impl PerformanceVisualizer {
         }
     }
 }
-
 impl Default for PerformanceVisualizer {
     fn default() -> Self {
         Self::new()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_visualizer_creation() {
         let visualizer: _ = PerformanceVisualizer::new();
         assert_eq!(visualizer.config.width, 800);
         assert_eq!(visualizer.config.height, 600);
     }
-
     #[test]
     fn test_generate_html_report() {
         let visualizer: _ = PerformanceVisualizer::new();
@@ -580,7 +532,6 @@ use std::collections::{HashMap, BTreeMap};
             cache_hit_rate: 70.0,
             total_code_executed: 1000,
         };
-
         let bottlenecks: _ = vec![
             crate::analysis::bottleneck_detector::Bottleneck {
                 bottleneck_type: crate::analysis::bottleneck_detector::BottleneckType::SlowExecution,
@@ -591,15 +542,12 @@ use std::collections::{HashMap, BTreeMap};
                 code_location: None,
             }
         ];
-
         let suggestions: _ = vec![];
-
         let html: _ = visualizer.generate_html_report(&report, &bottlenecks, &suggestions);
         assert!(html.contains("<!DOCTYPE html>"));
         assert!(html.contains("Beejs Performance Report"));
         assert!(html.contains("15.00"));
     }
-
     #[test]
     fn test_generate_markdown_report() {
         let visualizer: _ = PerformanceVisualizer::new();
@@ -611,28 +559,22 @@ use std::collections::{HashMap, BTreeMap};
             cache_hit_rate: 70.0,
             total_code_executed: 1000,
         };
-
         let bottlenecks: _ = vec![];
         let suggestions: _ = vec![];
-
         let md: _ = visualizer.generate_markdown_report(&report, &bottlenecks, &suggestions);
         assert!(md.contains("# 🚀 Beejs Performance Report"));
         assert!(md.contains("Average Execution Time"));
     }
-
     #[test]
     fn test_save_report() {
         let visualizer: _ = PerformanceVisualizer::new();
         let report: _ = "# Test Report\n";
         let result: _ = visualizer.save_report(report, "/tmp/test_report.html");
-
         assert!(result.is_ok());
     }
-
     #[test]
     fn test_severity_to_string() {
         let visualizer: _ = PerformanceVisualizer::new();
-
         assert_eq!(visualizer.severity_to_string(&BottleneckSeverity::Critical), "Critical");
         assert_eq!(visualizer.severity_to_string(&BottleneckSeverity::High), "High");
         assert_eq!(visualizer.severity_to_string(&BottleneckSeverity::Medium), "Medium");

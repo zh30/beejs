@@ -2,14 +2,11 @@
 //!
 //! This module provides functionality to inspect and manage variable scopes
 //! in JavaScript contexts, including global, local, closure, and catch scopes.
-
 use std::collections::HashMap;
 use rusty_v8 as v8;
-
 use crate::debugger::{DebugResult, config::DebugConfig};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// Scope types in JavaScript
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ScopeType {
@@ -22,7 +19,6 @@ pub enum ScopeType {
     Module,        // Module scope
     Script,        // Script scope
 }
-
 /// Variable information
 #[derive(Debug, Clone)]
 pub struct VariableInfo {
@@ -34,7 +30,6 @@ pub struct VariableInfo {
     pub length: Option<usize>,
     pub scope_type: ScopeType,
 }
-
 /// Variable scope representation
 #[derive(Debug, Clone)]
 pub struct VariableScope {
@@ -42,38 +37,31 @@ pub struct VariableScope {
     pub object: v8::Global<v8::Object>,
     pub scope_chain_position: usize,
 }
-
 /// Variable inspector
 pub struct VariableInspector {
     config: DebugConfig,
 }
-
 impl VariableInspector {
     /// Create a new variable inspector
     pub fn new(config: DebugConfig) -> Self {
         Self { config }
     }
-
     /// Get all variables in a scope
     pub fn get_scope_variables(
         &self,
         scope: &VariableScope,
     ) -> DebugResult<Vec<VariableInfo>> {
         let variables: _ = Vec::new();
-
         // Get object properties from V8
         // This would integrate with V8's Object API
-
         DebugResult::ok(variables)
     }
-
     /// Get variables from all accessible scopes
     pub fn get_all_scope_variables(
         &self,
         scopes: &[VariableScope],
     ) -> DebugResult<HashMap<ScopeType, Vec<VariableInfo>>> {
         let mut all_vars = HashMap::new();
-
         for scope in scopes {
             match self.get_scope_variables(scope) {
                 DebugResult { success: true, data: Some(vars), .. } => {
@@ -85,10 +73,8 @@ impl VariableInspector {
                 _ => return DebugResult::err("Unknown error".to_string()),
             }
         }
-
         DebugResult::ok(all_vars)
     }
-
     /// Evaluate an expression in a given context
     pub fn evaluate_expression(
         &self,
@@ -99,7 +85,6 @@ impl VariableInspector {
         // Note: V8 isolate access requires different approach in rusty_v8 0.22
         // This is a placeholder implementation
         // TODO: Implement proper expression evaluation with V8
-
         // For now, return a simple variable info
         let info: _ = VariableInfo {
             name: expression.to_string(),
@@ -110,10 +95,8 @@ impl VariableInspector {
             length: None,
             scope_type: ScopeType::Local,
         };
-
         DebugResult::ok(info)
     }
-
     /// Get global variables
     pub fn get_global_variables(
         &self,
@@ -122,11 +105,9 @@ impl VariableInspector {
         // Note: V8 isolate access requires different approach in rusty_v8 0.22
         // This is a placeholder implementation
         // TODO: Implement proper global variable access with V8
-
         // Return empty list for now
         DebugResult::ok(Vec::new())
     }
-
     /// Convert V8 object to VariableInfo
     fn object_to_variables(
         &self,
@@ -137,11 +118,9 @@ impl VariableInspector {
         // Note: V8 isolate access requires different approach in rusty_v8 0.22
         // This is a placeholder implementation
         // TODO: Implement proper object inspection with V8
-
         // Return empty list for now
         DebugResult::ok(Vec::new())
     }
-
     /// Get property details for an object
     pub fn get_object_properties(
         &self,
@@ -152,15 +131,12 @@ impl VariableInspector {
         if max_depth == 0 {
             return DebugResult::ok(Vec::new());
         }
-
         // Note: V8 isolate access requires different approach in rusty_v8 0.22
         // This is a placeholder implementation
         // TODO: Implement proper object inspection with V8
-
         // Return empty list for now
         DebugResult::ok(Vec::new())
     }
-
     /// Check if a variable exists in any scope
     pub fn find_variable(
         &self,
@@ -179,7 +155,6 @@ impl VariableInspector {
         }
         None
     }
-
     /// Get variable value from specific scope
     pub fn get_variable_from_scope(
         &self,
@@ -198,19 +173,15 @@ impl VariableInspector {
             DebugResult::err(variables_result.error.unwrap_or_else(|| "Unknown error".to_string()))
         }
     }
-
     /// Format variable for display
     pub fn format_variable(&self, var: &VariableInfo, max_length: usize) -> String {
         let mut result = format!("{}: {}", var.name, var.value);
-
         if result.len() > max_length {
             result.truncate(max_length);
             result.push_str("...");
         }
-
         result
     }
-
     /// Format multiple variables for display
     pub fn format_variables(
         &self,
@@ -223,10 +194,8 @@ impl VariableInspector {
             .collect()
     }
 }
-
 /// Scope utilities
 pub struct ScopeUtils;
-
 impl ScopeUtils {
     /// Create a global scope
     pub fn create_global_scope(
@@ -235,7 +204,6 @@ impl ScopeUtils {
         // Note: V8 isolate access requires different approach in rusty_v8 0.22
         // This is a placeholder implementation
         // TODO: Implement proper scope creation with V8
-
         // Return an empty scope for now
         DebugResult::ok(VariableScope {
             scope_type: ScopeType::Global,
@@ -243,7 +211,6 @@ impl ScopeUtils {
             scope_chain_position: 0,
         })
     }
-
     /// Parse scope type from string
     pub fn parse_scope_type(s: &str) -> Option<ScopeType> {
         match s.to_lowercase().as_str() {
@@ -258,7 +225,6 @@ impl ScopeUtils {
             _ => None,
         }
     }
-
     /// Get scope type display name
     pub fn scope_type_name(scope_type: &ScopeType) -> &'static str {
         match scope_type {

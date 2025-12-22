@@ -1,12 +1,10 @@
 //! 性能监控器 - Stage 78 Phase 4
 //!
 //! 提供实时性能指标收集、分析和报告功能
-
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 性能指标
 #[derive(Debug, Clone)]
 pub struct PerformanceMetrics {
@@ -17,7 +15,6 @@ pub struct PerformanceMetrics {
     pub cache_hit_rate: f64,
     pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
-
 impl PerformanceMetrics {
     pub fn new() -> Self {
         PerformanceMetrics {
@@ -30,14 +27,12 @@ impl PerformanceMetrics {
         }
     }
 }
-
 /// 性能快照
 #[derive(Debug, Clone)]
 pub struct PerformanceSnapshot {
     pub metrics: PerformanceMetrics,
     pub interval_ms: u64,
 }
-
 /// 指标收集器
 #[derive(Debug, Clone)]
 pub struct MetricsCollector {
@@ -45,7 +40,6 @@ pub struct MetricsCollector {
     max_history: usize,
     start_time: Instant,
 }
-
 impl MetricsCollector {
     pub fn new(max_history: usize) -> Self {
         MetricsCollector {
@@ -54,23 +48,19 @@ impl MetricsCollector {
             start_time: Instant::now(),
         }
     }
-
     pub fn record_metrics(&mut self, metrics: PerformanceMetrics) {
         self.history.push(metrics);
         if self.history.len() > self.max_history {
             self.history.remove(0);
         }
     }
-
     pub fn get_history(&self) -> Vec<PerformanceMetrics> {
         self.history.clone()
     }
-
     pub fn latest(&self) -> Option<&PerformanceMetrics> {
         self.history.last()
     }
 }
-
 /// 热点代码
 #[derive(Debug, Clone)]
 pub struct Hotspot {
@@ -78,14 +68,12 @@ pub struct Hotspot {
     pub execution_count: u64,
     pub performance_impact: f64,
 }
-
 /// 内存访问模式
 #[derive(Debug, Clone)]
 pub enum AccessType {
     Sequential,
     Random,
 }
-
 /// 内存统计
 #[derive(Debug, Clone)]
 pub struct MemoryStats {
@@ -94,7 +82,6 @@ pub struct MemoryStats {
     pub cache_misses: u64,
     pub avg_access_time_ns: u64,
 }
-
 impl MemoryStats {
     pub fn new() -> Self {
         MemoryStats {
@@ -105,7 +92,6 @@ impl MemoryStats {
         }
     }
 }
-
 /// 性能瓶颈
 #[derive(Debug, Clone)]
 pub struct PerformanceBottleneck {
@@ -114,7 +100,6 @@ pub struct PerformanceBottleneck {
     pub description: String,
     pub recommended_action: String,
 }
-
 /// 性能监控器
 #[derive(Debug, Clone)]
 pub struct PerformanceMonitor {
@@ -123,7 +108,6 @@ pub struct PerformanceMonitor {
     memory_access_count: u64,
     start_time: Instant,
 }
-
 impl PerformanceMonitor {
     pub fn new(max_history: usize) -> Self {
         PerformanceMonitor {
@@ -133,23 +117,18 @@ impl PerformanceMonitor {
             start_time: Instant::now(),
         }
     }
-
     pub fn start_monitoring(&self) {
         // 监控已自动开始
     }
-
     pub fn record_metrics(&mut self, metrics: PerformanceMetrics) {
         self.metrics_collector.record_metrics(metrics);
     }
-
     pub fn record_instruction(&mut self, address: u64) {
         *self.hotspot_counters.entry(address).or_insert(0) += 1;
     }
-
     pub fn record_memory_access(&mut self, _address: u64, _access_type: AccessType, _latency_ns: u64) {
         self.memory_access_count += 1;
     }
-
     pub fn detect_hotspots(&self) -> Vec<Hotspot> {
         let mut hotspots: Vec<Hotspot> = self
             .hotspot_counters
@@ -160,11 +139,9 @@ impl PerformanceMonitor {
                 performance_impact: count as f64,
             })
             .collect();
-
         hotspots.sort_by(|a, b| b.execution_count.cmp(&a.execution_count));
         hotspots
     }
-
     pub fn analyze_memory_patterns(&self) -> MemoryStats {
         MemoryStats {
             total_accesses: self.memory_access_count,
@@ -173,10 +150,8 @@ impl PerformanceMonitor {
             avg_access_time_ns: 100,
         }
     }
-
     pub fn diagnose_bottlenecks(&self) -> Vec<PerformanceBottleneck> {
         let mut bottlenecks = Vec::new();
-
         if let Some(metrics) = self.metrics_collector.latest() {
             if metrics.cpu_usage > 80.0 {
                 bottlenecks.push(PerformanceBottleneck {
@@ -187,16 +162,13 @@ impl PerformanceMonitor {
                 });
             }
         }
-
         bottlenecks
     }
-
     pub fn generate_report(&self) -> PerformanceReport {
         let history: _ = self.metrics_collector.get_history();
         let hotspots: _ = self.detect_hotspots();
         let bottlenecks: _ = self.diagnose_bottlenecks();
         let memory_stats: _ = self.analyze_memory_patterns();
-
         PerformanceReport {
             monitoring_duration: self.start_time.elapsed(),
             total_samples: history.len(),
@@ -205,18 +177,15 @@ impl PerformanceMonitor {
             memory_stats,
         }
     }
-
     pub fn get_current_metrics(&self) -> Option<PerformanceMetrics> {
         self.metrics_collector.latest().cloned()
     }
-
     pub fn reset(&mut self) {
         self.metrics_collector = MetricsCollector::new(self.metrics_collector.max_history);
         self.hotspot_counters.clear();
         self.memory_access_count = 0;
     }
 }
-
 /// 性能报告
 #[derive(Debug, Clone)]
 pub struct PerformanceReport {
@@ -226,7 +195,6 @@ pub struct PerformanceReport {
     pub bottlenecks: Vec<PerformanceBottleneck>,
     pub memory_stats: MemoryStats,
 }
-
 /// 优化统计
 #[derive(Debug, Clone)]
 pub struct OptimizationStats {

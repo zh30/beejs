@@ -1,6 +1,5 @@
 //! io_uring 引擎
 //! 基于 Linux io_uring 的高性能异步 I/O
-
 use super::{NetworkConfig, NetworkStats};
 use std::sync::Arc;
 use std::time::Duration;
@@ -8,7 +7,6 @@ use tokio::sync::{RwLock, mpsc};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// io_uring 配置
 #[derive(Debug, Clone)]
 pub struct UringConfig {
@@ -19,7 +17,6 @@ pub struct UringConfig {
     pub enable_cqe32: bool,
     pub enable_buffers: bool,
 }
-
 impl Default for UringConfig {
     fn default() -> Self {
         Self {
@@ -32,7 +29,6 @@ impl Default for UringConfig {
         }
     }
 }
-
 /// io_uring 提交条目
 #[derive(Debug, Clone)]
 pub struct UringSubmission {
@@ -45,7 +41,6 @@ pub struct UringSubmission {
     pub offset: u64,
     pub user_data: u64,
 }
-
 /// io_uring 完成条目
 #[derive(Debug, Clone)]
 pub struct UringCompletion {
@@ -53,7 +48,6 @@ pub struct UringCompletion {
     pub result: i32,
     pub flags: u32,
 }
-
 /// io_uring 统计
 #[derive(Debug, Clone)]
 pub struct UringStats {
@@ -63,7 +57,6 @@ pub struct UringStats {
     pub peak_qps: u64,
     pub queue_utilization: f64,
 }
-
 /// io_uring 引擎
 pub struct IoUringEngine {
     config: NetworkConfig,
@@ -73,12 +66,10 @@ pub struct IoUringEngine {
     operation_counter: Arc<RwLock<u64>>,
     completion_queue: Arc<RwLock<Vec<UringCompletion>>>,
 }
-
 impl IoUringEngine {
     /// 创建新的 io_uring 引擎
     pub fn new(config: NetworkConfig) -> Self {
         let uring_config: _ = UringConfig::default();
-
         Self {
             stats: Arc::new(Mutex::new(UringStats {
                 submissions: 0,
@@ -94,32 +85,25 @@ impl IoUringEngine {
             uring_config,
         }
     }
-
     /// 初始化 io_uring
     pub async fn initialize(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 实际实现中这里会调用 libc::io_uring_setup
         // 简化实现：模拟初始化
-
         println!("✅ io_uring 引擎初始化完成");
-
         // 启动完成队列处理
         let completion_queue: _ = Arc::clone(&self.completion_queue);
         let stats: _ = Arc::clone(&self.stats);
-
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(Duration::from_millis(1)).await;
-
                 // 处理完成队列
                 let mut completions = completion_queue.write().await;
                 if !completions.is_empty() {
                     let start_time: _ = std::time::Instant::now();
-
                     // 处理每个完成条目
                     for completion in completions.drain(..) {
                         Self::process_completion(&stats, &completion).await;
                     }
-
                     // 更新统计
                     let elapsed: _ = start_time.elapsed();
                     let mut stats_guard = stats.write().await;
@@ -128,10 +112,8 @@ impl IoUringEngine {
                 }
             }
         });
-
         Ok(())
     }
-
     /// 提交 I/O 操作
     pub async fn submit(&self, submission: UringSubmission) -> Result<(), Box<dyn std::error::Error>> {
         let id: _ = {
@@ -139,35 +121,28 @@ impl IoUringEngine {
             *counter += 1;
             *counter
         };
-
         let submission_with_id: _ = UringSubmission {
             user_data: id,
             ..submission
         };
-
         // 记录活跃操作
         {
             let mut active = self.active_operations.write().await;
             active.insert(id, std::time::Instant::now());
         }
-
         // 模拟提交到 io_uring
         self.submit_to_uring(submission_with_id).await?;
-
         // 更新统计
         let mut stats = self.stats.write().await;
         stats.submissions += 1;
         stats.queue_utilization = (stats.submissions as f64 / self.uring_config.queue_depth as f64)
             .min(1.0);
-
         Ok(())
     }
-
     /// 模拟提交到 io_uring
     async fn submit_to_uring(&self, submission: UringSubmission) -> Result<(), Box<dyn std::error::Error>> {
         // 实际实现中这里会将提交条目写入 io_uring 提交队列
         // 简化实现：模拟操作
-
         match submission.opcode {
             // NOP
             0 => {
@@ -189,10 +164,8 @@ impl IoUringEngine {
                 return Err(format!("不支持的操作码: {}", submission.opcode).into());
             }
         }
-
         Ok(())
     }
-
     /// 模拟操作完成
     async fn simulate_completion(&self, user_data: u64, result: i32) {
         let completion: _ = UringCompletion {
@@ -200,27 +173,22 @@ impl IoUringEngine {
             result,
             flags: 0,
         };
-
         let mut queue = self.completion_queue.write().await;
         queue.push(completion);
     }
-
     /// 处理完成条目
     async fn process_completion(stats: &Arc<RwLock<UringStats>>, completion: &UringCompletion) {
         let mut stats_guard = stats.write().await;
         stats_guard.completions += 1;
-
         if completion.result < 0 {
             println!("❌ 操作失败 (id: {}, result: {})", completion.user_data, completion.result);
         } else {
             println!("✅ 操作完成 (id: {}, bytes: {})", completion.user_data, completion.result);
         }
     }
-
     /// 等待完成
     pub async fn wait_for_completions(&self, count: usize) -> Vec<UringCompletion> {
         let mut completions = Vec::with_capacity(count);
-
         // 等待完成事件
         while completions.len() < count {
             {
@@ -229,34 +197,27 @@ impl IoUringEngine {
                     completions.push(queue.remove(0));
                 }
             }
-
             if completions.len() < count {
                 tokio::time::sleep(Duration::from_micros(10)).await;
             }
         }
-
         completions
     }
-
     /// 获取统计信息
     pub async fn get_stats(&self) -> UringStats {
         self.stats.read().await.clone()
     }
-
     /// 获取活跃操作数
     pub async fn get_active_operations_count(&self) -> usize {
         self.active_operations.read().await.len()
     }
-
     /// 关闭 io_uring
     pub async fn shutdown(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 实际实现中这里会清理 io_uring 资源
         println!("🔄 io_uring 引擎已关闭");
-
         Ok(())
     }
 }
-
 impl Drop for IoUringEngine {
     fn drop(&mut self) {
         // 清理资源

@@ -2,7 +2,6 @@
 //!
 //! This module provides an alerting system that can monitor metrics,
 //! detect anomalies, and send notifications via various channels.
-
 use anyhow::{Context, Result};use prometheus::proto::MetricFamily;
 use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
@@ -13,7 +12,6 @@ use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
 use tokio::sync::RwLock;
 use tracing::{error, info};
-
 /// Alert severity levels
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AlertSeverity {
@@ -21,7 +19,6 @@ pub enum AlertSeverity {
     Warning,
     Info,
 }
-
 impl std::fmt::Display for AlertSeverity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -31,7 +28,6 @@ impl std::fmt::Display for AlertSeverity {
         }
     }
 }
-
 /// Alert conditions
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AlertCondition {
@@ -48,7 +44,6 @@ pub enum AlertCondition {
     /// Outside range
     Outside(f64, f64),
 }
-
 /// Alert rule definition
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AlertRule {
@@ -71,7 +66,6 @@ pub struct AlertRule {
     /// Description of the alert
     pub description: String,
 }
-
 /// Alert instance
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Alert {
@@ -92,7 +86,6 @@ pub struct Alert {
     /// Description
     pub description: String,
 }
-
 /// Alert notifier interface
 pub trait AlertNotifier: Send + Sync {
     /// Send an alert notification
@@ -100,13 +93,11 @@ pub trait AlertNotifier: Send + Sync {
     /// Get the notifier type
     fn name(&self) -> &str;
 }
-
 /// HTTP webhook notifier
 pub struct HttpWebhookNotifier {
     url: String,
     headers: HashMap<String, String>,
 }
-
 impl HttpWebhookNotifier {
     pub fn new(url: String) -> Self {
         Self {
@@ -114,48 +105,37 @@ impl HttpWebhookNotifier {
             headers: HashMap::new(),
         }
     }
-
     pub fn with_header(mut self, key: String, value: String) -> Self {
         self.headers.insert(key, value);
         self
     }
 }
-
 impl AlertNotifier for HttpWebhookNotifier {
     fn send(&self, alert: &Alert) -> Result<()> {
         let payload: _ = serde_json::to_string(alert)
             .context("Failed to serialize alert")?;
-
         let client: _ = Client::new();
-
         let mut request = client.post(&self.url)
             .body(payload)
             .header("Content-Type", "application/json");
-
         // Add custom headers
         for (key, value) in &self.headers {
             request = request.header(key, value);
         }
-
         let response: _ = request.send()
             .context("Failed to send webhook")?;
-
         if !response.status().is_success() {
             return Err(anyhow::anyhow!("Webhook returned status: {}", response.status()));
         }
-
         info!("Alert sent via HTTP webhook to {}", self.url);
         Ok(())
     }
-
     fn name(&self) -> &str {
         "http_webhook"
     }
 }
-
 /// Console notifier (for testing)
 pub struct ConsoleNotifier;
-
 impl AlertNotifier for ConsoleNotifier {
     fn send(&self, alert: &Alert) -> Result<()> {
         println!("ALERT [{}] {}: {} (value: {}, threshold: {})",
@@ -166,12 +146,10 @@ impl AlertNotifier for ConsoleNotifier {
                  alert.threshold);
         Ok(())
     }
-
     fn name(&self) -> &str {
         "console"
     }
 }
-
 /// Alerting system
 pub struct AlertingSystem {
     /// Alert rules
@@ -185,13 +163,11 @@ pub struct AlertingSystem {
     /// Last check time
     last_check: Arc<RwLock<Instant>>,
 }
-
 impl AlertingSystem {
     /// Create a new alerting system
     pub fn new() -> Self {
         let mut notifiers = Vec::new();
         notifiers.push(Box::new(ConsoleNotifier) as Box<dyn AlertNotifier>);
-
         Self {
             rules: Arc::new(Mutex::new(Vec::new())),
             active_alerts: Arc::new(Mutex::new(HashMap::new())),
@@ -200,14 +176,12 @@ impl AlertingSystem {
             last_check: Arc::new(Mutex::new(Instant::now())),
         }
     }
-
     /// Create a new alerting system with custom check interval
     pub fn with_check_interval(interval: Duration) -> Self {
         let mut system = Self::new();
         system.check_interval = interval;
         system
     }
-
     /// Add an alert rule
     pub async fn add_rule(&self, rule: AlertRule) -> Result<()> {
         let rule_name: _ = rule.name.clone();
@@ -216,7 +190,6 @@ impl AlertingSystem {
         info!("Added alert rule: {}", rule_name);
         Ok(())
     }
-
     /// Remove an alert rule
     pub async fn remove_rule(&self, rule_id: &str) -> Result<()> {
         let mut rules = self.rules.write().await;
@@ -224,48 +197,38 @@ impl AlertingSystem {
         info!("Removed alert rule: {}", rule_id);
         Ok(())
     }
-
     /// Load alert rules from file
     pub async fn load_rules_from_file(&self, file_path: &str) -> Result<()> {
         let content: _ = fs::read_to_string(Path::new(file_path))
             .context("Failed to read alert rules file")?;
-
         let rules: Vec<AlertRule> = serde_yaml::from_str(&content)
             .context("Failed to parse alert rules")?;
-
         let mut rules_guard = self.rules.write().await;
         rules_guard.clear();
         rules_guard.extend(rules);
-
         info!("Loaded {} alert rules from {}", rules_guard.len(), file_path);
         Ok(())
     }
-
     /// Save alert rules to file
     pub async fn save_rules_to_file(&self, file_path: &str) -> Result<()> {
         let rules: _ = self.rules.read().await;
         let content: _ = serde_yaml::to_string(&*rules)
             .context("Failed to serialize alert rules")?;
-
         fs::write(Path::new(file_path), content)
             .context("Failed to write alert rules file")?;
-
         info!("Saved {} alert rules to {}", rules.len(), file_path);
         Ok(())
     }
-
     /// Add an alert notifier
     pub async fn add_notifier(&self, notifier: Box<dyn AlertNotifier>) {
         let mut notifiers = self.notifiers.write().await;
         notifiers.push(notifier);
         info!("Added alert notifier");
     }
-
     /// Check all alert rules
     pub async fn check_alerts(&self, metrics: &[MetricFamily]) -> Result<Vec<Alert>> {
         let rules: _ = self.rules.read().await;
         let mut triggered_alerts = Vec::new();
-
         for rule in rules.iter() {
             if let Some(metric) = self.find_metric(metrics, &rule.metric_name) {
                 if let Some(alert) = self.check_rule(rule, metric).await? {
@@ -273,29 +236,22 @@ impl AlertingSystem {
                 }
             }
         }
-
         Ok(triggered_alerts)
     }
-
     /// Check if it's time to run the alert check
     pub async fn should_check(&self) -> bool {
         let last_check: _ = *self.last_check.read().await;
         last_check.elapsed() >= self.check_interval
     }
-
     /// Run the alert check loop
     pub async fn run_check_loop(&self, metrics_provider: impl Fn() -> Vec<MetricFamily>) {
         let mut interval = tokio::time::interval(self.check_interval);
-
         loop {
             interval.tick().await;
-
             if !self.should_check().await {
                 continue;
             }
-
             let metrics: _ = metrics_provider();
-
             match self.check_alerts(&metrics).await {
                 Ok(alerts) => {
                     for alert in alerts {
@@ -306,15 +262,12 @@ impl AlertingSystem {
                     error!("Failed to check alerts: {}", e);
                 }
             }
-
             *self.last_check.write().await = Instant::now();
         }
     }
-
     /// Trigger an alert
     async fn trigger_alert(&self, alert: &Alert) {
         let mut active_alerts = self.active_alerts.write().await;
-
         // Check if alert is already active
         if active_alerts.contains_key(&alert.rule_id) {
             // Update existing alert
@@ -324,7 +277,6 @@ impl AlertingSystem {
             // New alert
             active_alerts.insert(alert.rule_id.clone(), alert.clone());
             info!("Triggered new alert: {}", alert.name);
-
             // Send notifications
             let notifiers: _ = self.notifiers.read().await;
             for notifier in notifiers.iter() {
@@ -334,12 +286,10 @@ impl AlertingSystem {
             }
         }
     }
-
     /// Get active alerts
     pub async fn get_active_alerts(&self) -> HashMap<String, Alert> {
         self.active_alerts.read().await.clone()
     }
-
     /// Resolve an alert
     pub async fn resolve_alert(&self, rule_id: &str) {
         let mut active_alerts = self.active_alerts.write().await;
@@ -347,28 +297,24 @@ impl AlertingSystem {
             info!("Resolved alert: {}", alert.name);
         }
     }
-
     /// Shutdown the alerting system
     pub async fn shutdown(&self) -> Result<()> {
         info!("Shutting down alerting system...");
         // Clean up resources if needed
         Ok(())
     }
-
     /// Find a metric by name
     fn find_metric<'a>(&self, metrics: &'a [MetricFamily], metric_name: &str) -> Option<&'a MetricFamily> {
         metrics.iter().find(|m| {
             m.get_name() == metric_name
         })
     }
-
     /// Check a single rule against a metric
     async fn check_rule(&self, rule: &AlertRule, metric: &MetricFamily) -> Result<Option<Alert>> {
         // Get the current value from the metric
         if metric.get_metric().is_empty() {
             return Ok(None);
         }
-
         let metric_point: _ = &metric.get_metric()[0];
         let value: _ = if metric_point.has_gauge() {
             // Use a simple default value for now - TODO: implement proper metric extraction
@@ -378,7 +324,6 @@ impl AlertingSystem {
         } else {
             return Ok(None);
         };
-
         // Check if condition is met
         let condition_met: _ = match &rule.condition {
             AlertCondition::GreaterThan(threshold) => value > *threshold,
@@ -388,7 +333,6 @@ impl AlertingSystem {
             AlertCondition::Between(min, max) => value >= *min && value <= *max,
             AlertCondition::Outside(min, max) => value < *min || value > *max,
         };
-
         if condition_met {
             let alert: _ = Alert {
                 rule_id: rule.id.clone(),
@@ -400,23 +344,19 @@ impl AlertingSystem {
                 labels: rule.labels.clone(),
                 description: rule.description.clone(),
             };
-
             Ok(Some(alert))
         } else {
             Ok(None)
         }
     }
 }
-
 impl Default for AlertingSystem {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// Built-in alert rules
 pub struct BuiltInAlertRules;
-
 impl BuiltInAlertRules {
     /// Get default alert rules for Beejs
     pub fn get_default_rules() -> Vec<AlertRule> {
@@ -457,23 +397,19 @@ impl BuiltInAlertRules {
         ]
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_alerting_system_creation() {
         let system: _ = AlertingSystem::new();
         assert!(system.rules.read().await.is_empty());
     }
-
     #[tokio::test]
     async fn test_add_rule() {
         let system: _ = AlertingSystem::new();
-
         let rule: _ = AlertRule {
             id: "test_rule".to_string(),
             name: "Test Rule".to_string(),
@@ -485,24 +421,19 @@ use std::collections::{HashMap, BTreeMap};
             labels: HashMap::new(),
             description: "Test alert rule".to_string(),
         };
-
         system.add_rule(rule).await.unwrap();
         assert_eq!(system.rules.read().await.len(), 1);
     }
-
     #[test]
     fn test_alert_condition() {
         assert!(AlertCondition::GreaterThan(100.0).is_triggered(150.0));
         assert!(!AlertCondition::GreaterThan(100.0).is_triggered(50.0));
-
         assert!(AlertCondition::LessThan(100.0).is_triggered(50.0));
         assert!(!AlertCondition::LessThan(100.0).is_triggered(150.0));
-
         assert!(AlertCondition::Between(50.0, 100.0).is_triggered(75.0));
         assert!(!AlertCondition::Between(50.0, 100.0).is_triggered(25.0));
     }
 }
-
 impl AlertCondition {
     fn is_triggered(&self, value: f64) -> bool {
         match self {

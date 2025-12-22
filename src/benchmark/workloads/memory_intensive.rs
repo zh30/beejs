@@ -1,18 +1,15 @@
 //! 内存密集型工作负载
 //!
 //! 实现内存密集型任务的性能测试
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use super::{WorkloadResult, ResourceUsage, BenchmarkError, BenchmarkResult as Result};
-
 /// 内存密集型工作负载
 #[derive(Debug)]
 pub struct MemoryWorkload {
     workload_type: super::WorkloadType,
 }
-
 impl MemoryWorkload {
     /// 创建新的内存密集型工作负载
     pub fn new() -> Self {
@@ -20,7 +17,6 @@ impl MemoryWorkload {
             workload_type: super::WorkloadType::MemoryIntensive,
         }
     }
-
     /// 执行工作负载
     pub async fn execute(
         &self,
@@ -29,10 +25,8 @@ impl MemoryWorkload {
     ) -> Result<WorkloadResult> {
         let mut result = WorkloadResult::new(self.workload_type);
         result.start();
-
         let iterations: _ = get_iterations(&parameters);
         let operation: _ = get_operation(&parameters);
-
         // 并行执行内存任务
         let handles: Vec<_> = (0..concurrency)
             .map(|_| {
@@ -43,7 +37,6 @@ impl MemoryWorkload {
                 })
             })
             .collect();
-
         // 等待所有任务完成
         let mut total_iterations = 0;
         for handle in handles {
@@ -59,22 +52,18 @@ impl MemoryWorkload {
                 }
             }
         }
-
         // 收集资源使用情况
         let resource_usage: _ = Self::collect_resource_usage();
         result.resource_usage = resource_usage;
-
         result.finish(total_iterations);
         Ok(result)
     }
-
     /// 运行内存任务
     async fn run_io_tasks(
         operation: String,
         iterations: u32,
     ) -> Result<u32, BenchmarkError> {
         let mut completed_iterations = 0;
-
         for _ in 0..iterations {
             match operation.as_str() {
                 "large_allocation" => {
@@ -91,20 +80,16 @@ impl MemoryWorkload {
                         format!("Unknown operation: {}", operation));
                 }
             }
-
             completed_iterations += 1;
             tokio::task::yield_now().await;
         }
-
         Ok(completed_iterations)
     }
-
     /// 大内存分配基准测试
     async fn large_allocation_benchmark() -> Result<(), BenchmarkError> {
         let _data: _ = vec![0u8; 1024 * 1024]; // 1MB
         Ok(())
     }
-
     /// 内存拷贝基准测试
     async fn memory_copy_benchmark() -> Result<(), BenchmarkError> {
         let src: _ = vec![0u8; 1024 * 1024]; // 1MB
@@ -112,26 +97,22 @@ impl MemoryWorkload {
         dst.copy_from_slice(&src);
         Ok(())
     }
-
     /// 内存压力基准测试
     async fn memory_pressure_benchmark() -> Result<(), BenchmarkError> {
         let _data: _ = vec![vec![0u8; 1024 * 100]; 100]; // 100MB
         Ok(())
     }
-
     /// 收集资源使用情况
     fn collect_resource_usage() -> ResourceUsage {
         ResourceUsage::new()
             .cpu_usage(50.0)
     }
 }
-
 impl Default for MemoryWorkload {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// 获取迭代次数
 fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
     parameters
@@ -140,7 +121,6 @@ fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
         .map(|v| v as u32)
         .unwrap_or(50)
 }
-
 /// 获取操作类型
 fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
     parameters
@@ -149,21 +129,17 @@ fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
         .map(|s| s.to_string())
         .unwrap_or_else(|| "large_allocation".to_string())
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_workload_execution() {
         let workload: _ = MemoryWorkload::new();
         let mut parameters = HashMap::new();
         parameters.insert("iterations".to_string(), serde_json::Value::from(5u64));
-
         let result: _ = workload.execute(parameters, 1).await.unwrap();
-
         assert_eq!(result.workload_type, super::super::WorkloadType::MemoryIntensive);
         assert!(result.success);
     }

@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 // 触觉反馈系统
-
 /// 触觉强度
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HapticIntensity {
@@ -12,13 +11,11 @@ pub enum HapticIntensity {
     /// 高强度
     High,
 }
-
 impl Default for HapticIntensity {
     fn default() -> Self {
         Self::Medium
     }
 }
-
 /// 触觉配置
 #[derive(Debug, Clone)]
 pub struct HapticConfig {
@@ -29,7 +26,6 @@ pub struct HapticConfig {
     /// 最大强度
     pub max_intensity: HapticIntensity,
 }
-
 impl Default for HapticConfig {
     fn default() -> Self {
         Self {
@@ -39,7 +35,6 @@ impl Default for HapticConfig {
         }
     }
 }
-
 /// 触觉模式
 #[derive(Debug, Clone)]
 pub struct HapticPattern {
@@ -52,7 +47,6 @@ pub struct HapticPattern {
     /// 波形
     pub waveform: Vec<f32>,
 }
-
 /// 触觉反馈系统
 pub struct HapticFeedback {
     /// 配置
@@ -60,7 +54,6 @@ pub struct HapticFeedback {
     /// 是否活跃
     active: bool,
 }
-
 impl HapticFeedback {
     /// 创建触觉反馈系统
     pub fn new(config: HapticConfig) -> Result<Self, HapticError> {
@@ -69,12 +62,10 @@ impl HapticFeedback {
             active: false,
         })
     }
-
     /// 获取执行器数量
     pub fn actuator_count(&self) -> u32 {
         self.config.actuator_count
     }
-
     /// 播放触觉模式
     pub fn play_pattern(&mut self, pattern: &HapticPattern) -> Result<(), HapticError> {
         self.active = true;
@@ -82,17 +73,14 @@ impl HapticFeedback {
         self.active = false;
         Ok(())
     }
-
     /// 停止所有触觉
     pub fn stop(&mut self) {
         self.active = false;
     }
-
     /// 是否活跃
     pub fn is_active(&self) -> bool {
         self.active
     }
-
     /// 设置单个执行器
     pub fn set_actuator(&mut self, index: u32, intensity: f32) -> Result<(), HapticError> {
         if index >= self.config.actuator_count {
@@ -101,7 +89,6 @@ impl HapticFeedback {
         Ok(())
     }
 }
-
 /// 触觉错误
 #[derive(Debug, Clone)]
 pub enum HapticError {
@@ -114,7 +101,6 @@ pub enum HapticError {
     /// 设备未找到
     DeviceNotFound,
 }
-
 impl std::fmt::Display for HapticError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -125,5 +111,4 @@ impl std::fmt::Display for HapticError {
         }
     }
 }
-
 impl std::error::Error for HapticError {}

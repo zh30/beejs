@@ -2,15 +2,12 @@
 //!
 //! Orchestrates the interaction between RuntimeLite and DebuggerEngine
 //! to provide a complete debugging experience.
-
 use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
 use anyhow::{Context, Result};
-
 use crate::{RuntimeLite, debugger::{DebuggerEngine, DebugConfig}};
 use crate::debugger::engine::SimpleEventListener;
 use crate::debugger::cli::{DebugConsole};
-
 /// Debug session that manages the runtime and debugger
 pub struct DebugSession {
     runtime: RuntimeLite,
@@ -20,7 +17,6 @@ pub struct DebugSession {
     debug_port: u16,
     web_ui: bool,
 }
-
 impl DebugSession {
     /// Create a new debug session
     pub fn new(
@@ -33,12 +29,10 @@ impl DebugSession {
             },
             _ => return Err(anyhow::anyhow!("Invalid debug command")),
         };
-
         // Create debugger engine with configuration
         let config: _ = DebugConfig::default();
         let debugger: _ = Arc::new(Mutex::new(DebuggerEngine::new(config)));
         let event_listener: _ = Arc::new(Mutex::new(SimpleEventListener::new()));
-
         Ok(Self {
             runtime,
             debugger,
@@ -48,29 +42,22 @@ impl DebugSession {
             web_ui,
         })
     }
-
     /// Initialize the debug session
     pub fn initialize(&self) -> Result<()> {
         // Get the V8 isolate from runtime
         // Note: This requires accessing internal V8 isolate
         // Implementation will be completed in future stages
-
         println!("🔧 Initializing debug session...");
         println!("   Debug port: {}", self.debug_port);
-
         if let Some(ref script) = self.script_path {
             println!("   Script: {}", script.display());
         }
-
         Ok(())
     }
-
     /// Start the debug session
     pub async fn start(&mut self) -> Result<()> {
         self.initialize()?;
-
         println!("🚀 Starting debug session on port {}", self.debug_port);
-
         if self.web_ui {
             println!("🌐 Web UI mode enabled");
             println!("   Open http://localhost:{} in your browser", self.debug_port);
@@ -79,72 +66,57 @@ impl DebugSession {
         } else {
             println!("💻 CLI debug mode");
         }
-
         // Load script if provided
         if let Some(ref script_path) = self.script_path {
             println!("\n📄 Loading script: {}", script_path.display());
-
             // Read script content
             let _code: _ = std::fs::read_to_string(script_path)
                 .context("Failed to read script file")?;
-
             // Set initial breakpoint if specified
             // TODO: Implement breakpoint setting
-
             // Start interactive CLI
             self.start_interactive_cli().await?;
         } else {
             println!("\n📋 Debug session ready!");
             println!("   Status: Waiting for connection");
             println!("   Debug port: {}", self.debug_port);
-
             // TODO: Start Chrome DevTools protocol server
             println!("   ⚠️  Chrome DevTools protocol not yet implemented");
         }
-
         Ok(())
     }
-
     /// Start interactive CLI debugging
     async fn start_interactive_cli(&mut self) -> Result<()> {
         println!("\n🐛 Starting interactive debug console...");
         println!("   Type 'help' for available commands\n");
-
         // Create debug console
         let mut console = DebugConsole::new(
             Arc::clone(&self.debugger),
             Arc::new(Mutex::new(self.runtime.clone())),
         );
-
         // Run the console
         console.run().await?;
-
         Ok(())
     }
-
     /// Get the debug port
     pub fn port(&self) -> u16 {
         self.debug_port
     }
-
     /// Check if Web UI is enabled
     pub fn web_ui_enabled(&self) -> bool {
         self.web_ui
     }
-
     /// Get the script path being debugged
     pub fn script_path(&self) -> Option<&PathBuf> {
         self.script_path.as_ref()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::cli::commands::SubCommand;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_debug_session_creation() {
         let runtime: _ = RuntimeLite::new(false).unwrap();
@@ -155,13 +127,11 @@ use std::collections::{HashMap, BTreeMap};
             web: false,
             pid: None,
         };
-
         let session: _ = DebugSession::new(runtime, cmd).unwrap();
         assert_eq!(session.port(), 9229);
         assert!(!session.web_ui_enabled());
         assert_eq!(session.script_path().unwrap().to_str(), Some("test.js"));
     }
-
     #[test]
     fn test_debug_session_attach() {
         let runtime: _ = RuntimeLite::new(false).unwrap();
@@ -172,12 +142,10 @@ use std::collections::{HashMap, BTreeMap};
             web: false,
             pid: Some(1234),
         };
-
         let session: _ = DebugSession::new(runtime, cmd).unwrap();
         assert_eq!(session.port(), 9229);
         assert!(session.script_path().is_none());
     }
-
     #[test]
     fn test_debug_session_inspect() {
         let runtime: _ = RuntimeLite::new(false).unwrap();
@@ -188,7 +156,6 @@ use std::collections::{HashMap, BTreeMap};
             web: true,
             pid: None,
         };
-
         let session: _ = DebugSession::new(runtime, cmd).unwrap();
         assert_eq!(session.port(), 8080);
         assert!(session.web_ui_enabled());

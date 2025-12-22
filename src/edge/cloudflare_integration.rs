@@ -1,11 +1,9 @@
 //! Cloudflare Workers Integration
 //! High-performance edge deployment via Cloudflare's global network
-
 use super::cdn_provider::{CdnProvider, CdnProviderType, CdnEndpoint, DeploymentResult, DeploymentStatus, ProviderHealth, EndpointStatus};
 use std::collections::HashMap;
 use anyhow::Result;
 use tokio::time::Duration;
-
 /// Cloudflare Workers integration
 #[derive(Debug)]
 pub struct CloudflareIntegration {
@@ -14,7 +12,6 @@ pub struct CloudflareIntegration {
     zone_id: String,
     base_url: String,
 }
-
 impl CloudflareIntegration {
     /// Create a new Cloudflare integration
     pub fn new() -> Result<Self> {
@@ -24,7 +21,6 @@ impl CloudflareIntegration {
             .unwrap_or_else(|_| "mock-api-token".to_string());
         let zone_id: _ = std::env::var("CLOUDFLARE_ZONE_ID")
             .unwrap_or_else(|_| "mock-zone-id".to_string());
-
         Ok(CloudflareIntegration {
             account_id,
             api_token,
@@ -32,21 +28,18 @@ impl CloudflareIntegration {
             base_url: "https://api.cloudflare.com/client/v4".to_string(),
         })
     }
-
     /// Create a Worker script
     async fn create_worker(&self, name: &str, code: &[u8]) -> Result<String> {
         // In a real implementation, this would use Cloudflare's API
         // For now, return a mock deployment ID
         Ok(format!("worker-{}-{}", name, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs())
     }
-
     /// Publish a Worker to a route
     async fn publish_worker(&self, worker_name: &str, route_pattern: &str) -> Result<()> {
         // In a real implementation, this would publish via Cloudflare API
         tokio::time::sleep(Duration::from_millis(100)).await; // Simulate API call
         Ok(())
     }
-
     /// Get edge locations from Cloudflare
     async fn get_edge_locations(&self) -> Result<Vec<String> {
         // Cloudflare has 250+ edge locations globally
@@ -60,17 +53,14 @@ impl CloudflareIntegration {
         ])
     }
 }
-
 #[async_trait::async_trait]
 impl CdnProvider for CloudflareIntegration {
     /// Deploy code to Cloudflare Workers
     async fn deploy(&self, code: &[u8], region: &str) -> Result<DeploymentResult> {
         let worker_name: _ = format!("beejs-worker-{}", region));
         let deployment_id: _ = self.create_worker(&worker_name, code).await?;
-
         let route_pattern: _ = format!("*.{}.beejs-edge.com/*", region));
         self.publish_worker(&worker_name, &route_pattern).await?;
-
         Ok(DeploymentResult {
             deployment_id,
             endpoint_id: format!("cf-{}-endpoint", region),
@@ -79,7 +69,6 @@ impl CdnProvider for CloudflareIntegration {
             estimated_propagation_time: 30,
         })
     }
-
     /// Get routing information for Cloudflare
     async fn route(&self, region: &str) -> Result<CdnEndpoint> {
         let latency: _ = match region {
@@ -91,7 +80,6 @@ impl CdnProvider for CloudflareIntegration {
             "ap-northeast" => 50.0,
             _ => 60.0,
         };
-
         Ok(CdnEndpoint {
             id: format!("cloudflare-{}-{}", region, self.account_id),
             provider: CdnProviderType::Cloudflare,
@@ -103,20 +91,16 @@ impl CdnProvider for CloudflareIntegration {
             current_load: 0.25, // 25% load
         })
     }
-
     /// Invalidate Cloudflare cache
     async fn invalidate_cache(&self, paths: &[&str]) -> Result<()> {
         // Cloudflare cache purge API
         // POST /zones/{zone_id}/purge_cache
         tokio::time::sleep(Duration::from_millis(50)).await; // Simulate API call
-
         for path in paths {
             println!("Purged Cloudflare cache for path: {}", path);
         }
-
         Ok(())
     }
-
     /// Get Cloudflare provider health
     async fn health_check(&self) -> Result<ProviderHealth> {
         Ok(ProviderHealth {
@@ -127,22 +111,18 @@ impl CdnProvider for CloudflareIntegration {
             last_check: std::time::SystemTime::now(),
         })
     }
-
     /// Update Cloudflare configuration
     async fn update_config(&self, config: &HashMap<String, String>) -> Result<()> {
         // Update Workers KV, environment variables, etc.
         if let Some(tier) = config.get("tier") {
             println!("Updated Cloudflare tier to: {}", tier);
         }
-
         if let Some(cache_level) = config.get("cache_level") {
             println!("Updated cache level to: {}", cache_level);
         }
-
         Ok(())
     }
 }
-
 /// Cloudflare-specific metrics and analytics
 #[derive(Debug)]
 pub struct CloudflareAnalytics {
@@ -151,7 +131,6 @@ pub struct CloudflareAnalytics {
     pub cache_hit_ratio: f64,
     pub threat_intelligence_blocked: u64,
 }
-
 impl CloudflareIntegration {
     /// Get analytics for a region
     pub async fn get_analytics(&self, region: &str, since: std::time::SystemTime) -> Result<CloudflareAnalytics> {
@@ -163,21 +142,18 @@ impl CloudflareIntegration {
             threat_intelligence_blocked: 1250,
         })
     }
-
     /// Enable Cloudflare's DDoS protection
     pub async fn enable_ddos_protection(&self) -> Result<()> {
         // Cloudflare Magic Transit / DDoS protection
         println!("Enabled Cloudflare DDoS protection");
         Ok(())
     }
-
     /// Enable Cloudflare's web application firewall (WAF)
     pub async fn enable_waf(&self, rules: &[String]) -> Result<()> {
         // Configure WAF rules
         println!("Enabled Cloudflare WAF with {} rules", rules.len());
         Ok(())
     }
-
     /// Get real-time metrics
     pub async fn get_realtime_metrics(&self) -> Result<RealtimeMetrics> {
         Ok(RealtimeMetrics {
@@ -188,7 +164,6 @@ impl CloudflareIntegration {
         })
     }
 }
-
 /// Real-time performance metrics
 #[derive(Debug, Clone)]
 pub struct RealtimeMetrics {
@@ -197,7 +172,6 @@ pub struct RealtimeMetrics {
     pub cpu_usage: f64, // 0.0 to 1.0
     pub memory_usage: f64, // 0.0 to 1.0
 }
-
 /// Cloudflare Workers Environment Configuration
 #[derive(Debug)]
 pub struct WorkerEnvironment {
@@ -206,7 +180,6 @@ pub struct WorkerEnvironment {
     pub kv_namespaces: Vec<String>,
     pub durable_objects: Vec<String>,
 }
-
 impl WorkerEnvironment {
     pub fn new() -> Self {
         WorkerEnvironment {
@@ -216,59 +189,48 @@ impl WorkerEnvironment {
             durable_objects: Vec::new(),
         }
     }
-
     pub fn add_variable(&mut self, key: &str, value: &str) {
         self.variables.insert(key.to_string(), value.to_string());
     }
-
     pub fn add_secret(&mut self, key: &str, value: &str) {
         self.secrets.insert(key.to_string(), value.to_string());
     }
-
     pub fn add_kv_namespace(&mut self, namespace: &str) {
         self.kv_namespaces.push(namespace.to_string());
     }
-
     pub fn add_durable_object(&mut self, class_name: &str) {
         self.durable_objects.push(class_name.to_string());
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_cloudflare_integration_creation() {
         let cf: _ = CloudflareIntegration::new();
         assert!(cf.is_ok());
     }
-
     #[tokio::test]
     async fn test_cloudflare_route() {
         let cf: _ = CloudflareIntegration::new().unwrap();
         let route: _ = cf.route("us-west").await;
         assert!(route.is_ok());
-
         let endpoint: _ = route.unwrap();
         assert_eq!(endpoint.provider, CdnProviderType::Cloudflare);
         assert!(endpoint.latency > 0.0);
     }
-
     #[tokio::test]
     async fn test_cloudflare_deployment() {
         let cf: _ = CloudflareIntegration::new().unwrap();
         let code: _ = b"addEventListener('fetch', event => { event.respondWith(new Response('Hello from Cloudflare!')) })";
         let deployment: _ = cf.deploy(code, "us-west").await;
         assert!(deployment.is_ok());
-
         let result: _ = deployment.unwrap();
         assert_eq!(result.status, DeploymentStatus::Complete);
         assert!(!result.deployment_id.is_empty());
     }
-
     #[tokio::test]
     async fn test_cache_invalidation() {
         let cf: _ = CloudflareIntegration::new().unwrap();
@@ -276,18 +238,15 @@ use std::collections::{HashMap, BTreeMap};
         let result: _ = cf.invalidate_cache(&paths).await;
         assert!(result.is_ok());
     }
-
     #[tokio::test]
     async fn test_health_check() {
         let cf: _ = CloudflareIntegration::new().unwrap();
         let health: _ = cf.health_check().await;
         assert!(health.is_ok());
-
         let status: _ = health.unwrap();
         assert_eq!(status.provider, CdnProviderType::Cloudflare);
         assert_eq!(status.status, EndpointStatus::Healthy);
     }
-
     #[tokio::test]
     async fn test_worker_environment() {
         let mut env = WorkerEnvironment::new();
@@ -295,7 +254,6 @@ use std::collections::{HashMap, BTreeMap};
         env.add_secret("API_KEY", "secret-123");
         env.add_kv_namespace("USER_DATA");
         env.add_durable_object("UserSession");
-
         assert_eq!(env.variables.len(), 1);
         assert_eq!(env.secrets.len(), 1);
         assert_eq!(env.kv_namespaces.len(), 1);

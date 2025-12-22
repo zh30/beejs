@@ -1,13 +1,11 @@
 //! 自适应垃圾回收控制器 - Stage 90 Phase 5.2
 //! 基于内存使用模式的自适应垃圾回收
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 use std::time::{Duration, Instant};
-
 /// GC 策略
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GCStrategy {
@@ -20,7 +18,6 @@ pub enum GCStrategy {
     /// 增量 GC
     Incremental,
 }
-
 /// GC 调优参数
 #[derive(Debug, Clone)]
 pub struct GCTuning {
@@ -29,7 +26,6 @@ pub struct GCTuning {
     pub promotion_threshold: usize,     // 晋升阈值
     pub survivor_ratio: f64,      // 幸存区比率
 }
-
 /// GC 事件
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GCEvent {
@@ -41,7 +37,6 @@ pub struct GCEvent {
     pub heap_after: usize,
     pub collected_bytes: usize,
 }
-
 /// GC 事件类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum GCEventType {
@@ -50,7 +45,6 @@ pub enum GCEventType {
     FullGC,
     IncrementalGC,
 }
-
 /// GC 统计信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GCStatistics {
@@ -61,7 +55,6 @@ pub struct GCStatistics {
     pub gc_frequency: f64, // runs per minute
     pub last_gc_time: Option<DateTime<Utc>>,
 }
-
 /// 堆指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeapMetrics {
@@ -71,7 +64,6 @@ pub struct HeapMetrics {
     pub allocation_rate: f64, // bytes per second
     pub deallocation_rate: f64, // bytes per second
 }
-
 /// 自适应垃圾回收控制器
 pub struct AdaptiveGCController {
     current_strategy: Arc<RwLock<GCStrategy>>,
@@ -81,7 +73,6 @@ pub struct AdaptiveGCController {
     heap_metrics: Arc<RwLock<HeapMetrics>>,
     last_gc: Arc<RwLock<Instant>>,
 }
-
 impl Default for GCTuning {
     fn default() -> Self {
         Self {
@@ -92,7 +83,6 @@ impl Default for GCTuning {
         }
     }
 }
-
 impl Default for GCStatistics {
     fn default() -> Self {
         Self {
@@ -105,7 +95,6 @@ impl Default for GCStatistics {
         }
     }
 }
-
 impl Default for HeapMetrics {
     fn default() -> Self {
         Self {
@@ -117,7 +106,6 @@ impl Default for HeapMetrics {
         }
     }
 }
-
 impl AdaptiveGCController {
     /// 创建新的自适应 GC 控制器
     pub fn new() -> Self {
@@ -130,17 +118,14 @@ impl AdaptiveGCController {
             last_gc: Arc::new(Mutex::new(Instant::now()))
         }
     }
-
     /// 触发 GC
     pub async fn trigger_gc(&self, event_type: GCEventType) -> GCEvent {
         let event_id: _ = self.generate_event_id();
         let start_time: _ = Instant::now();
-
         // 模拟 GC 执行
         let mut heap_before = 0;
         let mut heap_after = 0;
         let collected_bytes;
-
         {
             let mut metrics = self.heap_metrics.write().await;
             heap_before = metrics.used_heap_size;
@@ -150,9 +135,7 @@ impl AdaptiveGCController {
             metrics.used_heap_size = heap_after;
             metrics.heap_utilization = heap_after as f64 / metrics.total_heap_size as f64;
         }
-
         let duration: _ = start_time.elapsed();
-
         let event: _ = GCEvent {
             event_id,
             event_type,
@@ -162,18 +145,15 @@ impl AdaptiveGCController {
             heap_after,
             collected_bytes,
         };
-
         // 记录事件
         {
             let mut events = self.recent_events.write().await;
             events.push(event.clone());
-
             // 限制事件历史大小
             if events.len() > 100 {
                 events.remove(0);
             }
         }
-
         // 更新统计
         {
             let mut stats = self.statistics.write().await;
@@ -184,35 +164,28 @@ impl AdaptiveGCController {
             stats.last_gc_time = Some(Utc::now());
             stats.gc_frequency = stats.total_gc_runs as f64 / 60.0; // 简化计算
         }
-
         // 更新最后 GC 时间
         {
             let mut last_gc = self.last_gc.write().await;
             *last_gc = Instant::now();
         }
-
         // 可能需要调整策略
         self.adjust_strategy().await;
-
         event
     }
-
     /// 检查是否需要 GC
     pub async fn should_gc(&self) -> bool {
         let metrics: _ = self.heap_metrics.read().await;
         let tuning: _ = self.tuning.read().await;
         let last_gc: _ = self.last_gc.read().await;
-
         // 基于堆使用率
         if metrics.heap_utilization > tuning.heap_threshold {
             return true;
         }
-
         // 基于分配率
         if metrics.allocation_rate > tuning.allocation_rate_threshold {
             return true;
         }
-
         // 基于时间（至少 1 秒间隔）
         if last_gc.elapsed() > Duration::from_secs(1) {
             // 基于堆使用率轻微超过阈值
@@ -220,16 +193,13 @@ impl AdaptiveGCController {
                 return true;
             }
         }
-
         false
     }
-
     /// 自动调整 GC 策略
     pub async fn adjust_strategy(&self) {
         let stats: _ = self.statistics.read().await;
         let metrics: _ = self.heap_metrics.read().await;
         let mut strategy = self.current_strategy.write().await;
-
         // 根据统计信息调整策略
         if stats.average_gc_time > 100.0 { // > 100ms
             // GC 时间太长，使用保守策略
@@ -242,24 +212,20 @@ impl AdaptiveGCController {
             *strategy = GCStrategy::Adaptive;
         }
     }
-
     /// 获取 GC 统计信息
     pub async fn get_statistics(&self) -> GCStatistics {
         self.statistics.read().await.clone()
     }
-
     /// 获取堆指标
     pub async fn get_heap_metrics(&self) -> HeapMetrics {
         self.heap_metrics.read().await.clone()
     }
-
     /// 获取最近的 GC 事件
     pub async fn get_recent_events(&self, count: usize) -> Vec<GCEvent> {
         let events: _ = self.recent_events.read().await;
         let count: _ = count.min(events.len());
         events.iter().rev().take(count).cloned().collect()
     }
-
     /// 更新堆指标
     pub async fn update_heap_metrics(&self, used_size: usize, total_size: usize, alloc_rate: f64, dealloc_rate: f64) {
         let mut metrics = self.heap_metrics.write().await;
@@ -269,7 +235,6 @@ impl AdaptiveGCController {
         metrics.allocation_rate = alloc_rate;
         metrics.deallocation_rate = dealloc_rate;
     }
-
     /// 生成事件 ID
     fn generate_event_id(&self) -> u64 {
         use std::sync::atomic::{AtomicU64, Ordering};
@@ -277,33 +242,26 @@ impl AdaptiveGCController {
         COUNTER.fetch_add(1, Ordering::SeqCst)
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_adaptive_gc() {
         let gc: _ = AdaptiveGCController::new();
-
         // 初始状态
         assert_eq!(gc.get_statistics().await.total_gc_runs, 0);
-
         // 触发 GC
         let event: _ = gc.trigger_gc(GCEventType::MinorGC).await;
         assert_eq!(event.event_type, GCEventType::MinorGC);
         assert!(event.collected_bytes > 0);
-
         // 检查统计
         let stats: _ = gc.get_statistics().await;
         assert_eq!(stats.total_gc_runs, 1);
         assert!(stats.total_collected_bytes > 0);
-
         // 更新堆指标
         gc.update_heap_metrics(80_000_000, 100_000_000, 5_000_000.0, 2_000_000.0).await;
-
         // 检查是否需要 GC
         let should_gc: _ = gc.should_gc().await;
         // 基于我们的阈值，这可能为 false

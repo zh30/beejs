@@ -1,9 +1,7 @@
 //! 全息存储系统
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 压缩模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CompressionMode {
@@ -16,13 +14,11 @@ pub enum CompressionMode {
     /// 智能压缩 (根据数据特征选择)
     Intelligent,
 }
-
 impl Default for CompressionMode {
     fn default() -> Self {
         Self::Intelligent
     }
 }
-
 /// 存储配置
 #[derive(Debug, Clone)]
 pub struct StorageConfig {
@@ -33,7 +29,6 @@ pub struct StorageConfig {
     /// 启用去重
     pub enable_deduplication: bool,
 }
-
 impl Default for StorageConfig {
     fn default() -> Self {
         Self {
@@ -43,7 +38,6 @@ impl Default for StorageConfig {
         }
     }
 }
-
 /// 全息存储系统
 pub struct HolographicStorage {
     /// 配置
@@ -55,7 +49,6 @@ pub struct HolographicStorage {
     /// 压缩后大小
     compressed_size: usize,
 }
-
 impl HolographicStorage {
     /// 创建全息存储
     pub fn new(config: StorageConfig) -> Result<Self, StorageError> {
@@ -66,13 +59,11 @@ impl HolographicStorage {
             compressed_size: 0,
         })
     }
-
     /// 存储全息数据
     pub fn store(&mut self, name: &str, data: &[u8]) -> Result<(), StorageError> {
         let original_size: _ = data.len();
         let compressed_data: _ = self.compress(data)?;
         let compressed_size: _ = compressed_data.len();
-
         self.data.insert(
             name.to_string(),
             StoredHologram {
@@ -82,19 +73,15 @@ impl HolographicStorage {
                 data: compressed_data,
             },
         );
-
         self.total_size += original_size;
         self.compressed_size += compressed_size;
-
         Ok(())
     }
-
     pub fn retrieve(&self, name: &str) -> Result<Vec<u8>, StorageError> {
     /// 读取全息数据
         let stored: _ = self.data.get(name).ok_or(StorageError::NotFound(name.to_string()))?;
         self.decompress(&stored.data)
     }
-
     /// 删除全息数据
     pub fn delete(&mut self, name: &str) -> Result<(), StorageError> {
         if let Some(stored) = self.data.remove(name) {
@@ -105,7 +92,6 @@ impl HolographicStorage {
             Err(StorageError::NotFound(name.to_string()))
         }
     }
-
     /// 获取压缩比
     pub fn compression_ratio(&self) -> f64 {
         if self.compressed_size == 0 {
@@ -114,25 +100,21 @@ impl HolographicStorage {
             self.total_size as f64 / self.compressed_size as f64
         }
     }
-
     /// 获取条目数量
     pub fn count(&self) -> usize {
         self.data.len()
     }
-
     /// 压缩数据
     fn compress(&self, data: &[u8]) -> Result<Vec<u8>, StorageError> {
         // 简化实现：直接返回原数据
         Ok(data.to_vec())
     }
-
     /// 解压数据
     fn decompress(&self, data: &[u8]) -> Result<Vec<u8>, StorageError> {
         // 简化实现：直接返回原数据
         Ok(data.to_vec())
     }
 }
-
 /// 存储的全息数据
 #[derive(Debug, Clone)]
 struct StoredHologram {
@@ -145,7 +127,6 @@ struct StoredHologram {
     /// 压缩数据
     data: Vec<u8>,
 }
-
 /// 存储错误
 #[derive(Debug, Clone)]
 pub enum StorageError {
@@ -160,7 +141,6 @@ pub enum StorageError {
     /// 解压失败
     DecompressionFailed(String),
 }
-
 impl std::fmt::Display for StorageError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -172,5 +152,4 @@ impl std::fmt::Display for StorageError {
         }
     }
 }
-
 impl std::error::Error for StorageError {}

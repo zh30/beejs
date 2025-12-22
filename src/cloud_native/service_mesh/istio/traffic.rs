@@ -1,31 +1,25 @@
 //! Traffic management for Istio
 //! Provides routing, load balancing, and traffic splitting capabilities
-
 use std::collections::HashMap;
 use kube::Api;
 use tracing::info;
-
 use super::types::{
     VirtualService, VirtualServiceSpec, HttpRoute, HttpRouteDestination,
     Destination, PortSelector, HttpMatchRequest, StringMatch,
     HttpFaultInjection, Delay, Abort, Percent,
 };
-
 /// Traffic manager for Istio
 pub struct TrafficManager {
     /// Kubernetes client
     client: kube::Client,
-
     /// Namespace
     namespace: String,
 }
-
 impl TrafficManager {
     /// Create a new traffic manager
     pub fn new(client: kube::Client, namespace: String) -> Self {
         Self { client, namespace }
     }
-
     /// Create a canary deployment routing
     pub async fn create_canary_routing(
         &self,
@@ -38,10 +32,8 @@ impl TrafficManager {
             "Creating canary routing for service: {} (canary: {}%)",
             service, canary_percent
         );
-
         let virtual_services: Api<VirtualService> =
             Api::namespaced(self.client.clone(), &self.namespace);
-
         // Create routing rules
         let routes: _ = vec![
             // Canary route (header-based)
@@ -94,21 +86,17 @@ impl TrafficManager {
                 retries: None,
             },
         ];
-
         let vs_spec: _ = VirtualServiceSpec {
             hosts: vec![service.to_string()],
             gateways: Some(vec![format!("{}-gateway", service)]),
             http: Some(routes),
         };
-
         let vs: _ = VirtualService::new(&format!("{}-canary", service), vs_spec);
         let params: _ = kube::api::PostParams::default();
         virtual_services.create(&params, &vs).await?;
-
         info!("Created canary routing for service: {}", service);
         Ok(())
     }
-
     /// Create A/B testing routing
     pub async fn create_ab_test_routing(
         &self,
@@ -121,10 +109,8 @@ impl TrafficManager {
             "Creating A/B testing routing for service: {} (split: {}%)",
             service, split_percent
         );
-
         let virtual_services: Api<VirtualService> =
             Api::namespaced(self.client.clone(), &self.namespace);
-
         let routes: _ = vec![
             // Version A (header-based)
             HttpRoute {
@@ -176,21 +162,17 @@ impl TrafficManager {
                 retries: None,
             },
         ];
-
         let vs_spec: _ = VirtualServiceSpec {
             hosts: vec![service.to_string()],
             gateways: Some(vec![format!("{}-gateway", service)]),
             http: Some(routes),
         };
-
         let vs: _ = VirtualService::new(&format!("{}-ab-test", service), vs_spec);
         let params: _ = kube::api::PostParams::default();
         virtual_services.create(&params, &vs).await?;
-
         info!("Created A/B testing routing for service: {}", service);
         Ok(())
     }
-
     /// Apply fault injection for testing
     pub async fn apply_fault_injection(
         &self,
@@ -202,13 +184,10 @@ impl TrafficManager {
             "Applying fault injection for service: {} (type: {:?}, percentage: {}%)",
             service, fault_type, percentage
         );
-
         let virtual_services: Api<VirtualService> =
             Api::namespaced(self.client.clone(), &self.namespace);
-
         // Get existing virtual service
         let vs: _ = virtual_services.get(service).await?;
-
         // Build updated spec with fault injection
         let updated_http: _ = vs.spec.http.map(|routes| {
             routes.into_iter().map(|mut route| {
@@ -231,7 +210,6 @@ impl TrafficManager {
                 route
             }).collect::<Vec<HttpRoute>>()
         });
-
         // Update virtual service
         let params: _ = kube::api::PatchParams::default();
         let patch: _ = serde_json::json!({
@@ -239,23 +217,17 @@ impl TrafficManager {
                 "http": updated_http
             }
         });
-
         virtual_services.patch(service, &params, &kube::api::Patch::Merge(&patch)).await?;
-
         info!("Applied fault injection for service: {}", service);
         Ok(())
     }
-
     /// Remove fault injection
     pub async fn remove_fault_injection(&self, service: &str) -> Result<(), Error> {
         info!("Removing fault injection for service: {}", service);
-
         let virtual_services: Api<VirtualService> =
             Api::namespaced(self.client.clone(), &self.namespace);
-
         // Get existing virtual service
         let vs: _ = virtual_services.get(service).await?;
-
         // Remove fault injection from HTTP routes
         let updated_http: _ = vs.spec.http.map(|routes| {
             routes.into_iter().map(|mut route| {
@@ -263,7 +235,6 @@ impl TrafficManager {
                 route
             }).collect::<Vec<_>>()
         });
-
         // Update virtual service
         let params: _ = kube::api::PatchParams::default();
         let patch: _ = serde_json::json!({
@@ -271,13 +242,10 @@ impl TrafficManager {
                 "http": updated_http
             }
         });
-
         virtual_services.patch(service, &params, &kube::api::Patch::Merge(&patch)).await?;
-
         info!("Removed fault injection for service: {}", service);
         Ok(())
     }
-
     /// Create traffic mirror for monitoring
     pub async fn create_traffic_mirror(
         &self,
@@ -288,59 +256,47 @@ impl TrafficManager {
             "Creating traffic mirror: {} -> {}",
             service, _mirror_service
         );
-
         let virtual_services: Api<VirtualService> =
             Api::namespaced(self.client.clone(), &self.namespace);
-
         // Get existing virtual service and log it
         let _vs: _ = virtual_services.get(service).await?;
-
         // Note: Mirror functionality requires additional types in our local Istio types
         // For now, just verify the service exists
         info!("Traffic mirror setup for service: {}", service);
         Ok(())
     }
 }
-
 /// Fault type for testing
 #[derive(Debug, Clone)]
 pub enum FaultType {
     /// Delay fault (add latency)
     Delay,
-
     /// Abort fault (return error)
     Abort,
 }
-
 /// Traffic split configuration
 #[derive(Debug, Clone)]
 pub struct TrafficSplit {
     /// Service name
     pub service: String,
-
     /// Splits (subset -> percentage)
     pub splits: Vec<(String, u32)>,
 }
-
 /// Error type
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Kubernetes error: {0}")]
     Kube(#[from] kube::Error),
-
     #[error("Serde error: {0}")]
     Serde(#[from] serde_json::Error),
-
     #[error("Other error: {0}")]
     Other(String),
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_traffic_split_creation() {
         let split: _ = TrafficSplit {
@@ -350,7 +306,6 @@ use std::collections::{HashMap, BTreeMap};
                 ("v2".to_string(), 10),
             ],
         };
-
         assert_eq!(split.service, "beejs-api");
         assert_eq!(split.splits.len(), 2);
         assert_eq!(split.splits[0].0, "v1");
@@ -358,12 +313,10 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(split.splits[1].0, "v2");
         assert_eq!(split.splits[1].1, 10);
     }
-
     #[test]
     fn test_fault_type() {
         let delay: _ = FaultType::Delay;
         let abort: _ = FaultType::Abort;
-
         assert!(matches!(delay, FaultType::Delay));
         assert!(matches!(abort, FaultType::Abort));
     }

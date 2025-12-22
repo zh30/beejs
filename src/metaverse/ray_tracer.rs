@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 // 实时光线追踪渲染器
-
 /// 弹射次数限制
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BounceLimit {
@@ -10,13 +9,11 @@ pub enum BounceLimit {
     /// 限制次数
     Limited(u32),
 }
-
 impl Default for BounceLimit {
     fn default() -> Self {
         Self::Limited(4)
     }
 }
-
 /// 光线追踪配置
 #[derive(Debug, Clone)]
 pub struct RayTracerConfig {
@@ -29,7 +26,6 @@ pub struct RayTracerConfig {
     /// 启用全局光照
     pub enable_global_illumination: bool,
 }
-
 impl Default for RayTracerConfig {
     fn default() -> Self {
         Self {
@@ -40,7 +36,6 @@ impl Default for RayTracerConfig {
         }
     }
 }
-
 /// 光线追踪渲染器
 pub struct RayTracer {
     /// 配置
@@ -48,7 +43,6 @@ pub struct RayTracer {
     /// 累积帧数
     accumulated_frames: u64,
 }
-
 impl RayTracer {
     /// 创建光线追踪渲染器
     pub fn new(config: RayTracerConfig) -> Result<Self, RayTracerError> {
@@ -57,7 +51,6 @@ impl RayTracer {
             accumulated_frames: 0,
         })
     }
-
     /// 获取最大弹射次数
     pub fn max_bounces(&self) -> u32 {
         match self.config.max_bounces {
@@ -65,22 +58,18 @@ impl RayTracer {
             BounceLimit::Limited(n) => n,
         }
     }
-
     /// 降噪是否启用
     pub fn denoising_enabled(&self) -> bool {
         self.config.enable_denoising
     }
-
     /// 全局光照是否启用
     pub fn global_illumination_enabled(&self) -> bool {
         self.config.enable_global_illumination
     }
-
     /// 获取每像素采样数
     pub fn samples_per_pixel(&self) -> u32 {
         self.config.samples_per_pixel
     }
-
     /// 追踪单条光线
     pub fn trace_ray(&self, origin: [f32; 3], direction: [f32; 3]) -> RayHit {
         // 简化实现
@@ -96,7 +85,6 @@ impl RayTracer {
             color: [1.0, 1.0, 1.0, 1.0],
         }
     }
-
     /// 渲染场景
     pub fn render(
         &mut self,
@@ -107,13 +95,11 @@ impl RayTracer {
         let pixel_count: _ = (width * height) as usize;
         Ok(vec![[0.5, 0.5, 0.5, 1.0]; pixel_count])
     }
-
     /// 重置累积
     pub fn reset_accumulation(&mut self) {
         self.accumulated_frames = 0;
     }
 }
-
 /// 光线命中结果
 #[derive(Debug, Clone)]
 pub struct RayHit {
@@ -128,7 +114,6 @@ pub struct RayHit {
     /// 颜色
     pub color: [f32; 4],
 }
-
 /// 光线追踪错误
 #[derive(Debug, Clone)]
 pub enum RayTracerError {
@@ -139,7 +124,6 @@ pub enum RayTracerError {
     /// GPU 不支持
     GpuNotSupported,
 }
-
 impl std::fmt::Display for RayTracerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -149,5 +133,4 @@ impl std::fmt::Display for RayTracerError {
         }
     }
 }
-
 impl std::error::Error for RayTracerError {}

@@ -1,12 +1,10 @@
 //! V8 Bindings for Testing Framework - Fixed version
 //! Registers test() / describe() / expect() functions in V8 context
-
 use rusty_v8 as v8;
 use crate::testing::{register_suite, get_all_suites};
 use crate::testing::test_context::{TestSuite, TestCase};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// Register all testing functions in the V8 global scope
 pub fn register_testing_api(_scope: &mut v8::HandleScope, _global: v8::Local<v8::Object>) {
     // Temporarily disabled due to V8 API complexity
@@ -15,7 +13,6 @@ pub fn register_testing_api(_scope: &mut v8::HandleScope, _global: v8::Local<v8:
         eprintln!("✅ Registered testing API in V8 context");
     }
 }
-
 /// test() callback - registers a test case
 fn test_callback(
     scope: &mut v8::HandleScope,
@@ -24,25 +21,20 @@ fn test_callback(
 ) {
     let name: _ = args.get(0).to_rust_string_lossy(scope);
     let function: _ = args.get(1);
-
     if !function.is_function() {
         let error: _ = v8::String::new(scope, "test() requires a function as second argument").unwrap();
         let exception: _ = v8::Exception::error(scope, error);
         scope.throw_exception(exception);
         return;
     }
-
     let _func: _ = v8::Local::<v8::Function>::try_from(args.get(1)).unwrap();
-
     // Temporarily disabled test registration
     // Will be re-implemented with proper V8 function handling
     if cfg!(feature = "verbose_logging") {
         eprintln!("📝 Registered test: {}", name);
     }
-
     retval.set(v8::undefined(scope).into());
 }
-
 /// describe() callback - creates a test suite
 fn describe_callback(
     scope: &mut v8::HandleScope,
@@ -50,12 +42,10 @@ fn describe_callback(
     mut retval: v8::ReturnValue,
 ) {
     let _name: _ = args.get(0).to_rust_string_lossy(scope);
-
     // For now, just return undefined
     // TODO: Implement suite registration
     retval.set(v8::undefined(scope).into());
 }
-
 /// it() callback - alias for test()
 fn it_callback(
     scope: &mut v8::HandleScope,
@@ -64,7 +54,6 @@ fn it_callback(
 ) {
     test_callback(scope, args, retval);
 }
-
 /// expect() callback - creates an expectation object
 fn expect_callback(
     scope: &mut v8::HandleScope,
@@ -72,12 +61,10 @@ fn expect_callback(
     mut retval: v8::ReturnValue,
 ) {
     let _value: _ = args.get(0);
-
     // Create a simple expect object (matchers disabled for now)
     let expect_obj: _ = v8::Object::new(scope);
     retval.set(expect_obj.into());
 }
-
 /// beforeEach() callback
 fn before_each_callback(
     scope: &mut v8::HandleScope,
@@ -90,7 +77,6 @@ fn before_each_callback(
     }
     retval.set(v8::undefined(scope).into());
 }
-
 /// afterEach() callback
 fn after_each_callback(
     scope: &mut v8::HandleScope,
@@ -102,7 +88,6 @@ fn after_each_callback(
     }
     retval.set(v8::undefined(scope).into());
 }
-
 /// beforeAll() callback
 fn before_all_callback(
     scope: &mut v8::HandleScope,
@@ -114,7 +99,6 @@ fn before_all_callback(
     }
     retval.set(v8::undefined(scope).into());
 }
-
 /// afterAll() callback
 fn after_all_callback(
     scope: &mut v8::HandleScope,
@@ -126,7 +110,6 @@ fn after_all_callback(
     }
     retval.set(v8::undefined(scope).into());
 }
-
 /// skip() callback
 fn skip_callback(
     scope: &mut v8::HandleScope,
@@ -135,7 +118,6 @@ fn skip_callback(
 ) {
     retval.set(v8::undefined(scope).into());
 }
-
 /// only() callback
 fn only_callback(
     scope: &mut v8::HandleScope,
@@ -144,7 +126,6 @@ fn only_callback(
 ) {
     retval.set(v8::undefined(scope).into());
 }
-
 /// toBe matcher - strict equality
 fn to_be_matcher(
     scope: &mut v8::HandleScope,
@@ -152,11 +133,9 @@ fn to_be_matcher(
     mut retval: v8::ReturnValue,
 ) {
     let _expected: _ = args.get(0);
-
     // Simple implementation - just return true for now
     retval.set(v8::Boolean::new(scope, true).into());
 }
-
 /// toEqual matcher - deep equality
 fn to_equal_matcher(
     scope: &mut v8::HandleScope,
@@ -164,11 +143,9 @@ fn to_equal_matcher(
     mut retval: v8::ReturnValue,
 ) {
     let _expected: _ = args.get(0);
-
     // Simple implementation - just return true for now
     retval.set(v8::Boolean::new(scope, true).into());
 }
-
 /// toBeTruthy matcher
 fn to_be_truthy_matcher(
     scope: &mut v8::HandleScope,
@@ -177,7 +154,6 @@ fn to_be_truthy_matcher(
 ) {
     retval.set(v8::Boolean::new(scope, true).into());
 }
-
 /// toBeFalsy matcher
 fn to_be_falsy_matcher(
     scope: &mut v8::HandleScope,
@@ -186,7 +162,6 @@ fn to_be_falsy_matcher(
 ) {
     retval.set(v8::Boolean::new(scope, true).into());
 }
-
 /// toContain matcher
 fn to_contain_matcher(
     scope: &mut v8::HandleScope,

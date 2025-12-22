@@ -2,7 +2,6 @@
 //! Stage 91 Phase 3.1 - Lockfile 解析和管理
 //!
 //! 支持 package-lock.json、yarn.lock、pnpm-lock.yaml
-
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -10,7 +9,6 @@ use std::path::PathBuf;
 use tokio;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// Lockfile 类型
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LockfileType {
@@ -18,7 +16,6 @@ pub enum LockfileType {
     YarnLock,
     PnpmLock,
 }
-
 /// Lockfile 条目
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LockfileEntry {
@@ -36,14 +33,12 @@ pub struct LockfileEntry {
     pub os: Option<Vec<String>>,
     pub cpu: Option<Vec<String>>,
 }
-
 /// Lockfile 管理器
 #[derive(Debug)]
 pub struct LockfileManager {
     lockfile_type: LockfileType,
     entries: HashMap<String, LockfileEntry>,
 }
-
 impl LockfileManager {
     /// 创建新的 lockfile 管理器
     pub fn new() -> Self {
@@ -54,17 +49,14 @@ impl LockfileManager {
         } else {
             LockfileType::PackageLock
         };
-
         Self {
             lockfile_type,
             entries: HashMap::new(),
         }
     }
-
     /// 从文件加载 lockfile
     pub async fn load_from_file(&mut self, path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         let content: _ = tokio::fs::read_to_string(path).await?;
-
         match self.lockfile_type {
             LockfileType::PackageLock => {
                 self.load_package_lock(&content)?;
@@ -76,19 +68,15 @@ impl LockfileManager {
                 self.load_pnpm_lock(&content)?;
             }
         }
-
         Ok(())
     }
-
     /// 加载 package-lock.json
     fn load_package_lock(&mut self, content: &str) -> Result<(), Box<dyn std::error::Error>> {
         let package_lock: serde_json::Value = serde_json::from_str(content)?;
-
         if let Some(packages) = package_lock.get("packages") {
             for (key, value) in packages.as_object().unwrap() {
                 if key.starts_with("node_modules/") {
                     let package_name: _ = key.strip_prefix("node_modules/").unwrap();
-
                     let entry: _ = LockfileEntry {
                         version: value.get("version").unwrap().as_str().unwrap_or("").to_string(),
                         resolved: value.get("resolved").unwrap().as_str().unwrap_or("").to_string(),
@@ -126,15 +114,12 @@ impl LockfileManager {
                                 .filter_map(|v| v.as_str().map(|s| s.to_string())
                                 .collect()),
                     };
-
                     self.entries.insert(package_name.to_string(), entry);
                 }
             }
         }
-
         Ok(())
     }
-
     /// 加载 yarn.lock
     fn load_yarn_lock(&mut self, content: &str) -> Result<(), Box<dyn std::error::Error>> {
         // 简化的 yarn.lock 解析
@@ -142,7 +127,6 @@ impl LockfileManager {
         let lines: Vec<&str> = content.lines().collect();
         let mut current_package = None;
         let mut current_entry = None;
-
         for line in lines {
             if line.starts_with('"') {
                 // 包定义开始
@@ -183,17 +167,14 @@ impl LockfileManager {
                 }
             }
         }
-
         // 处理最后一个包
         if let Some(entry) = current_entry.take() {
             if let Some(pkg_name) = current_package.take() {
                 self.entries.insert(pkg_name, entry);
             }
         }
-
         Ok(())
     }
-
     /// 解析 yarn.lock 键
     fn parse_yarn_lock_key(&self, key: &str) -> Option<(String, String)> {
         let key: _ = key.trim().trim_matches('"');
@@ -210,7 +191,6 @@ impl LockfileManager {
             None
         }
     }
-
     /// 加载 pnpm-lock.yaml
     fn load_pnpm_lock(&mut self, content: &str) -> Result<(), Box<dyn std::error::Error>> {
         // 简化的 pnpm-lock.yaml 解析
@@ -218,14 +198,12 @@ impl LockfileManager {
         let lines: Vec<&str> = content.lines().collect();
         let mut current_package = None;
         let mut current_version = None;
-
         for line in lines {
             if line.starts_with("  ") && line.contains(":") {
                 let parts: Vec<&str> = line.split(':').collect();
                 if parts.len() >= 2 {
                     let key: _ = parts[0].trim();
                     let value: _ = parts[1].trim();
-
                     match key {
                         "version" => {
                             current_version = Some(value.to_string());
@@ -242,7 +220,6 @@ impl LockfileManager {
                     } else {
                         parts[0].to_string()
                     };
-
                     if let Some(version) = current_version.take() {
                         self.entries.insert(
                             name,
@@ -266,10 +243,8 @@ impl LockfileManager {
                 }
             }
         }
-
         Ok(())
     }
-
     /// 保存 lockfile
     pub async fn save_to_file(&self, path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         match self.lockfile_type {
@@ -283,20 +258,16 @@ impl LockfileManager {
                 self.save_pnpm_lock(path).await?;
             }
         }
-
         Ok(())
     }
-
     /// 保存 package-lock.json
     async fn save_package_lock(&self, path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         let mut package_lock = serde_json::Map::new();
         package_lock.insert("name".to_string(), serde_json::Value::String("beejs-project".to_string());
         package_lock.insert("version".to_string(), serde_json::Value::String("1.0.0".to_string());
         package_lock.insert("lockfileVersion".to_string(), serde_json::Value::Number(serde_json::Number::from(3));
-
         let mut packages = serde_json::Map::new();
         packages.insert("".to_string(), serde_json::Value::Object(serde_json::Map::new());
-
         for (name, entry) in &self.entries {
             let mut package_obj = serde_json::Map::new();
             package_obj.insert("version".to_string(), serde_json::Value::String(entry.version.clone());
@@ -304,7 +275,6 @@ impl LockfileManager {
             package_obj.insert("integrity".to_string(), serde_json::Value::String(entry.integrity.clone());
             package_obj.insert("dev".to_string(), serde_json::Value::Bool(entry.dev));
             package_obj.insert("optional".to_string(), serde_json::Value::Bool(entry.optional));
-
             if !entry.requires.is_empty() {
                 let requires: _ = serde_json::Value::Object(
                     entry.requires.iter()
@@ -313,7 +283,6 @@ impl LockfileManager {
                 );
                 package_obj.insert("requires".to_string(), requires);
             }
-
             if !entry.dependencies.is_empty() {
                 let dependencies: _ = serde_json::Value::Object(
                     entry.dependencies.iter()
@@ -322,25 +291,19 @@ impl LockfileManager {
                 );
                 package_obj.insert("dependencies".to_string(), dependencies);
             }
-
             let package_key: _ = format!("node_modules/{}", name));
             packages.insert(package_key, serde_json::Value::Object(package_obj));
         }
-
         package_lock.insert("packages".to_string(), serde_json::Value::Object(packages));
-
         let content: _ = serde_json::to_string_pretty(&serde_json::Value::Object(package_lock))?;
         tokio::fs::write(path, content).await?;
-
         Ok(())
     }
-
     /// 保存 yarn.lock
     async fn save_yarn_lock(&self, path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         let mut content = String::new();
         content.push_str("# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.\n");
         content.push_str(&format!("# yarn lockfile v1\n\n"));
-
         for (name, entry) in &self.entries {
             let (name_part, version_part) = if name.starts_with("@") {
                 let parts: Vec<&str> = name.split('/').collect();
@@ -352,53 +315,41 @@ impl LockfileManager {
             } else {
                 (name.clone(), "".to_string())
             };
-
             content.push_str(&format!("\"{}@{}\":\n", name_part, version_part));
             content.push_str(&format!("  version \"{}\"\n", entry.version));
             content.push_str(&format!("  resolved \"{}\"\n", entry.resolved));
             content.push_str(&format!("  integrity {}\n", entry.integrity));
             content.push('\n');
         }
-
         tokio::fs::write(path, content).await?;
-
         Ok(())
     }
-
     /// 保存 pnpm-lock.yaml
     async fn save_pnpm_lock(&self, path: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         let mut content = String::new();
         content.push_str("lockfileVersion: 6.0\n");
         content.push_str("settings:\n  autoInstallPeers: true\n  excludeLinksFromLockfile: false\n\n");
         content.push_str("importers:\n  .:\n    devDependencies:\n\n");
-
         content.push_str("packages:\n");
-
         for (name, entry) in &self.entries {
             let package_path: _ = if name.starts_with("@") {
                 format!("node_modules/{}", name)
             } else {
                 format!("node_modules/{}", name)
             };
-
             content.push_str(&format!("  {}:\n", package_path));
             content.push_str(&format!("    version: {}\n", entry.version));
-
             if !entry.requires.is_empty() {
                 content.push_str(&format!("    requires:\n"));
                 for (dep, version) in &entry.requires {
                     content.push_str(&format!("      {}: {}\n", dep, version));
                 }
             }
-
             content.push('\n');
         }
-
         tokio::fs::write(path, content).await?;
-
         Ok(())
     }
-
     /// 更新 lockfile
     pub async fn update_lockfile(
         &mut self,
@@ -420,23 +371,18 @@ impl LockfileManager {
                 os: None,
                 cpu: None,
             };
-
             self.entries.insert(name.clone(), entry);
         }
-
         Ok(())
     }
-
     /// 获取所有条目
     pub fn get_entries(&self) -> &HashMap<String, LockfileEntry> {
         &self.entries
     }
-
     /// 查找包
     pub fn find_package(&self, name: &str) -> Option<&LockfileEntry> {
         self.entries.get(name)
     }
-
     /// 验证 lockfile 完整性
     pub fn validate(&self) -> Result<(), Box<dyn std::error::Error>> {
         // 检查是否有缺失的包
@@ -448,7 +394,6 @@ impl LockfileManager {
                 return Err(format!("Package {} missing resolved URL", name).into());
             }
         }
-
         Ok(())
     }
 }

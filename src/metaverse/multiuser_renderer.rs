@@ -1,9 +1,7 @@
 //! 多用户协作渲染器
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 同步模式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SyncMode {
@@ -16,13 +14,11 @@ pub enum SyncMode {
     /// 服务器权威
     ServerAuthoritative,
 }
-
 impl Default for SyncMode {
     fn default() -> Self {
         Self::Interpolation
     }
 }
-
 /// Avatar 配置
 #[derive(Debug, Clone)]
 pub struct AvatarConfig {
@@ -35,7 +31,6 @@ pub struct AvatarConfig {
     /// 启用唇同步
     pub enable_lip_sync: bool,
 }
-
 /// 用户 Avatar
 #[derive(Debug, Clone)]
 pub struct UserAvatar {
@@ -52,7 +47,6 @@ pub struct UserAvatar {
     /// 是否在线
     online: bool,
 }
-
 impl UserAvatar {
     /// 创建用户 Avatar
     pub fn new(config: AvatarConfig) -> Self {
@@ -65,35 +59,29 @@ impl UserAvatar {
             online: true,
         }
     }
-
     /// 获取用户 ID
     pub fn user_id(&self) -> &str {
         &self.config.user_id
     }
-
     /// 更新位置
     pub fn update_position(&mut self, position: [f32; 3], rotation: [f32; 4]) {
         self.position = position;
         self.rotation = rotation;
     }
-
     /// 更新头部姿态
     pub fn update_head(&mut self, position: [f32; 3], rotation: [f32; 4]) {
         self.head_position = position;
         self.head_rotation = rotation;
     }
-
     /// 是否在线
     pub fn is_online(&self) -> bool {
         self.online
     }
-
     /// 设置在线状态
     pub fn set_online(&mut self, online: bool) {
         self.online = online;
     }
 }
-
 /// 多用户渲染器
 pub struct MultiuserRenderer {
     /// 同步模式
@@ -103,7 +91,6 @@ pub struct MultiuserRenderer {
     /// 最大用户数
     max_users: u32,
 }
-
 impl MultiuserRenderer {
     /// 创建多用户渲染器
     pub fn new(sync_mode: SyncMode) -> Result<Self, MultiuserError> {
@@ -113,44 +100,36 @@ impl MultiuserRenderer {
             max_users: 1000,
         })
     }
-
     /// 添加 Avatar
     pub fn add_avatar(&mut self, config: AvatarConfig) -> Result<(), MultiuserError> {
         if self.avatars.len() >= self.max_users as usize {
             return Err(MultiuserError::MaxUsersReached(self.max_users));
         }
-
         let user_id: _ = config.user_id.clone();
         let avatar: _ = UserAvatar::new(config);
         self.avatars.insert(user_id, avatar);
         Ok(())
     }
-
     /// 移除 Avatar
     pub fn remove_avatar(&mut self, user_id: &str) -> Option<UserAvatar> {
         self.avatars.remove(user_id)
     }
-
     /// 获取 Avatar
     pub fn get_avatar(&self, user_id: &str) -> Option<&UserAvatar> {
         self.avatars.get(user_id)
     }
-
     /// 获取可变 Avatar
     pub fn get_avatar_mut(&mut self, user_id: &str) -> Option<&mut UserAvatar> {
         self.avatars.get_mut(user_id)
     }
-
     /// 获取用户数量
     pub fn user_count(&self) -> usize {
         self.avatars.len()
     }
-
     /// 获取同步模式
     pub fn sync_mode(&self) -> SyncMode {
         self.sync_mode
     }
-
     /// 广播状态更新
     pub fn broadcast_update(&self, user_id: &str) -> Result<(), MultiuserError> {
         if !self.avatars.contains_key(user_id) {
@@ -159,7 +138,6 @@ impl MultiuserRenderer {
         Ok(())
     }
 }
-
 /// 多用户渲染错误
 #[derive(Debug, Clone)]
 pub enum MultiuserError {
@@ -172,7 +150,6 @@ pub enum MultiuserError {
     /// 同步失败
     SyncFailed(String),
 }
-
 impl std::fmt::Display for MultiuserError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -183,5 +160,4 @@ impl std::fmt::Display for MultiuserError {
         }
     }
 }
-
 impl std::error::Error for MultiuserError {}

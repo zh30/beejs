@@ -2,14 +2,12 @@
 //! Stage 86 Phase 3 - 插件市场平台实现
 //!
 //! 提供插件搜索、发现、评分、评论和管理的完整功能
-
 use std::collections::{HashMap, HashSet, BTreeMap};
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use anyhow::{Result, Context};
 use crate::ecosystem::types::*;
-
 /// 插件市场主引擎
 #[derive(Debug, Clone)]
 pub struct PluginMarketplace {
@@ -24,7 +22,6 @@ pub struct PluginMarketplace {
     /// 缓存层
     cache: Arc<MarketplaceCache>,
 }
-
 /// 插件索引
 #[derive(Debug, Clone)]
 pub struct PluginIndex {
@@ -37,7 +34,6 @@ pub struct PluginIndex {
     /// 分类索引
     category_index: BTreeMap<String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId, String, HashSet<PluginId>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>,
 }
-
 /// 插件元数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginMetadata {
@@ -64,7 +60,6 @@ pub struct PluginMetadata {
     pub featured: bool,
     pub status: PluginStatus,
 }
-
 /// 插件作者
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginAuthor {
@@ -74,14 +69,12 @@ pub struct PluginAuthor {
     pub url: Option<String>,
     pub avatar_url: Option<String>,
 }
-
 /// 插件 ID
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct PluginId {
     pub name: String,
     pub version: Version,
 }
-
 /// 插件评分
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginRating {
@@ -89,7 +82,6 @@ pub struct PluginRating {
     pub count: u64,
     pub distribution: RatingDistribution,
 }
-
 /// 评分分布
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RatingDistribution {
@@ -99,7 +91,6 @@ pub struct RatingDistribution {
     pub two_star: u64,
     pub one_star: u64,
 }
-
 /// 下载统计
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DownloadStats {
@@ -107,7 +98,6 @@ pub struct DownloadStats {
     pub recent: u64,
     pub trend: DownloadTrend,
 }
-
 /// 下载趋势
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DownloadTrend {
@@ -115,7 +105,6 @@ pub struct DownloadTrend {
     pub weekly: Vec<u64>,
     pub monthly: Vec<u64>,
 }
-
 /// 插件状态
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PluginStatus {
@@ -124,7 +113,6 @@ pub enum PluginStatus {
     Yanked,
     Unpublished,
 }
-
 /// 搜索引擎
 #[derive(Debug, Clone)]
 pub struct SearchEngine {
@@ -133,7 +121,6 @@ pub struct SearchEngine {
     /// 排名算法
     ranking_algorithm: Arc<RankingAlgorithm>,
 }
-
 /// 搜索索引
 #[derive(Debug, Clone)]
 pub struct SearchIndex {
@@ -144,14 +131,12 @@ pub struct SearchIndex {
     /// 作者搜索索引
     author_search_index: HashMap<String, HashSet<PluginId>>,
 }
-
 /// 排名算法
 #[derive(Debug, Clone)]
 pub struct RankingAlgorithm {
     /// 权重配置
     weights: RankingWeights,
 }
-
 /// 排名权重
 #[derive(Debug, Clone)]
 pub struct RankingWeights {
@@ -161,7 +146,6 @@ pub struct RankingWeights {
     pub recency: f64,
     pub verified: f64,
 }
-
 /// 搜索查询
 #[derive(Debug, Clone)]
 pub struct SearchQuery {
@@ -170,7 +154,6 @@ pub struct SearchQuery {
     pub sort: SortOption,
     pub pagination: Pagination,
 }
-
 /// 搜索过滤器
 #[derive(Debug, Clone)]
 pub struct SearchFilters {
@@ -183,7 +166,6 @@ pub struct SearchFilters {
     pub version_constraint: Option<VersionConstraint>,
     pub date_range: Option<(DateTime<Utc>, DateTime<Utc>)>,
 }
-
 impl std::hash::Hash for SearchFilters {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.categories.hash(state);
@@ -202,7 +184,6 @@ impl std::hash::Hash for SearchFilters {
         }
     }
 }
-
 /// 排序选项
 #[derive(Debug, Clone)]
 pub enum SortOption {
@@ -213,7 +194,6 @@ pub enum SortOption {
     NewlyPublished,
     Name,
 }
-
 impl std::hash::Hash for SortOption {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         // 使用变体的名称进行哈希
@@ -227,21 +207,18 @@ impl std::hash::Hash for SortOption {
         }
     }
 }
-
 /// 分页信息
 #[derive(Debug, Clone)]
 pub struct Pagination {
     pub page: usize,
     pub per_page: usize,
 }
-
 impl std::hash::Hash for Pagination {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.page.hash(state);
         self.per_page.hash(state);
     }
 }
-
 /// 搜索结果
 #[derive(Debug, Clone)]
 pub struct SearchResults {
@@ -250,7 +227,6 @@ pub struct SearchResults {
     pub took_ms: u64,
     pub facets: SearchFacets,
 }
-
 /// 插件搜索结果
 #[derive(Debug, Clone)]
 pub struct PluginSearchResult {
@@ -258,7 +234,6 @@ pub struct PluginSearchResult {
     pub score: f64,
     pub highlights: Vec<String>,
 }
-
 /// 搜索面
 #[derive(Debug, Clone)]
 pub struct SearchFacets {
@@ -266,14 +241,12 @@ pub struct SearchFacets {
     pub tags: Vec<FacetCount>,
     pub authors: Vec<FacetCount>,
 }
-
 /// 分面计数
 #[derive(Debug, Clone)]
 pub struct FacetCount {
     pub value: String,
     pub count: u64,
 }
-
 /// 评分系统
 #[derive(Debug, Clone)]
 pub struct RatingSystem {
@@ -282,7 +255,6 @@ pub struct RatingSystem {
     /// 统计计算器
     stats_calculator: Arc<RatingStatsCalculator>,
 }
-
 /// 评分存储
 #[derive(Debug, Clone)]
 pub struct RatingStorage {
@@ -291,7 +263,6 @@ pub struct RatingStorage {
     /// 评分聚合
     pub rating_aggregates: HashMap<PluginId, RatingAggregate>,
 }
-
 /// 用户评分
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserRating {
@@ -301,7 +272,6 @@ pub struct UserRating {
     pub created_at: DateTime<Utc>,
     pub helpful_votes: u64,
 }
-
 /// 评分聚合
 #[derive(Debug, Clone)]
 pub struct RatingAggregate {
@@ -310,11 +280,9 @@ pub struct RatingAggregate {
     pub distribution: RatingDistribution,
     pub last_updated: DateTime<Utc>,
 }
-
 /// 评分统计计算器
 #[derive(Debug, Clone)]
 pub struct RatingStatsCalculator;
-
 /// 审核系统
 #[derive(Debug, Clone)]
 pub struct ReviewSystem {
@@ -323,7 +291,6 @@ pub struct ReviewSystem {
     /// 自动审核器
     auto_reviewer: Arc<AutoReviewer>,
 }
-
 /// 审核队列
 #[derive(Debug, Clone)]
 pub struct ReviewQueue {
@@ -332,7 +299,6 @@ pub struct ReviewQueue {
     /// 审核历史
     review_history: HashMap<PluginId, Vec<ReviewRecord>>,
 }
-
 /// 审核票据
 #[derive(Debug, Clone)]
 pub struct ReviewTicket {
@@ -342,7 +308,6 @@ pub struct ReviewTicket {
     pub status: ReviewStatus,
     pub priority: ReviewPriority,
 }
-
 /// 审核状态
 #[derive(Debug, Clone)]
 pub enum ReviewStatus {
@@ -352,7 +317,6 @@ pub enum ReviewStatus {
     Rejected,
     RequiresChanges,
 }
-
 /// 审核优先级
 #[derive(Debug, Clone)]
 pub enum ReviewPriority {
@@ -361,7 +325,6 @@ pub enum ReviewPriority {
     High,
     Critical,
 }
-
 /// 审核记录
 #[derive(Debug, Clone)]
 pub struct ReviewRecord {
@@ -370,7 +333,6 @@ pub struct ReviewRecord {
     pub comments: Option<String>,
     pub timestamp: DateTime<Utc>,
 }
-
 /// 审核动作
 #[derive(Debug, Clone)]
 pub enum ReviewAction {
@@ -380,7 +342,6 @@ pub enum ReviewAction {
     RequestChanges,
     Comment,
 }
-
 /// 自动审核器
 #[derive(Debug, Clone)]
 pub struct AutoReviewer {
@@ -389,15 +350,12 @@ pub struct AutoReviewer {
     /// 质量分析器
     quality_analyzer: Arc<QualityAnalyzer>,
 }
-
 /// 安全扫描器
 #[derive(Debug, Clone)]
 pub struct SecurityScanner;
-
 /// 质量分析器
 #[derive(Debug, Clone)]
 pub struct QualityAnalyzer;
-
 /// 市场缓存
 #[derive(Debug, Clone)]
 pub struct MarketplaceCache {
@@ -408,7 +366,6 @@ pub struct MarketplaceCache {
     /// 缓存统计
     pub stats: CacheStats,
 }
-
 /// 缓存统计
 #[derive(Debug, Clone)]
 pub struct CacheStats {
@@ -416,7 +373,6 @@ pub struct CacheStats {
     pub misses: u64,
     pub size: usize,
 }
-
 impl PluginMarketplace {
     /// 创建新的插件市场实例
     pub fn new() -> Self {
@@ -428,21 +384,16 @@ impl PluginMarketplace {
             cache: Arc::new(Mutex::new(MarketplaceCache::new()))
         }
     }
-
     /// 初始化市场数据
     pub async fn initialize(&self) -> Result<()> {
         // 初始化插件索引
         self.plugin_index.initialize().await?;
-
         // 构建搜索索引
         self.search_engine.build_index().await?;
-
         // 预热缓存
         self.cache.warmup().await?;
-
         Ok(())
     }
-
     /// 搜索插件
     pub async fn search_plugins(&mut self, query: &SearchQuery) -> Result<SearchResults> {
         // 检查缓存
@@ -450,55 +401,44 @@ impl PluginMarketplace {
         if let Some(cached_results) = self.cache.get_search_results(&cache_key).await {
             return Ok(cached_results);
         }
-
         // 执行搜索
         let start_time: _ = std::time::Instant::now();
         let results: _ = self.search_engine.search(query).await?;
         let took_ms: _ = start_time.elapsed().as_millis() as u64;
-
         // 计算分面
         let facets: _ = self.calculate_facets(&results).await?;
-
         let search_results: _ = SearchResults {
             plugins: results.clone(),
             total: results.len(),
             took_ms,
             facets,
         };
-
         // 缓存结果（克隆以避免移动）
         if let Some(cache) = Arc::get_mut(&mut self.cache) {
             cache.search_cache.insert(cache_key, search_results.clone());
         }
-
         Ok(search_results)
     }
-
     /// 获取插件详情
     pub async fn get_plugin_details(&mut self, plugin_id: &PluginId) -> Result<Option<PluginMetadata>> {
         // 检查缓存
         if let Some(cached) = self.cache.get_plugin(plugin_id).await {
             return Ok(Some(cached));
         }
-
         // 从索引获取
         let plugin: _ = self.plugin_index.get_plugin(plugin_id).await?;
-
         if let Some(ref plugin_data) = plugin {
             // 缓存插件数据
             if let Some(cache) = Arc::get_mut(&mut self.cache) {
                 cache.plugin_cache.insert(plugin_id.clone(), plugin_data.clone());
             }
         }
-
         Ok(plugin)
     }
-
     /// 获取插件评分详情
     pub async fn get_plugin_rating(&self, plugin_id: &PluginId) -> Result<PluginRating> {
         self.rating_system.get_rating(plugin_id).await
     }
-
     /// 提交插件评分
     pub async fn rate_plugin(&mut self,
         plugin_id: &PluginId,
@@ -512,17 +452,14 @@ impl PluginMarketplace {
             Err(anyhow::anyhow!("Failed to get mutable reference to rating system"))
         }
     }
-
     /// 获取热门插件
     pub async fn get_featured_plugins(&self, limit: usize) -> Result<Vec<PluginMetadata> {
         self.plugin_index.get_featured_plugins(limit).await
     }
-
     /// 获取最新插件
     pub async fn get_recent_plugins(&self, limit: usize) -> Result<Vec<PluginMetadata> {
         self.plugin_index.get_recent_plugins(limit).await
     }
-
     /// 获取插件统计信息
     pub async fn get_plugin_stats(&self) -> Result<MarketplaceStats> {
         Ok(MarketplaceStats {
@@ -532,60 +469,49 @@ impl PluginMarketplace {
             categories_count: self.plugin_index.categories_count(),
         })
     }
-
     /// 生成缓存键
     fn generate_cache_key(&self, query: &SearchQuery) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
         let mut hasher = DefaultHasher::new();
         query.query.hash(&mut hasher);
         query.filters.hash(&mut hasher);
         query.sort.hash(&mut hasher);
         query.pagination.hash(&mut hasher);
-
         format!("search_{:x}", hasher.finish())
     }
-
     /// 计算搜索分面
     async fn calculate_facets(&self, plugins: &[PluginSearchResult]) -> Result<SearchFacets> {
         let mut category_counts = HashMap::new();
         let mut tag_counts = HashMap::new();
         let mut author_counts = HashMap::new();
-
         for result in plugins {
             // 统计分类
             for category in &result.plugin.categories {
                 *category_counts.entry(category.clone()).or_insert(0) += 1;
             }
-
             // 统计标签
             for tag in &result.plugin.tags {
                 *tag_counts.entry(tag.clone()).or_insert(0) += 1;
             }
-
             // 统计作者
             let author_name: _ = &result.plugin.author.name;
             *author_counts.entry(author_name.clone()).or_insert(0) += 1;
         }
-
         let categories: _ = category_counts
             .into_iter()
             .map(|(value, count)| FacetCount { value, count })
             .collect();
-
         let tags: _ = tag_counts
             .into_iter()
             .map(|(value, count)| FacetCount { value, count })
             .collect();
-
         let authors: _ = author_counts
             .into_iter()
             .map(|(value, count)| FacetCount { value, count })
             .collect();
-
         Ok(SearchFacets {
             categories,
             tags,
@@ -593,7 +519,6 @@ use std::collections::{HashMap, BTreeMap};
         })
     }
 }
-
 /// 市场统计信息
 #[derive(Debug, Clone)]
 pub struct MarketplaceStats {
@@ -602,7 +527,6 @@ pub struct MarketplaceStats {
     pub average_rating: f64,
     pub categories_count: usize,
 }
-
 // 实现各个组件的初始化方法
 impl PluginIndex {
     pub fn new() -> Self {
@@ -613,16 +537,13 @@ impl PluginIndex {
             category_index: BTreeMap::new(),
         }
     }
-
     pub async fn initialize(&self) -> Result<()> {
         // 初始化索引数据
         Ok(())
     }
-
     pub async fn get_plugin(&self, plugin_id: &PluginId) -> Result<Option<PluginMetadata>> {
         Ok(self.plugins.get(plugin_id).cloned())
     }
-
     pub async fn get_featured_plugins(&self, limit: usize) -> Result<Vec<PluginMetadata> {
         let featured: Vec<_> = self.plugins
             .values()
@@ -632,7 +553,6 @@ impl PluginIndex {
             .collect();
         Ok(featured)
     }
-
     pub async fn get_recent_plugins(&self, limit: usize) -> Result<Vec<PluginMetadata> {
         let recent: Vec<_> = self.plugins
             .values()
@@ -641,20 +561,16 @@ impl PluginIndex {
             .collect();
         Ok(recent)
     }
-
     pub fn total_plugins(&self) -> usize {
         self.plugins.len()
     }
-
     pub fn total_downloads(&self) -> u64 {
         self.plugins.values().map(|p| p.downloads.total).sum()
     }
-
     pub fn categories_count(&self) -> usize {
         self.category_index.len()
     }
 }
-
 impl SearchEngine {
     pub fn new() -> Self {
         Self {
@@ -662,40 +578,31 @@ impl SearchEngine {
             ranking_algorithm: Arc::new(Mutex::new(RankingAlgorithm::new()))
         }
     }
-
     pub async fn build_index(&self) -> Result<()> {
         // 构建搜索索引
         Ok(())
     }
-
     pub async fn search(&self, query: &SearchQuery) -> Result<Vec<PluginSearchResult> {
         let mut results = Vec::new();
-
         // 如果查询为空，返回所有插件
         if query.query.is_empty() {
             // 返回按排序的插件
             return Ok(results);
         }
-
         // 解析查询词
         let terms: _ = self.parse_query(&query.query);
-
         // 执行搜索
         for term in terms {
             let term_results: _ = self.search_by_term(&term, query).await?;
             results.extend(term_results);
         }
-
         // 去重
         results.sort_by(|a, b| a.plugin.plugin_id.name.cmp(&b.plugin.plugin_id.name));
         results.dedup_by(|a, b| a.plugin.plugin_id == b.plugin.plugin_id);
-
         // 应用过滤器
         results = self.apply_filters(results, &query.filters).await?;
-
         // 排序
         results = self.sort_results(results, &query.sort).await?;
-
         // 分页
         let start: _ = (query.pagination.page - 1) * query.pagination.per_page;
         let end: _ = start + query.pagination.per_page;
@@ -704,10 +611,8 @@ impl SearchEngine {
         } else {
             results[start..].to_vec()
         };
-
         Ok(paginated_results)
     }
-
     /// 解析查询字符串
     fn parse_query(&self, query: &str) -> Vec<String> {
         query.split_whitespace()
@@ -715,14 +620,11 @@ impl SearchEngine {
             .filter(|s| !s.is_empty())
             .collect()
     }
-
     /// 按词条搜索
     async fn search_by_term(&self, term: &str, query: &SearchQuery) -> Result<Vec<PluginSearchResult> {
         let mut results = Vec::new();
-
         // 模拟搜索结果（实际实现中会查询索引）
         // 这里应该根据 fulltext_index, tag_search_index 等进行搜索
-
         // 演示用：返回模拟结果
         if term.contains("test") {
             let plugin: _ = PluginMetadata {
@@ -776,17 +678,14 @@ impl SearchEngine {
                 featured: false,
                 status: PluginStatus::Active,
             };
-
             results.push(PluginSearchResult {
                 plugin,
                 score: 0.95,
                 highlights: vec![format!("Found in: {}", term)],
             });
         }
-
         Ok(results)
     }
-
     /// 应用搜索过滤器
     async fn apply_filters(
         &self,
@@ -799,51 +698,42 @@ impl SearchEngine {
                 r.plugin.categories.iter().any(|c| categories.contains(c))
             });
         }
-
         // 标签过滤
         if let Some(ref tags) = filters.tags {
             results.retain(|r| {
                 r.plugin.tags.iter().any(|t| tags.contains(t))
             });
         }
-
         // 作者过滤
         if let Some(ref authors) = filters.authors {
             results.retain(|r| {
                 authors.contains(&r.plugin.author.name)
             });
         }
-
         // 评分过滤
         if let Some(min_rating) = filters.rating_min {
             results.retain(|r| r.plugin.rating.average >= min_rating);
         }
-
         // 仅认证插件
         if filters.verified_only {
             results.retain(|r| r.plugin.verified);
         }
-
         // 免费插件
         if filters.free_only {
             results.retain(|r| r.plugin.license == "MIT" || r.plugin.license == "Apache-2.0");
         }
-
         // 版本约束过滤
         if let Some(ref constraint) = filters.version_constraint {
             results.retain(|r| constraint.matches(&r.plugin.version));
         }
-
         // 日期范围过滤
         if let Some((start, end)) = filters.date_range {
             results.retain(|r| {
                 r.plugin.published_at >= start && r.plugin.published_at <= end
             });
         }
-
         Ok(results)
     }
-
     /// 排序搜索结果
     async fn sort_results(
         &self,
@@ -873,11 +763,9 @@ impl SearchEngine {
                 results.sort_by(|a, b| a.plugin.name.cmp(&b.plugin.name));
             }
         }
-
         Ok(results)
     }
 }
-
 impl SearchIndex {
     pub fn new() -> Self {
         Self {
@@ -887,7 +775,6 @@ impl SearchIndex {
         }
     }
 }
-
 impl RankingAlgorithm {
     pub fn new() -> Self {
         Self {
@@ -901,7 +788,6 @@ impl RankingAlgorithm {
         }
     }
 }
-
 impl RatingSystem {
     pub fn new() -> Self {
         Self {
@@ -909,7 +795,6 @@ impl RatingSystem {
             stats_calculator: Arc::new(Mutex::new(RatingStatsCalculator)))
         }
     }
-
     pub async fn get_rating(&self, plugin_id: &PluginId) -> Result<PluginRating> {
         // 获取评分聚合数据
         if let Some(aggregate) = self.ratings.rating_aggregates.get(plugin_id) {
@@ -933,7 +818,6 @@ impl RatingSystem {
             })
         }
     }
-
     pub async fn submit_rating(
         &mut self,
         plugin_id: &PluginId,
@@ -945,7 +829,6 @@ impl RatingSystem {
         if rating < 1 || rating > 5 {
             return Err(anyhow::anyhow!("Rating must be between 1 and 5"));
         }
-
         // 创建用户评分记录
         let user_rating: _ = UserRating {
             user_id: user_id.to_string(),
@@ -954,36 +837,29 @@ impl RatingSystem {
             created_at: Utc::now(),
             helpful_votes: 0,
         };
-
         // 存储用户评分
         let rating_key: _ = (plugin_id.clone(), user_id.to_string());
         if let Some(ratings) = Arc::get_mut(&mut self.ratings) {
             ratings.user_ratings.insert(rating_key, user_rating);
         }
-
         // 重新计算聚合评分
         self.recalculate_aggregate(plugin_id).await?;
-
         Ok(())
     }
-
     pub async fn get_average_rating(&self) -> f64 {
         // 计算所有插件的平均评分
         let mut total_rating = 0.0;
         let mut count = 0;
-
         for aggregate in self.ratings.rating_aggregates.values() {
             total_rating += aggregate.average * aggregate.count as f64;
             count += aggregate.count;
         }
-
         if count > 0 {
             total_rating / count as f64
         } else {
             0.0
         }
     }
-
     /// 重新计算插件的聚合评分
     async fn recalculate_aggregate(&mut self, plugin_id: &PluginId) -> Result<()> {
         let plugin_ratings: Vec<_> = self.ratings
@@ -992,15 +868,12 @@ impl RatingSystem {
             .filter(|(key, _)| key.0 == *plugin_id)
             .map(|(_, rating)| rating)
             .collect();
-
         if plugin_ratings.is_empty() {
             return Ok(());
         }
-
         let count: _ = plugin_ratings.len() as u64;
         let total: u64 = plugin_ratings.iter().map(|r| r.rating as u64).sum();
         let average: _ = total as f64 / count as f64;
-
         // 计算评分分布
         let mut distribution = RatingDistribution {
             five_star: 0,
@@ -1009,7 +882,6 @@ impl RatingSystem {
             two_star: 0,
             one_star: 0,
         };
-
         for rating in plugin_ratings {
             match rating.rating {
                 5 => distribution.five_star += 1,
@@ -1020,7 +892,6 @@ impl RatingSystem {
                 _ => {}
             }
         }
-
         // 更新聚合数据
         let aggregate: _ = RatingAggregate {
             average,
@@ -1028,14 +899,11 @@ impl RatingSystem {
             distribution,
             last_updated: Utc::now(),
         };
-
         if let Some(ratings) = Arc::get_mut(&mut self.ratings) {
             ratings.rating_aggregates.insert(plugin_id.clone(), aggregate);
         }
-
         Ok(())
     }
-
     /// 获取用户对插件的评分
     pub async fn get_user_rating(
         &self,
@@ -1045,7 +913,6 @@ impl RatingSystem {
         let rating_key: _ = (plugin_id.clone(), user_id.to_string());
         Ok(self.ratings.user_ratings.get(&rating_key).cloned())
     }
-
     /// 投票帮助性
     pub async fn vote_helpful(&mut self,
         plugin_id: &PluginId,
@@ -1064,7 +931,6 @@ impl RatingSystem {
         }
         Ok(())
     }
-
     /// 获取插件的所有评论
     pub async fn get_plugin_reviews(
         &self,
@@ -1082,18 +948,14 @@ impl RatingSystem {
                 }
             })
             .collect();
-
         // 按帮助性投票数排序
         reviews.sort_by(|a, b| b.helpful_votes.cmp(&a.helpful_votes));
-
         // 限制数量
         if reviews.len() > limit {
             reviews.truncate(limit);
         }
-
         Ok(reviews)
     }
-
     /// 获取评分统计
     pub async fn get_rating_statistics(&self, plugin_id: &PluginId) -> Result<RatingStatistics> {
         let plugin_ratings: Vec<_> = self.ratings
@@ -1102,7 +964,6 @@ impl RatingSystem {
             .filter(|(key, _)| key.0 == *plugin_id)
             .map(|(_, rating)| rating)
             .collect();
-
         if plugin_ratings.is_empty() {
             return Ok(RatingStatistics {
                 total_reviews: 0,
@@ -1112,14 +973,12 @@ impl RatingSystem {
                 rating_trend: RatingTrend::Stable,
             });
         }
-
         let total_reviews: _ = plugin_ratings.len() as u64;
         let reviews_with_comments: _ = plugin_ratings
             .iter()
             .filter(|r| r.review.is_some())
             .count() as u64;
         let helpful_votes_total: u64 = plugin_ratings.iter().map(|r| r.helpful_votes).sum();
-
         let total_length: usize = plugin_ratings
             .iter()
             .filter_map(|r| r.review.as_ref().map(|s| s.len())
@@ -1129,10 +988,8 @@ impl RatingSystem {
         } else {
             0.0
         };
-
         // 简化的趋势计算（实际中会更复杂）
         let rating_trend: _ = RatingTrend::Stable;
-
         Ok(RatingStatistics {
             total_reviews,
             reviews_with_comments,
@@ -1142,7 +999,6 @@ impl RatingSystem {
         })
     }
 }
-
 /// 评分统计信息
 #[derive(Debug, Clone)]
 pub struct RatingStatistics {
@@ -1152,7 +1008,6 @@ pub struct RatingStatistics {
     pub average_review_length: f64,
     pub rating_trend: RatingTrend,
 }
-
 /// 评分趋势
 #[derive(Debug, Clone)]
 pub enum RatingTrend {
@@ -1160,7 +1015,6 @@ pub enum RatingTrend {
     Falling,
     Stable,
 }
-
 impl RatingStorage {
     pub fn new() -> Self {
         Self {
@@ -1169,13 +1023,11 @@ impl RatingStorage {
         }
     }
 }
-
 impl RatingStatsCalculator {
     pub fn new() -> Self {
         Self
     }
 }
-
 impl ReviewSystem {
     pub fn new() -> Self {
         Self {
@@ -1184,7 +1036,6 @@ impl ReviewSystem {
         }
     }
 }
-
 impl ReviewQueue {
     pub fn new() -> Self {
         Self {
@@ -1193,7 +1044,6 @@ impl ReviewQueue {
         }
     }
 }
-
 impl AutoReviewer {
     pub fn new() -> Self {
         Self {
@@ -1202,19 +1052,16 @@ impl AutoReviewer {
         }
     }
 }
-
 impl SecurityScanner {
     pub fn new() -> Self {
         Self
     }
 }
-
 impl QualityAnalyzer {
     pub fn new() -> Self {
         Self
     }
 }
-
 impl MarketplaceCache {
     pub fn new() -> Self {
         Self {
@@ -1227,24 +1074,19 @@ impl MarketplaceCache {
             },
         }
     }
-
     pub async fn warmup(&self) -> Result<()> {
         // 预热缓存
         Ok(())
     }
-
     pub async fn get_plugin(&self, plugin_id: &PluginId) -> Option<PluginMetadata> {
         self.plugin_cache.get(plugin_id).cloned()
     }
-
     pub async fn store_plugin(&mut self, plugin_id: &PluginId, plugin: PluginMetadata) {
         self.plugin_cache.insert(plugin_id.clone(), plugin);
     }
-
     pub async fn get_search_results(&self, cache_key: &str) -> Option<SearchResults> {
         self.search_cache.get(cache_key).cloned()
     }
-
     pub async fn store_search_results(&mut self, cache_key: String, results: SearchResults) {
         self.search_cache.insert(cache_key, results);
     }

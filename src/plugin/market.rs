@@ -1,8 +1,6 @@
 //! Plugin market module
-
 use anyhow::Result;
 use std::collections::HashMap;
-
 #[derive(Debug, Clone)]
 pub struct PluginInfo {
     pub name: String,
@@ -12,15 +10,12 @@ pub struct PluginInfo {
     pub rating: f64,
     pub author: String,
 }
-
 pub struct PluginMarket {
     plugins: HashMap<String, PluginInfo>,
 }
-
 impl PluginMarket {
     pub fn new() -> Self {
         let mut plugins = HashMap::new();
-
         // Add some example plugins
         plugins.insert("typescript-transformer".to_string(), PluginInfo {
             name: "typescript-transformer".to_string(),
@@ -30,7 +25,6 @@ impl PluginMarket {
             rating: 4.5,
             author: "Beejs Team".to_string(),
         });
-
         plugins.insert("css-minifier".to_string(), PluginInfo {
             name: "css-minifier".to_string(),
             version: "2.0.0".to_string(),
@@ -39,10 +33,8 @@ impl PluginMarket {
             rating: 4.2,
             author: "Beejs Team".to_string(),
         });
-
         Self { plugins }
     }
-
     /// Search plugins
     pub fn search(&self, query: &str) -> Vec<&PluginInfo> {
         self.plugins.values()
@@ -53,17 +45,14 @@ impl PluginMarket {
             })
             .collect()
     }
-
     /// Get plugin info
     pub fn get_plugin(&self, name: &str) -> Option<&PluginInfo> {
         self.plugins.get(name)
     }
-
     /// List all plugins
     pub fn list_all(&self) -> Vec<&PluginInfo> {
         self.plugins.values().collect()
     }
-
     /// Install plugin
     pub fn install(&self, name: &str) -> Result<String> {
         if let Some(plugin) = self.plugins.get(name) {
@@ -74,19 +63,16 @@ impl PluginMarket {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_plugin_market_creation() {
         let market: _ = PluginMarket::new();
         assert!(!market.list_all().is_empty());
     }
-
     #[test]
     fn test_search_plugins() {
         let market: _ = PluginMarket::new();
@@ -94,7 +80,6 @@ use std::collections::{HashMap, BTreeMap};
         assert!(!results.is_empty());
         assert!(results[0].name.contains("typescript"));
     }
-
     #[test]
     fn test_install_plugin() {
         let market: _ = PluginMarket::new();

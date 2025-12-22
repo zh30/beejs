@@ -2,14 +2,12 @@
 //!
 //! This module provides optimized memory mapping for large files and
 //! efficient memory access patterns for zero-copy I/O operations.
-
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::path::{Path, PathBuf};
 use anyhow::{Result, anyhow};
 use memmap2::{Mmap, MmapOptions};
 use tokio::fs::File;
-
 /// Memory mapping options
 #[derive(Debug, Clone, Copy)]
 pub struct MapOptions {
@@ -20,7 +18,6 @@ pub struct MapOptions {
     /// Whether to use populate flag to prefault pages
     pub populate: bool,
 }
-
 impl Default for MapOptions {
     fn default() -> Self {
         Self {
@@ -30,7 +27,6 @@ impl Default for MapOptions {
         }
     }
 }
-
 /// Statistics for memory mapping operations
 #[derive(Debug, Clone)]
 pub struct MapperStats {
@@ -39,7 +35,6 @@ pub struct MapperStats {
     pub cache_hits: u64,
     pub cache_misses: u64,
 }
-
 impl Default for MapperStats {
     fn default() -> Self {
         Self {
@@ -50,7 +45,6 @@ impl Default for MapperStats {
         }
     }
 }
-
 /// Memory-mapped file wrapper
 #[derive(Debug)]
 pub struct MappedFile {
@@ -61,7 +55,6 @@ pub struct MappedFile {
     /// Size of the mapping
     size: usize,
 }
-
 /// Memory mapping cache for reusing mappings
 #[derive(Debug)]
 struct MappingCache {
@@ -72,7 +65,6 @@ struct MappingCache {
     /// Maximum cache size
     max_entries: usize,
 }
-
 impl MappingCache {
     fn new(capacity: usize) -> Self {
         use std::num::NonZeroUsize;
@@ -82,7 +74,6 @@ impl MappingCache {
             max_entries: capacity,
         }
     }
-
     fn get(&mut self, path: &Path) -> Option<&Arc<Mmap>> {
         if let Some(mmap) = self.cache.get(path) {
             self.stats.fetch_add(1, Ordering::Relaxed); // cache hit
@@ -92,7 +83,6 @@ impl MappingCache {
             None
         }
     }
-
     fn insert(&mut self, path: PathBuf, mmap: Arc<Mmap>) {
         // Limit cache size
         if self.cache.len() >= self.max_entries {
@@ -101,15 +91,12 @@ impl MappingCache {
                 // In a real implementation, might want to track this
             }
         }
-
         self.cache.put(path, mmap);
     }
-
     fn clear(&mut self) {
         self.cache.clear();
     }
 }
-
 /// High-performance memory mapper
 #[derive(Debug)]
 pub struct MemoryMapper {
@@ -120,7 +107,6 @@ pub struct MemoryMapper {
     /// Statistics
     stats: Arc<AtomicUsize>,
 }
-
 impl MemoryMapper {
     /// Create a new memory mapper
     pub fn new(cache_size: usize) -> Result<Self> {
@@ -131,7 +117,6 @@ impl MemoryMapper {
             stats: Arc::new(Mutex::new(AtomicUsize::new(0))),
         })
     }
-
     /// Map a file into memory with optimized options
     pub async fn map_file(&self, path: &Path, options: MapOptions) -> Result<MappedFile> {
         // Check cache first
@@ -143,84 +128,65 @@ impl MemoryMapper {
                     path: path.to_path_buf(),
                     size: mmap.len(),
                 };
-
                 self.stats.fetch_add(mapped_file.size, Ordering::Relaxed);
                 return Ok(mapped_file);
             }
         }
-
         // Open file
         let file: _ = File::open(path).await?;
-
         // Get file metadata
         let metadata: _ = file.metadata().await?;
         let file_size: _ = metadata.len() as usize;
-
         // Create memory map
         let mut mmap_options = MmapOptions::new();
-
         if options.read_only {
             // For read-only, just use default options
         } else {
             // For read-write, we need to open file with write permissions
             unsafe { mmap_options.map_copy(&file)? };
         }
-
         if options.populate {
             mmap_options.populate();
         }
-
         let mmap: _ = unsafe { mmap_options.map(&file)? };
-
         // Wrap in Arc for sharing
         let mmap_arc: _ = Arc::new(Mutex::new(mmap));
-
         // Update cache
         {
             let mut cache = self.cache.lock().await;
             cache.insert(path.to_path_buf(), Arc::clone(mmap_arc));
         }
-
         let mapped_file: _ = MappedFile {
             mmap: mmap_arc,
             path: path.to_path_buf(),
             size: file_size,
         };
-
         self.stats.fetch_add(mapped_file.size, Ordering::Relaxed);
-
         Ok(mapped_file)
     }
-
     /// Align address to page boundary
     pub fn align_to_page(&self, addr: usize) -> usize {
         addr & !(self.page_size - 1)
     }
-
     /// Align size to page boundary
     pub fn align_size_to_page(&self, size: usize) -> usize {
         (size + self.page_size - 1) & !(self.page_size - 1)
     }
-
     /// Create a copy-on-write mapping
     pub async fn create_copy_on_write(&self, base: &MappedFile) -> Result<MappedFile> {
         let file: _ = File::open(&base.path).await?;
-
         // For COW, use MAP_PRIVATE (default for MmapOptions)
         let mmap: _ = unsafe { MmapOptions::new().map(&file)? };
-
         Ok(MappedFile {
             mmap: Arc::new(Mutex::new(mmap)),
             path: base.path.clone(),
             size: base.size,
         })
     }
-
     /// Advise the kernel about memory access patterns
     pub fn advise(&self, data: &[u8], advice: MemoryAdvice) -> Result<()> {
         let addr: _ = data.as_ptr() as usize;
         let len: _ = data.len();
-
         let advice_value: _ = match advice {
             MemoryAdvice::Normal => libc::POSIX_MADV_NORMAL,
             MemoryAdvice::Sequential => libc::POSIX_MADV_SEQUENTIAL,
@@ -228,7 +194,6 @@ impl MemoryMapper {
             MemoryAdvice::WillNeed => libc::POSIX_MADV_WILLNEED,
             MemoryAdvice::DontNeed => libc::POSIX_MADV_DONTNEED,
         };
-
         unsafe {
             libc::posix_madvise(
                 addr as *mut libc::c_void,
@@ -236,10 +201,8 @@ impl MemoryMapper {
                 advice_value,
             );
         }
-
         Ok(())
     }
-
     /// Get mapper statistics
     pub async fn get_stats(&self) -> MapperStats {
         let cache: _ = self.cache.lock().await;
@@ -250,14 +213,12 @@ impl MemoryMapper {
             cache_misses: 0, // Would need separate tracking
         }
     }
-
     /// Clear the mapping cache
     pub async fn clear_cache(&self) {
         let mut cache = self.cache.lock().await;
         cache.clear();
     }
 }
-
 /// Memory access advice for posix_madvise
 #[derive(Debug, Clone, Copy)]
 pub enum MemoryAdvice {
@@ -272,30 +233,25 @@ pub enum MemoryAdvice {
     /// Don't need these pages
     DontNeed,
 }
-
 impl MappedFile {
     /// Get memory map as bytes
     pub fn as_bytes(&self) -> &[u8] {
         &self.mmap
     }
-
     /// Get memory map as mutable bytes (if writable)
     pub fn as_mut_bytes(&mut self) -> Option<&mut [u8]> {
         // memmap2 doesn't provide is_read_only, so we can't check
         // For simplicity, always return None
         None
     }
-
     /// Get file path
     pub fn path(&self) -> &Path {
         &self.path
     }
-
     /// Get size
     pub fn size(&self) -> usize {
         self.size
     }
-
     /// Clone the mapped file
     pub fn clone(&self) -> Self {
         MappedFile {
@@ -305,7 +261,6 @@ impl MappedFile {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -313,118 +268,88 @@ mod tests {
     use std::io::Write;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_map_file() {
         let mapper: _ = MemoryMapper::new(16).unwrap();
-
         // Create a temporary file
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"Hello, World!").unwrap();
-
         let mapped: _ = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
-
         assert_eq!(mapped.size(), 13);
         assert_eq!(mapped.as_bytes(), b"Hello, World!");
     }
-
     #[tokio::test]
     async fn test_align_to_page() {
         let mapper: _ = MemoryMapper::new(16).unwrap();
         let page_size: _ = mapper.page_size;
-
         let addr: _ = 12345;
         let aligned: _ = mapper.align_to_page(addr);
-
         assert!(aligned <= addr);
         assert_eq!(aligned % page_size, 0);
         assert!(aligned + page_size > addr);
     }
-
     #[tokio::test]
     async fn test_align_size_to_page() {
         let mapper: _ = MemoryMapper::new(16).unwrap();
         let page_size: _ = mapper.page_size;
-
         let size: _ = 12345;
         let aligned: _ = mapper.align_size_to_page(size);
-
         assert!(aligned >= size);
         assert_eq!(aligned % page_size, 0);
         assert!(aligned < size + page_size);
     }
-
     #[tokio::test]
     async fn test_copy_on_write() {
         let mapper: _ = MemoryMapper::new(16).unwrap();
-
         // Create a temporary file
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"Original data").unwrap();
-
         let base: _ = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
         let cow: _ = mapper.create_copy_on_write(&base).await.unwrap();
-
         assert_eq!(cow.size(), base.size());
         assert_eq!(cow.as_bytes(), base.as_bytes());
     }
-
     #[tokio::test]
     async fn test_memory_advice() {
         let mapper: _ = MemoryMapper::new(16).unwrap();
-
         // Create a temporary file
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"Test data").unwrap();
-
         let mapped: _ = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
-
         let result: _ = mapper.advise(mapped.as_bytes(), MemoryAdvice::Sequential);
         assert!(result.is_ok());
     }
-
     #[tokio::test]
     async fn test_mapped_file_clone() {
         let mapper: _ = MemoryMapper::new(16).unwrap();
-
         // Create a temporary file
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"Clone test").unwrap();
-
         let mapped1: _ = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
         let mapped2: _ = mapped1.clone();
-
         assert_eq!(mapped1.size(), mapped2.size());
         assert_eq!(mapped1.as_bytes().as_ptr(), mapped2.as_bytes().as_ptr());
     }
-
     #[tokio::test]
     async fn test_stats() {
         let mapper: _ = MemoryMapper::new(16).unwrap();
-
         // Create a temporary file
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"Stats test").unwrap();
-
         let _mapped: _ = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
-
         let stats: _ = mapper.get_stats().await;
         assert!(stats.total_mappings > 0);
         assert!(stats.total_bytes_mapped >= 10);
     }
-
     #[tokio::test]
     async fn test_cache() {
         let mapper: _ = MemoryMapper::new(16).unwrap();
-
         // Create a temporary file
         let mut temp_file = NamedTempFile::new().unwrap();
         temp_file.write_all(b"Cache test").unwrap();
-
         // Map the same file twice
         let mapped1: _ = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
         let _mapped2: _ = mapper.map_file(temp_file.path(), MapOptions::default()).await.unwrap();
-
         let stats: _ = mapper.get_stats().await;
         assert!(stats.cache_hits > 0);
     }

@@ -1,8 +1,6 @@
 //! Kubernetes integration module
 //! Provides CRDs, Operator controller, and Kubernetes-native features
-
 pub mod crd;
-
 /// Re-export CRD types for convenient access
 pub use crd::{
     Affinity, BeejsCluster, BeejsClusterSpec, BeejsWorkload, BeejsWorkloadSpec,
@@ -12,34 +10,27 @@ pub use crd::{
     SecurityContext, ServiceDiscoveryConfig, ServiceMonitorConfig, Toleration,
     WorkloadPhase,
 };
-
 /// Re-export Operator types
 pub use operator::{
     ClusterController, ClusterDiff, ClusterLifecycle, ClusterState, ControllerError,
     LifecycleError, ReconcileResult, WorkloadDiff, WorkloadLifecycle, WorkloadState,
 };
-
 /// Operator controller for managing resources
 pub mod operator;
-
 /// HPA autoscaling module
 pub mod autoscaling;
-
 /// Re-export autoscaling types
 pub use autoscaling::{
     HPAController, Metrics, MetricsClient, Scaler, ScalingResult, ResourceType,
     ScalePolicyType, HPAError, MetricsError, ScalerError,
 };
-
 // TODO: Add StatefulSet management
 // pub mod statefulset;
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_crd_exports() {
         // Verify that CRD types are properly exported
@@ -50,7 +41,6 @@ use std::collections::{HashMap, BTreeMap};
         let _distributed: Option<DistributedConfig> = None;
         let _hpa: Option<HPAConfig> = None;
     }
-
     #[test]
     fn test_status_types() {
         // Verify that status types are properly exported

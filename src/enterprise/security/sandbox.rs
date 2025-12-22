@@ -1,6 +1,5 @@
 //! Runtime Security Sandbox
 //! 实现运行时安全沙箱和资源隔离
-
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -8,7 +7,6 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use tracing::{info, warn, error, debug};
-
 /// Sandbox configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SandboxConfig {
@@ -35,7 +33,6 @@ pub struct SandboxConfig {
     /// Environment variables to remove
     pub blocked_env_vars: Vec<String>,
 }
-
 /// Resource limits
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceLimits {
@@ -50,7 +47,6 @@ pub struct ResourceLimits {
     /// Maximum file size in bytes
     pub max_file_size: u64,
 }
-
 /// Sandbox execution result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SandboxResult {
@@ -73,7 +69,6 @@ pub struct SandboxResult {
     /// Network connections
     pub network_connections: Vec<String>,
 }
-
 /// Runtime security sandbox
 #[derive(Debug)]
 pub struct SecuritySandbox {
@@ -84,7 +79,6 @@ pub struct SecuritySandbox {
     /// Resource usage tracker
     resource_usage: Arc<Mutex<ResourceTracker>>,
 }
-
 /// Sandbox execution
 #[derive(Debug)]
 struct SandboxExecution {
@@ -97,7 +91,6 @@ struct SandboxExecution {
     /// Command
     command: String,
 }
-
 /// Resource tracker
 #[derive(Debug, Default)]
 struct ResourceTracker {
@@ -110,7 +103,6 @@ struct ResourceTracker {
     /// Peak memory usage
     peak_memory: u64,
 }
-
 impl SecuritySandbox {
     /// Create a new SecuritySandbox
     pub fn new(config: SandboxConfig) -> Result<Self> {
@@ -119,29 +111,22 @@ impl SecuritySandbox {
             std::fs::create_dir_all(&config.base_dir)
                 .context("Failed to create sandbox base directory")?;
         }
-
         info!("Security sandbox initialized with base dir: {:?}", config.base_dir);
-
         Ok(Self {
             config,
             active_sandboxes: Arc::new(Mutex::new(HashMap::new()))
             resource_usage: Arc::new(Mutex::new(ResourceTracker::default()))
         })
     }
-
     /// Execute a command in the sandbox
     pub async fn execute(&self, command: &str, args: &[&str]) -> Result<SandboxResult> {
         let sandbox_id: _ = format!("sandbox_{}", std::process::id());
         let work_dir: _ = self.create_sandbox_dir(&sandbox_id)?;
-
         info!("Executing command in sandbox: {} {}", command, args.join(" "));
-
         // Set up resource limits
         let limits: _ = self.create_resource_limits();
-
         // Execute command with restrictions
         let start_time: _ = std::time::Instant::now();
-
         let output: _ = Command::new(command)
             .args(args)
             .current_dir(&work_dir)
@@ -150,9 +135,7 @@ impl SecuritySandbox {
             .stdin(Stdio::null())
             .spawn()
             .context("Failed to spawn sandboxed process")?;
-
         let pid: _ = output.id();
-
         // Track sandbox execution
         {
             let mut active = self.active_sandboxes.lock().unwrap();
@@ -163,16 +146,12 @@ impl SecuritySandbox {
                 command: format!("{} {}", command, args.join(" ")),
             });
         }
-
         // Wait for process completion
         let result: _ = output.wait_with_output()
             .context("Failed to wait for sandboxed process")?;
-
         let execution_time: _ = start_time.elapsed();
-
         // Clean up
         self.cleanup_sandbox_dir(&work_dir)?;
-
         let sandbox_result: _ = SandboxResult {
             success: result.status.success(),
             exit_code: result.status.code().unwrap_or(-1),
@@ -184,21 +163,16 @@ impl SecuritySandbox {
             files_created: Vec::new(), // TODO: Implement file tracking
             network_connections: Vec::new(), // TODO: Implement network tracking
         };
-
         info!("Sandbox execution completed: success={}, exit_code={}",
             sandbox_result.success, sandbox_result.exit_code);
-
         Ok(sandbox_result)
     }
-
     /// Create a sandboxed working directory
     fn create_sandbox_dir(&self, sandbox_id: &str) -> Result<PathBuf> {
         let work_dir: _ = self.config.base_dir.join(sandbox_id);
-
         // Create directory with restricted permissions
         std::fs::create_dir_all(&work_dir)
             .context("Failed to create sandbox directory")?;
-
         // Set directory permissions (read/write/execute for owner only)
         #[cfg(unix)]
         {
@@ -206,10 +180,8 @@ impl SecuritySandbox {
             std::fs::set_permissions(&work_dir, std::fs::Permissions::from_mode(0o700))
                 .context("Failed to set sandbox directory permissions")?;
         }
-
         Ok(work_dir)
     }
-
     /// Clean up sandbox directory
     fn cleanup_sandbox_dir(&self, work_dir: &PathBuf) -> Result<()> {
         if work_dir.exists() {
@@ -218,7 +190,6 @@ impl SecuritySandbox {
         }
         Ok(())
     }
-
     /// Create resource limits for the process
     fn create_resource_limits(&self) -> ResourceLimits {
         ResourceLimits {
@@ -229,7 +200,6 @@ impl SecuritySandbox {
             max_file_size: self.config.max_file_size,
         }
     }
-
     /// Check if a path is allowed
     pub fn is_path_allowed(&self, path: &PathBuf) -> bool {
         // Check blocked paths first
@@ -238,48 +208,38 @@ impl SecuritySandbox {
                 return false;
             }
         }
-
         // Check allowed paths
         for allowed in &self.config.allowed_paths {
             if path.starts_with(allowed) {
                 return true;
             }
         }
-
         // If no allowed paths specified, default to sandbox base dir
         if self.config.allowed_paths.is_empty() {
             return path.starts_with(&self.config.base_dir);
         }
-
         false
     }
-
     /// Get sandbox statistics
     pub fn get_stats(&self) -> HashMap<String, serde_json::Value> {
         let mut stats = HashMap::new();
-
         let active: _ = self.active_sandboxes.lock().unwrap();
         let resources: _ = self.resource_usage.lock().unwrap();
-
         stats.insert("active_sandboxes".to_string(), serde_json::Value::from(active.len());
         stats.insert("total_memory_bytes".to_string(), serde_json::Value::from(resources.total_memory));
         stats.insert("total_cpu_time_seconds".to_string(), serde_json::Value::from(resources.total_cpu_time));
         stats.insert("peak_memory_bytes".to_string(), serde_json::Value::from(resources.peak_memory));
-
         stats
     }
-
     /// Terminate a sandboxed process
     pub fn terminate_sandbox(&self, sandbox_id: &str) -> Result<()> {
         let mut active = self.active_sandboxes.lock().unwrap();
-
         if let Some(execution) = active.remove(sandbox_id) {
             #[cfg(unix)]
             {
                 use libc::{kill, SIGTERM};
                 unsafe { kill(execution.pid as i32, SIGTERM) };
             }
-
             #[cfg(windows)]
             {
                 Command::new("taskkill")
@@ -287,23 +247,18 @@ impl SecuritySandbox {
                     .status()
                     .ok();
             }
-
             // Clean up directory
             self.cleanup_sandbox_dir(&execution.work_dir)?;
-
             info!("Terminated sandbox: {}", sandbox_id);
         }
-
         Ok(())
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_sandbox_creation() {
         let config: _ = SandboxConfig {
@@ -319,11 +274,9 @@ use std::collections::{HashMap, BTreeMap};
             env_vars: HashMap::new(),
             blocked_env_vars: Vec::new(),
         };
-
         let sandbox: _ = SecuritySandbox::new(config);
         assert!(sandbox.is_ok());
     }
-
     #[test]
     fn test_path_allowed() {
         let config: _ = SandboxConfig {
@@ -339,13 +292,10 @@ use std::collections::{HashMap, BTreeMap};
             env_vars: HashMap::new(),
             blocked_env_vars: Vec::new(),
         };
-
         let sandbox: _ = SecuritySandbox::new(config).unwrap();
-
         assert!(sandbox.is_path_allowed(&PathBuf::from("/tmp/beejs-sandbox/test"));
         assert!(!sandbox.is_path_allowed(&PathBuf::from("/etc/passwd"));
     }
-
     #[test]
     fn test_resource_limits() {
         let config: _ = SandboxConfig {
@@ -361,10 +311,8 @@ use std::collections::{HashMap, BTreeMap};
             env_vars: HashMap::new(),
             blocked_env_vars: Vec::new(),
         };
-
         let sandbox: _ = SecuritySandbox::new(config).unwrap();
         let limits: _ = sandbox.create_resource_limits();
-
         assert_eq!(limits.memory, 512 * 1024 * 1024);
         assert_eq!(limits.cpu_time, 30);
         assert_eq!(limits.max_processes, 5);

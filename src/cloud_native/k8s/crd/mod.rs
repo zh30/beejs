@@ -1,19 +1,15 @@
 //! Custom Resource Definitions for Kubernetes
 //! Defines BeejsCluster and BeejsWorkload CRDs
-
 use serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
-
 mod beejs_cluster;
 mod beejs_workload;
-
 pub use beejs_cluster::{
     Affinity, BeejsCluster, BeejsClusterSpec, DistributedConfig, MonitoringConfig,
     PodAffinity, PodAntiAffinity, PreferredSchedulingTerm, ResourceRequirements,
     SecurityConfig, SecurityContext, ServiceDiscoveryConfig, ServiceMonitorConfig,
     Toleration,
 };
-
 pub use beejs_workload::{
     BeejsWorkload, BeejsWorkloadSpec, BufferConfig, CustomMetric, ExecutionConfig,
     ExecutionMode, HPAConfig, IOConfig, IngressBackend, IngressConfig, IngressHost,
@@ -22,107 +18,82 @@ pub use beejs_workload::{
     OutputDestination, PersistenceConfig, RetryConfig, ScalePolicy, ServiceConfig,
     ServicePort,
 };
-
 /// Status phases for BeejsCluster
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ClusterPhase {
     /// Cluster is pending creation
     Pending,
-
     /// Cluster is being created
     Creating,
-
     /// Cluster is running normally
     Running,
-
     /// Cluster is being updated
     Updating,
-
     /// Cluster has failed
     Failed,
 }
-
 /// Status for BeejsWorkload
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WorkloadPhase {
     /// Workload is pending
     Pending,
-
     /// Workload is creating
     Creating,
-
     /// Workload is running
     Running,
-
     /// Workload is being updated
     Updating,
-
     /// Workload has failed
     Failed,
 }
-
 /// Condition types for cluster/workload status
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ConditionType {
     /// Available condition
     Available,
-
     /// Ready condition
     Ready,
-
     /// Failed condition
     Failed,
-
     /// Updating condition
     Updating,
 }
-
 /// Condition status
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ConditionStatus {
     /// Condition is true
     True,
-
     /// Condition is false
     False,
-
     /// Condition is unknown
     Unknown,
 }
-
 /// Common condition structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Default))]
 pub struct Condition {
     /// Type of the condition
     pub condition_type: ConditionType,
-
     /// Status of the condition
     pub status: ConditionStatus,
-
     /// Last time we probed the condition
     pub last_probe_time: Option<String>,
-
     /// Last time the condition transitioned from one status to another
     pub last_transition_time: Option<String>,
-
     /// Unique, one-word, CamelCase reason for the condition's last transition
     pub reason: Option<String>,
-
     /// Human-readable message indicating details about the transition
     pub message: Option<String>,
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_cluster_phases() {
         assert_eq!(ClusterPhase::Pending.as_str(), "Pending");
@@ -131,7 +102,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(ClusterPhase::Updating.as_str(), "Updating");
         assert_eq!(ClusterPhase::Failed.as_str(), "Failed");
     }
-
     #[test]
     fn test_workload_phases() {
         assert_eq!(WorkloadPhase::Pending.as_str(), "Pending");
@@ -140,7 +110,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(WorkloadPhase::Updating.as_str(), "Updating");
         assert_eq!(WorkloadPhase::Failed.as_str(), "Failed");
     }
-
     #[test]
     fn test_condition_types() {
         assert_eq!(ConditionType::Available.as_str(), "Available");
@@ -148,14 +117,12 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(ConditionType::Failed.as_str(), "Failed");
         assert_eq!(ConditionType::Updating.as_str(), "Updating");
     }
-
     #[test]
     fn test_condition_status() {
         assert_eq!(ConditionStatus::True.as_str(), "True");
         assert_eq!(ConditionStatus::False.as_str(), "False");
         assert_eq!(ConditionStatus::Unknown.as_str(), "Unknown");
     }
-
     #[test]
     fn test_condition_structure() {
         let condition: _ = Condition {
@@ -166,14 +133,12 @@ use std::collections::{HashMap, BTreeMap};
             reason: Some("KubeScheduler".to_string()),
             message: Some("Pod has been scheduled".to_string()),
         };
-
         assert_eq!(condition.condition_type, ConditionType::Ready);
         assert_eq!(condition.status, ConditionStatus::True);
         assert!(condition.reason.is_some());
         assert!(condition.message.is_some());
     }
 }
-
 // Implement helper methods for enums
 impl ClusterPhase {
     pub fn as_str(&self) -> &'static str {
@@ -186,7 +151,6 @@ impl ClusterPhase {
         }
     }
 }
-
 impl WorkloadPhase {
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -198,7 +162,6 @@ impl WorkloadPhase {
         }
     }
 }
-
 impl ConditionType {
     pub fn as_str(&self) -> &'static str {
         match self {
@@ -209,7 +172,6 @@ impl ConditionType {
         }
     }
 }
-
 impl ConditionStatus {
     pub fn as_str(&self) -> &'static str {
         match self {

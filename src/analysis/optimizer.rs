@@ -2,14 +2,12 @@
 //!
 //! This module generates actionable optimization suggestions based on
 //! performance analysis and bottleneck detection results.
-
 use crate::analysis::bottleneck_detector::{
     Bottleneck, BottleneckType, BottleneckDetector, BottleneckSeverity
 };
 use crate::performance_analyzer::PerformanceReport;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
 /// Optimization priority levels
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum OptimizationPriority {
@@ -22,7 +20,6 @@ pub enum OptimizationPriority {
     /// Low - fix when resources available
     Low,
 }
-
 /// Category of optimization
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum OptimizationCategory {
@@ -41,7 +38,6 @@ pub enum OptimizationCategory {
     /// Configuration tuning
     ConfigurationTuning,
 }
-
 /// An optimization suggestion
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationSuggestion {
@@ -57,12 +53,10 @@ pub struct OptimizationSuggestion {
     pub related_bottlenecks: Vec<String>,
     pub references: Vec<String>,
 }
-
 /// Performance optimizer that generates suggestions
 pub struct PerformanceOptimizer {
     bottleneck_detector: BottleneckDetector,
 }
-
 impl PerformanceOptimizer {
     /// Create a new performance optimizer
     pub fn new() -> Self {
@@ -70,26 +64,21 @@ impl PerformanceOptimizer {
             bottleneck_detector: BottleneckDetector::new(),
         }
     }
-
     /// Generate optimization suggestions from bottlenecks
     pub fn generate_suggestions(&self, bottlenecks: &[Bottleneck]) -> Vec<OptimizationSuggestion> {
         let mut suggestions = Vec::new();
-
         for bottleneck in bottlenecks {
             let mut bottleneck_suggestions = self.suggest_for_bottleneck(bottleneck);
             suggestions.append(&mut bottleneck_suggestions);
         }
-
         // Sort by priority
         suggestions.sort_by(|a, b| {
             let a_val: _ = self.priority_to_value(&a.priority);
             let b_val: _ = self.priority_to_value(&b.priority);
             b_val.cmp(&a_val)
         });
-
         suggestions
     }
-
     /// Generate suggestions for a specific bottleneck
     fn suggest_for_bottleneck(&self, bottleneck: &Bottleneck) -> Vec<OptimizationSuggestion> {
         match &bottleneck.bottleneck_type {
@@ -104,7 +93,6 @@ impl PerformanceOptimizer {
             BottleneckType::Other(_) => self.suggest_for_other(bottleneck),
         }
     }
-
     /// Suggestions for slow execution
     fn suggest_for_slow_execution(&self, bottleneck: &Bottleneck) -> Vec<OptimizationSuggestion> {
         vec![
@@ -177,7 +165,6 @@ impl PerformanceOptimizer {
             },
         ]
     }
-
     /// Suggestions for low cache hit rate
     fn suggest_for_low_cache_hit_rate(&self, bottleneck: &Bottleneck) -> Vec<OptimizationSuggestion> {
         vec![
@@ -225,7 +212,6 @@ impl PerformanceOptimizer {
             },
         ]
     }
-
     /// Suggestions for high memory usage
     fn suggest_for_high_memory_usage(&self, bottleneck: &Bottleneck) -> Vec<OptimizationSuggestion> {
         vec![
@@ -274,7 +260,6 @@ impl PerformanceOptimizer {
             },
         ]
     }
-
     /// Suggestions for CPU-intensive operations
     fn suggest_for_cpu_intensive(&self, bottleneck: &Bottleneck) -> Vec<OptimizationSuggestion> {
         vec![
@@ -302,7 +287,6 @@ impl PerformanceOptimizer {
             },
         ]
     }
-
     /// Suggestions for I/O blocking operations
     fn suggest_for_io_blocking(&self, bottleneck: &Bottleneck) -> Vec<OptimizationSuggestion> {
         vec![
@@ -329,7 +313,6 @@ impl PerformanceOptimizer {
             },
         ]
     }
-
     /// Suggestions for heap pressure
     fn suggest_for_heap_pressure(&self, bottleneck: &Bottleneck) -> Vec<OptimizationSuggestion> {
         vec![
@@ -356,7 +339,6 @@ impl PerformanceOptimizer {
             },
         ]
     }
-
     /// Suggestions for frequent garbage collection
     fn suggest_for_frequent_gc(&self, bottleneck: &Bottleneck) -> Vec<OptimizationSuggestion> {
         vec![
@@ -383,7 +365,6 @@ impl PerformanceOptimizer {
             },
         ]
     }
-
     /// Suggestions for event loop lag
     fn suggest_for_event_loop_lag(&self, bottleneck: &Bottleneck) -> Vec<OptimizationSuggestion> {
         vec![
@@ -410,7 +391,6 @@ impl PerformanceOptimizer {
             },
         ]
     }
-
     /// Suggestions for other bottlenecks
     fn suggest_for_other(&self, bottleneck: &Bottleneck) -> Vec<OptimizationSuggestion> {
         vec![
@@ -438,7 +418,6 @@ impl PerformanceOptimizer {
             },
         ]
     }
-
     /// Convert priority to numeric value for sorting
     fn priority_to_value(&self, priority: &OptimizationPriority) -> i32 {
         match priority {
@@ -448,7 +427,6 @@ impl PerformanceOptimizer {
             OptimizationPriority::Low => 2,
         }
     }
-
     /// Generate a comprehensive optimization report
     pub fn generate_optimization_report(
         &self,
@@ -456,9 +434,7 @@ impl PerformanceOptimizer {
     ) -> HashMap<String, _> {
         let bottlenecks: _ = self.bottleneck_detector.detect_bottlenecks(report);
         let suggestions: _ = self.generate_suggestions(&bottlenecks);
-
         let mut categorized_suggestions = HashMap::new();
-
         for suggestion in suggestions {
             let category: _ = format!("{:?}", suggestion.category);
             categorized_suggestions
@@ -466,30 +442,25 @@ impl PerformanceOptimizer {
                 .or_insert_with(Vec::new)
                 .push(suggestion);
         }
-
         categorized_suggestions
     }
 }
-
 impl Default for PerformanceOptimizer {
     fn default() -> Self {
         Self::new()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_optimizer_creation() {
         let optimizer: _ = PerformanceOptimizer::new();
         // Just ensure it doesn't panic
         let _: _ = optimizer;
     }
-
     #[test]
     fn test_generate_suggestions_for_slow_execution() {
         let optimizer: _ = PerformanceOptimizer::new();
@@ -501,12 +472,10 @@ use std::collections::{HashMap, BTreeMap};
             suggestion: "Optimize code".to_string(),
             code_location: None,
         };
-
         let suggestions: _ = optimizer.generate_suggestions(&[bottleneck]);
         assert!(!suggestions.is_empty());
         assert!(suggestions.iter().any(|s| s.category == OptimizationCategory::JITOptimization));
     }
-
     #[test]
     fn test_generate_suggestions_for_low_cache_hit_rate() {
         let optimizer: _ = PerformanceOptimizer::new();
@@ -518,12 +487,10 @@ use std::collections::{HashMap, BTreeMap};
             suggestion: "Increase cache size".to_string(),
             code_location: None,
         };
-
         let suggestions: _ = optimizer.generate_suggestions(&[bottleneck]);
         assert!(!suggestions.is_empty());
         assert!(suggestions.iter().any(|s| s.category == OptimizationCategory::CachingStrategy));
     }
-
     #[test]
     fn test_generate_optimization_report() {
         let optimizer: _ = PerformanceOptimizer::new();
@@ -535,15 +502,12 @@ use std::collections::{HashMap, BTreeMap};
             cache_hit_rate: 30.0,
             total_code_executed: 1000,
         };
-
         let optimization_report: _ = optimizer.generate_optimization_report(&report);
         assert!(!optimization_report.is_empty());
     }
-
     #[test]
     fn test_priority_sorting() {
         let optimizer: _ = PerformanceOptimizer::new();
-
         let suggestions: _ = vec![
             OptimizationSuggestion {
                 id: "1".to_string(),
@@ -572,7 +536,6 @@ use std::collections::{HashMap, BTreeMap};
                 references: vec![],
             },
         ];
-
         // Manually create bottlenecks and suggestions
         let bottlenecks: _ = vec![
             Bottleneck {
@@ -584,14 +547,12 @@ use std::collections::{HashMap, BTreeMap};
                 code_location: None,
             }
         ];
-
         let mut suggestions = optimizer.generate_suggestions(&bottlenecks);
         suggestions.sort_by(|a, b| {
             let a_val: _ = optimizer.priority_to_value(&a.priority);
             let b_val: _ = optimizer.priority_to_value(&b.priority);
             b_val.cmp(&a_val)
         });
-
         assert!(matches!(suggestions[0].priority, OptimizationPriority::Critical));
     }
 }

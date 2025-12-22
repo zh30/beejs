@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 // 跨平台资产互通系统
-
 /// 资产格式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AssetFormat {
@@ -18,13 +17,11 @@ pub enum AssetFormat {
     /// VRM (VR 虚拟形象)
     VRM,
 }
-
 impl Default for AssetFormat {
     fn default() -> Self {
         Self::GLTF
     }
 }
-
 /// 资产
 #[derive(Debug, Clone)]
 pub struct Asset {
@@ -35,7 +32,6 @@ pub struct Asset {
     /// 数据
     pub data: Vec<u8>,
 }
-
 /// 资产变换
 #[derive(Debug, Clone)]
 pub struct AssetTransform {
@@ -46,7 +42,6 @@ pub struct AssetTransform {
     /// 缩放
     pub scale: [f32; 3],
 }
-
 impl Default for AssetTransform {
     fn default() -> Self {
         Self {
@@ -56,13 +51,11 @@ impl Default for AssetTransform {
         }
     }
 }
-
 /// 资产互通系统
 pub struct AssetInterop {
     /// 支持的格式
     supported_formats: Vec<AssetFormat>,
 }
-
 impl AssetInterop {
     /// 创建资产互通系统
     pub fn new() -> Self {
@@ -77,22 +70,18 @@ impl AssetInterop {
             ],
         }
     }
-
     /// 检查格式是否支持
     pub fn supports_format(&self, format: AssetFormat) -> bool {
         self.supported_formats.contains(&format)
     }
-
     /// 转换资产格式
     pub fn convert(&self, asset: &Asset, target_format: AssetFormat) -> Result<Asset, AssetError> {
         if !self.supports_format(asset.format) {
             return Err(AssetError::UnsupportedFormat(format!("{:?}", asset.format)));
         }
-
         if !self.supports_format(target_format) {
             return Err(AssetError::UnsupportedFormat(format!("{:?}", target_format)));
         }
-
         // 简化实现：直接返回新格式的资产
         Ok(Asset {
             id: asset.id.clone(),
@@ -100,7 +89,6 @@ impl AssetInterop {
             data: asset.data.clone(),
         })
     }
-
     /// 验证资产
     pub fn validate(&self, asset: &Asset) -> Result<(), AssetError> {
         if asset.data.is_empty() {
@@ -108,7 +96,6 @@ impl AssetInterop {
         }
         Ok(())
     }
-
     /// 获取资产元数据
     pub fn get_metadata(&self, asset: &Asset) -> AssetMetadata {
         AssetMetadata {
@@ -118,13 +105,11 @@ impl AssetInterop {
         }
     }
 }
-
 impl Default for AssetInterop {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// 资产元数据
 #[derive(Debug, Clone)]
 pub struct AssetMetadata {
@@ -135,7 +120,6 @@ pub struct AssetMetadata {
     /// ID
     pub id: String,
 }
-
 /// 资产错误
 #[derive(Debug, Clone)]
 pub enum AssetError {
@@ -148,7 +132,6 @@ pub enum AssetError {
     /// 加载失败
     LoadFailed(String),
 }
-
 impl std::fmt::Display for AssetError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -159,5 +142,4 @@ impl std::fmt::Display for AssetError {
         }
     }
 }
-
 impl std::error::Error for AssetError {}

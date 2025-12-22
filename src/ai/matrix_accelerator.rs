@@ -2,10 +2,8 @@
 //!
 //! 提供 BLAS 优化的矩阵运算，利用 SIMD 指令集加速矩阵乘法
 //! 支持批处理操作和缓存友好的内存布局优化
-
 use std::sync::atomic::{AtomicU64, Ordering};
 // AiHardwareFeatures 在 mod.rs 中定义
-
 /// 矩阵结构体
 #[derive(Debug, Clone)]
 pub struct Matrix {
@@ -13,7 +11,6 @@ pub struct Matrix {
     cols: usize,
     data: Vec<f32>,
 }
-
 impl Matrix {
     /// 创建新矩阵
     pub fn new(rows: usize, cols: usize) -> Self {
@@ -23,48 +20,39 @@ impl Matrix {
             data: vec![0.0; rows * cols],
         }
     }
-
     /// 从数据创建矩阵
     pub fn from_data(data: Vec<f32>, rows: usize, cols: usize) -> Self {
         assert_eq!(data.len(), rows * cols);
         Matrix { rows, cols, data }
     }
-
     /// 获取矩阵行数
     pub fn rows(&self) -> usize {
         self.rows
     }
-
     /// 获取矩阵列数
     pub fn cols(&self) -> usize {
         self.cols
     }
-
     /// 获取矩阵元素数
     pub fn size(&self) -> usize {
         self.rows * self.cols
     }
-
     /// 获取元素值
     pub fn get(&self, row: usize, col: usize) -> f32 {
         self.data[row * self.cols + col]
     }
-
     /// 设置元素值
     pub fn set(&mut self, row: usize, col: usize, value: f32) {
         self.data[row * self.cols + col] = value;
     }
-
     /// 获取数据切片
     pub fn data(&self) -> &[f32] {
         &self.data
     }
-
     /// 获取可变数据切片
     pub fn data_mut(&mut self) -> &mut [f32] {
         &mut self.data
     }
-
     /// 矩阵转置
     pub fn transpose(&self) -> Matrix {
         let mut result = Matrix::new(self.cols, self.rows);
@@ -76,14 +64,12 @@ impl Matrix {
         result
     }
 }
-
 /// 矩阵对（用于批处理）
 #[derive(Debug, Clone)]
 pub struct MatrixPair {
     pub a: Matrix,
     pub b: Matrix,
 }
-
 /// 优化的矩阵
 #[derive(Debug, Clone)]
 pub struct OptimizedMatrix {
@@ -92,7 +78,6 @@ pub struct OptimizedMatrix {
     pub block_size: usize,
     pub memory_accesses: u64,
 }
-
 /// 矩阵加速器统计信息
 #[derive(Debug, Clone)]
 pub struct MatrixAcceleratorStats {
@@ -102,7 +87,6 @@ pub struct MatrixAcceleratorStats {
     pub simd_used: u64,
     pub block_size_used: usize,
 }
-
 /// 矩阵运算加速器
 pub struct MatrixAccelerator {
     hardware_features: AiHardwareFeatures,
@@ -112,7 +96,6 @@ pub struct MatrixAccelerator {
     cache_misses: AtomicU64,
     simd_used: AtomicU64,
 }
-
 impl MatrixAccelerator {
     /// 创建新的矩阵加速器
     pub fn new() -> Self {
@@ -138,20 +121,15 @@ impl MatrixAccelerator {
             simd_used: AtomicU64::new(0),
         }
     }
-
     /// 优化的矩阵乘法 (GEMM)
     pub fn gemm_optimized(&self, a: &Matrix, b: &Matrix) -> Matrix {
         assert_eq!(a.cols(), b.rows());
-
         let rows: _ = a.rows();
         let cols: _ = b.cols();
         let k: _ = a.cols();
-
         let mut result = Matrix::new(rows, cols);
-
         // 选择最佳块大小
         let block_size: _ = self.select_block_size();
-
         // 分块矩阵乘法优化
         for ii in (0..rows).step_by(block_size) {
             for jj in (0..cols).step_by(block_size) {
@@ -159,7 +137,6 @@ impl MatrixAccelerator {
                     let i_end: _ = (ii + block_size).min(rows);
                     let j_end: _ = (jj + block_size).min(cols);
                     let k_end: _ = (kk + block_size).min(k);
-
                     self.multiply_blocks(
                         a,
                         b,
@@ -174,18 +151,14 @@ impl MatrixAccelerator {
                 }
             }
         }
-
         self.operation_count.fetch_add(1, Ordering::Relaxed);
         result
     }
-
     /// SIMD 优化的向量点积
     pub fn vector_dot_product(&self, a: &[f32], b: &[f32]) -> f32 {
         assert_eq!(a.len(), b.len());
-
         let len: _ = a.len();
         let mut sum = 0.0f32;
-
         // 根据硬件特性选择最佳实现
         if self.hardware_features.has_avx512 {
             self.simd_used.fetch_add(1, Ordering::Relaxed);
@@ -202,31 +175,24 @@ impl MatrixAccelerator {
                 sum += a[i] * b[i];
             }
         }
-
         self.operation_count.fetch_add(1, Ordering::Relaxed);
         sum
     }
-
     /// 批处理矩阵乘法
     pub fn batch_gemm(&self, batch: &[MatrixPair]) -> Vec<Matrix> {
         let mut results = Vec::with_capacity(batch.len());
-
         for pair in batch {
             let result: _ = self.gemm_optimized(&pair.a, &pair.b);
             results.push(result);
         }
-
         self.operation_count.fetch_add(batch.len() as u64, Ordering::Relaxed);
         results
     }
-
     /// 优化矩阵内存布局
     pub fn optimize_layout(&self, matrix: &Matrix) -> OptimizedMatrix {
         let block_size: _ = self.select_block_size();
-
         // 计算内存访问模式
         let memory_accesses: _ = (matrix.rows() * matrix.cols()) as u64;
-
         OptimizedMatrix {
             original: matrix.clone(),
             is_optimized: true,
@@ -234,7 +200,6 @@ impl MatrixAccelerator {
             memory_accesses,
         }
     }
-
     /// 选择最佳块大小
     fn select_block_size(&self) -> usize {
         // 根据缓存大小选择块大小
@@ -246,7 +211,6 @@ impl MatrixAccelerator {
             32
         }
     }
-
     /// 分块矩阵乘法
     fn multiply_blocks(
         &self,
@@ -270,7 +234,6 @@ impl MatrixAccelerator {
             }
         }
     }
-
     /// SIMD 512 向量点积
     fn simd512_vector_dot(&self, a: &[f32], b: &[f32]) -> f32 {
         #[cfg(target_arch = "x86_64")]
@@ -278,20 +241,17 @@ impl MatrixAccelerator {
             use std::arch::x86_64::*;
             let mut sum = _mm512_setzero_ps();
             let len: _ = a.len() / 16;
-
             for i in 0..len {
                 let a_chunk: _ = _mm512_loadu_ps(&a[i * 16..]);
                 let b_chunk: _ = _mm512_loadu_ps(&b[i * 16..]);
                 let prod: _ = _mm512_mul_ps(a_chunk, b_chunk);
                 sum = _mm512_add_ps(sum, prod);
             }
-
             let result: _ = _mm512_reduce_add_ps(sum);
             return result + self.accumulate_remainder(a, b, len * 16);
         }
         self.scalar_vector_dot(a, b)
     }
-
     /// SIMD 256 向量点积
     fn simd256_vector_dot(&self, a: &[f32], b: &[f32]) -> f32 {
         #[cfg(target_arch = "x86_64")]
@@ -299,24 +259,20 @@ impl MatrixAccelerator {
             use std::arch::x86_64::*;
             let mut sum = _mm256_setzero_ps();
             let len: _ = a.len() / 8;
-
             for i in 0..len {
                 let a_chunk: _ = _mm256_loadu_ps(&a[i * 8..]);
                 let b_chunk: _ = _mm256_loadu_ps(&b[i * 8..]);
                 let prod: _ = _mm256_mul_ps(a_chunk, b_chunk);
                 sum = _mm256_add_ps(sum, prod);
             }
-
             let result: _ = _mm256_hadd_ps(sum, sum);
             let result: _ = _mm256_hadd_ps(result, result);
             let result: _ = _mm256_hadd_ps(result, result);
             let result: _ = _mm256_extract_epi32(_mm256_castps_si256(result), 0) as f32;
-
             return result + self.accumulate_remainder(a, b, len * 8);
         }
         self.scalar_vector_dot(a, b)
     }
-
     /// SIMD 128 向量点积
     fn simd128_vector_dot(&self, a: &[f32], b: &[f32]) -> f32 {
         #[cfg(target_arch = "x86_64")]
@@ -326,47 +282,37 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
             let mut sum = _mm_setzero_ps();
             let len: _ = a.len() / 4;
-
             for i in 0..len {
                 let a_chunk: _ = _mm_loadu_ps(&a[i * 4..]);
                 let b_chunk: _ = _mm_loadu_ps(&b[i * 4..]);
                 let prod: _ = _mm_mul_ps(a_chunk, b_chunk);
                 sum = _mm_add_ps(sum, prod);
             }
-
             let result: _ = _mm_hadd_ps(sum, sum);
             let result: _ = _mm_hadd_ps(result, result);
             let result: _ = _mm_extract_ps(result, 0) as f32;
-
             return result + self.accumulate_remainder(a, b, len * 4);
         }
         self.scalar_vector_dot(a, b)
     }
-
     /// 标量向量点积
     fn scalar_vector_dot(&self, a: &[f32], b: &[f32]) -> f32 {
         let len: _ = a.len();
         let mut sum = 0.0f32;
-
         for i in 0..len {
             sum += a[i] * b[i];
         }
-
         sum
     }
-
     /// 累加剩余元素
     fn accumulate_remainder(&self, a: &[f32], b: &[f32], start: usize) -> f32 {
         let len: _ = a.len();
         let mut sum = 0.0f32;
-
         for i in start..len {
             sum += a[i] * b[i];
         }
-
         sum
     }
-
     /// 获取统计信息
     pub fn get_stats(&self) -> MatrixAcceleratorStats {
         MatrixAcceleratorStats {
@@ -378,21 +324,17 @@ use std::collections::{HashMap, BTreeMap};
         }
     }
 }
-
 impl Default for MatrixAccelerator {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// 矩阵加法运算符重载
 impl std::ops::Add for &Matrix {
     type Output = Matrix;
-
     fn add(self, other: &Matrix) -> Matrix {
         assert_eq!(self.rows(), other.rows());
         assert_eq!(self.cols(), other.cols());
-
         let mut result = Matrix::new(self.rows(), self.cols());
         for i in 0..self.rows() {
             for j in 0..self.cols() {
@@ -402,15 +344,12 @@ impl std::ops::Add for &Matrix {
         result
     }
 }
-
 /// 矩阵减法运算符重载
 impl std::ops::Sub for &Matrix {
     type Output = Matrix;
-
     fn sub(self, other: &Matrix) -> Matrix {
         assert_eq!(self.rows(), other.rows());
         assert_eq!(self.cols(), other.cols());
-
         let mut result = Matrix::new(self.rows(), self.cols());
         for i in 0..self.rows() {
             for j in 0..self.cols() {
@@ -420,11 +359,9 @@ impl std::ops::Sub for &Matrix {
         result
     }
 }
-
 /// 矩阵标量乘法运算符重载
 impl std::ops::Mul<f32> for &Matrix {
     type Output = Matrix;
-
     fn mul(self, scalar: f32) -> Matrix {
         let mut result = Matrix::new(self.rows(), self.cols());
         for i in 0..self.rows() {

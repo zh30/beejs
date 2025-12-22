@@ -2,15 +2,12 @@
 //! Stage 91 Phase 4.1 - 环境诊断命令
 //!
 //! 实现 `beejs doctor` 命令，诊断开发环境问题
-
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
-
 use super::output_formatter::OutputFormatter;
-
 /// 诊断检查结果
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckStatus {
@@ -23,7 +20,6 @@ pub enum CheckStatus {
     /// 跳过
     Skip,
 }
-
 impl CheckStatus {
     fn icon(&self) -> &'static str {
         match self {
@@ -33,7 +29,6 @@ impl CheckStatus {
             CheckStatus::Skip => "○",
         }
     }
-
     fn color(&self) -> &'static str {
         match self {
             CheckStatus::Pass => "\x1b[32m",    // Green
@@ -43,7 +38,6 @@ impl CheckStatus {
         }
     }
 }
-
 /// 单个诊断检查
 #[derive(Debug)]
 pub struct DiagnosticCheck {
@@ -58,14 +52,12 @@ pub struct DiagnosticCheck {
     /// 建议操作
     pub suggestion: Option<String>,
 }
-
 /// Doctor 命令执行器
 pub struct DoctorCommand {
     formatter: OutputFormatter,
     verbose: bool,
     checks: Vec<DiagnosticCheck>,
 }
-
 impl DoctorCommand {
     /// 创建新的 doctor 命令
     pub fn new(verbose: bool) -> Self {
@@ -75,14 +67,11 @@ impl DoctorCommand {
             checks: Vec::new(),
         }
     }
-
     /// 执行所有诊断检查
     pub fn execute(&mut self) -> anyhow::Result<()> {
         let start: _ = Instant::now();
-
         self.formatter.title("Beejs Environment Diagnostics");
         println!();
-
         // 运行所有检查
         self.check_beejs_version();
         self.check_v8_engine();
@@ -93,17 +82,13 @@ impl DoctorCommand {
         self.check_disk_space();
         self.check_network();
         self.check_permissions();
-
         // 打印结果
         self.print_results();
-
         // 统计
         let elapsed: _ = start.elapsed();
         let (pass, warn, fail) = self.count_status();
-
         println!();
         self.formatter.title("Summary");
-
         if self.formatter.color_enabled {
             println!(
                 "  \x1b[32m{} passed\x1b[0m, \x1b[33m{} warnings\x1b[0m, \x1b[31m{} failed\x1b[0m",
@@ -112,13 +97,11 @@ impl DoctorCommand {
         } else {
             println!("  {} passed, {} warnings, {} failed", pass, warn, fail);
         }
-
         println!(
             "  Completed in {}",
             OutputFormatter::format_duration(elapsed)
         );
         println!();
-
         if fail > 0 {
             self.formatter
                 .warning("Some checks failed. See suggestions above.");
@@ -129,17 +112,13 @@ impl DoctorCommand {
             self.formatter
                 .success("All checks passed! Your environment is ready.");
         }
-
         Ok(())
     }
-
     fn add_check(&mut self, check: DiagnosticCheck) {
         self.checks.push(check);
     }
-
     fn check_beejs_version(&mut self) {
         let version: _ = env!("CARGO_PKG_VERSION");
-
         self.add_check(DiagnosticCheck {
             name: "Beejs Version".to_string(),
             description: "Check Beejs runtime version".to_string(),
@@ -148,11 +127,9 @@ impl DoctorCommand {
             suggestion: None,
         });
     }
-
     fn check_v8_engine(&mut self) {
         // V8 引擎通常与 rusty_v8 绑定
         let v8_version: _ = "10.x (rusty_v8 0.22)";
-
         self.add_check(DiagnosticCheck {
             name: "V8 JavaScript Engine".to_string(),
             description: "Check V8 engine availability".to_string(),
@@ -161,7 +138,6 @@ impl DoctorCommand {
             suggestion: None,
         });
     }
-
     fn check_rust_toolchain(&mut self) {
         match Command::new("rustc").arg("--version").output() {
             Ok(output) if output.status.success() => {
@@ -185,7 +161,6 @@ impl DoctorCommand {
             }
         }
     }
-
     fn check_node_compatibility(&mut self) {
         // 检查是否有 Node.js (用于比较和兼容性)
         match Command::new("node").arg("--version").output() {
@@ -210,7 +185,6 @@ impl DoctorCommand {
             }
         }
     }
-
     fn check_git(&mut self) {
         match Command::new("git").arg("--version").output() {
             Ok(output) if output.status.success() => {
@@ -234,7 +208,6 @@ impl DoctorCommand {
             }
         }
     }
-
     fn check_package_managers(&mut self) {
         // Check npm
         let npm_status: _ = match Command::new("npm").arg("--version").output() {
@@ -244,7 +217,6 @@ impl DoctorCommand {
             }
             _ => (CheckStatus::Skip, Some("npm not found".to_string())),
         };
-
         // Check yarn
         let yarn_status: _ = match Command::new("yarn").arg("--version").output() {
             Ok(output) if output.status.success() => {
@@ -253,7 +225,6 @@ impl DoctorCommand {
             }
             _ => (CheckStatus::Skip, None),
         };
-
         // Check pnpm
         let pnpm_status: _ = match Command::new("pnpm").arg("--version").output() {
             Ok(output) if output.status.success() => {
@@ -262,7 +233,6 @@ impl DoctorCommand {
             }
             _ => (CheckStatus::Skip, None),
         };
-
         let mut managers = Vec::new();
         if npm_status.0 == CheckStatus::Pass {
             managers.push(npm_status.1.unwrap());
@@ -273,13 +243,11 @@ impl DoctorCommand {
         if pnpm_status.0 == CheckStatus::Pass {
             managers.push(pnpm_status.1.unwrap());
         }
-
         let (status, message) = if managers.is_empty() {
             (CheckStatus::Warning, "No package manager found".to_string())
         } else {
             (CheckStatus::Pass, managers.join(", "))
         };
-
         self.add_check(DiagnosticCheck {
             name: "Package Managers".to_string(),
             description: "npm/yarn/pnpm availability".to_string(),
@@ -292,24 +260,18 @@ impl DoctorCommand {
             },
         });
     }
-
     fn check_disk_space(&mut self) {
         // 获取当前目录的磁盘空间
         let cwd: _ = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-
         #[cfg(unix)]
         {
             use std::ffi::CString;
-
             let path: _ = CString::new(cwd.to_string_lossy().as_bytes()).unwrap();
             let mut stat: libc::statvfs = unsafe { std::mem::zeroed() };
-
             let result: _ = unsafe { libc::statvfs(path.as_ptr(), &mut stat) };
-
             if result == 0 {
                 let free_bytes: _ = stat.f_bavail as u64 * stat.f_bsize as u64;
                 let free_gb: _ = free_bytes / (1024 * 1024 * 1024);
-
                 let (status, suggestion) = if free_gb < 1 {
                     (
                         CheckStatus::Fail,
@@ -323,7 +285,6 @@ impl DoctorCommand {
                 } else {
                     (CheckStatus::Pass, None)
                 };
-
                 self.add_check(DiagnosticCheck {
                     name: "Disk Space".to_string(),
                     description: "Available disk space".to_string(),
@@ -334,7 +295,6 @@ impl DoctorCommand {
                 return;
             }
         }
-
         // Fallback for non-Unix or failed check
         self.add_check(DiagnosticCheck {
             name: "Disk Space".to_string(),
@@ -344,7 +304,6 @@ impl DoctorCommand {
             suggestion: None,
         });
     }
-
     fn check_network(&mut self) {
         // 简单的网络连通性检查
         #[cfg(unix)]
@@ -352,7 +311,6 @@ impl DoctorCommand {
             let result: _ = Command::new("ping")
                 .args(["-c", "1", "-W", "2", "8.8.8.8"])
                 .output();
-
             let (status, message) = match result {
                 Ok(output) if output.status.success() => (
                     CheckStatus::Pass,
@@ -363,7 +321,6 @@ impl DoctorCommand {
                     "Internet connection unavailable or slow".to_string(),
                 ),
             };
-
             self.add_check(DiagnosticCheck {
                 name: "Network Connectivity".to_string(),
                 description: "Internet connection check".to_string(),
@@ -377,7 +334,6 @@ impl DoctorCommand {
             });
             return;
         }
-
         #[cfg(not(unix))]
         {
             self.add_check(DiagnosticCheck {
@@ -389,17 +345,14 @@ impl DoctorCommand {
             });
         }
     }
-
     fn check_permissions(&mut self) {
         let cwd: _ = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-
         // 检查写入权限
         let test_file: _ = cwd.join(".beejs-permission-test");
         let can_write: _ = fs::write(&test_file, "test").is_ok();
         if can_write {
             let _: _ = fs::remove_file(&test_file);
         }
-
         let (status, message) = if can_write {
             (CheckStatus::Pass, "Write permissions OK".to_string())
         } else {
@@ -408,7 +361,6 @@ impl DoctorCommand {
                 "No write permissions in current directory".to_string(),
             )
         };
-
         self.add_check(DiagnosticCheck {
             name: "File Permissions".to_string(),
             description: "Write access to current directory".to_string(),
@@ -421,24 +373,19 @@ impl DoctorCommand {
             },
         });
     }
-
     fn print_results(&self) {
         for check in &self.checks {
             let icon: _ = check.status.icon();
             let color: _ = check.status.color();
-
             if self.formatter.color_enabled {
                 print!("  {}{}\x1b[0m {}", color, icon, check.name);
             } else {
                 print!("  {} {}", icon, check.name);
             }
-
             if let Some(msg) = &check.message {
                 print!(" - {}", msg);
             }
-
             println!();
-
             // 打印建议 (仅在非 pass 状态)
             if let Some(suggestion) = &check.suggestion {
                 if self.formatter.color_enabled {
@@ -449,12 +396,10 @@ impl DoctorCommand {
             }
         }
     }
-
     fn count_status(&self) -> (usize, usize, usize) {
         let mut pass = 0;
         let mut warn = 0;
         let mut fail = 0;
-
         for check in &self.checks {
             match check.status {
                 CheckStatus::Pass => pass += 1,
@@ -463,17 +408,14 @@ impl DoctorCommand {
                 CheckStatus::Skip => {}
             }
         }
-
         (pass, warn, fail)
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_check_status_icon() {
         assert_eq!(CheckStatus::Pass.icon(), "✓");
@@ -481,19 +423,16 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(CheckStatus::Fail.icon(), "✗");
         assert_eq!(CheckStatus::Skip.icon(), "○");
     }
-
     #[test]
     fn test_doctor_command_execute() {
         let mut cmd = DoctorCommand::new(false);
         assert!(cmd.execute().is_ok());
     }
-
     #[test]
     fn test_doctor_command_checks() {
         let mut cmd = DoctorCommand::new(true);
         cmd.check_beejs_version();
         cmd.check_v8_engine();
-
         assert!(cmd.checks.len() >= 2);
         assert!(cmd.checks.iter().any(|c| c.name == "Beejs Version"));
     }

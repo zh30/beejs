@@ -1,20 +1,17 @@
 //! 运行时对比模块
 //!
 //! 提供与 Bun、Node.js 等运行时的性能对比功能
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::Command;
 use super::{Runtime, BenchmarkResult, BenchmarkError, BenchmarkResult as Result};
-
 /// 运行时检测器
 #[derive(Debug)]
 pub struct RuntimeDetector {
     /// 检测到的运行时
     detected_runtimes: HashMap<Runtime, bool>,
 }
-
 impl RuntimeDetector {
     /// 创建新的运行时检测器
     pub fn new() -> Self {
@@ -24,7 +21,6 @@ impl RuntimeDetector {
         detector.detect_all_runtimes();
         detector
     }
-
     /// 检测所有运行时
     pub fn detect_all_runtimes(&mut self) {
         // 检测 Beejs
@@ -32,26 +28,22 @@ impl RuntimeDetector {
             Runtime::Beejs,
             check_command_available("beejs")
         );
-
         // 检测 Node.js
         self.detected_runtimes.insert(
             Runtime::NodeJs,
             check_command_available("node")
         );
-
         // 检测 Bun
         self.detected_runtimes.insert(
             Runtime::Bun,
             check_command_available("bun")
         );
-
         // 检测 Deno
         self.detected_runtimes.insert(
             Runtime::Deno,
             check_command_available("deno")
         );
     }
-
     /// 检查特定运行时是否可用
     pub fn is_available(&self, runtime: Runtime) -> bool {
         self.detected_runtimes
@@ -59,7 +51,6 @@ impl RuntimeDetector {
             .cloned()
             .unwrap_or(false)
     }
-
     /// 获取所有可用的运行时
     pub fn get_available_runtimes(&self) -> Vec<Runtime> {
         self.detected_runtimes
@@ -73,7 +64,6 @@ impl RuntimeDetector {
             })
             .collect()
     }
-
     /// 获取运行时版本
     pub fn get_version(&self, runtime: Runtime) -> Option<String> {
         match runtime {
@@ -85,24 +75,20 @@ impl RuntimeDetector {
         }
     }
 }
-
 /// 进程启动器
 #[derive(Debug)]
 pub struct ProcessLauncher {
     /// 启动配置
     config: ProcessConfig,
 }
-
 impl ProcessLauncher {
     /// 创建新的进程启动器
     pub fn new(config: ProcessConfig) -> Self {
         Self { config }
     }
-
     /// 启动进程
     pub async fn launch(&self, code: &str, runtime: Runtime) -> Result<ProcessOutput> {
         let start_time: _ = tokio::time::Instant::now();
-
         match runtime {
             Runtime::Beejs => {
                 self.launch_beejs(code).await
@@ -125,25 +111,20 @@ impl ProcessLauncher {
             output
         })
     }
-
     /// 启动 Beejs 进程
     async fn launch_beejs(&self, code: &str) -> Result<ProcessOutput> {
         let temp_file: _ = super::super::utils::create_temp_dir("beejs_bench")?;
         let file_path: _ = temp_file.path().join("test.js");
-
         // 写入临时文件
         tokio::fs::write(&file_path, code).await?;
-
         // 启动进程
         let output: _ = tokio::process::Command::new("beejs")
             .arg(&file_path)
             .output()
             .await?;
-
         let exit_code: _ = output.status.code().unwrap_or(-1);
         let stdout: _ = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr: _ = String::from_utf8_lossy(&output.stderr).to_string();
-
         Ok(ProcessOutput {
             runtime: Runtime::Beejs,
             exit_code,
@@ -152,23 +133,18 @@ impl ProcessLauncher {
             elapsed_time: tokio::time::Duration::from_secs(0),
         })
     }
-
     /// 启动 Node.js 进程
     async fn launch_nodejs(&self, code: &str) -> Result<ProcessOutput> {
         let temp_file: _ = super::super::utils::create_temp_dir("nodejs_bench")?;
         let file_path: _ = temp_file.path().join("test.js");
-
         tokio::fs::write(&file_path, code).await?;
-
         let output: _ = tokio::process::Command::new("node")
             .arg(&file_path)
             .output()
             .await?;
-
         let exit_code: _ = output.status.code().unwrap_or(-1);
         let stdout: _ = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr: _ = String::from_utf8_lossy(&output.stderr).to_string();
-
         Ok(ProcessOutput {
             runtime: Runtime::NodeJs,
             exit_code,
@@ -177,23 +153,18 @@ impl ProcessLauncher {
             elapsed_time: tokio::time::Duration::from_secs(0),
         })
     }
-
     /// 启动 Bun 进程
     async fn launch_bun(&self, code: &str) -> Result<ProcessOutput> {
         let temp_file: _ = super::super::utils::create_temp_dir("bun_bench")?;
         let file_path: _ = temp_file.path().join("test.js");
-
         tokio::fs::write(&file_path, code).await?;
-
         let output: _ = tokio::process::Command::new("bun")
             .arg(&file_path)
             .output()
             .await?;
-
         let exit_code: _ = output.status.code().unwrap_or(-1);
         let stdout: _ = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr: _ = String::from_utf8_lossy(&output.stderr).to_string();
-
         Ok(ProcessOutput {
             runtime: Runtime::Bun,
             exit_code,
@@ -202,24 +173,19 @@ impl ProcessLauncher {
             elapsed_time: tokio::time::Duration::from_secs(0),
         })
     }
-
     /// 启动 Deno 进程
     async fn launch_deno(&self, code: &str) -> Result<ProcessOutput> {
         let temp_file: _ = super::super::utils::create_temp_dir("deno_bench")?;
         let file_path: _ = temp_file.path().join("test.js");
-
         tokio::fs::write(&file_path, code).await?;
-
         let output: _ = tokio::process::Command::new("deno")
             .arg("run")
             .arg(&file_path)
             .output()
             .await?;
-
         let exit_code: _ = output.status.code().unwrap_or(-1);
         let stdout: _ = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr: _ = String::from_utf8_lossy(&output.stderr).to_string();
-
         Ok(ProcessOutput {
             runtime: Runtime::Deno,
             exit_code,
@@ -229,7 +195,6 @@ impl ProcessLauncher {
         })
     }
 }
-
 /// 进程启动配置
 #[derive(Debug, Clone)]
 pub struct ProcessConfig {
@@ -240,7 +205,6 @@ pub struct ProcessConfig {
     /// 工作目录
     pub working_directory: Option<PathBuf>,
 }
-
 impl Default for ProcessConfig {
     fn default() -> Self {
         Self {
@@ -250,32 +214,27 @@ impl Default for ProcessConfig {
         }
     }
 }
-
 impl ProcessConfig {
     /// 创建新的配置
     pub fn new() -> Self {
         Self::default()
     }
-
     /// 设置超时时间
     pub fn timeout(mut self, timeout: tokio::time::Duration) -> Self {
         self.timeout = timeout;
         self
     }
-
     /// 添加环境变量
     pub fn add_env(mut self, key: &str, value: &str) -> Self {
         self.environment.insert(key.to_string(), value.to_string());
         self
     }
-
     /// 设置工作目录
     pub fn working_directory(mut self, dir: PathBuf) -> Self {
         self.working_directory = Some(dir);
         self
     }
 }
-
 /// 进程输出
 #[derive(Debug, Clone)]
 pub struct ProcessOutput {
@@ -290,19 +249,16 @@ pub struct ProcessOutput {
     /// 执行时间
     pub elapsed_time: tokio::time::Duration,
 }
-
 impl ProcessOutput {
     /// 检查是否成功
     pub fn is_success(&self) -> bool {
         self.exit_code == 0
     }
-
     /// 获取执行时间 (毫秒)
     pub fn execution_time_ms(&self) -> f64 {
         self.elapsed_time.as_secs_f64() * 1000.0
     }
 }
-
 /// 对比报告
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComparisonReport {
@@ -317,7 +273,6 @@ pub struct ComparisonReport {
     /// 统计显著性
     pub statistical_significance: StatisticalSignificance,
 }
-
 impl ComparisonReport {
     /// 创建新的对比报告
     pub fn new(test_name: &str, baseline_result: BenchmarkResult) -> Self {
@@ -329,12 +284,10 @@ impl ComparisonReport {
             statistical_significance: StatisticalSignificance::default(),
         }
     }
-
     /// 添加对比结果
     pub fn add_comparison_result(&mut self, result: BenchmarkResult) {
         self.comparison_results.push(result);
     }
-
     /// 生成性能对比
     pub fn generate_performance_comparison(&mut self) {
         self.performance_comparison = PerformanceComparison::generate(
@@ -342,7 +295,6 @@ impl ComparisonReport {
             &self.comparison_results,
         );
     }
-
     /// 生成统计显著性分析
     pub fn generate_statistical_analysis(&mut self) {
         self.statistical_significance = StatisticalSignificance::analyze(
@@ -351,7 +303,6 @@ impl ComparisonReport {
         );
     }
 }
-
 /// 性能对比
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PerformanceComparison {
@@ -362,7 +313,6 @@ pub struct PerformanceComparison {
     /// 延迟对比
     pub latency_comparison: HashMap<Runtime, f64>,
 }
-
 impl PerformanceComparison {
     /// 生成性能对比
     pub fn generate(
@@ -372,11 +322,9 @@ impl PerformanceComparison {
         let mut improvements = Vec::new();
         let mut throughput_comparison = HashMap::new();
         let mut latency_comparison = HashMap::new();
-
         // 计算基准性能
         let baseline_throughput: _ = baseline.throughput();
         let baseline_latency: _ = baseline.average_duration().as_secs_f64() * 1000.0;
-
         for result in comparisons {
             // 计算性能提升
             let throughput_improvement: _ = if baseline_throughput > 0.0 {
@@ -384,23 +332,19 @@ impl PerformanceComparison {
             } else {
                 0.0
             };
-
             let latency_improvement: _ = if baseline_latency > 0.0 {
                 ((baseline_latency - result.average_duration().as_secs_f64() * 1000.0) / baseline_latency) * 100.0
             } else {
                 0.0
             };
-
             improvements.push(PerformanceImprovement {
                 runtime: result.runtime,
                 throughput_improvement,
                 latency_improvement,
             });
-
             throughput_comparison.insert(result.runtime, result.throughput());
             latency_comparison.insert(result.runtime, result.average_duration().as_secs_f64() * 1000.0);
         }
-
         Self {
             improvements,
             throughput_comparison,
@@ -408,7 +352,6 @@ impl PerformanceComparison {
         }
     }
 }
-
 /// 性能提升
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceImprovement {
@@ -419,7 +362,6 @@ pub struct PerformanceImprovement {
     /// 延迟提升百分比
     pub latency_improvement: f64,
 }
-
 /// 统计显著性
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StatisticalSignificance {
@@ -428,7 +370,6 @@ pub struct StatisticalSignificance {
     /// 置信区间
     pub confidence_intervals: HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64), Runtime, (f64, f64), std::collections::HashMap<Runtime, (f64, f64), Runtime, (f64, f64)>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>,
 }
-
 impl StatisticalSignificance {
     /// 分析统计显著性
     pub fn analyze(
@@ -437,7 +378,6 @@ impl StatisticalSignificance {
     ) -> Self {
         let mut significance_tests = Vec::new();
         let mut confidence_intervals = HashMap::new();
-
         for result in comparisons {
             let is_significant: _ = baseline.is_statistically_significant(result, 0.05);
             significance_tests.push(SignificanceTest {
@@ -445,7 +385,6 @@ impl StatisticalSignificance {
                 is_significant,
                 p_value: 0.0, // 简化实现
             });
-
             confidence_intervals.insert(
                 result.runtime,
                 (
@@ -454,14 +393,12 @@ impl StatisticalSignificance {
                 )
             );
         }
-
         Self {
             significance_tests,
             confidence_intervals,
         }
     }
 }
-
 /// 显著性测试
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignificanceTest {
@@ -472,7 +409,6 @@ pub struct SignificanceTest {
     /// P 值
     pub p_value: f64,
 }
-
 /// 检查命令是否可用
 fn check_command_available(command: &str) -> bool {
     Command::new(command)
@@ -481,39 +417,33 @@ fn check_command_available(command: &str) -> bool {
         .map(|output| output.status.success())
         .unwrap_or(false)
 }
-
 /// 获取命令版本
 fn get_command_version(command: &str) -> Option<String> {
     let output: _ = Command::new(command)
         .arg("--version")
         .output()
         .ok()?;
-
     if output.status.success() {
         Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
     } else {
         None
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_runtime_detection() {
         let detector: _ = RuntimeDetector::new();
         let available: _ = detector.get_available_runtimes();
         println!("Available runtimes: {:?}", available);
     }
-
     #[tokio::test]
     async fn test_process_launcher() {
         let config: _ = ProcessConfig::new();
         let launcher: _ = ProcessLauncher::new(config);
-
         let code: _ = r#"
             console.log('Hello, World!');
             const start = Date.now();
@@ -525,7 +455,6 @@ use std::collections::{HashMap, BTreeMap};
             const end = Date.now();
             console.log('Time:', end - start, 'ms');
         "#;
-
         let output: _ = launcher.launch(code, Runtime::NodeJs).await.unwrap();
         println!("Output: {}", output.stdout);
         println!("Time: {} ms", output.execution_time_ms());

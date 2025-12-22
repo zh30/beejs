@@ -5,13 +5,11 @@
 //! - 自适应 GC 调优
 //! - 分代 GC 优化
 //! - 增量 GC 和并行 GC
-
 use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering, AtomicI64};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{RwLock, Mutex};
 use anyhow::{Result, anyhow};
-
 /// GC 配置
 #[derive(Debug, Clone)]
 pub struct GcConfig {
@@ -30,7 +28,6 @@ pub struct GcConfig {
     /// GC 线程数
     pub gc_threads: usize,
 }
-
 impl Default for GcConfig {
     fn default() -> Self {
         Self {
@@ -44,7 +41,6 @@ impl Default for GcConfig {
         }
     }
 }
-
 /// GC 策略
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum GcStrategy {
@@ -59,7 +55,6 @@ pub enum GcStrategy {
     /// 预测性 GC - 基于 AI 预测
     Predictive,
 }
-
 /// 堆信息
 #[derive(Debug, Clone)]
 pub struct HeapInfo {
@@ -76,7 +71,6 @@ pub struct HeapInfo {
     /// 回收速率 (字节/秒)
     pub collection_rate: f64,
 }
-
 /// GC 事件
 #[derive(Debug, Clone)]
 pub struct GcEvent {
@@ -92,7 +86,6 @@ pub struct GcEvent {
     /// 回收的字节数
     pub bytes_collected: usize,
 }
-
 /// GC 事件类型
 #[derive(Debug, Clone, Copy)]
 pub enum GcEventType {
@@ -105,7 +98,6 @@ pub enum GcEventType {
     Incremental,
     Parallel,
 }
-
 /// GC 性能指标
 #[derive(Debug, Default)]
 pub struct GcMetrics {
@@ -119,7 +111,6 @@ pub struct GcMetrics {
     pub average_gc_time_ms: AtomicUsize,
     pub peak_memory_usage: AtomicUsize,
 }
-
 /// AI GC 预测器
 #[derive(Debug)]
 pub struct AiGcPredictor {
@@ -132,7 +123,6 @@ pub struct AiGcPredictor {
     /// 预测准确率
     accuracy: f64,
 }
-
 impl AiGcPredictor {
     pub fn new() -> Self {
         Self {
@@ -142,81 +132,64 @@ impl AiGcPredictor {
             accuracy: 0.0,
         }
     }
-
     /// 记录 GC 事件
     pub fn record_gc_event(&mut self, event: GcEvent) {
         self.history.push(event);
-
         // 限制历史记录大小
         if self.history.len() > 1024 {
             self.history.remove(0);
         }
-
         // 更新预测模型
         self.update_model();
     }
-
     /// 预测下次 GC 触发时间
     pub fn predict_next_gc(&self, current_heap: usize, allocation_rate: f64) -> Option<Duration> {
         if self.history.len() < 10 {
             return None;
         }
-
         // 使用线性回归预测
         let features: _ = [current_heap as f64, allocation_rate, 0.0, 0.0];
         let score: _ = self.calculate_prediction_score(&features);
-
         // 基于历史 GC 间隔计算预测时间
         let recent_intervals: Vec<Duration> = self.history
             .windows(2)
             .map(|w| w[1].timestamp.duration_since(w[0].timestamp))
             .collect();
-
         let avg_interval: _ = recent_intervals.iter()
             .sum::<Duration>() / recent_intervals.len() as u32;
-
         Some(avg_interval * score as u32)
     }
-
     /// 更新预测模型
     fn update_model(&mut self) {
         if self.history.len() < 20 {
             return;
         }
-
         // 简化的梯度下降算法
         let mut total_error = 0.0;
-
         for window in self.history.windows(20) {
             let mut features = [0.0; 4];
             let mut target = 0.0;
-
             // 提取特征
             if let Some((last, rest)) = window.split_last() {
                 features[0] = last.heap_before as f64;
                 features[1] = last.heap_before.saturating_sub(last.heap_after) as f64;
                 features[2] = rest.len() as f64;
                 features[3] = last.duration.as_secs_f64();
-
                 // 目标：是否触发 GC
                 target = if last.bytes_collected > last.heap_before / 4 { 1.0 } else { 0.0 };
             }
-
             // 计算预测误差
             let prediction: _ = self.calculate_prediction_score(&features);
             let error: _ = target - prediction;
             total_error += error.abs();
-
             // 更新权重
             for i in 0..self.weights.len() {
                 self.weights[i] += self.learning_rate * error * features[i];
             }
         }
-
         // 计算准确率
         self.accuracy = 1.0 - (total_error / self.history.len() as f64).min(1.0);
     }
-
     /// 计算预测得分
     fn calculate_prediction_score(&self, features: &[f64; 4]) -> f64 {
         features.iter()
@@ -227,7 +200,6 @@ impl AiGcPredictor {
             .min(1.0)
     }
 }
-
 /// 增强的 GC 优化器
 #[derive(Debug)]
 pub struct EnhancedGcOptimizer {
@@ -246,7 +218,6 @@ pub struct EnhancedGcOptimizer {
     /// 当前 GC 策略
     current_strategy: Arc<RwLock<GcStrategy>>,
 }
-
 /// GC 触发决策
 #[derive(Debug)]
 pub struct GcTriggerDecision {
@@ -259,7 +230,6 @@ pub struct GcTriggerDecision {
     /// 预测准确率
     pub confidence: f64,
 }
-
 impl EnhancedGcOptimizer {
     /// 创建 GC 优化器
     pub fn new(config: GcConfig) -> Self {
@@ -280,49 +250,40 @@ impl EnhancedGcOptimizer {
             current_strategy: Arc::new(Mutex::new(GcStrategy::Standard)),
         }
     }
-
     /// 使用默认配置创建
     pub fn default() -> Self {
         Self::new(GcConfig::default())
     }
-
     /// 记录内存分配
     pub async fn record_allocation(&self, size: usize) {
         let mut heap = self.heap_info.write().await;
         heap.current_size += size;
         heap.used_size += size;
         heap.object_count += 1;
-
         if heap.current_size > heap.peak_size {
             heap.peak_size = heap.current_size;
             self.metrics.peak_memory_usage.store(heap.peak_size, Ordering::Relaxed);
         }
-
         // 检查是否需要触发 GC
         self.check_and_trigger_gc(size).await;
     }
-
     /// 记录内存回收
     pub async fn record_deallocation(&self, size: usize) {
         let mut heap = self.heap_info.write().await;
         heap.used_size = heap.used_size.saturating_sub(size);
         heap.object_count = heap.object_count.saturating_sub(1);
     }
-
     /// 检查并触发 GC
     async fn check_and_trigger_gc(&self, allocation_size: usize) {
         let decision: _ = self.should_trigger_gc(allocation_size).await;
-
         if decision.should_trigger {
             self.trigger_gc(decision).await;
         }
     }
-
     /// 判断是否应该触发 GC
     async fn should_trigger_gc(&self, allocation_size: usize) -> GcTriggerDecision {
         let heap: _ = self.heap_info.read().await;
         let mut predictor = self.predictor.write().await;
-
         // 检查紧急情况
         if heap.used_size + allocation_size > heap.current_size {
             return GcTriggerDecision {
@@ -332,7 +293,6 @@ impl EnhancedGcOptimizer {
                 confidence: 1.0,
             };
         }
-
         // 检查堆大小阈值
         let usage_ratio: _ = heap.used_size as f64 / heap.current_size as f64;
         if usage_ratio > 0.9 {
@@ -343,7 +303,6 @@ impl EnhancedGcOptimizer {
                 confidence: 0.95,
             };
         }
-
         // 预测性 GC 检查
         if self.predictive_enabled.load(Ordering::Relaxed) {
             if let Some(predicted_time) = predictor.predict_next_gc(heap.current_size, heap.allocation_rate) {
@@ -358,7 +317,6 @@ impl EnhancedGcOptimizer {
                 }
             }
         }
-
         GcTriggerDecision {
             should_trigger: false,
             strategy: GcStrategy::Standard,
@@ -366,25 +324,20 @@ impl EnhancedGcOptimizer {
             confidence: 0.0,
         }
     }
-
     /// 触发 GC
     async fn trigger_gc(&self, decision: GcTriggerDecision) {
         let start_time: _ = Instant::now();
         let heap: _ = self.heap_info.read().await;
         let heap_before: _ = heap.current_size;
-
         // 更新当前策略
         {
             let mut strategy = self.current_strategy.write().await;
             *strategy = decision.strategy;
         }
-
         // 模拟 GC 执行
         self.execute_gc(decision.strategy).await;
-
         let duration: _ = start_time.elapsed();
         let heap_after: _ = heap.current_size.saturating_sub(heap.used_size / 2);
-
         // 记录 GC 事件
         let event: _ = GcEvent {
             event_type: match decision.strategy {
@@ -400,12 +353,10 @@ impl EnhancedGcOptimizer {
             duration,
             bytes_collected: heap_before.saturating_sub(heap_after),
         };
-
         // 更新统计
         self.metrics.total_collections.fetch_add(1, Ordering::Relaxed);
         self.metrics.total_bytes_collected.fetch_add(event.bytes_collected, Ordering::Relaxed);
         self.metrics.total_gc_time_ms.fetch_add(duration.as_millis() as usize, Ordering::Relaxed);
-
         match decision.strategy {
             GcStrategy::Emergency => { self.metrics.emergency_collections.fetch_add(1, Ordering::Relaxed); }
             GcStrategy::Predictive => { self.metrics.predictive_collections.fetch_add(1, Ordering::Relaxed); }
@@ -413,24 +364,20 @@ impl EnhancedGcOptimizer {
             GcStrategy::Parallel => { self.metrics.parallel_collections.fetch_add(1, Ordering::Relaxed); }
             _ => {},
         }
-
         // 更新预测器
         {
             let mut predictor = self.predictor.write().await;
             predictor.record_gc_event(event.clone());
         }
-
         // 添加到历史
         {
             let mut history = self.event_history.lock().await;
             history.push(event);
-
             if history.len() > 1024 {
                 history.remove(0);
             }
         }
     }
-
     /// 执行 GC
     async fn execute_gc(&self, strategy: GcStrategy) {
         match strategy {
@@ -452,12 +399,10 @@ impl EnhancedGcOptimizer {
             }
         }
     }
-
     /// 标准 GC
     async fn standard_gc(&self) {
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-
     /// 增量 GC
     async fn incremental_gc(&self) {
         // 分 4 批执行
@@ -465,7 +410,6 @@ impl EnhancedGcOptimizer {
             tokio::time::sleep(Duration::from_millis(2)).await;
         }
     }
-
     /// 并行 GC
     async fn parallel_gc(&self) {
         let tasks: _ = (0..self.config.gc_threads).map(|_| {
@@ -473,30 +417,24 @@ impl EnhancedGcOptimizer {
                 tokio::time::sleep(Duration::from_millis(5)).await;
             })
         });
-
         futures::future::join_all(tasks).await;
     }
-
     /// 完整 GC
     async fn full_gc(&self) {
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
-
     /// 启用预测性 GC
     pub fn enable_predictive_gc(&self) {
         self.predictive_enabled.store(true, Ordering::Relaxed);
     }
-
     /// 禁用预测性 GC
     pub fn disable_predictive_gc(&self) {
         self.predictive_enabled.store(false, Ordering::Relaxed);
     }
-
     /// 获取当前堆信息
     pub async fn get_heap_info(&self) -> HeapInfo {
         self.heap_info.read().await.clone()
     }
-
     /// 获取 GC 统计
     pub async fn get_metrics(&self) -> GcMetricsSnapshot {
         GcMetricsSnapshot {
@@ -516,14 +454,12 @@ impl EnhancedGcOptimizer {
             peak_memory_usage: self.metrics.peak_memory_usage.load(Ordering::Relaxed),
         }
     }
-
     /// 获取预测器准确率
     pub async fn get_predictor_accuracy(&self) -> f64 {
         let predictor: _ = self.predictor.read().await;
         predictor.accuracy
     }
 }
-
 /// GC 统计快照
 #[derive(Debug, Clone)]
 pub struct GcMetricsSnapshot {
@@ -537,7 +473,6 @@ pub struct GcMetricsSnapshot {
     pub average_gc_time_ms: usize,
     pub peak_memory_usage: usize,
 }
-
 impl GcMetricsSnapshot {
     pub fn collection_rate(&self) -> f64 {
         if self.total_gc_time_ms > 0 {
@@ -546,7 +481,6 @@ impl GcMetricsSnapshot {
             0.0
         }
     }
-
     pub fn predictive_ratio(&self) -> f64 {
         if self.total_collections > 0 {
             self.predictive_collections as f64 / self.total_collections as f64
@@ -555,49 +489,39 @@ impl GcMetricsSnapshot {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_gc_optimizer_creation() {
         let optimizer: _ = EnhancedGcOptimizer::default();
         assert!(optimizer.config.initial_heap_threshold > 0);
         assert!(optimizer.config.incremental_gc);
     }
-
     #[tokio::test]
     async fn test_record_allocation() {
         let optimizer: _ = EnhancedGcOptimizer::default();
-
         optimizer.record_allocation(1024).await;
-
         let heap: _ = optimizer.get_heap_info().await;
         assert_eq!(heap.current_size, 1024);
         assert_eq!(heap.used_size, 1024);
     }
-
     #[tokio::test]
     async fn test_predictive_gc() {
         let optimizer: _ = EnhancedGcOptimizer::default();
         optimizer.enable_predictive_gc();
-
         // 记录大量分配以触发 GC
         for _ in 0..100 {
             optimizer.record_allocation(1024 * 1024).await;
         }
-
         let metrics: _ = optimizer.get_metrics().await;
         assert!(metrics.total_collections > 0);
     }
-
     #[test]
     fn test_ai_gc_predictor() {
         let mut predictor = AiGcPredictor::new();
-
         // 模拟一些 GC 事件
         for i in 0..20 {
             let event: _ = GcEvent {
@@ -610,7 +534,6 @@ use std::collections::{HashMap, BTreeMap};
             };
             predictor.record_gc_event(event);
         }
-
         let prediction: _ = predictor.predict_next_gc(2000000, 1000000.0);
         assert!(prediction.is_some());
     }

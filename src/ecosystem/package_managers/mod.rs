@@ -2,27 +2,23 @@
 //! Stage 91 Phase 3.1 - 包管理器集成
 //!
 //! 提供 npm、Yarn、pnpm 的完整兼容性支持
-
 pub mod npm;
 pub mod yarn;
 pub mod pnpm;
 pub mod lockfile;
 pub mod registry;
 pub mod auth;
-
 pub use npm::*;
 pub use yarn::*;
 pub use pnpm::*;
 pub use lockfile::*;
 pub use registry::*;
 pub use auth::*;
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 包管理器类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PackageManagerType {
@@ -30,7 +26,6 @@ pub enum PackageManagerType {
     Yarn,
     Pnpm,
 }
-
 /// 包规范
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PackageSpec {
@@ -45,7 +40,6 @@ pub enum PackageSpec {
     /// 本地路径
     Local(PathBuf),
 }
-
 /// 构建结果
 #[derive(Debug, Clone)]
 pub struct BuildResult {
@@ -55,7 +49,6 @@ pub struct BuildResult {
     pub warnings: Vec<String>,
     pub errors: Vec<String>,
 }
-
 /// 包管理器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PackageManagerConfig {
@@ -68,7 +61,6 @@ pub struct PackageManagerConfig {
     pub ca_file: Option<PathBuf>,
     pub strict_ssl: bool,
 }
-
 impl Default for PackageManagerConfig {
     fn default() -> Self {
         Self {
@@ -83,7 +75,6 @@ impl Default for PackageManagerConfig {
         }
     }
 }
-
 /// 包解析结果
 #[derive(Debug, Clone)]
 pub struct PackageResolution {
@@ -99,7 +90,6 @@ pub struct PackageResolution {
     pub types: Option<String>,
     pub exports: Option<serde_json::Value>,
 }
-
 /// 包安装选项
 #[derive(Debug, Clone)]
 pub struct InstallOptions {
@@ -113,7 +103,6 @@ pub struct InstallOptions {
     pub ignore_scripts: bool,
     pub legacy_peer_deps: bool,
 }
-
 impl Default for InstallOptions {
     fn default() -> Self {
         Self {
@@ -129,7 +118,6 @@ impl Default for InstallOptions {
         }
     }
 }
-
 /// 依赖类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DependencyType {
@@ -139,7 +127,6 @@ pub enum DependencyType {
     Optional,
     Bundle,
 }
-
 /// 脚本定义
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Script {
@@ -147,7 +134,6 @@ pub struct Script {
     pub command: String,
     pub description: Option<String>,
 }
-
 /// 导出配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportsConfig {
@@ -160,14 +146,12 @@ pub struct ExportsConfig {
     pub require: Option<String>,
     pub default: Option<String>,
 }
-
 /// 文件模式
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilesConfig {
     pub include: Vec<String>,
     pub exclude: Vec<String>,
 }
-
 /// 生命周期钩子
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LifecycleHooks {
@@ -176,7 +160,6 @@ pub struct LifecycleHooks {
     pub pre_publish: Vec<String>,
     pub post_publish: Vec<String>,
 }
-
 /// 语义化版本范围
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VersionRange {
@@ -191,22 +174,18 @@ pub enum VersionRange {
     Or(Vec<VersionRange>),
     Wildcard,               // *
 }
-
 impl VersionRange {
     /// 解析版本范围字符串
     pub fn parse(s: &str) -> Result<Self, String> {
         if s == "*" {
             return Ok(VersionRange::Wildcard);
         }
-
         if let Some(stripped) = s.strip_prefix('^') {
             return Ok(VersionRange::Compatible(stripped.to_string());
         }
-
         if let Some(stripped) = s.strip_prefix('~') {
             return Ok(VersionRange::Approximate(stripped.to_string());
         }
-
         if s.contains("||") {
             let parts: Vec<VersionRange> = s
                 .split("||")
@@ -214,31 +193,26 @@ impl VersionRange {
                 .collect::<Result<Vec<_>, _>>()?;
             return Ok(VersionRange::Or(parts));
         }
-
         if s.contains(" - ") {
             let parts: Vec<&str> = s.split(" - ").collect();
             if parts.len() == 2 {
                 return Ok(VersionRange::Range(parts[0].to_string(), parts[1].to_string());
             }
         }
-
         if let Some(stripped) = s.strip_prefix('>') {
             if stripped.starts_with('=') {
                 return Ok(VersionRange::GreaterThanOrEqual(stripped[1..].to_string());
             }
             return Ok(VersionRange::GreaterThan(stripped.to_string());
         }
-
         if let Some(stripped) = s.strip_prefix('<') {
             if stripped.starts_with('=') {
                 return Ok(VersionRange::LessThanOrEqual(stripped[1..].to_string());
             }
             return Ok(VersionRange::LessThan(stripped.to_string());
         }
-
         Ok(VersionRange::Exact(s.to_string())
     }
-
     /// 检查版本是否匹配此范围
     pub fn matches(&self, version: &str) -> bool {
         match self {
@@ -271,7 +245,6 @@ impl VersionRange {
         }
     }
 }
-
 impl std::fmt::Display for VersionRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

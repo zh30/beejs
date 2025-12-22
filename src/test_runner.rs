@@ -1,11 +1,9 @@
 //! Beejs Test Runner
 //! 高性能测试运行器，支持 Jest 风格的测试
-
 #[allow(unused_imports)]
 use anyhow::{anyhow, Result};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
-
 /// Test status
 #[derive(Debug, Clone, PartialEq)]
 pub enum TestStatus {
@@ -15,7 +13,6 @@ pub enum TestStatus {
     Failed(String),
     Skipped(String),
 }
-
 /// Test case structure
 #[derive(Debug, Clone)]
 pub struct TestCase {
@@ -25,7 +22,6 @@ pub struct TestCase {
     pub duration: Option<Duration>,
     pub error: Option<String>,
 }
-
 /// Test suite for a file
 #[derive(Debug, Clone)]
 pub struct TestSuite {
@@ -36,7 +32,6 @@ pub struct TestSuite {
     pub skipped: usize,
     pub total_duration: Duration,
 }
-
 /// Test runner configuration
 #[derive(Debug, Clone)]
 pub struct TestRunnerConfig {
@@ -45,7 +40,6 @@ pub struct TestRunnerConfig {
     pub test_timeout: Duration,
     pub max_workers: usize,
 }
-
 impl Default for TestRunnerConfig {
     fn default() -> Self {
         Self {
@@ -56,13 +50,11 @@ impl Default for TestRunnerConfig {
         }
     }
 }
-
 /// Test runner for Beejs runtime
 pub struct TestRunner {
     config: TestRunnerConfig,
     runtime: crate::Runtime,
 }
-
 impl TestRunner {
     /// Create a new test runner
     pub fn new(config: TestRunnerConfig) -> Result<Self> {
@@ -73,29 +65,22 @@ impl TestRunner {
                 return Err(anyhow!("V8 engine is not available (Once instance is poisoned). Tests cannot run in parallel."));
             }
         }
-
         let runtime: _ = crate::Runtime::new(
             67108864,   // 64MB stack
             1073741824, // 1GB heap
             config.verbose,  , false)?;
-
         Ok(Self { config, runtime })
     }
-
     /// Run tests in a file
     pub fn run_file(&self, file: &Path) -> Result<TestSuite> {
         let start_time: _ = Instant::now();
-
         if self.config.verbose {
             println!("Running tests in: {}", file.display());
         }
-
         // Execute tests
         let result: _ = self.runtime.execute_file(&file.to_path_buf())?;
-
         // Parse test results
         let tests: _ = self.parse_test_results(&result)?;
-
         let passed: _ = tests
             .iter()
             .filter(|t| matches!(t.status, TestStatus::Passed))
@@ -108,7 +93,6 @@ impl TestRunner {
             .iter()
             .filter(|t| matches!(t.status, TestStatus::Skipped(_))
             .count();
-
         let suite: _ = TestSuite {
             file: file.to_path_buf(),
             tests,
@@ -117,24 +101,19 @@ impl TestRunner {
             skipped,
             total_duration: start_time.elapsed(),
         };
-
         if self.config.verbose {
             println!(
                 "Tests completed: {} passed, {} failed, {} skipped",
                 suite.passed, suite.failed, suite.skipped
             );
         }
-
         Ok(suite)
     }
-
     /// Run tests matching a pattern
     pub fn run_pattern(&self, pattern: &str) -> Result<Vec<TestSuite> {
         let mut suites = Vec::new();
-
         // Find test files matching pattern
         let test_files: _ = self.find_test_files(pattern)?;
-
         for file in test_files {
             match self.run_file(&file) {
                 Ok(suite) => suites.push(suite),
@@ -145,14 +124,11 @@ impl TestRunner {
                 }
             }
         }
-
         Ok(suites)
     }
-
     /// Find test files matching a pattern
     fn find_test_files(&self, _pattern: &str) -> Result<Vec<PathBuf> {
         let mut files = Vec::new();
-
         // Simple pattern matching - look for *.test.js or *.spec.js
         let patterns: _ = vec![
             "**/*.test.js",
@@ -160,7 +136,6 @@ impl TestRunner {
             "**/test/**/*.js",
             "**/tests/**/*.js",
         ];
-
         for _pattern in patterns {
             // In a real implementation, we'd use glob or similar
             // For now, just look in current directory
@@ -170,7 +145,6 @@ impl TestRunner {
                         let path: _ = entry.path();
                         if path.is_file() {
                             let file_name: _ = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-
                             if file_name.contains("test") || file_name.contains("spec") {
                                 if file_name.ends_with(".js") {
                                     files.push(path);
@@ -181,10 +155,8 @@ impl TestRunner {
                 }
             }
         }
-
         Ok(files)
     }
-
     /// Parse test execution results
     fn parse_test_results(&self, _output: &str) -> Result<Vec<TestCase> {
         // In a real implementation, we'd parse JSON output or structured logs
@@ -197,7 +169,6 @@ impl TestRunner {
             error: None,
         }])
     }
-
     /// Get test statistics
     pub fn get_stats(&self) -> TestStats {
         TestStats {
@@ -210,7 +181,6 @@ impl TestRunner {
         }
     }
 }
-
 /// Test statistics
 #[derive(Debug, Clone)]
 pub struct TestStats {
@@ -221,7 +191,6 @@ pub struct TestStats {
     pub skipped: usize,
     pub total_duration: Duration,
 }
-
 impl TestStats {
     /// Format statistics as string
     pub fn format_summary(&self) -> String {
@@ -235,18 +204,15 @@ impl TestStats {
         )
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Write;
     use tempfile::NamedTempFile;
-
     // Import the V8 requirement macro
     use crate::require_v8;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_runner_creation() {
         require_v8!();
@@ -254,17 +220,14 @@ use std::collections::{HashMap, BTreeMap};
         let runner: _ = TestRunner::new(config);
         assert!(runner.is_ok());
     }
-
     #[test]
     fn test_run_simple_file() {
         require_v8!();
         let config: _ = TestRunnerConfig::default();
         let runner: _ = TestRunner::new(config).unwrap();
-
         // Create a simple test file
         let mut file = NamedTempFile::new().unwrap();
         writeln!(file, "console.log('test output');").unwrap();
-
         let result: _ = runner.run_file(file.path());
         assert!(result.is_ok());
     }

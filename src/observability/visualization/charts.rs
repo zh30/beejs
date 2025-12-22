@@ -7,13 +7,11 @@
 //! - HeatMap: Density and intensity visualization
 //! - ScatterPlot: Correlation and distribution analysis
 //! - AreaChart: Cumulative and range data
-
 use super::*;
 use anyhow::{Result, Context, anyhow};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, warn, error};
-
 /// Line Chart - For time series and continuous data
 pub struct LineChart {
     config: VisualizationConfig,
@@ -24,7 +22,6 @@ pub struct LineChart {
     line_style: LineStyle,
     color_palette: ColorPalette,
 }
-
 impl LineChart {
     /// Create a new line chart
     pub fn new(config: VisualizationConfig) -> Self {
@@ -46,61 +43,49 @@ impl LineChart {
             config,
         }
     }
-
     /// Add a data series
     pub fn add_series(&mut self, series: DataSeries) -> &mut Self {
         self.data.push(series);
         self
     }
-
     /// Set axis configuration
     pub fn axis_config(&mut self, config: AxisConfig) -> &mut Self {
         self.axis_config = config;
         self
     }
-
     /// Set legend configuration
     pub fn legend_config(&mut self, config: LegendConfig) -> &mut Self {
         self.legend_config = config;
         self
     }
-
     /// Set marker configuration
     pub fn marker_config(&mut self, config: MarkerConfig) -> &mut Self {
         self.marker_config = config;
         self
     }
-
     /// Set line style
     pub fn line_style(&mut self, style: LineStyle) -> &mut Self {
         self.line_style = style;
         self
     }
-
     /// Set color palette
     pub fn color_palette(&mut self, palette: ColorPalette) -> &mut Self {
         self.color_palette = palette;
         self
     }
-
     /// Render the chart as SVG
     pub fn render_svg(&self) -> Result<String> {
         debug!("Rendering line chart: {}", self.config.title);
-
         if self.data.is_empty() {
             return Err(anyhow!("No data series provided"));
         }
-
         let width: _ = self.config.width;
         let height: _ = self.config.height;
         let padding: _ = &self.config.padding;
-
         let chart_width: _ = width - padding.left - padding.right;
         let chart_height: _ = height - padding.top - padding.bottom;
-
         // Calculate scales
         let (min_x, max_x, min_y, max_y) = self.calculate_bounds();
-
         // Build SVG
         let mut svg = String::new();
         svg.push_str(&format!(
@@ -130,7 +115,6 @@ impl LineChart {
             self.config.text_color,
             self.config.background_color
         ));
-
         // Render title
         svg.push_str(&format!(
             r#"  <text x="{}" y="{}" class="title" text-anchor="middle">{}</text>
@@ -139,7 +123,6 @@ impl LineChart {
             padding.top / 2,
             self.config.title
         ));
-
         // Render axes
         svg.push_str(&format!(
             r#"  <line x1="{}" y1="{}" x2="{}" y2="{}" class="axis"/>
@@ -150,7 +133,6 @@ impl LineChart {
             padding.left, padding.top,
             padding.left, height - padding.bottom
         ));
-
         // Render grid
         if self.config.padding.bottom > 30 {
             let grid_lines: _ = 5;
@@ -164,7 +146,6 @@ impl LineChart {
                 ));
             }
         }
-
         // Render data series
         let colors: _ = vec![
             &self.color_palette.primary,
@@ -175,23 +156,19 @@ impl LineChart {
             &self.color_palette.warning,
             &self.color_palette.error,
         ];
-
         for (series_idx, series) in self.data.iter().enumerate() {
             let color: _ = series.color.as_ref().unwrap_or(colors[series_idx % colors.len()]);
-
             if !series.data.is_empty() {
                 // Build path
                 let mut path = String::new();
                 for (point_idx, point) in series.data.iter().enumerate() {
                     let x: _ = padding.left + ((point.x - min_x) / (max_x - min_x)) * chart_width;
                     let y: _ = height - padding.bottom - ((point.y - min_y) / (max_y - min_y)) * chart_height;
-
                     if point_idx == 0 {
                         path.push_str(&format!("M {} {}", x, y));
                     } else {
                         path.push_str(&format!(" L {} {}", x, y));
                     }
-
                     // Render marker
                     if self.marker_config.enabled {
                         svg.push_str(&format!(
@@ -201,13 +178,11 @@ impl LineChart {
                         ));
                     }
                 }
-
                 // Render line
                 let dash_attr: _ = match &self.line_style.dash_array {
                     Some(dash) => format!("stroke-dasharray=\"{}\"", dash.join(" ")),
                     None => String::new(),
                 };
-
                 svg.push_str(&format!(
                     r#"  <path d="{}" fill="none" stroke="{}" stroke-width="{}" {} opacity="0.9"/>
 "#,
@@ -215,16 +190,13 @@ impl LineChart {
                 ));
             }
         }
-
         // Render legend
         if self.legend_config.show && !self.data.is_empty() {
             let legend_y: _ = height - 10;
             let legend_x_start: _ = width / 2 - (self.data.len() as i32 * 100) / 2;
-
             for (series_idx, series) in self.data.iter().enumerate() {
                 let x: _ = legend_x_start + (series_idx as i32 * 100);
                 let color: _ = series.color.as_ref().unwrap_or(colors[series_idx % colors.len()]);
-
                 svg.push_str(&format!(
                     r#"  <line x1="{}" y1="{}" x2="{}" y2="{}" stroke="{}" stroke-width="3"/>
   <text x="{}" y="{}" class="legend" text-anchor="start">{}</text>
@@ -234,20 +206,16 @@ impl LineChart {
                 ));
             }
         }
-
         svg.push_str("</svg>");
-
         debug!("Line chart rendered successfully: {} bytes", svg.len());
         Ok(svg)
     }
-
     /// Calculate data bounds
     fn calculate_bounds(&self) -> (f64, f64, f64, f64) {
         let mut min_x = f64::INFINITY;
         let mut max_x = f64::NEG_INFINITY;
         let mut min_y = f64::INFINITY;
         let mut max_y = f64::NEG_INFINITY;
-
         for series in &self.data {
             for point in &series.data {
                 min_x = min_x.min(point.x);
@@ -256,20 +224,16 @@ impl LineChart {
                 max_y = max_y.max(point.y);
             }
         }
-
         // Add padding to bounds
         let x_range: _ = max_x - min_x;
         let y_range: _ = max_y - min_y;
-
         let min_x: _ = min_x - x_range * 0.05;
         let max_x: _ = max_x + x_range * 0.05;
         let min_y: _ = min_y - y_range * 0.05;
         let max_y: _ = max_y + y_range * 0.05;
-
         (min_x, max_x, min_y, max_y)
     }
 }
-
 impl Visualizable for LineChart {
     fn render(&self) -> String {
         self.render_svg().unwrap_or_else(|e| {
@@ -278,7 +242,6 @@ impl Visualizable for LineChart {
                     self.config.width, self.config.height, e)
         })
     }
-
     fn update_data(&mut self, data: Vec<f64>) -> Result<()> {
         // Convert flat data to DataSeries
         let data_points: Vec<DataPoint> = data.into_iter()
@@ -291,7 +254,6 @@ impl Visualizable for LineChart {
                 metadata: HashMap::new(),
             })
             .collect();
-
         let series: _ = DataSeries {
             name: "Series 1".to_string(),
             data: data_points,
@@ -299,17 +261,14 @@ impl Visualizable for LineChart {
             visible: true,
             line_style: self.line_style.clone(),
         };
-
         self.data.clear();
         self.data.push(series);
         Ok(())
     }
-
     fn get_config(&self) -> &VisualizationConfig {
         &self.config
     }
 }
-
 /// Bar Chart - For categorical and discrete data
 pub struct BarChart {
     config: VisualizationConfig,
@@ -320,7 +279,6 @@ pub struct BarChart {
     bar_width: f64,
     bar_gap: f64,
 }
-
 impl BarChart {
     /// Create a new bar chart
     pub fn new(config: VisualizationConfig) -> Self {
@@ -342,55 +300,44 @@ impl BarChart {
             bar_gap: 10.0,
         }
     }
-
     /// Add a data series
     pub fn add_series(&mut self, series: DataSeries) -> &mut Self {
         self.data.push(series);
         self
     }
-
     /// Set axis configuration
     pub fn axis_config(&mut self, config: AxisConfig) -> &mut Self {
         self.axis_config = config;
         self
     }
-
     /// Set legend configuration
     pub fn legend_config(&mut self, config: LegendConfig) -> &mut Self {
         self.legend_config = config;
         self
     }
-
     /// Set bar width
     pub fn bar_width(&mut self, width: f64) -> &mut Self {
         self.bar_width = width;
         self
     }
-
     /// Set bar gap
     pub fn bar_gap(&mut self, gap: f64) -> &mut Self {
         self.bar_gap = gap;
         self
     }
-
     /// Render the chart as SVG
     pub fn render_svg(&self) -> Result<String> {
         debug!("Rendering bar chart: {}", self.config.title);
-
         if self.data.is_empty() {
             return Err(anyhow!("No data series provided"));
         }
-
         let width: _ = self.config.width;
         let height: _ = self.config.height;
         let padding: _ = &self.config.padding;
-
         let chart_width: _ = width - padding.left - padding.right;
         let chart_height: _ = height - padding.top - padding.bottom;
-
         // Calculate scales
         let (_, _, min_y, max_y) = self.calculate_bounds();
-
         // Build SVG
         let mut svg = String::new();
         svg.push_str(&format!(
@@ -418,7 +365,6 @@ impl BarChart {
             self.config.text_color,
             self.config.background_color
         ));
-
         // Render title
         svg.push_str(&format!(
             r#"  <text x="{}" y="{}" class="title" text-anchor="middle">{}</text>
@@ -427,7 +373,6 @@ impl BarChart {
             padding.top / 2,
             self.config.title
         ));
-
         // Render axes
         svg.push_str(&format!(
             r#"  <line x1="{}" y1="{}" x2="{}" y2="{}" class="axis"/>
@@ -438,7 +383,6 @@ impl BarChart {
             padding.left, padding.top,
             padding.left, height - padding.bottom
         ));
-
         // Render bars
         let colors: _ = vec![
             &self.color_palette.primary,
@@ -449,25 +393,20 @@ impl BarChart {
             &self.color_palette.warning,
             &self.color_palette.error,
         ];
-
         let max_bars: _ = self.data.iter().map(|s| s.data.len()).max().unwrap_or(0);
         let total_bar_width: _ = self.bar_width * max_bars as f64 + self.bar_gap * (max_bars as f64 - 1.0);
         let start_x: _ = padding.left + (chart_width - total_bar_width) / 2.0;
-
         for (series_idx, series) in self.data.iter().enumerate() {
             let color: _ = series.color.as_ref().unwrap_or(colors[series_idx % colors.len()]);
-
             for (bar_idx, point) in series.data.iter().enumerate() {
                 let x: _ = start_x + bar_idx as f64 * (self.bar_width + self.bar_gap);
                 let bar_height: _ = ((point.y - min_y) / (max_y - min_y)) * chart_height;
                 let y: _ = height - padding.bottom - bar_height;
-
                 svg.push_str(&format!(
                     r#"  <rect x="{}" y="{}" width="{}" height="{}" fill="{}" rx="4" opacity="0.8"/>
 "#,
                     x, y, self.bar_width, bar_height, color
                 ));
-
                 // Render value label
                 svg.push_str(&format!(
                     r#"  <text x="{}" y="{}" class="label" text-anchor="middle" dy="-5">{}</text>
@@ -477,35 +416,28 @@ impl BarChart {
                 ));
             }
         }
-
         svg.push_str("</svg>");
-
         debug!("Bar chart rendered successfully: {} bytes", svg.len());
         Ok(svg)
     }
-
     /// Calculate data bounds
     fn calculate_bounds(&self) -> (f64, f64, f64, f64) {
         let mut min_x = 0.0;
         let mut max_x = 0.0;
         let mut min_y = f64::INFINITY;
         let mut max_y = f64::NEG_INFINITY;
-
         for series in &self.data {
             for point in &series.data {
                 min_y = min_y.min(point.y);
                 max_y = max_y.max(point.y);
             }
         }
-
         let y_range: _ = max_y - min_y;
         let min_y: _ = min_y - y_range * 0.05;
         let max_y: _ = max_y + y_range * 0.05;
-
         (min_x, max_x, min_y, max_y)
     }
 }
-
 impl Visualizable for BarChart {
     fn render(&self) -> String {
         self.render_svg().unwrap_or_else(|e| {
@@ -514,7 +446,6 @@ impl Visualizable for BarChart {
                     self.config.width, self.config.height, e)
         })
     }
-
     fn update_data(&mut self, data: Vec<f64>) -> Result<()> {
         let series: _ = DataSeries {
             name: "Series 1".to_string(),
@@ -535,17 +466,14 @@ impl Visualizable for BarChart {
             visible: true,
             line_style: LineStyle::default(),
         };
-
         self.data.clear();
         self.data.push(series);
         Ok(())
     }
-
     fn get_config(&self) -> &VisualizationConfig {
         &self.config
     }
 }
-
 /// Pie Chart - For proportional and percentage data
 pub struct PieChart {
     config: VisualizationConfig,
@@ -555,7 +483,6 @@ pub struct PieChart {
     show_percentages: bool,
     inner_radius: f64,
 }
-
 impl PieChart {
     /// Create a new pie chart
     pub fn new(config: VisualizationConfig) -> Self {
@@ -576,50 +503,41 @@ impl PieChart {
             inner_radius: 0.0,
         }
     }
-
     /// Add data point
     pub fn add_data(&mut self, point: DataPoint) -> &mut Self {
         self.data.push(point);
         self
     }
-
     /// Set show labels
     pub fn show_labels(&mut self, show: bool) -> &mut Self {
         self.show_labels = show;
         self
     }
-
     /// Set show percentages
     pub fn show_percentages(&mut self, show: bool) -> &mut Self {
         self.show_percentages = show;
         self
     }
-
     /// Set inner radius (for donut chart)
     pub fn inner_radius(&mut self, radius: f64) -> &mut Self {
         self.inner_radius = radius;
         self
     }
-
     /// Render the chart as SVG
     pub fn render_svg(&self) -> Result<String> {
         debug!("Rendering pie chart: {}", self.config.title);
-
         if self.data.is_empty() {
             return Err(anyhow!("No data points provided"));
         }
-
         let width: _ = self.config.width;
         let height: _ = self.config.height;
         let center_x: _ = width / 2.0;
         let center_y: _ = height / 2.0;
         let radius: _ = (width.min(height) / 2.0) - 40.0;
-
         let total: f64 = self.data.iter().map(|p| p.y).sum();
         if total == 0.0 {
             return Err(anyhow!("Total data value is zero"));
         }
-
         // Build SVG
         let mut svg = String::new();
         svg.push_str(&format!(
@@ -642,7 +560,6 @@ impl PieChart {
             self.config.font_size + 6,
             self.config.background_color
         ));
-
         // Render title
         svg.push_str(&format!(
             r#"  <text x="{}" y="{}" class="title" text-anchor="middle">{}</text>
@@ -651,7 +568,6 @@ impl PieChart {
             30,
             self.config.title
         ));
-
         // Render pie slices
         let colors: _ = vec![
             &self.color_palette.primary,
@@ -662,21 +578,16 @@ impl PieChart {
             &self.color_palette.warning,
             &self.color_palette.error,
         ];
-
         let mut current_angle = -std::f64::consts::PI / 2.0; // Start at top
-
         for (idx, point) in self.data.iter().enumerate() {
             let slice_angle: _ = (point.y / total) * std::f64::consts::PI * 2.0;
             let end_angle: _ = current_angle + slice_angle;
-
             let x1: _ = center_x + radius * current_angle.cos();
             let y1: _ = center_y + radius * current_angle.sin();
             let x2: _ = center_x + radius * end_angle.cos();
             let y2: _ = center_y + radius * end_angle.sin();
-
             let large_arc: _ = if slice_angle > std::f64::consts::PI { 1 } else { 0 };
             let color: _ = point.color.as_ref().unwrap_or(colors[idx % colors.len()]);
-
             // Draw slice
             if self.inner_radius > 0.0 {
                 // Donut chart
@@ -684,7 +595,6 @@ impl PieChart {
                 let inner_y1: _ = center_y + self.inner_radius * current_angle.sin();
                 let inner_x2: _ = center_x + self.inner_radius * end_angle.cos();
                 let inner_y2: _ = center_y + self.inner_radius * end_angle.sin();
-
                 svg.push_str(&format!(
                     r#"  <path d="M {} {} L {} {} A {} {} 0 {} 1 {} {} L {} {} A {} {} 0 {} 0 {} {} Z" fill="{}"/>
 "#,
@@ -700,7 +610,6 @@ impl PieChart {
                     center_x, center_y, x1, y1, radius, radius, large_arc, x2, y2, color
                 ));
             }
-
             // Render label
             if self.show_labels {
                 let label_angle: _ = current_angle + slice_angle / 2.0;
@@ -709,10 +618,8 @@ impl PieChart {
                 } else {
                     radius * 0.7
                 };
-
                 let label_x: _ = center_x + label_distance * label_angle.cos();
                 let label_y: _ = center_y + label_distance * label_angle.sin();
-
                 let label_text: _ = if let Some(ref lbl) = point.label {
                     if self.show_percentages {
                         format!("{} ({:.1}%)", lbl, (point.y / total) * 100.0)
@@ -722,24 +629,19 @@ impl PieChart {
                 } else {
                     format!("{:.1}%", (point.y / total) * 100.0)
                 };
-
                 svg.push_str(&format!(
                     r#"  <text x="{}" y="{}" class="label" text-anchor="middle" dy=".3em">{}</text>
 "#,
                     label_x, label_y, label_text
                 ));
             }
-
             current_angle = end_angle;
         }
-
         svg.push_str("</svg>");
-
         debug!("Pie chart rendered successfully: {} bytes", svg.len());
         Ok(svg)
     }
 }
-
 impl Visualizable for PieChart {
     fn render(&self) -> String {
         self.render_svg().unwrap_or_else(|e| {
@@ -748,7 +650,6 @@ impl Visualizable for PieChart {
                     self.config.width, self.config.height, e)
         })
     }
-
     fn update_data(&mut self, data: Vec<f64>) -> Result<()> {
         self.data = data.into_iter().map(|y| DataPoint {
             x: 0.0,
@@ -759,12 +660,10 @@ impl Visualizable for PieChart {
         }).collect();
         Ok(())
     }
-
     fn get_config(&self) -> &VisualizationConfig {
         &self.config
     }
 }
-
 /// Builder for LineChart
 pub struct LineChartBuilder {
     config: VisualizationConfig,
@@ -775,7 +674,6 @@ pub struct LineChartBuilder {
     line_style: LineStyle,
     color_palette: ColorPalette,
 }
-
 impl LineChartBuilder {
     /// Create a new builder
     pub fn new() -> Self {
@@ -797,20 +695,17 @@ impl LineChartBuilder {
             },
         }
     }
-
     /// Set title
     pub fn title(&mut self, title: &str) -> &mut Self {
         self.config.title = title.to_string();
         self
     }
-
     /// Set dimensions
     pub fn dimensions(&mut self, width: u32, height: u32) -> &mut Self {
         self.config.width = width;
         self.config.height = height;
         self
     }
-
     /// Add data series
     pub fn data(&mut self, data: Vec<f64>) -> &mut Self {
         let series: _ = DataSeries {
@@ -835,7 +730,6 @@ impl LineChartBuilder {
         self.data.push(series);
         self
     }
-
     /// Build the chart
     pub fn build(&mut self) -> Result<LineChart> {
         let mut chart = LineChart::new(self.config.clone());
@@ -848,13 +742,11 @@ impl LineChartBuilder {
         Ok(chart)
     }
 }
-
 impl Default for LineChartBuilder {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// Builder for BarChart
 pub struct BarChartBuilder {
     config: VisualizationConfig,
@@ -865,7 +757,6 @@ pub struct BarChartBuilder {
     bar_width: f64,
     bar_gap: f64,
 }
-
 impl BarChartBuilder {
     /// Create a new builder
     pub fn new() -> Self {
@@ -888,20 +779,17 @@ impl BarChartBuilder {
             bar_gap: 10.0,
         }
     }
-
     /// Set title
     pub fn title(&mut self, title: &str) -> &mut Self {
         self.config.title = title.to_string();
         self
     }
-
     /// Set dimensions
     pub fn dimensions(&mut self, width: u32, height: u32) -> &mut Self {
         self.config.width = width;
         self.config.height = height;
         self
     }
-
     /// Add data series
     pub fn data(&mut self, data: Vec<f64>) -> &mut Self {
         let series: _ = DataSeries {
@@ -926,7 +814,6 @@ impl BarChartBuilder {
         self.data.push(series);
         self
     }
-
     /// Build the chart
     pub fn build(&mut self) -> Result<BarChart> {
         let mut chart = BarChart::new(self.config.clone());
@@ -938,13 +825,11 @@ impl BarChartBuilder {
         Ok(chart)
     }
 }
-
 impl Default for BarChartBuilder {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// Builder for PieChart
 pub struct PieChartBuilder {
     config: VisualizationConfig,
@@ -954,7 +839,6 @@ pub struct PieChartBuilder {
     show_percentages: bool,
     inner_radius: f64,
 }
-
 impl PieChartBuilder {
     /// Create a new builder
     pub fn new() -> Self {
@@ -976,20 +860,17 @@ impl PieChartBuilder {
             inner_radius: 0.0,
         }
     }
-
     /// Set title
     pub fn title(&mut self, title: &str) -> &mut Self {
         self.config.title = title.to_string();
         self
     }
-
     /// Set dimensions
     pub fn dimensions(&mut self, width: u32, height: u32) -> &mut Self {
         self.config.width = width;
         self.config.height = height;
         self
     }
-
     /// Add data point
     pub fn data(&mut self, value: f64, label: &str) -> &mut Self {
         self.data.push(DataPoint {
@@ -1001,7 +882,6 @@ impl PieChartBuilder {
         });
         self
     }
-
     /// Build the chart
     pub fn build(&mut self) -> Result<PieChart> {
         let mut chart = PieChart::new(self.config.clone());
@@ -1012,19 +892,16 @@ impl PieChartBuilder {
         Ok(chart)
     }
 }
-
 impl Default for PieChartBuilder {
     fn default() -> Self {
         Self::new()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_line_chart_builder() {
         let mut builder = LineChartBuilder::new();
@@ -1032,13 +909,11 @@ use std::collections::{HashMap, BTreeMap};
             .title("Test Line Chart")
             .dimensions(800, 600)
             .data(vec![10.0, 20.0, 30.0, 40.0, 50.0]);
-
         let chart: _ = builder.build().unwrap();
         assert_eq!(chart.config.title, "Test Line Chart");
         assert_eq!(chart.config.width, 800);
         assert_eq!(chart.config.height, 600);
     }
-
     #[test]
     fn test_bar_chart_builder() {
         let mut builder = BarChartBuilder::new();
@@ -1046,12 +921,10 @@ use std::collections::{HashMap, BTreeMap};
             .title("Test Bar Chart")
             .dimensions(800, 600)
             .data(vec![10.0, 20.0, 30.0, 40.0, 50.0]);
-
         let chart: _ = builder.build().unwrap();
         assert_eq!(chart.config.title, "Test Bar Chart");
         assert_eq!(chart.config.width, 800);
     }
-
     #[test]
     fn test_pie_chart_builder() {
         let mut builder = PieChartBuilder::new();
@@ -1061,42 +934,34 @@ use std::collections::{HashMap, BTreeMap};
             .data(30.0, "Category A")
             .data(20.0, "Category B")
             .data(50.0, "Category C");
-
         let chart: _ = builder.build().unwrap();
         assert_eq!(chart.config.title, "Test Pie Chart");
         assert_eq!(chart.data.len(), 3);
     }
-
     #[test]
     fn test_line_chart_render() {
         let mut builder = LineChartBuilder::new();
         builder
             .title("CPU Usage")
             .data(vec![10.0, 20.0, 30.0, 25.0, 35.0]);
-
         let chart: _ = builder.build().unwrap();
         let svg: _ = chart.render();
-
         assert!(svg.contains("<svg"));
         assert!(svg.contains("CPU Usage"));
         assert!(svg.contains("path"));
     }
-
     #[test]
     fn test_bar_chart_render() {
         let mut builder = BarChartBuilder::new();
         builder
             .title("Memory Usage")
             .data(vec![100.0, 200.0, 150.0, 300.0]);
-
         let chart: _ = builder.build().unwrap();
         let svg: _ = chart.render();
-
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Memory Usage"));
         assert!(svg.contains("rect"));
     }
-
     #[test]
     fn test_pie_chart_render() {
         let mut builder = PieChartBuilder::new();
@@ -1105,42 +970,33 @@ use std::collections::{HashMap, BTreeMap};
             .data(40.0, "Product A")
             .data(35.0, "Product B")
             .data(25.0, "Product C");
-
         let chart: _ = builder.build().unwrap();
         let svg: _ = chart.render();
-
         assert!(svg.contains("<svg"));
         assert!(svg.contains("Market Share"));
         assert!(svg.contains("path"));
     }
-
     #[test]
     fn test_line_chart_empty_data() {
         let config: _ = VisualizationConfig::default();
         let chart: _ = LineChart::new(config);
         let result: _ = chart.render_svg();
-
         assert!(result.is_err());
     }
-
     #[test]
     fn test_bar_chart_empty_data() {
         let config: _ = VisualizationConfig::default();
         let chart: _ = BarChart::new(config);
         let result: _ = chart.render_svg();
-
         assert!(result.is_err());
     }
-
     #[test]
     fn test_pie_chart_empty_data() {
         let config: _ = VisualizationConfig::default();
         let chart: _ = PieChart::new(config);
         let result: _ = chart.render_svg();
-
         assert!(result.is_err());
     }
-
     #[test]
     fn test_line_chart_update_data() {
         let mut builder = LineChartBuilder::new();
@@ -1149,13 +1005,10 @@ use std::collections::{HashMap, BTreeMap};
             .data(vec![1.0, 2.0, 3.0])
             .build()
             .unwrap();
-
         chart.update_data(vec![10.0, 20.0, 30.0, 40.0]).unwrap();
         let svg: _ = chart.render();
-
         assert!(svg.contains("<svg"));
     }
-
     #[test]
     fn test_pie_chart_donut() {
         let mut builder = PieChartBuilder::new();
@@ -1165,13 +1018,10 @@ use std::collections::{HashMap, BTreeMap};
             .data(70.0, "B")
             .build()
             .unwrap();
-
         chart.inner_radius(50.0);
         let svg: _ = chart.render();
-
         assert!(svg.contains("Donut Chart"));
     }
-
     #[test]
     fn test_color_palette() {
         let palette: _ = ColorPalette {
@@ -1183,16 +1033,13 @@ use std::collections::{HashMap, BTreeMap};
             warning: "#ffa500".to_string(),
             error: "#ff0000".to_string(),
         };
-
         assert_eq!(palette.primary, "#ff0000");
         assert_eq!(palette.secondary, "#00ff00");
     }
-
     #[test]
     fn test_data_point_with_metadata() {
         let mut metadata = HashMap::new();
         metadata.insert("category".to_string(), serde_json::Value::String("test".to_string()));
-
         let point: _ = DataPoint {
             x: 10.0,
             y: 20.0,
@@ -1200,7 +1047,6 @@ use std::collections::{HashMap, BTreeMap};
             color: Some("#3b82f6".to_string()),
             metadata,
         };
-
         assert_eq!(point.x, 10.0);
         assert_eq!(point.y, 20.0);
         assert_eq!(point.label, Some("Test Point".to_string()));

@@ -1,9 +1,7 @@
 //! Stage 89 Phase 2: 错误处理模块
 //! 提供统一的错误处理、自动恢复和错误上下文管理
-
 pub mod types;
 pub mod recovery;
-
 pub use types::{
     BeejsError,
     ErrorContext,
@@ -11,7 +9,6 @@ pub use types::{
     StackFrame,
     ErrorSeverity,
 };
-
 pub use recovery::{
     AutoRecovery,
     RetryPolicy,
@@ -19,7 +16,6 @@ pub use recovery::{
     RecoveryStats,
     FallbackStrategyFn,
 };
-
 /// 创建错误上下文的便捷函数
 pub fn create_error_context(
     error: BeejsError,
@@ -29,15 +25,12 @@ pub fn create_error_context(
 ) -> ErrorContext {
     ErrorContext::new(error, file, line, function)
 }
-
 /// 创建简单错误上下文的便捷函数
 pub fn create_simple_error_context(error: BeejsError) -> ErrorContext {
     ErrorContext::new_without_location(error)
 }
-
 /// 错误处理结果类型
 pub type Result<T> = std::result::Result<T, BeejsError>;
-
 /// 全局错误处理配置
 #[derive(Debug, Clone)]
 pub struct GlobalErrorConfig {
@@ -46,7 +39,6 @@ pub struct GlobalErrorConfig {
     pub max_error_history: usize,
     pub enable_error_logging: bool,
 }
-
 impl Default for GlobalErrorConfig {
     fn default() -> Self {
         Self {
@@ -57,10 +49,8 @@ impl Default for GlobalErrorConfig {
         }
     }
 }
-
 /// 错误处理工具函数
 pub struct ErrorHandler;
-
 impl ErrorHandler {
     /// 包装可能出错的操作，提供错误上下文
     pub async fn wrap_with_context<F, T, Fut>(
@@ -84,18 +74,15 @@ impl ErrorHandler {
                     line,
                     function.to_string(),
                 );
-
                 // 记录错误
                 if GlobalErrorConfig::default().enable_error_logging {
                     eprintln!("Error context: {}", context);
                 }
-
                 // 返回包装后的错误
                 Err(error_type)
             }
         }
     }
-
     /// 安全执行可能出错的操作
     pub async fn safe_execute<F, T, Fut>(
         file: &'static str,
@@ -116,13 +103,11 @@ impl ErrorHandler {
             }
         }
     }
-
     /// 转换任意错误为 BeejsError
     pub fn convert_error<E: std::fmt::Display>(error: E) -> BeejsError {
         BeejsError::RuntimeError(error.to_string())
     }
 }
-
 /// 错误宏
 #[macro_export]
 macro_rules! beejs_try {
@@ -147,7 +132,6 @@ macro_rules! beejs_try {
         }
     };
 }
-
 /// 异步错误处理宏
 #[macro_export]
 macro_rules! beejs_try_async {
@@ -175,13 +159,11 @@ macro_rules! beejs_try_async {
         }
     };
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_error_context_creation() {
         let error: _ = BeejsError::V8Error("Test error".to_string());
@@ -191,36 +173,29 @@ use std::collections::{HashMap, BTreeMap};
             42,
             "test_function".to_string(),
         );
-
         assert_eq!(context.error_type, error);
         assert_eq!(context.source_location.as_ref().unwrap().file, "test.rs");
         assert_eq!(context.source_location.as_ref().unwrap().line, 42);
     }
-
     #[tokio::test]
     async fn test_simple_error_context() {
         let error: _ = BeejsError::RuntimeError("Simple error".to_string());
         let context: _ = create_simple_error_context(error.clone());
-
         assert_eq!(context.error_type, error);
         assert!(context.source_location.is_none());
     }
-
     #[tokio::test]
     async fn test_error_conversion() {
         let std_error: _ = "Standard error";
         let beejs_error: _ = ErrorHandler::convert_error(std_error);
-
         assert!(matches!(beejs_error, BeejsError::RuntimeError(_));
     }
-
     #[test]
     fn test_beejs_try_macro() {
         let result: Result<i32> = Ok(42);
         let value: _ = beejs_try!(result);
         assert_eq!(value, 42);
     }
-
     #[test]
     fn test_beejs_try_macro_error() {
         let result: Result<i32> = Err(BeejsError::V8Error("Test".to_string());

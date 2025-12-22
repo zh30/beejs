@@ -1,8 +1,6 @@
 //! Stage 12.2: V8堆配置优化模块
 //! 提供V8引擎的自定义堆配置，优化不同场景的内存使用
-
 use rusty_v8 as v8;
-
 /// V8堆配置预设
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum V8HeapPreset {
@@ -24,7 +22,6 @@ pub enum V8HeapPreset {
     /// 自定义配置
     Custom(V8HeapConfig),
 }
-
 /// V8堆详细配置
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct V8HeapConfig {
@@ -45,7 +42,6 @@ pub struct V8HeapConfig {
     /// 是否启用并发清扫
     pub concurrent_sweeping: bool,
 }
-
 impl Default for V8HeapConfig {
     fn default() -> Self {
         Self {
@@ -60,7 +56,6 @@ impl Default for V8HeapConfig {
         }
     }
 }
-
 impl V8HeapConfig {
     /// 创建极小配置
     pub fn minimal() -> Self {
@@ -75,7 +70,6 @@ impl V8HeapConfig {
             concurrent_sweeping: false,
         }
     }
-
     /// 创建小型配置
     pub fn small() -> Self {
         Self {
@@ -89,7 +83,6 @@ impl V8HeapConfig {
             concurrent_sweeping: true,
         }
     }
-
     /// 创建大型配置
     pub fn large() -> Self {
         Self {
@@ -103,7 +96,6 @@ impl V8HeapConfig {
             concurrent_sweeping: true,
         }
     }
-
     /// 创建最大配置
     pub fn maximum() -> Self {
         Self {
@@ -118,7 +110,6 @@ impl V8HeapConfig {
         }
     }
 }
-
 impl V8HeapPreset {
     /// 获取堆配置
     pub fn config(&self) -> V8HeapConfig {
@@ -131,7 +122,6 @@ impl V8HeapPreset {
             V8HeapPreset::Custom(config) => *config,
         }
     }
-
     /// 根据代码复杂度推荐预设
     pub fn from_code_complexity(code: &str) -> Self {
         let len: _ = code.len();
@@ -140,10 +130,8 @@ impl V8HeapPreset {
             + code.matches("while").count()
             + code.matches(".map").count()
             + code.matches(".forEach").count();
-
         // 复杂度评分
         let complexity_score: _ = len / 100 + func_count * 10 + loop_count * 5;
-
         match complexity_score {
             0..=10 => V8HeapPreset::Minimal,
             11..=50 => V8HeapPreset::Small,
@@ -153,12 +141,10 @@ impl V8HeapPreset {
         }
     }
 }
-
 /// V8 CreateParams 构建器
 pub struct V8CreateParamsBuilder {
     config: V8HeapConfig,
 }
-
 impl V8CreateParamsBuilder {
     /// 使用预设创建构建器
     pub fn with_preset(preset: V8HeapPreset) -> Self {
@@ -166,12 +152,10 @@ impl V8CreateParamsBuilder {
             config: preset.config(),
         }
     }
-
     /// 使用自定义配置创建构建器
     pub fn with_config(config: V8HeapConfig) -> Self {
         Self { config }
     }
-
     /// 构建 V8 CreateParams
     /// 注意：rusty_v8 的 CreateParams 构建比较受限
     /// 我们返回默认参数，但记录推荐配置
@@ -181,43 +165,35 @@ impl V8CreateParamsBuilder {
         // 这里返回默认参数，配置通过 V8 flags 设置
         v8::CreateParams::default()
     }
-
     /// 获取推荐的 V8 flags
     pub fn recommended_flags(&self) -> Vec<String> {
         let mut flags = Vec::new();
-
         // 堆大小限制
         flags.push(format!(
             "--max-old-space-size={}",
             self.config.max_old_space_size_mb
         ));
-
         // 增量标记
         if self.config.incremental_marking {
             flags.push("--incremental-marking".to_string());
         }
-
         // 并发标记
         if self.config.concurrent_marking {
             flags.push("--concurrent-marking".to_string());
         }
-
         // 并发清扫
         if self.config.concurrent_sweeping {
             flags.push("--concurrent-sweeping".to_string());
         }
-
         flags
     }
 }
-
 /// 全局V8配置管理器
 pub struct V8ConfigManager {
     current_preset: V8HeapPreset,
     /// 是否已应用配置
     applied: bool,
 }
-
 impl V8ConfigManager {
     /// 创建新的配置管理器
     pub fn new() -> Self {
@@ -226,80 +202,64 @@ impl V8ConfigManager {
             applied: false,
         }
     }
-
     /// 设置预设
     pub fn set_preset(&mut self, preset: V8HeapPreset) {
         self.current_preset = preset;
     }
-
     /// 获取当前预设
     pub fn current_preset(&self) -> V8HeapPreset {
         self.current_preset
     }
-
     /// 获取当前配置
     pub fn current_config(&self) -> V8HeapConfig {
         self.current_preset.config()
     }
-
     /// 标记配置已应用
     pub fn mark_applied(&mut self) {
         self.applied = true;
     }
-
     /// 检查配置是否已应用
     pub fn is_applied(&self) -> bool {
         self.applied
     }
-
     /// 根据代码自动选择配置
     pub fn auto_select(&mut self, code: &str) {
         self.current_preset = V8HeapPreset::from_code_complexity(code);
     }
-
     /// 获取内存使用估算（MB）
     pub fn estimated_memory_usage(&self) -> usize {
         let config: _ = self.current_config();
         config.initial_heap_size_mb + config.code_range_size_mb
     }
-
     /// 获取最大内存使用估算（MB）
     pub fn max_memory_usage(&self) -> usize {
         let config: _ = self.current_config();
         config.max_heap_size_mb + config.code_range_size_mb
     }
 }
-
 impl Default for V8ConfigManager {
     fn default() -> Self {
         Self::new()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_heap_presets() {
         let minimal: _ = V8HeapPreset::Minimal.config();
         assert_eq!(minimal.max_heap_size_mb, 16);
-
         let small: _ = V8HeapPreset::Small.config();
         assert_eq!(small.max_heap_size_mb, 64);
-
         let default: _ = V8HeapPreset::Default.config();
         assert_eq!(default.max_heap_size_mb, 256);
-
         let large: _ = V8HeapPreset::Large.config();
         assert_eq!(large.max_heap_size_mb, 512);
-
         let maximum: _ = V8HeapPreset::Maximum.config();
         assert_eq!(maximum.max_heap_size_mb, 1024);
     }
-
     #[test]
     fn test_code_complexity_detection() {
         // 简单代码
@@ -308,7 +268,6 @@ use std::collections::{HashMap, BTreeMap};
             V8HeapPreset::from_code_complexity(simple),
             V8HeapPreset::Minimal
         );
-
         // 中等复杂度
         let medium: _ = r#"
             function add(a, b) { return a + b; }
@@ -321,7 +280,6 @@ use std::collections::{HashMap, BTreeMap};
                 || preset == V8HeapPreset::Default
                 || preset == V8HeapPreset::Minimal
         )));
-
         // 复杂代码
         let complex: _ = r#"
             class Calculator {
@@ -342,33 +300,25 @@ use std::collections::{HashMap, BTreeMap};
                 || preset == V8HeapPreset::Large
         )));
     }
-
     #[test]
     fn test_config_manager() {
         let mut manager = V8ConfigManager::new();
-
         assert_eq!(manager.current_preset(), V8HeapPreset::Default);
         assert!(!manager.is_applied());
-
         manager.set_preset(V8HeapPreset::Large);
         assert_eq!(manager.current_preset(), V8HeapPreset::Large);
-
         manager.mark_applied();
         assert!(manager.is_applied());
-
         // 测试内存估算
         let memory: _ = manager.estimated_memory_usage();
         assert!(memory > 0);
     }
-
     #[test]
     fn test_create_params_builder() {
         let builder: _ = V8CreateParamsBuilder::with_preset(V8HeapPreset::Small);
         let flags: _ = builder.recommended_flags();
-
         assert!(flags.iter().any(|f| f.contains("max-old-space-size"));
     }
-
     #[test]
     fn test_custom_config() {
         let custom_config: _ = V8HeapConfig {
@@ -381,21 +331,16 @@ use std::collections::{HashMap, BTreeMap};
             concurrent_marking: true,
             concurrent_sweeping: true,
         };
-
         let preset: _ = V8HeapPreset::Custom(custom_config);
         let config: _ = preset.config();
-
         assert_eq!(config.max_heap_size_mb, 400);
         assert_eq!(config.initial_heap_size_mb, 100);
     }
-
     #[test]
     fn test_auto_select() {
         let mut manager = V8ConfigManager::new();
-
         manager.auto_select("1 + 1");
         assert_eq!(manager.current_preset(), V8HeapPreset::Minimal);
-
         manager.auto_select("function complex() { for(;;) {} }".repeat(10).as_str());
         assert!(
             manager.current_preset() == V8HeapPreset::Default

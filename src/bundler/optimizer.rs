@@ -1,7 +1,5 @@
 //! Code optimization module
-
 use anyhow::Result;
-
 pub fn optimize_code(code: &str, level: u8) -> Result<String> {
     match level {
         0 => Ok(code.to_string()),
@@ -17,7 +15,6 @@ pub fn optimize_code(code: &str, level: u8) -> Result<String> {
                         let mut in_string = false;
                         let mut string_char = '\0';
                         let _inside_string: _ = false;
-
                         for (i, c) in before_comment.chars().enumerate() {
                             if c == '"' || c == '\'' {
                                 if !in_string {
@@ -31,7 +28,6 @@ pub fn optimize_code(code: &str, level: u8) -> Result<String> {
                                 }
                             }
                         }
-
                         if !in_string {
                             line[..pos].trim_end()
                         } else {
@@ -87,20 +83,17 @@ pub fn optimize_code(code: &str, level: u8) -> Result<String> {
         _ => Ok(code.to_string()),
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_optimize_level_0() {
         let code: _ = "console.log('test'); // comment";
         let result: _ = optimize_code(code, 0).unwrap();
         assert!(result.contains("// comment"));
     }
-
     #[test]
     fn test_optimize_level_1() {
         let code: _ = "console.log('test'); // comment";

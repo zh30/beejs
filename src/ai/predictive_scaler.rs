@@ -1,12 +1,10 @@
 //! AI 预测性扩展器
 //! 提供基于机器学习的资源预测、自动扩展和智能调度功能
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc, Duration};
-
 /// 时间序列指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Metrics {
@@ -18,7 +16,6 @@ pub struct Metrics {
     pub active_connections: u64,
     pub request_rate: f64,
 }
-
 /// 时间范围
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimeFrame {
@@ -26,7 +23,6 @@ pub struct TimeFrame {
     pub end_time: DateTime<Utc>,
     pub duration: Duration,
 }
-
 /// 资源预测
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourcePrediction {
@@ -37,7 +33,6 @@ pub struct ResourcePrediction {
     pub confidence: f64,
     pub factors: Vec<PredictionFactor>,
 }
-
 /// 预测因子
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PredictionFactor {
@@ -45,7 +40,6 @@ pub struct PredictionFactor {
     pub impact: f64,
     pub description: String,
 }
-
 /// 趋势分析
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrendAnalysis {
@@ -55,7 +49,6 @@ pub struct TrendAnalysis {
     pub anomalies: Vec<Anomaly>,
     pub forecast_accuracy: f64,
 }
-
 /// 趋势方向
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TrendDirection {
@@ -64,7 +57,6 @@ pub enum TrendDirection {
     Stable,
     Volatile,
 }
-
 /// 季节性模式
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SeasonalityPattern {
@@ -72,7 +64,6 @@ pub struct SeasonalityPattern {
     pub amplitude: f64,
     pub phase: f64,
 }
-
 /// 异常点
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Anomaly {
@@ -81,7 +72,6 @@ pub struct Anomaly {
     pub deviation_score: f64,
     pub description: String,
 }
-
 /// 扩展策略
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScalingStrategy {
@@ -91,7 +81,6 @@ pub struct ScalingStrategy {
     pub cooldown_period: Duration,
     pub max_instances: u32,
 }
-
 /// 扩展动作
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScalingAction {
@@ -100,7 +89,6 @@ pub struct ScalingAction {
     pub resources: ResourceAllocation,
     pub execution_window: TimeFrame,
 }
-
 /// 动作类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ActionType {
@@ -109,7 +97,6 @@ pub enum ActionType {
     ScaleOut,
     ScaleIn,
 }
-
 /// 资源分配
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceAllocation {
@@ -118,7 +105,6 @@ pub struct ResourceAllocation {
     pub storage_gb: f64,
     pub network_bandwidth_mbps: u64,
 }
-
 /// 扩展结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScalingResult {
@@ -130,7 +116,6 @@ pub struct ScalingResult {
     pub performance_impact: f64,
     pub cost_impact: f64,
 }
-
 /// 任务信息
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
@@ -141,7 +126,6 @@ pub struct Task {
     pub resource_requirements: ResourceRequirements,
     pub dependencies: Vec<String>,
 }
-
 /// 任务优先级
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TaskPriority {
@@ -150,7 +134,6 @@ pub enum TaskPriority {
     Medium,
     Low,
 }
-
 /// 资源需求
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceRequirements {
@@ -158,7 +141,6 @@ pub struct ResourceRequirements {
     pub memory: f64,
     pub estimated_duration: Duration,
 }
-
 /// 调度计划
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Schedule {
@@ -166,7 +148,6 @@ pub struct Schedule {
     pub total_duration: Duration,
     pub resource_utilization: HashMap<String, f64>,
 }
-
 /// 已调度的任务
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScheduledTask {
@@ -175,7 +156,6 @@ pub struct ScheduledTask {
     pub scheduled_end: DateTime<Utc>,
     pub allocated_resources: ResourceAllocation,
 }
-
 /// 预测性扩展器
 #[derive(Debug, Clone)]
 pub struct PredictiveScaler {
@@ -183,35 +163,30 @@ pub struct PredictiveScaler {
     analyzer: Arc<RwLock<TrendAnalyzer>>,
     scaler: Arc<RwLock<AutoScaler>>,
 }
-
 /// 资源预测器
 #[derive(Debug, Clone)]
 pub struct ResourcePredictor {
     model: Arc<PredictionModel>,
     historical_data: Arc<RwLock<Vec<Metrics>>>,
 }
-
 /// 趋势分析器
 #[derive(Debug, Clone)]
 pub struct TrendAnalyzer {
     patterns: Arc<RwLock<HashMap<String, SeasonalityPattern>>>,
     anomaly_detector: Arc<AnomalyDetector>,
 }
-
 /// 自动扩展器
 #[derive(Debug, Clone)]
 pub struct AutoScaler {
     current_capacity: Arc<RwLock<ResourceAllocation>>,
     scaling_history: Arc<RwLock<Vec<ScalingAction>>>,
 }
-
 /// 预测模型
 #[derive(Debug, Clone)]
 pub struct PredictionModel {
     model_type: ModelType,
     parameters: HashMap<String, f64>,
 }
-
 /// 模型类型
 #[derive(Debug, Clone)]
 pub enum ModelType {
@@ -220,52 +195,41 @@ pub enum ModelType {
     ExponentialSmoothing,
     Prophet,
 }
-
 /// 异常检测器
 #[derive(Debug, Clone)]
 pub struct AnomalyDetector {
     threshold: f64,
     window_size: usize,
 }
-
 impl PredictiveScaler {
     /// 创建新的预测性扩展器
     pub fn new() -> Self {
         let predictor = Arc::new(RwLock::new(ResourcePredictor::new()));
         let analyzer = Arc::new(RwLock::new(TrendAnalyzer::new()));
         let scaler = Arc::new(RwLock::new(AutoScaler::new()));
-
         Self {
             predictor,
             analyzer,
             scaler,
         }
     }
-
     /// 预测资源使用
     pub async fn predict_resource_usage(&self, timeframe: TimeFrame) -> Result<ResourcePrediction, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(60)).await;
-
         let predictor: _ = self.predictor.read().await;
         let prediction: _ = predictor.predict(&timeframe).await?;
-
         Ok(prediction)
     }
-
     /// 分析趋势
     pub async fn analyze_trends(&self, historical_data: &[Metrics]) -> Result<TrendAnalysis, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(70)).await;
-
         let analyzer: _ = self.analyzer.read().await;
         let analysis: _ = analyzer.analyze(historical_data).await?;
-
         Ok(analysis)
     }
-
     /// 生成扩展策略
     pub async fn suggest_scaling(&self, prediction: &ResourcePrediction) -> Result<ScalingStrategy, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
         let mut strategy = ScalingStrategy {
             trigger_metric: "cpu_usage".to_string(),
             threshold: 70.0,
@@ -283,7 +247,6 @@ impl PredictiveScaler {
             cooldown_period: Duration::minutes(5),
             max_instances: 10,
         };
-
         // 基于预测调整策略
         if prediction.predicted_cpu > 80.0 {
             strategy.action = ScalingAction {
@@ -312,36 +275,27 @@ impl PredictiveScaler {
             };
             strategy.threshold = 20.0;
         }
-
         Ok(strategy)
     }
-
     /// 执行自动扩展
     pub async fn auto_scale(&self, strategy: &ScalingStrategy) -> Result<ScalingResult, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-
         let scaler: _ = self.scaler.read().await;
         let result: _ = scaler.execute(strategy).await?;
-
         Ok(result)
     }
-
     /// 优化调度
     pub async fn optimize_schedule(&self, tasks: &[Task]) -> Result<Schedule, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(80)).await;
-
         // 简单的调度算法：按优先级排序
         let mut sorted_tasks = tasks.to_vec();
         sorted_tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
-
         let mut scheduled_tasks = Vec::new();
         let mut current_time = Utc::now();
         let mut total_duration = Duration::seconds(0);
-
         for task in sorted_tasks {
             let scheduled_start: _ = current_time;
             let scheduled_end: _ = current_time + task.estimated_duration;
-
             scheduled_tasks.push(ScheduledTask {
                 task: task.clone(),
                 scheduled_start,
@@ -353,38 +307,30 @@ impl PredictiveScaler {
                     network_bandwidth_mbps: 100,
                 },
             });
-
             current_time = scheduled_end;
             total_duration = total_duration + task.estimated_duration;
         }
-
         let mut resource_utilization = HashMap::new();
         resource_utilization.insert("cpu".to_string(), 0.75);
         resource_utilization.insert("memory".to_string(), 0.65);
-
         Ok(Schedule {
             tasks: scheduled_tasks,
             total_duration,
             resource_utilization,
         })
     }
-
     /// 预测执行时间
     pub async fn predict_execution_time(&self, task: &Task) -> Result<Duration, Box<dyn std::error::Error>> {
         tokio::time::sleep(std::time::Duration::from_millis(30)).await;
-
         // 基于历史数据和资源需求预测执行时间
         let base_time: _ = task.estimated_duration.num_seconds() as f64;
         let cpu_factor: _ = 1.0 / task.resource_requirements.cpu;
         let memory_factor: _ = 1.0 / task.resource_requirements.memory;
-
         let predicted_time: _ = base_time * cpu_factor * memory_factor;
         let predicted_duration: _ = Duration::seconds(predicted_time.round() as i64);
-
         Ok(predicted_duration)
     }
 }
-
 impl ResourcePredictor {
     pub fn new() -> Self {
         Self {
@@ -392,20 +338,16 @@ impl ResourcePredictor {
             historical_data: Arc::new(RwLock::new(Vec::new())),
         }
     }
-
     pub async fn predict(&self, timeframe: &TimeFrame) -> Result<ResourcePrediction, Box<dyn std::error::Error>> {
         let historical_data: _ = self.historical_data.read().await;
-
         if historical_data.is_empty() {
             return Err("没有历史数据用于预测".into());
         }
-
         // 使用简单的线性预测
         let last_data: _ = &historical_data[historical_data.len() - 1];
         let predicted_cpu: _ = (last_data.cpu_usage * 1.1).min(100.0);
         let predicted_memory: _ = (last_data.memory_usage * 1.05).min(100.0);
         let predicted_connections: _ = (last_data.active_connections as f64 * 1.2) as u64;
-
         let factors: _ = vec![
             PredictionFactor {
                 name: "历史趋势".to_string(),
@@ -423,7 +365,6 @@ impl ResourcePredictor {
                 description: "外部负载变化".to_string(),
             },
         ];
-
         Ok(ResourcePrediction {
             timeframe: timeframe.clone(),
             predicted_cpu,
@@ -433,18 +374,15 @@ impl ResourcePredictor {
             factors,
         })
     }
-
     pub async fn add_historical_data(&self, metrics: Metrics) {
         let mut data = self.historical_data.write().await;
         data.push(metrics);
-
         // 保持最近 1000 条记录
         if data.len() > 1000 {
             data.remove(0);
         }
     }
 }
-
 impl TrendAnalyzer {
     pub fn new() -> Self {
         Self {
@@ -452,12 +390,10 @@ impl TrendAnalyzer {
             anomaly_detector: Arc::new(AnomalyDetector::new(2.0, 50)),
         }
     }
-
     pub async fn analyze(&self, data: &[Metrics]) -> Result<TrendAnalysis, Box<dyn std::error::Error>> {
         if data.len() < 2 {
             return Err("数据点不足，无法分析趋势".into());
         }
-
         // 计算趋势方向
         let first_cpu: _ = data.first().unwrap().cpu_usage;
         let last_cpu: _ = data.last().unwrap().cpu_usage;
@@ -468,7 +404,6 @@ impl TrendAnalyzer {
         } else {
             TrendDirection::Stable
         };
-
         // 计算增长率
         let time_span: _ = (data.last().unwrap().timestamp - data.first().unwrap().timestamp).num_seconds() as f64;
         let growth_rate: _ = if time_span > 0.0 {
@@ -476,13 +411,10 @@ impl TrendAnalyzer {
         } else {
             0.0
         };
-
         // 检测季节性
         let seasonality: _ = self.detect_seasonality(data);
-
         // 检测异常
         let anomalies: _ = self.anomaly_detector.detect(data);
-
         Ok(TrendAnalysis {
             trend_direction,
             growth_rate,
@@ -491,7 +423,6 @@ impl TrendAnalyzer {
             forecast_accuracy: 0.85,
         })
     }
-
     fn detect_seasonality(&self, data: &[Metrics]) -> Option<SeasonalityPattern> {
         // 简单的季节性检测
         if data.len() > 24 {
@@ -505,7 +436,6 @@ impl TrendAnalyzer {
         }
     }
 }
-
 impl AutoScaler {
     pub fn new() -> Self {
         Self {
@@ -518,14 +448,11 @@ impl AutoScaler {
             scaling_history: Arc::new(RwLock::new(Vec::new())),
         }
     }
-
     pub async fn execute(&self, strategy: &ScalingStrategy) -> Result<ScalingResult, Box<dyn std::error::Error>> {
         let mut capacity = self.current_capacity.write().await;
         let mut history = self.scaling_history.write().await;
-
         let instances_before: _ = (capacity.cpu_cores / 2.0) as u32;
         let resources_before: _ = capacity.clone();
-
         // 执行扩展动作
         match strategy.action.action_type {
             ActionType::ScaleOut | ActionType::ScaleUp => {
@@ -541,12 +468,9 @@ impl AutoScaler {
                 capacity.network_bandwidth_mbps = (capacity.network_bandwidth_mbps - strategy.action.resources.network_bandwidth_mbps).max(100);
             }
         }
-
         let instances_after: _ = (capacity.cpu_cores / 2.0) as u32;
-
         // 记录扩展历史
         history.push(strategy.action.clone());
-
         Ok(ScalingResult {
             success: true,
             instances_before,
@@ -558,7 +482,6 @@ impl AutoScaler {
         })
     }
 }
-
 impl PredictionModel {
     pub fn new(model_type: ModelType) -> Self {
         Self {
@@ -567,7 +490,6 @@ impl PredictionModel {
         }
     }
 }
-
 impl AnomalyDetector {
     pub fn new(threshold: f64, window_size: usize) -> Self {
         Self {
@@ -575,25 +497,20 @@ impl AnomalyDetector {
             window_size,
         }
     }
-
     pub fn detect(&self, data: &[Metrics]) -> Vec<Anomaly> {
         let mut anomalies = Vec::new();
-
         if data.len() < self.window_size {
             return anomalies;
         }
-
         for i in self.window_size..data.len() {
             let window: _ = &data[i - self.window_size..i];
             let current: _ = &data[i];
-
             // 计算窗口内的平均值和标准差
             let avg_cpu: f64 = window.iter().map(|m| m.cpu_usage).sum::<f64>() / window.len() as f64;
             let std_cpu: _ = (window.iter().map(|m| {
                 let diff: _ = m.cpu_usage - avg_cpu;
                 diff * diff
             }).sum::<f64>() / window.len() as f64).sqrt();
-
             // 检测异常
             if (current.cpu_usage - avg_cpu).abs() > self.threshold * std_cpu {
                 anomalies.push(Anomaly {
@@ -604,22 +521,18 @@ impl AnomalyDetector {
                 });
             }
         }
-
         anomalies
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_predictive_scaler_creation() {
         let scaler: _ = PredictiveScaler::new();
     }
-
     #[tokio::test]
     async fn test_resource_prediction() {
         let scaler: _ = PredictiveScaler::new();
@@ -628,7 +541,6 @@ use std::collections::{HashMap, BTreeMap};
             end_time: Utc::now() + Duration::hours(1),
             duration: Duration::hours(1),
         };
-
         // 添加历史数据
         {
             let predictor: _ = scaler.predictor.read().await;
@@ -643,18 +555,14 @@ use std::collections::{HashMap, BTreeMap};
                 request_rate: 10.0,
             });
         }
-
         let prediction: _ = scaler.predict_resource_usage(timeframe).await.unwrap();
-
         assert!(prediction.predicted_cpu > 0.0);
         assert!(prediction.confidence > 0.0);
         assert!(!prediction.factors.is_empty());
     }
-
     #[tokio::test]
     async fn test_trend_analysis() {
         let scaler: _ = PredictiveScaler::new();
-
         let mut historical_data = Vec::new();
         for i in 0..10 {
             historical_data.push(Metrics {
@@ -667,18 +575,14 @@ use std::collections::{HashMap, BTreeMap};
                 request_rate: 10.0 + i as f64,
             });
         }
-
         let analysis: _ = scaler.analyze_trends(&historical_data).await.unwrap();
-
         assert_eq!(analysis.trend_direction, TrendDirection::Increasing);
         assert!(analysis.growth_rate > 0.0);
         assert!(analysis.forecast_accuracy > 0.0);
     }
-
     #[tokio::test]
     async fn test_schedule_optimization() {
         let scaler: _ = PredictiveScaler::new();
-
         let tasks: _ = vec![
             Task {
                 id: "1".to_string(),
@@ -705,9 +609,7 @@ use std::collections::{HashMap, BTreeMap};
                 dependencies: vec![],
             },
         ];
-
         let schedule: _ = scaler.optimize_schedule(&tasks).await.unwrap();
-
         assert!(!schedule.tasks.is_empty());
         assert_eq!(schedule.tasks.len(), tasks.len());
         assert!(schedule.total_duration.num_seconds() > 0);

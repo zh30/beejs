@@ -7,11 +7,9 @@
 //! - 缓存预热器
 //! - 缓存一致性协议
 //! - 布隆过滤器
-
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-
 /// 缓存条目
 #[derive(Debug, Clone)]
 pub struct CacheEntry<T> {
@@ -30,7 +28,6 @@ pub struct CacheEntry<T> {
     /// 标记为热点数据
     pub is_hot: bool,
 }
-
 /// 缓存节点
 #[derive(Debug, Clone)]
 pub struct CacheNode {
@@ -47,7 +44,6 @@ pub struct CacheNode {
     /// 可用性
     pub availability: f64,
 }
-
 /// 缓存策略
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CacheStrategy {
@@ -62,7 +58,6 @@ pub enum CacheStrategy {
     /// 智能缓存 (基于访问模式)
     Intelligent,
 }
-
 /// 缓存配置
 #[derive(Debug, Clone)]
 pub struct CacheConfig {
@@ -83,7 +78,6 @@ pub struct CacheConfig {
     /// 一致性级别
     pub consistency_level: ConsistencyLevel,
 }
-
 impl Default for CacheConfig {
     fn default() -> Self {
         Self {
@@ -98,7 +92,6 @@ impl Default for CacheConfig {
         }
     }
 }
-
 /// 一致性级别
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ConsistencyLevel {
@@ -109,7 +102,6 @@ pub enum ConsistencyLevel {
     /// 因果一致性
     Causal,
 }
-
 /// 缓存统计信息
 #[derive(Debug, Clone, Default)]
 pub struct CacheStats {
@@ -132,7 +124,6 @@ pub struct CacheStats {
     /// 布隆过滤器命中次数
     pub bloom_filter_hits: u64,
 }
-
 /// 分布式缓存管理器
 ///
 /// 该结构体提供高性能的分布式缓存功能：
@@ -158,12 +149,10 @@ pub struct DistributedCache<T> {
     /// 预热数据队列
     warmup_queue: Arc<Mutex<VecDeque<String>>>,
 }
-
 impl<T: Clone> DistributedCache<T> {
     /// 创建新的分布式缓存
     pub fn new(config: Option<CacheConfig>) -> Self {
         let config: _ = config.unwrap_or_default();
-
         Self {
             config,
             storage: Arc::new(Mutex::new(HashMap::new())),
@@ -174,7 +163,6 @@ impl<T: Clone> DistributedCache<T> {
             warmup_queue: Arc::new(Mutex::new(VecDeque::new())),
         }
     }
-
     /// 添加缓存节点
     pub fn add_node(&mut self, node: CacheNode) {
         let node_id: _ = node.id.clone();
@@ -182,18 +170,14 @@ impl<T: Clone> DistributedCache<T> {
         self.nodes.push(node);
         println!("➕ 添加缓存节点: {} (权重: {})", node_id, node_weight);
     }
-
     /// 获取缓存值
     pub fn get(&self, key: &str) -> Option<T> {
         let start_time: _ = Instant::now();
-
         let mut storage = self.storage.lock().unwrap();
         let mut access_order = self.access_order.lock().unwrap();
         let mut access_frequency = self.access_frequency.lock().unwrap();
-
         // 检查是否存在
         let entry: _ = storage.get_mut(key);
-
         if let Some(cache_entry) = entry {
             // 检查是否过期
             if let Some(ttl) = cache_entry.ttl {
@@ -202,29 +186,23 @@ impl<T: Clone> DistributedCache<T> {
                     storage.remove(key);
                     access_order.retain(|k| k != key);
                     access_frequency.remove(key);
-
                     self.update_stats(false, start_time);
                     return None;
                 }
             }
-
             // 更新访问信息
             cache_entry.last_accessed = Instant::now();
             cache_entry.access_count += 1;
-
             // 更新访问顺序
             access_order.retain(|k| k != key);
             access_order.push_back(key.to_string());
-
             // 更新访问频率
             *access_frequency.entry(key.to_string()).or_insert(0) += 1;
-
             // 检查是否需要标记为热点
             if cache_entry.access_count > 100 && !cache_entry.is_hot {
                 cache_entry.is_hot = true;
                 println!("🔥 标记为热点数据: {}", key);
             }
-
             self.update_stats(true, start_time);
             Some(cache_entry.value.clone())
         } else {
@@ -232,19 +210,16 @@ impl<T: Clone> DistributedCache<T> {
             None
         }
     }
-
     /// 设置缓存值
     pub fn set(&self, key: String, value: T, ttl: Option<Duration>) -> bool {
         let mut storage = self.storage.lock().unwrap();
         let mut access_order = self.access_order.lock().unwrap();
         let mut access_frequency = self.access_frequency.lock().unwrap();
-
         // 检查容量限制
         if storage.len() >= self.config.max_capacity {
             // 根据策略删除旧数据
             self.evict_entries(&mut storage, &mut access_order, &mut access_frequency);
         }
-
         // 创建缓存条目
         let entry: _ = CacheEntry {
             key: key.clone(),
@@ -255,56 +230,45 @@ impl<T: Clone> DistributedCache<T> {
             ttl: ttl.or(Some(self.config.default_ttl)),
             is_hot: false,
         };
-
         // 添加到缓存
         let key_for_log: _ = key.clone();
         storage.insert(key.clone(), entry);
         access_order.push_back(key.clone());
         access_frequency.insert(key, 0);
-
         // 更新统计信息
         {
             let mut stats = self.stats.lock().unwrap();
             stats.cache_size = storage.len();
         }
-
         println!("✅ 设置缓存: {} (TTL: {:?})", key_for_log, ttl);
         true
     }
-
     /// 删除缓存值
     pub fn delete(&self, key: &str) -> bool {
         let mut storage = self.storage.lock().unwrap();
         let mut access_order = self.access_order.lock().unwrap();
         let mut access_frequency = self.access_frequency.lock().unwrap();
-
         let removed: _ = storage.remove(key).is_some();
         if removed {
             access_order.retain(|k| k != key);
             access_frequency.remove(key);
-
             // 更新统计信息
             {
                 let mut stats = self.stats.lock().unwrap();
                 stats.cache_size = storage.len();
             }
-
             println!("🗑️ 删除缓存: {}", key);
         }
-
         removed
     }
-
     /// 清空缓存
     pub fn clear(&self) {
         let mut storage = self.storage.lock().unwrap();
         let mut access_order = self.access_order.lock().unwrap();
         let mut access_frequency = self.access_frequency.lock().unwrap();
-
         storage.clear();
         access_order.clear();
         access_frequency.clear();
-
         // 更新统计信息
         {
             let mut stats = self.stats.lock().unwrap();
@@ -313,10 +277,8 @@ impl<T: Clone> DistributedCache<T> {
             stats.total_misses = 0;
             stats.total_requests = 0;
         }
-
         println!("🧹 清空缓存");
     }
-
     /// 预热缓存
     pub fn warmup<F>(&self, load_fn: F) -> Result<(), Box<dyn std::error::Error>>
     where
@@ -324,9 +286,7 @@ impl<T: Clone> DistributedCache<T> {
     {
         let mut warmup_queue = self.warmup_queue.lock().unwrap();
         let mut storage = self.storage.lock().unwrap();
-
         println!("🔥 开始缓存预热...");
-
         // 模拟预热数据加载
         let warmup_keys: _ = vec![
             "user:profile:123".to_string(),
@@ -334,9 +294,7 @@ impl<T: Clone> DistributedCache<T> {
             "config:app".to_string(),
             "data:popular".to_string(),
         ];
-
         let mut actual_warmup_count = 0;
-
         for key in warmup_keys {
             if let Some(value) = load_fn(&key) {
                 let entry: _ = CacheEntry {
@@ -348,52 +306,42 @@ impl<T: Clone> DistributedCache<T> {
                     ttl: Some(self.config.default_ttl),
                     is_hot: true,
                 };
-
                 storage.insert(key.clone(), entry);
                 warmup_queue.push_back(key);
                 actual_warmup_count += 1;
             }
         }
-
         // 更新统计信息
         {
             let mut stats = self.stats.lock().unwrap();
             stats.warmup_count = actual_warmup_count as u64;
             stats.cache_size = storage.len();
         }
-
         println!("✅ 缓存预热完成: {} 条记录", actual_warmup_count);
         Ok(())
     }
-
     /// 获取缓存统计信息
     pub fn get_stats(&self) -> CacheStats {
         let mut stats = self.stats.lock().unwrap();
         stats.total_requests = stats.total_hits + stats.total_misses;
-
         if stats.total_requests > 0 {
             stats.hit_rate = stats.total_hits as f64 / stats.total_requests as f64 * 100.0;
         } else {
             stats.hit_rate = 0.0;
         }
-
         stats.clone()
     }
-
     /// 更新统计信息
     fn update_stats(&self, is_hit: bool, start_time: Instant) {
         let mut stats = self.stats.lock().unwrap();
-
         if is_hit {
             stats.total_hits += 1;
         } else {
             stats.total_misses += 1;
         }
-
         // 计算平均响应时间
         let elapsed: _ = start_time.elapsed();
         let response_time_us: _ = elapsed.as_micros() as u64;
-
         if stats.total_requests == 0 {
             stats.avg_response_time_us = response_time_us;
         } else {
@@ -401,7 +349,6 @@ impl<T: Clone> DistributedCache<T> {
                 / stats.total_requests;
         }
     }
-
     /// 驱逐旧条目
     fn evict_entries(
         &self,
@@ -412,7 +359,6 @@ impl<T: Clone> DistributedCache<T> {
         if storage.is_empty() {
             return;
         }
-
         // 计算需要驱逐的项目数量，至少驱逐1个
         let current_size: _ = storage.len();
         let max_capacity: _ = self.config.max_capacity;
@@ -422,7 +368,6 @@ impl<T: Clone> DistributedCache<T> {
         } else {
             (max_capacity as f64 * 0.1) as usize // 驱逐 10%
         };
-
         match self.config.strategy {
             CacheStrategy::LRU => {
                 // 驱逐最近最少使用的
@@ -438,13 +383,11 @@ impl<T: Clone> DistributedCache<T> {
                 let mut keys_by_frequency: Vec<_> = access_frequency.iter()
                     .collect();
                 keys_by_frequency.sort_by_key(|(_, &count)| count);
-
                 // 首先收集要删除的键，释放 access_frequency 的借用
                 let keys_to_remove: Vec<String> = keys_by_frequency.iter()
                     .take(evict_count)
                     .map(|(key, _)| (*key).clone())
                     .collect();
-
                 // 然后删除这些键
                 for key in keys_to_remove {
                     storage.remove(&key);
@@ -476,7 +419,6 @@ impl<T: Clone> DistributedCache<T> {
                     })
                     .take(evict_count)
                     .collect();
-
                 // 然后驱逐这些键
                 for key in keys_to_evict {
                     storage.remove(&key);
@@ -492,13 +434,10 @@ impl<T: Clone> DistributedCache<T> {
                         let recency_score: _ = 1.0 / (entry.last_accessed.elapsed().as_secs() + 1) as f64;
                         let hot_bonus: _ = if entry.is_hot { 10.0 } else { 0.0 };
                         let score: _ = frequency_score * 0.4 + recency_score * 0.4 + hot_bonus * 0.2;
-
                         (key.clone(), score)
                     })
                     .collect();
-
                 candidates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap()); // 按分数升序
-
                 for (key, _) in candidates.drain(..evict_count.min(candidates.len())) {
                     storage.remove(&key);
                     access_order.retain(|k| k != &key);
@@ -506,14 +445,11 @@ impl<T: Clone> DistributedCache<T> {
                 }
             }
         }
-
         println!("🧹 驱逐 {} 个缓存条目 (策略: {:?})", evict_count, self.config.strategy);
     }
-
     /// 生成性能报告
     pub fn generate_report(&self) -> String {
         let stats: _ = self.get_stats();
-
         format!(
             r#"
 分布式缓存性能报告
@@ -544,35 +480,29 @@ impl<T: Clone> DistributedCache<T> {
             self.config.consistency_level
         )
     }
-
     /// 检查缓存是否存在
     pub fn contains(&self, key: &str) -> bool {
         self.storage.lock().unwrap().contains_key(key)
     }
-
     /// 获取缓存大小
     pub fn size(&self) -> usize {
         self.storage.lock().unwrap().len()
     }
-
     /// 检查缓存是否为空
     pub fn is_empty(&self) -> bool {
         self.size() == 0
     }
 }
-
 impl<T: Clone> Default for DistributedCache<T> {
     fn default() -> Self {
         Self::new(None)
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     /// 测试创建分布式缓存
     #[test]
     fn test_distributed_cache_creation() {
@@ -581,81 +511,62 @@ use std::collections::{HashMap, BTreeMap};
         assert!(cache.is_empty());
         println!("✅ 测试通过: 分布式缓存创建");
     }
-
     /// 测试设置和获取缓存
     #[test]
     fn test_set_and_get() {
         let cache: DistributedCache<String> = DistributedCache::new(None);
-
         // 设置缓存
         cache.set("key1".to_string(), "value1".to_string(), None);
         assert_eq!(cache.size(), 1);
-
         // 获取缓存
         let value: _ = cache.get("key1");
         assert_eq!(value, Some("value1".to_string()));
-
         // 获取不存在的缓存
         let value: _ = cache.get("key2");
         assert_eq!(value, None);
-
         println!("✅ 测试通过: 设置和获取缓存");
     }
-
     /// 测试删除缓存
     #[test]
     fn test_delete() {
         let cache: DistributedCache<String> = DistributedCache::new(None);
-
         cache.set("key1".to_string(), "value1".to_string(), None);
         assert_eq!(cache.size(), 1);
-
         let deleted: _ = cache.delete("key1");
         assert!(deleted);
         assert_eq!(cache.size(), 0);
-
         let deleted: _ = cache.delete("key2");
         assert!(!deleted);
-
         println!("✅ 测试通过: 删除缓存");
     }
-
     /// 测试清空缓存
     #[test]
     fn test_clear() {
         let cache: DistributedCache<String> = DistributedCache::new(None);
-
         cache.set("key1".to_string(), "value1".to_string(), None);
         cache.set("key2".to_string(), "value2".to_string(), None);
         assert_eq!(cache.size(), 2);
-
         cache.clear();
         assert_eq!(cache.size(), 0);
         assert!(cache.is_empty());
-
         println!("✅ 测试通过: 清空缓存");
     }
-
     /// 测试缓存统计
     #[test]
     fn test_cache_stats() {
         let cache: DistributedCache<String> = DistributedCache::new(None);
-
         // 执行一些操作
         cache.set("key1".to_string(), "value1".to_string(), None);
         let _: _ = cache.get("key1");
         let _: _ = cache.get("key2"); // 未命中
-
         let stats: _ = cache.get_stats();
         assert_eq!(stats.total_requests, 2);
         assert_eq!(stats.total_hits, 1);
         assert_eq!(stats.total_misses, 1);
         assert_eq!(stats.hit_rate, 50.0);
         assert_eq!(stats.cache_size, 1);
-
         println!("✅ 测试通过: 缓存统计");
     }
-
     /// 测试 LRU 策略
     #[test]
     fn test_lru_strategy() {
@@ -664,38 +575,29 @@ use std::collections::{HashMap, BTreeMap};
             max_capacity: 2,
             ..Default::default()
         };
-
         let cache: DistributedCache<String> = DistributedCache::new(Some(config));
-
         cache.set("key1".to_string(), "value1".to_string(), None);
         cache.set("key2".to_string(), "value2".to_string(), None);
         cache.set("key3".to_string(), "value3".to_string(), None); // 应该驱逐 key1
-
         assert_eq!(cache.size(), 2);
         assert!(cache.contains("key2"));
         assert!(cache.contains("key3"));
         assert!(!cache.contains("key1"));
-
         println!("✅ 测试通过: LRU 策略");
     }
-
     /// 测试缓存预热
     #[test]
     fn test_warmup() {
         let cache: DistributedCache<String> = DistributedCache::new(None);
-
         let load_fn: _ = |key: &str| match key {
             "user:profile:123" => Some("user_data".to_string()),
             "user:session:456" => Some("session_data".to_string()),
             _ => None,
         };
-
         cache.warmup(load_fn).expect("预热失败");
-
         let stats: _ = cache.get_stats();
         assert_eq!(stats.warmup_count, 2);
         assert_eq!(stats.cache_size, 2);
-
         println!("✅ 测试通过: 缓存预热");
     }
 }

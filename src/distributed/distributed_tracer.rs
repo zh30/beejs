@@ -2,25 +2,20 @@
 //! 提供分布式 tracing、性能分析和请求链路追踪功能
 //!
 //! Stage 29.7: 分布式监控与调试 - 实时性能指标和监控
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::interval;
 use tracing::{info, debug, warn, instrument};
-
 use super::node_manager::NodeManager;
 use super::task_executor::TaskExecutor;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 追踪ID
 pub type TraceId = String;
-
 /// 跨度ID
 pub type SpanId = String;
-
 /// 追踪事件类型
 #[derive(Debug, Clone, PartialEq)]
 pub enum TraceEventType {
@@ -35,7 +30,6 @@ pub enum TraceEventType {
     GcEvent,
     Custom(&'static str),
 }
-
 /// 追踪事件
 #[derive(Debug, Clone)]
 pub struct TraceEvent {
@@ -51,7 +45,6 @@ pub struct TraceEvent {
     pub tags: HashMap<String, String>,
     pub baggage: HashMap<String, String>,
 }
-
 /// 跨度（Span）
 #[derive(Debug, Clone)]
 pub struct Span {
@@ -66,7 +59,6 @@ pub struct Span {
     pub events: Vec<TraceEvent>,
     pub baggage: HashMap<String, String>,
 }
-
 impl Span {
     /// 创建新的跨度
     pub fn new(
@@ -89,30 +81,25 @@ impl Span {
             baggage: HashMap::new(),
         }
     }
-
     /// 结束跨度
     pub fn finish(&mut self) {
         self.end_time = Some(Instant::now());
     }
-
     /// 获取跨度持续时间
     pub fn duration(&self) -> Option<Duration> {
         self.end_time.map(|end| end.duration_since(self.start_time))
     }
-
     /// 添加标签
     pub fn with_tag(mut self, key: String, value: String) -> Self {
         self.tags.insert(key, value);
         self
     }
-
     /// 添加行李数据
     pub fn with_baggage(mut self, key: String, value: String) -> Self {
         self.baggage.insert(key, value);
         self
     }
 }
-
 /// 追踪（Trace）
 #[derive(Debug, Clone)]
 pub struct Trace {
@@ -123,13 +110,11 @@ pub struct Trace {
     pub end_time: Option<Instant>,
     pub duration: Option<Duration>,
 }
-
 impl Trace {
     /// 创建新的追踪
     pub fn new(trace_id: TraceId, root_span: Span) -> Self {
         let mut spans = HashMap::new();
         spans.insert(root_span.span_id.clone(), root_span.clone());
-
         Self {
             trace_id,
             root_span,
@@ -139,17 +124,14 @@ impl Trace {
             duration: None,
         }
     }
-
     /// 添加跨度
     pub fn add_span(&mut self, span: Span) {
         self.spans.insert(span.span_id.clone(), span);
     }
-
     /// 结束追踪
     pub fn finish(&mut self) {
         self.end_time = Some(Instant::now());
         self.duration = self.end_time.map(|end| end.duration_since(self.start_time));
-
         // 结束所有未结束的跨度
         for span in self.spans.values_mut() {
             if span.end_time.is_none() {
@@ -157,23 +139,19 @@ impl Trace {
             }
         }
     }
-
     /// 获取追踪持续时间
     pub fn duration(&self) -> Option<Duration> {
         self.duration
     }
-
     /// 获取跨度数量
     pub fn span_count(&self) -> usize {
         self.spans.len()
     }
-
     /// 获取跨度详情
     pub fn get_span(&self, span_id: &SpanId) -> Option<&Span> {
         self.spans.get(span_id)
     }
 }
-
 /// 性能统计
 #[derive(Debug, Clone)]
 pub struct PerformanceStats {
@@ -186,7 +164,6 @@ pub struct PerformanceStats {
     pub slowest_operations: Vec<(String, Duration)>,
     pub operation_counts: HashMap<String, u64>,
 }
-
 /// 链路追踪配置
 #[derive(Debug, Clone)]
 pub struct TracingConfig {
@@ -197,7 +174,6 @@ pub struct TracingConfig {
     pub sampling_rate: f64, // 0.0 - 1.0
     pub enable_performance_analysis: bool,
 }
-
 /// 分布式追踪器
 #[derive(Clone, Debug)]
 pub struct DistributedTracer {
@@ -208,7 +184,6 @@ pub struct DistributedTracer {
     completed_traces: Arc<RwLock<HashMap<TraceId, Trace>>>,
     performance_stats: Arc<RwLock<PerformanceStats>>,
 }
-
 impl DistributedTracer {
     /// 创建新的分布式追踪器
     pub fn new(
@@ -226,7 +201,6 @@ impl DistributedTracer {
             slowest_operations: Vec::new(),
             operation_counts: HashMap::new(),
         };
-
         Self {
             config,
             node_manager,
@@ -236,32 +210,25 @@ impl DistributedTracer {
             performance_stats: Arc::new(Mutex::new(initial_stats)),
         }
     }
-
     /// 启动追踪器
     pub async fn start(&self) -> Result<(), String> {
         info!("Starting distributed tracer...");
-
         let tracer: _ = self.clone();
         tokio::spawn(async move {
             let mut interval_timer = interval(Duration::from_secs(5));
-
             loop {
                 interval_timer.tick().await;
-
                 if let Err(e) = tracer.cleanup_old_traces().await {
                     warn!("Failed to cleanup old traces: {}", e);
                 }
-
                 if let Err(e) = tracer.update_performance_stats().await {
                     warn!("Failed to update performance stats: {}", e);
                 }
             }
         });
-
         info!("Distributed tracer started");
         Ok(())
     }
-
     /// 开始新的追踪
     pub async fn start_trace(&self, operation_name: String, service_name: String) -> TraceId {
         let trace_id: _ = self.generate_trace_id();
@@ -273,31 +240,23 @@ impl DistributedTracer {
             operation_name,
             service_name,
         );
-
         let trace: _ = Trace::new(trace_id.clone(), root_span);
         let mut traces = self.active_traces.write().await;
         traces.insert(trace_id.clone(), trace);
-
         trace_id
     }
-
     /// 结束追踪
     pub async fn finish_trace(&self, trace_id: &TraceId) -> Option<Trace> {
         let mut traces = self.active_traces.write().await;
         let trace: _ = traces.remove(trace_id)?;
-
         let mut completed = self.completed_traces.write().await;
         let mut trace_clone = trace.clone();
         trace_clone.finish();
-
         completed.insert(trace_id.clone(), trace_clone.clone());
-
         // 更新统计信息
         self.update_trace_stats(&trace_clone).await;
-
         Some(trace_clone)
     }
-
     /// 开始跨度
     pub async fn start_span(
         &self,
@@ -307,7 +266,6 @@ impl DistributedTracer {
     ) -> Option<SpanId> {
         let span_id: _ = self.generate_span_id();
         let parent_span_id: _ = self.get_current_span_id(trace_id).await;
-
         let span: _ = Span::new(
             trace_id.clone(),
             span_id.clone(),
@@ -315,7 +273,6 @@ impl DistributedTracer {
             operation_name,
             service_name,
         );
-
         let mut traces = self.active_traces.write().await;
         if let Some(trace) = traces.get_mut(trace_id) {
             trace.add_span(span);
@@ -324,7 +281,6 @@ impl DistributedTracer {
             None
         }
     }
-
     /// 结束跨度
     pub async fn finish_span(&self, trace_id: &TraceId, span_id: &SpanId) -> Option<()> {
         let mut traces = self.active_traces.write().await;
@@ -339,7 +295,6 @@ impl DistributedTracer {
             None
         }
     }
-
     /// 添加追踪事件
     #[instrument(skip(self))]
     pub async fn add_event(
@@ -363,7 +318,6 @@ impl DistributedTracer {
             tags,
             baggage: HashMap::new(),
         };
-
         let mut traces = self.active_traces.write().await;
         if let Some(trace) = traces.get_mut(trace_id) {
             if let Some(span) = trace.spans.get_mut(span_id) {
@@ -371,91 +325,73 @@ impl DistributedTracer {
             }
         }
     }
-
     /// 获取追踪
     pub async fn get_trace(&self, trace_id: &TraceId) -> Option<Trace> {
         let traces: _ = self.active_traces.read().await;
         traces.get(trace_id).cloned()
     }
-
     /// 获取所有追踪
     pub async fn get_all_traces(&self) -> Vec<Trace> {
         let traces: _ = self.active_traces.read().await;
         traces.values().cloned().collect()
     }
-
     /// 获取已完成追踪
     pub async fn get_completed_traces(&self) -> Vec<Trace> {
         let traces: _ = self.completed_traces.read().await;
         traces.values().cloned().collect()
     }
-
     /// 获取性能统计
     pub async fn get_performance_stats(&self) -> PerformanceStats {
         let stats: _ = self.performance_stats.read().await;
         stats.clone()
     }
-
     /// 清理旧追踪
     async fn cleanup_old_traces(&self) -> Result<(), String> {
         let cutoff: _ = Instant::now() - self.config.trace_retention;
-
         let mut completed = self.completed_traces.write().await;
         completed.retain(|_, trace| {
             trace.start_time > cutoff
         });
-
         Ok(())
     }
-
     /// 更新性能统计
     async fn update_performance_stats(&self) -> Result<(), String> {
         let completed: _ = self.completed_traces.read().await;
         let traces: Vec<&Trace> = completed.values().collect();
-
         if traces.is_empty() {
             return Ok(());
         }
-
         // 计算统计信息
         let total_traces: _ = traces.len() as u64;
         let total_spans: u64 = traces.iter().map(|t| t.span_count() as u64).sum();
-
         // 计算持续时间
         let mut durations: Vec<Duration> = traces.iter()
             .filter_map(|t| t.duration())
             .collect();
-
         durations.sort();
-
         let average_duration: _ = if !durations.is_empty() {
             durations.iter().sum::<Duration>() / durations.len() as u32
         } else {
             Duration::from_millis(0)
         };
-
         let p50_duration: _ = if durations.len() > 1 {
             durations[durations.len() * 50 / 100]
         } else {
             Duration::from_millis(0)
         };
-
         let p90_duration: _ = if durations.len() > 1 {
             durations[durations.len() * 90 / 100]
         } else {
             Duration::from_millis(0)
         };
-
         let p99_duration: _ = if durations.len() > 1 {
             durations[durations.len() * 99 / 100]
         } else {
             Duration::from_millis(0)
         };
-
         // 计算最慢操作
         let mut slowest_operations = Vec::new();
         let mut operation_counts = HashMap::new();
-
         for trace in traces {
             for span in trace.spans.values() {
                 if let Some(duration) = span.duration() {
@@ -464,11 +400,9 @@ impl DistributedTracer {
                 }
             }
         }
-
         // 排序并保留前10个
         slowest_operations.sort_by(|a, b| b.1.cmp(&a.1));
         slowest_operations.truncate(10);
-
         let stats: _ = PerformanceStats {
             total_traces,
             total_spans,
@@ -479,36 +413,29 @@ impl DistributedTracer {
             slowest_operations,
             operation_counts,
         };
-
         let mut current_stats = self.performance_stats.write().await;
         *current_stats = stats;
-
         Ok(())
     }
-
     /// 更新追踪统计
     async fn update_trace_stats(&self, trace: &Trace) {
         // 这里可以添加更详细的追踪统计逻辑
         debug!("Updated stats for trace: {}", trace.trace_id);
     }
-
     /// 生成追踪ID
     fn generate_trace_id(&self) -> TraceId {
         format!("trace-{:x}", rand::random::<u128>())
     }
-
     /// 生成跨度ID
     fn generate_span_id(&self) -> SpanId {
         format!("span-{:x}", rand::random::<u64>())
     }
-
     /// 获取当前跨度ID
     async fn get_current_span_id(&self, _trace_id: &TraceId) -> Option<SpanId> {
         // 实际实现中需要维护当前上下文
         // 这里简化处理
         None
     }
-
     /// 获取父跨度ID
     async fn get_parent_span_id(&self, trace_id: &TraceId, span_id: &SpanId) -> Option<SpanId> {
         let traces: _ = self.active_traces.read().await;
@@ -520,7 +447,6 @@ impl DistributedTracer {
         None
     }
 }
-
 /// 追踪上下文
 #[derive(Clone, Debug)]
 pub struct TraceContext {
@@ -528,7 +454,6 @@ pub struct TraceContext {
     pub span_id: SpanId,
     pub baggage: HashMap<String, String>,
 }
-
 impl TraceContext {
     /// 创建新的追踪上下文
     pub fn new(trace_id: TraceId, span_id: SpanId) -> Self {
@@ -538,7 +463,6 @@ impl TraceContext {
             baggage: HashMap::new(),
         }
     }
-
     /// 添加行李数据
     pub fn with_baggage(mut self, key: String, value: String) -> Self {
         self.baggage.insert(key, value);

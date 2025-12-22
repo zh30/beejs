@@ -1,9 +1,7 @@
 //! 调用栈分析模块
 //! 分析函数调用栈，识别热点路径和性能瓶颈
-
 use std::collections::{HashMap, VecDeque};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
 /// 调用栈帧
 #[derive(Debug, Clone)]
 pub struct StackFrame {
@@ -24,7 +22,6 @@ pub struct StackFrame {
     /// 时间戳
     pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化
 }
-
 /// 调用栈分析结果
 #[derive(Debug, Clone)]
 pub struct CallStackAnalysis {
@@ -37,7 +34,6 @@ pub struct CallStackAnalysis {
     /// 调用深度统计
     pub depth_stats: DepthStats,
 }
-
 /// 性能瓶颈信息
 #[derive(Debug, Clone)]
 pub struct Bottleneck {
@@ -50,7 +46,6 @@ pub struct Bottleneck {
     /// 影响程度 (0.0 - 1.0)
     pub impact: f64,
 }
-
 /// 瓶颈类型
 #[derive(Debug, Clone, PartialEq)]
 pub enum BottleneckType {
@@ -63,7 +58,6 @@ pub enum BottleneckType {
     /// 嵌套过深
     DeepNesting,
 }
-
 /// 递归调用信息
 #[derive(Debug, Clone)]
 pub struct RecursionInfo {
@@ -76,7 +70,6 @@ pub struct RecursionInfo {
     /// 是否有直接递归
     pub is_direct_recursion: bool,
 }
-
 /// 调用深度统计
 #[derive(Debug, Clone)]
 pub struct DepthStats {
@@ -87,7 +80,6 @@ pub struct DepthStats {
     /// 深度分布
     pub depth_distribution: HashMap<usize, usize>,
 }
-
 /// 调用栈分析器
 #[derive(Debug)]
 pub struct CallStackAnalyzer {
@@ -104,7 +96,6 @@ pub struct CallStackAnalyzer {
     /// 统计信息
     stats: AnalyzerStats,
 }
-
 /// 递归跟踪器
 #[derive(Debug)]
 struct RecursionTracker {
@@ -113,7 +104,6 @@ struct RecursionTracker {
     /// 递归信息
     recursion_info: HashMap<String, RecursionInfo>,
 }
-
 /// 分析器统计信息
 #[derive(Debug, Clone, Default)]
 pub struct AnalyzerStats {
@@ -128,7 +118,6 @@ pub struct AnalyzerStats {
     /// 分析次数
     pub analysis_count: u64,
 }
-
 impl CallStackAnalyzer {
     /// 创建新的调用栈分析器
     pub fn new(max_depth: usize) -> Self {
@@ -144,7 +133,6 @@ impl CallStackAnalyzer {
             stats: AnalyzerStats::default(),
         }
     }
-
     /// 记录函数进入
     pub fn enter_function(
         &mut self,
@@ -155,13 +143,11 @@ impl CallStackAnalyzer {
         timestamp: u64,
     ) {
         let depth: _ = self.current_stack.len();
-
         // 检查深度限制
         if depth >= self.max_depth {
             // 达到最大深度，记录警告但仍然添加
             eprintln!("Warning: Maximum call depth {} reached", self.max_depth);
         }
-
         let frame: _ = StackFrame {
             function_name: function_name.to_string(),
             file,
@@ -172,23 +158,18 @@ impl CallStackAnalyzer {
             depth,
             timestamp,
         };
-
         self.current_stack.push_back(frame);
         self.stats.total_calls += 1;
-
         if depth > self.stats.max_call_depth {
             self.stats.max_call_depth = depth;
         }
-
         // 更新调用计数
         *self.function_call_counts
             .entry(function_name.to_string())
             .or_insert(0) += 1;
-
         // 检查递归
         self.check_recursion(function_name);
     }
-
     /// 记录函数退出
     pub fn exit_function(
         &mut self,
@@ -199,13 +180,10 @@ impl CallStackAnalyzer {
         if let Some(frame) = self.current_stack.pop_back() {
             if frame.function_name == function_name {
                 let execution_time: _ = Duration::from_nanos(end_timestamp - frame.timestamp);
-
                 let mut completed_frame = frame;
                 completed_frame.execution_time = execution_time;
                 completed_frame.memory_used = memory_used;
-
                 self.call_history.push(completed_frame.clone());
-
                 // 从递归栈中移除
                 if let Some(pos) = self
                     .recursion_tracker
@@ -215,17 +193,14 @@ impl CallStackAnalyzer {
                 {
                     self.recursion_tracker.current_recursion_stack.remove(pos);
                 }
-
                 return Some(completed_frame);
             } else {
                 // 函数不匹配，重新放回栈中
                 self.current_stack.push_back(frame);
             }
         }
-
         None
     }
-
     /// 检查递归调用
     fn check_recursion(&mut self, function_name: &str) {
         // 检查当前递归栈中是否已有此函数
@@ -243,7 +218,6 @@ impl CallStackAnalyzer {
                 .position(|f| f == function_name)
                 .map(|pos| self.recursion_tracker.current_recursion_stack.len() - pos)
                 .unwrap_or(1);
-
             let recursion_info: _ = self
                 .recursion_tracker
                 .recursion_info
@@ -254,10 +228,8 @@ impl CallStackAnalyzer {
                     recursion_count: 0,
                     is_direct_recursion: true,
                 });
-
             recursion_info.recursion_depth = recursion_info.recursion_depth.max(depth);
             recursion_info.recursion_count += 1;
-
             self.stats.recursion_detected += 1;
         } else {
             // 添加到递归栈
@@ -266,14 +238,12 @@ impl CallStackAnalyzer {
                 .push(function_name.to_string());
         }
     }
-
     /// 分析调用栈
     pub fn analyze_stack(&mut self) -> CallStackAnalysis {
         let hot_path: _ = self.identify_hot_path();
         let bottlenecks: _ = self.identify_bottlenecks();
         let recursion: _ = self.get_recursion_info();
         let depth_stats: _ = self.calculate_depth_stats();
-
         CallStackAnalysis {
             hot_path,
             bottlenecks,
@@ -281,26 +251,21 @@ impl CallStackAnalyzer {
             depth_stats,
         }
     }
-
     /// 识别热点路径
     fn identify_hot_path(&self) -> Vec<String> {
         // 简化实现：返回最频繁调用的函数序列
         let mut function_counts: Vec<(&String, &usize)> =
             self.function_call_counts.iter().collect();
-
         function_counts.sort_by(|a, b| b.1.cmp(a.1));
-
         function_counts
             .into_iter()
             .take(5)
             .map(|(name, _)| name.clone())
             .collect()
     }
-
     /// 识别性能瓶颈
     fn identify_bottlenecks(&mut self) -> Vec<Bottleneck> {
         let mut bottlenecks = Vec::new();
-
         // 分析每个函数的性能
         for (function_name, call_count) in &self.function_call_counts {
             // 计算平均执行时间（简化）
@@ -310,13 +275,11 @@ impl CallStackAnalyzer {
                 .filter(|frame| &frame.function_name == function_name)
                 .map(|frame| frame.execution_time)
                 .sum();
-
             let avg_execution_time: _ = if *call_count > 0 {
                 Duration::from_nanos(total_execution_time.as_nanos() as u64 / *call_count as u64)
             } else {
                 Duration::from_nanos(0)
             };
-
             // 检测执行时间过长
             if avg_execution_time > Duration::from_millis(10) {
                 bottlenecks.push(Bottleneck {
@@ -329,7 +292,6 @@ impl CallStackAnalyzer {
                     impact: 0.8,
                 });
             }
-
             // 检测调用频率过高
             if *call_count > 1000 {
                 bottlenecks.push(Bottleneck {
@@ -340,7 +302,6 @@ impl CallStackAnalyzer {
                 });
             }
         }
-
         // 检测嵌套过深
         if self.stats.max_call_depth > 10 {
             bottlenecks.push(Bottleneck {
@@ -353,11 +314,9 @@ impl CallStackAnalyzer {
                 impact: 0.7,
             });
         }
-
         self.stats.bottlenecks_detected += bottlenecks.len() as u64;
         bottlenecks
     }
-
     /// 获取递归信息
     fn get_recursion_info(&self) -> Vec<RecursionInfo> {
         self.recursion_tracker
@@ -366,17 +325,14 @@ impl CallStackAnalyzer {
             .cloned()
             .collect()
     }
-
     /// 计算深度统计
     fn calculate_depth_stats(&self) -> DepthStats {
         let mut depth_distribution: HashMap<usize, usize> = HashMap::new();
-
         for frame in &self.call_history {
             *depth_distribution
                 .entry(frame.depth)
                 .or_insert(0) += 1;
         }
-
         let total_calls: _ = self.call_history.len() as f64;
         let avg_depth: _ = if total_calls > 0.0 {
             self.call_history
@@ -387,29 +343,24 @@ impl CallStackAnalyzer {
         } else {
             0.0
         };
-
         DepthStats {
             max_depth: self.stats.max_call_depth,
             avg_depth,
             depth_distribution,
         }
     }
-
     /// 获取当前调用栈
     pub fn get_current_stack(&self) -> Vec<&StackFrame> {
         self.current_stack.iter().collect()
     }
-
     /// 获取函数调用统计
     pub fn get_function_call_counts(&self) -> HashMap<String, usize> {
         self.function_call_counts.clone()
     }
-
     /// 获取统计信息
     pub fn get_stats(&self) -> &AnalyzerStats {
         &self.stats
     }
-
     /// 清除所有数据
     pub fn clear(&mut self) {
         self.current_stack.clear();
@@ -419,91 +370,73 @@ impl CallStackAnalyzer {
         self.recursion_tracker.recursion_info.clear();
         self.stats = AnalyzerStats::default();
     }
-
     /// 获取调用历史
     pub fn get_call_history(&self) -> &[StackFrame] {
         &self.call_history
     }
-
     /// 检查是否正在递归
     pub fn is_recursive_call(&self, function_name: &str) -> bool {
         self.recursion_tracker
             .current_recursion_stack
             .iter().any(|s| s == function_name)
     }
-
     /// 获取当前递归深度
     pub fn get_current_recursion_depth(&self) -> usize {
         self.recursion_tracker.current_recursion_stack.len()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_call_stack_analyzer_creation() {
         let analyzer: _ = CallStackAnalyzer::new(100);
         assert_eq!(analyzer.get_stats().total_calls, 0);
     }
-
     #[test]
     fn test_enter_and_exit_function() {
         let mut analyzer = CallStackAnalyzer::new(10);
         let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
-
         analyzer.enter_function("test_func", None, None, None, start_time);
         std::thread::sleep(Duration::from_millis(10));
         let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
         let frame: _ = analyzer.exit_function("test_func", end_time, 1024);
-
         assert!(frame.is_some());
         let frame_data: _ = frame.unwrap();
         assert_eq!(frame_data.function_name, "test_func");
         assert!(frame_data.execution_time >= Duration::from_millis(10));
     }
-
     #[test]
     fn test_recursion_detection() {
         let mut analyzer = CallStackAnalyzer::new(10);
         let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
-
         analyzer.enter_function("recursive_func", None, None, None, start_time);
         assert!(!analyzer.is_recursive_call("recursive_func"));
-
         analyzer.enter_function("recursive_func", None, None, None, start_time);
         assert!(analyzer.is_recursive_call("recursive_func"));
-
         let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
         analyzer.exit_function("recursive_func", end_time, 0);
         assert!(!analyzer.is_recursive_call("recursive_func"));
     }
-
     #[test]
     fn test_analyze_stack() {
         let mut analyzer = CallStackAnalyzer::new(10);
         let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
-
         // 模拟函数调用
         analyzer.enter_function("func_a", None, None, None, start_time);
         analyzer.enter_function("func_b", None, None, None, start_time);
         let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
         analyzer.exit_function("func_b", end_time, 0);
         analyzer.exit_function("func_a", end_time, 0);
-
         let analysis: _ = analyzer.analyze_stack();
-
         assert!(!analysis.hot_path.is_empty());
         assert!(analysis.depth_stats.max_depth > 0);
     }
-
     #[test]
     fn test_bottleneck_detection() {
         let mut analyzer = CallStackAnalyzer::new(10);
-
         // 模拟频繁调用的函数
         for _ in 0..1100 {
             let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
@@ -511,21 +444,17 @@ use std::collections::{HashMap, BTreeMap};
             let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
             analyzer.exit_function("frequent_func", end_time, 0);
         }
-
         let analysis: _ = analyzer.analyze_stack();
         let has_frequency_bottleneck: _ = analysis.bottlenecks.iter().any(|b| {
             b.function == "frequent_func"
                 && b.bottleneck_type == BottleneckType::HighCallFrequency
         });
-
         assert!(has_frequency_bottleneck);
     }
-
     #[test]
     fn test_max_depth_limit() {
         let mut analyzer = CallStackAnalyzer::new(3);
         let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
-
         // 尝试超过最大深度
         for i in 0..5 {
             analyzer.enter_function(
@@ -536,38 +465,30 @@ use std::collections::{HashMap, BTreeMap};
                 start_time,
             );
         }
-
         let stats: _ = analyzer.get_stats();
         assert_eq!(stats.max_call_depth, 4); // 从0开始计数
     }
-
     #[test]
     fn test_clear() {
         let mut analyzer = CallStackAnalyzer::new(10);
         let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
-
         analyzer.enter_function("test_func", None, None, None, start_time);
         let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
         analyzer.exit_function("test_func", end_time, 0);
-
         analyzer.clear();
-
         assert_eq!(analyzer.get_stats().total_calls, 0);
         assert_eq!(analyzer.get_call_history().len(), 0);
     }
-
     #[test]
     fn test_depth_statistics() {
         let mut analyzer = CallStackAnalyzer::new(10);
         let start_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
-
         // 不同深度的调用
         analyzer.enter_function("depth_0", None, None, None, start_time);
         analyzer.enter_function("depth_1", None, None, None, start_time);
         let end_time: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as u64;
         analyzer.exit_function("depth_1", end_time, 0);
         analyzer.exit_function("depth_0", end_time, 0);
-
         let analysis: _ = analyzer.analyze_stack();
         assert!(analysis.depth_stats.avg_depth >= 0.0);
         assert!(analysis.depth_stats.max_depth > 0);

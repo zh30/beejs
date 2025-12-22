@@ -5,7 +5,6 @@
 //! - 与 Bun、Node.js 等运行时的对比
 //! - 性能回归检测
 //! - 实时性能监控
-
 pub mod engine;
 pub mod config;
 pub mod result;
@@ -14,7 +13,6 @@ pub mod workloads;
 pub mod regression;
 pub mod monitoring;
 pub mod utils;
-
 pub use engine::{BenchmarkEngine, BenchmarkRun};
 pub use config::{BenchmarkConfig, TestSuite, WorkloadProfile, RuntimeComparison};
 pub use result::{BenchmarkResult, Statistics, PerformanceMetrics};
@@ -24,7 +22,6 @@ pub use regression::{RegressionDetector, PerformanceHistory, RegressionReport};
 pub use monitoring::{RealTimeMonitor, PerformanceDashboard, MetricsCollector};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 运行时类型枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Runtime {
@@ -39,7 +36,6 @@ pub enum Runtime {
     /// 自定义运行时
     Custom(String),
 }
-
 impl std::fmt::Display for Runtime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -51,7 +47,6 @@ impl std::fmt::Display for Runtime {
         }
     }
 }
-
 /// 性能指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MetricType {
@@ -66,7 +61,6 @@ pub enum MetricType {
     /// 延迟 (毫秒)
     Latency,
 }
-
 impl std::fmt::Display for MetricType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -78,28 +72,21 @@ impl std::fmt::Display for MetricType {
         }
     }
 }
-
 /// 基准测试错误类型
 #[derive(thiserror::Error, Debug)]
 pub enum BenchmarkError {
     #[error("Runtime not available: {0}")]
     RuntimeNotAvailable(String),
-
     #[error("Test execution failed: {0}")]
     TestExecutionFailed(String),
-
     #[error("Configuration error: {0}")]
     ConfigError(String),
-
     #[error("Statistics calculation error: {0}")]
     StatisticsError(String),
-
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
-
     #[error("JSON error: {0}")]
     JsonError(#[from] serde_json::Error),
 }
-
 /// 基准测试成功结果
 pub type BenchmarkResult<T = ()> = std::result::Result<T, BenchmarkError>;

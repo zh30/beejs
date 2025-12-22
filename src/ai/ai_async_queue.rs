@@ -1,6 +1,5 @@
 //! AI异步任务队列
 //! 高性能异步任务调度和队列管理系统
-
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BinaryHeap, HashMap};
 use std::sync::{
@@ -10,7 +9,6 @@ use std::sync::{
 use std::time::{Duration, Instant};
 use tokio::sync::{oneshot, Semaphore};
 use tokio::task::JoinHandle;
-
 /// 任务优先级（从低到高排序）
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(dead_code)]
@@ -21,7 +19,6 @@ pub enum TaskPriority {
     High = 3,
     Critical = 4,
 }
-
 /// AI任务状态
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
@@ -33,7 +30,6 @@ pub enum TaskStatus {
     Cancelled,
     Retrying,
 }
-
 /// AI任务
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -47,7 +43,6 @@ pub struct AiTask {
     pub timeout: Duration,
     pub dependencies: Vec<usize>, // 依赖的任务ID
 }
-
 /// 队列任务（用于优先级队列）
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -56,21 +51,17 @@ struct QueueTask {
     enqueue_time: Instant,
     attempt_count: usize,
 }
-
 impl PartialEq for QueueTask {
     fn eq(&self, other: &Self) -> bool {
         self.task.priority == other.task.priority && self.enqueue_time == other.enqueue_time
     }
 }
-
 impl Eq for QueueTask {}
-
 impl PartialOrd for QueueTask {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
-
 impl Ord for QueueTask {
     fn cmp(&self, other: &Self) -> Ordering {
         // 反向比较以实现最大堆（高优先级在前）
@@ -80,7 +71,6 @@ impl Ord for QueueTask {
         }
     }
 }
-
 /// 任务执行结果
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -92,7 +82,6 @@ pub struct TaskResult {
     pub execution_time: Duration,
     pub attempt_count: usize,
 }
-
 /// 队列配置
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -106,7 +95,6 @@ pub struct QueueConfig {
     pub task_retry_delay: Duration,
     pub max_memory_usage: usize,
 }
-
 impl Default for QueueConfig {
     fn default() -> Self {
         Self {
@@ -121,7 +109,6 @@ impl Default for QueueConfig {
         }
     }
 }
-
 /// 异步任务队列
 #[allow(dead_code)]
 pub struct AiAsyncQueue {
@@ -134,7 +121,6 @@ pub struct AiAsyncQueue {
     worker_handles: Arc<Mutex<Vec<JoinHandle<()>>>>,
     stats: Arc<Mutex<QueueStats>>,
 }
-
 /// 正在运行的任务信息
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -143,7 +129,6 @@ struct RunningTaskInfo {
     start_time: Instant,
     worker_id: usize,
 }
-
 /// 队列统计信息
 #[derive(Debug, Clone, Default)]
 #[allow(dead_code)]
@@ -162,7 +147,6 @@ pub struct QueueStats {
     pub throughput_tasks_per_second: f64,
     pub memory_usage: usize,
 }
-
 impl QueueStats {
     #[allow(dead_code)]
     pub fn success_rate(&self) -> f64 {
@@ -173,7 +157,6 @@ impl QueueStats {
             0.0
         }
     }
-
     #[allow(dead_code)]
     pub fn update_throughput(&mut self, elapsed: Duration) {
         if elapsed.as_secs_f64() > 0.0 {
@@ -182,7 +165,6 @@ impl QueueStats {
         }
     }
 }
-
 #[allow(dead_code)]
 impl AiAsyncQueue {
     /// 创建新的异步任务队列
@@ -198,11 +180,9 @@ impl AiAsyncQueue {
             stats: Arc::new(Mutex::new(QueueStats::default())),
         }
     }
-
     /// 启动队列工作线程
     pub async fn start(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut handles = Vec::new();
-
         for worker_id in 0..self.config.worker_count {
             let tasks: _ = self.tasks.clone();
             let running_tasks: _ = self.running_tasks.clone();
@@ -210,7 +190,6 @@ impl AiAsyncQueue {
             let queue_semaphore: _ = self.queue_semaphore.clone();
             let stats: _ = self.stats.clone();
             let config: _ = self.config.clone();
-
             let handle: _ = tokio::spawn(async move {
                 worker_loop(
                     worker_id,
@@ -223,19 +202,15 @@ impl AiAsyncQueue {
                 )
                 .await;
             });
-
             handles.push(handle);
         }
-
         {
             let mut worker_handles = self.worker_handles.lock().unwrap();
             worker_handles.extend(handles);
         }
-
         println!("AI异步队列启动，{} 个工作线程", self.config.worker_count);
         Ok(())
     }
-
     /// 停止队列
     pub async fn stop(&self) {
         // 等待所有工作线程完成
@@ -244,14 +219,11 @@ impl AiAsyncQueue {
             let handles: _ = worker_handles.drain(..).collect::<Vec<_>>();
             handles
         };
-
         for handle in handles {
             handle.abort();
         }
-
         println!("AI异步队列已停止");
     }
-
     /// 入队任务
     pub async fn enqueue(
         &self,
@@ -264,49 +236,39 @@ impl AiAsyncQueue {
                 return Err("队列已满".into());
             }
         }
-
         let task_id: _ = self.next_task_id.fetch_add(1, AtomicOrdering::SeqCst);
         let mut task_with_id = task;
         task_with_id.id = task_id;
-
         let queue_task: _ = QueueTask {
             task: task_with_id,
             enqueue_time: Instant::now(),
             attempt_count: 0,
         };
-
         {
             let mut tasks = self.tasks.lock().unwrap();
             tasks.push(Reverse(queue_task));
-
             let mut stats = self.stats.lock().unwrap();
             stats.total_tasks_enqueued += 1;
             stats.current_queue_size += 1;
             stats.peak_queue_size = stats.peak_queue_size.max(stats.current_queue_size);
         }
-
         Ok(task_id)
     }
-
     /// 批量入队任务
     pub async fn enqueue_batch(
         &self,
         tasks: Vec<AiTask>,
     ) -> Result<Vec<usize>, Box<dyn std::error::Error + Send + Sync>> {
         let mut task_ids = Vec::with_capacity(tasks.len());
-
         for task in tasks {
             let task_id: _ = self.enqueue(task).await?;
             task_ids.push(task_id);
         }
-
         Ok(task_ids)
     }
-
     /// 获取任务结果（异步）
     pub async fn get_result(&self, task_id: usize) -> Option<TaskResult> {
         let (_tx, rx) = oneshot::channel();
-
         // 检查任务是否已完成
         {
             let results: _ = self.task_results.lock().unwrap();
@@ -314,13 +276,10 @@ impl AiAsyncQueue {
                 return Some(result);
             }
         }
-
         // 发送查询请求到工作线程
         // 实际实现中需要更复杂的机制来查询任务状态
-
         rx.await.ok()
     }
-
     /// 取消任务
     pub async fn cancel(
         &self,
@@ -335,45 +294,36 @@ impl AiAsyncQueue {
             execution_time: Duration::from_secs(0),
             attempt_count: 0,
         };
-
         {
             let mut results = self.task_results.lock().unwrap();
             results.insert(task_id, result);
         }
-
         Ok(())
     }
-
     /// 获取队列统计信息
     pub fn get_stats(&self) -> QueueStats {
         self.stats.lock().unwrap().clone()
     }
-
     /// 获取当前队列大小
     pub fn queue_size(&self) -> usize {
         self.tasks.lock().unwrap().len()
     }
-
     /// 获取当前运行任务数
     pub fn running_tasks_count(&self) -> usize {
         self.running_tasks.lock().unwrap().len()
     }
-
     /// 清空队列
     pub async fn clear(&self) {
         {
             let mut tasks = self.tasks.lock().unwrap();
             tasks.clear();
         }
-
         {
             let mut stats = self.stats.lock().unwrap();
             stats.current_queue_size = 0;
         }
-
         println!("队列已清空");
     }
-
     /// 等待所有任务完成
     pub async fn drain(&self) {
         while self.queue_size() > 0 || self.running_tasks_count() > 0 {
@@ -382,7 +332,6 @@ impl AiAsyncQueue {
         println!("所有任务已完成");
     }
 }
-
 /// 工作线程循环
 #[allow(dead_code)]
 async fn worker_loop(
@@ -400,11 +349,9 @@ async fn worker_loop(
             let mut tasks_guard = tasks.lock().unwrap();
             tasks_guard.pop().map(|Reverse(queue_task)| queue_task)
         };
-
         if let Some(queue_task) = task_option {
             // 获取执行许可
             let _permit: _ = queue_semaphore.acquire().await.unwrap();
-
             // 标记任务为运行中
             let task: _ = queue_task.task;
             {
@@ -417,26 +364,21 @@ async fn worker_loop(
                         worker_id,
                     },
                 );
-
                 let mut stats_guard = stats.lock().unwrap();
                 stats_guard.current_running_tasks += 1;
                 stats_guard.peak_running_tasks = stats_guard
                     .peak_running_tasks
                     .max(stats_guard.current_running_tasks);
             }
-
             // 执行任务
             let result: _ = execute_task(&task).await;
-
             // 记录结果
             {
                 let mut results_guard = task_results.lock().unwrap();
                 results_guard.insert(task.id, result);
-
                 let mut stats_guard = stats.lock().unwrap();
                 stats_guard.current_running_tasks -= 1;
             }
-
             // 从运行任务中移除
             {
                 let mut running = running_tasks.lock().unwrap();
@@ -448,12 +390,10 @@ async fn worker_loop(
         }
     }
 }
-
 /// 执行单个任务
 #[allow(dead_code)]
 async fn execute_task(task: &AiTask) -> TaskResult {
     let start_time: _ = Instant::now();
-
     // 模拟任务执行
     let execution_result: Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> =
         match task.task_type.as_str() {
@@ -474,9 +414,7 @@ async fn execute_task(task: &AiTask) -> TaskResult {
                 Ok(vec![0; 256])
             }
         };
-
     let execution_time: _ = start_time.elapsed();
-
     match execution_result {
         Ok(data) => TaskResult {
             task_id: task.id,
@@ -496,7 +434,6 @@ async fn execute_task(task: &AiTask) -> TaskResult {
         },
     }
 }
-
 /// 便利函数：创建高吞吐量队列
 #[allow(dead_code)]
 pub fn create_high_throughput_queue() -> AiAsyncQueue {
@@ -512,7 +449,6 @@ pub fn create_high_throughput_queue() -> AiAsyncQueue {
     };
     AiAsyncQueue::new(config)
 }
-
 /// 便利函数：创建低延迟队列
 #[allow(dead_code)]
 pub fn create_low_latency_queue() -> AiAsyncQueue {
@@ -528,20 +464,17 @@ pub fn create_low_latency_queue() -> AiAsyncQueue {
     };
     AiAsyncQueue::new(config)
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_queue_creation() {
         let queue: _ = AiAsyncQueue::new(QueueConfig::default());
         assert_eq!(queue.queue_size(), 0);
         assert_eq!(queue.running_tasks_count(), 0);
     }
-
     #[tokio::test]
     async fn test_enqueue_task() {
         let queue: _ = AiAsyncQueue::new(QueueConfig::default());
@@ -555,12 +488,10 @@ use std::collections::{HashMap, BTreeMap};
             timeout: Duration::from_secs(10),
             dependencies: vec![],
         };
-
         let result: _ = queue.enqueue(task).await;
         assert!(result.is_ok());
         assert_eq!(queue.queue_size(), 1);
     }
-
     #[tokio::test]
     async fn test_batch_enqueue() {
         let queue: _ = AiAsyncQueue::new(QueueConfig::default());
@@ -586,37 +517,31 @@ use std::collections::{HashMap, BTreeMap};
                 dependencies: vec![],
             },
         ];
-
         let result: _ = queue.enqueue_batch(tasks).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap().len(), 2);
     }
-
     #[test]
     fn test_task_priority_ordering() {
         let critical: _ = TaskPriority::Critical;
         let normal: _ = TaskPriority::Normal;
         let low: _ = TaskPriority::Low;
-
         assert!(critical > normal);
         assert!(normal > low);
         assert!(critical > low);
     }
-
     #[test]
     fn test_queue_stats() {
         let stats: _ = QueueStats::default();
         assert_eq!(stats.total_tasks_enqueued, 0);
         assert_eq!(stats.success_rate(), 0.0);
     }
-
     #[test]
     fn test_create_high_throughput_queue() {
         let queue: _ = create_high_throughput_queue();
         assert!(queue.config.max_queue_size >= 50000);
         assert!(queue.config.worker_count >= num_cpus::get());
     }
-
     #[test]
     fn test_create_low_latency_queue() {
         let queue: _ = create_low_latency_queue();

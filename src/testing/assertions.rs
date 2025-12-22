@@ -6,25 +6,20 @@
 //! - Async matchers for Promise-based tests
 //! - Custom matcher support
 //! - Deep equality checking
-
 /// Core matcher trait
 pub trait Matcher<T> {
     type Output;
-
     fn matches(&self, value: &T) -> bool;
     fn message(&self, value: &T) -> String;
 }
-
 /// Assertion context for chaining
 pub struct AssertionContext<T> {
     value: T,
 }
-
 impl<T> AssertionContext<T> {
     pub fn new(value: T) -> Self {
         AssertionContext { value }
     }
-
     /// Basic equality matcher
     pub fn to_equal(&self, expected: &T) -> bool
     where
@@ -32,18 +27,15 @@ impl<T> AssertionContext<T> {
     {
         self.value == *expected
     }
-
     /// Get the value for further operations
     pub fn value(&self) -> &T {
         &self.value
     }
 }
-
 /// Create an assertion context
 pub fn expect<T>(value: T) -> AssertionContext<T> {
     AssertionContext::new(value)
 }
-
 /// Result of an assertion
 #[derive(Debug, Clone)]
 pub struct AssertionCheck {
@@ -52,7 +44,6 @@ pub struct AssertionCheck {
     pub expected: Option<String>,
     pub actual: Option<String>,
 }
-
 impl AssertionCheck {
     pub fn success(message: String) -> Self {
         AssertionCheck {
@@ -62,7 +53,6 @@ impl AssertionCheck {
             actual: None,
         }
     }
-
     pub fn failure(message: String, expected: Option<String>, actual: Option<String>) -> Self {
         AssertionCheck {
             passed: false,
@@ -72,7 +62,6 @@ impl AssertionCheck {
         }
     }
 }
-
 /// Extended matcher types
 #[derive(Debug, Clone)]
 pub enum ExtendedMatcher<T> {
@@ -93,35 +82,28 @@ pub enum ExtendedMatcher<T> {
     Truthy,
     Falsy,
 }
-
 impl<T> ExtendedMatcher<T> {
     pub fn new_equal(value: T) -> Self {
         ExtendedMatcher::Equal(value)
     }
-
     pub fn new_contains(substring: String) -> Self {
         ExtendedMatcher::Contains(substring)
     }
-
     pub fn new_length(length: usize) -> Self {
         ExtendedMatcher::Length(length)
     }
-
     pub fn new_truthy() -> Self {
         ExtendedMatcher::Truthy
     }
-
     pub fn new_falsy() -> Self {
         ExtendedMatcher::Falsy
     }
 }
-
 impl<T> Matcher<T> for ExtendedMatcher<T>
 where
     T: PartialEq + std::fmt::Debug + serde::Serialize + Clone,
 {
     type Output = AssertionCheck;
-
     fn matches(&self, value: &T) -> bool {
         match self {
             ExtendedMatcher::Equal(expected) => value == expected,
@@ -201,7 +183,6 @@ where
             }
         }
     }
-
     fn message(&self, value: &T) -> String {
         match self {
             ExtendedMatcher::Equal(expected) => {
@@ -234,13 +215,11 @@ where
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_equal_matcher() {
         let matcher: _ = ExtendedMatcher::Equal(42);
@@ -248,28 +227,24 @@ use std::collections::{HashMap, BTreeMap};
         assert!(matcher.matches(&value));
         assert!(matcher.message(&value).contains("equal"));
     }
-
     #[test]
     fn test_contains_matcher() {
         let matcher: _ = ExtendedMatcher::Contains("test".to_string());
         let value: _ = "this is a test string";
         assert!(matcher.matches(&value));
     }
-
     #[test]
     fn test_length_matcher() {
         let matcher: _ = ExtendedMatcher::Length(5);
         let value: _ = vec![1, 2, 3, 4, 5];
         assert!(matcher.matches(&value));
     }
-
     #[test]
     fn test_truthy_matcher() {
         let matcher: _ = ExtendedMatcher::Truthy;
         let value: _ = "true";
         assert!(matcher.matches(&value));
     }
-
     #[test]
     fn test_falsy_matcher() {
         let matcher: _ = ExtendedMatcher::Falsy;

@@ -7,32 +7,25 @@
 //! - 异步零拷贝操作
 //! - 智能批处理器
 //! - 内存映射管理器
-
 pub mod sender;
 pub mod receiver;
 pub mod async_impl;
 pub mod batch_processor;
-
 // 重新导出主要类型
 pub use sender::{
     ZeroCopySender, ZeroCopySenderConfig, ZeroCopySenderStats,
     ZeroCopyDirection,
 };
-
 pub use receiver::{
     ZeroCopyReceiver, ZeroCopyReceiverConfig, ZeroCopyReceiverStats,
 };
-
 pub use async_impl::AsyncZeroCopy;
-
 pub use batch_processor::BatchProcessor;
-
 // 内部模块
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 零拷贝 I/O 性能指标
 #[derive(Debug, Clone, Default)]
 pub struct ZeroCopyMetrics {
@@ -51,7 +44,6 @@ pub struct ZeroCopyMetrics {
     /// 系统调用减少数量
     pub syscalls_reduced: u64,
 }
-
 /// 零拷贝 I/O 性能监控器
 #[derive(Debug)]
 pub struct ZeroCopyMonitor {
@@ -60,7 +52,6 @@ pub struct ZeroCopyMonitor {
     /// 监控开始时间
     start_time: Instant,
 }
-
 impl ZeroCopyMonitor {
     /// 创建新的性能监控器
     pub fn new() -> Self {
@@ -69,17 +60,13 @@ impl ZeroCopyMonitor {
             start_time: Instant::now(),
         }
     }
-
     /// 记录成功传输
     pub fn record_success(&self, bytes: u64, duration: Duration) {
         let mut metrics = self.metrics.lock().unwrap();
-
         metrics.total_bytes_transferred += bytes;
         metrics.total_operations += 1;
-
         if duration.as_secs_f64() > 0.0 {
             let speed: _ = bytes as f64 / duration.as_secs_f64();
-
             // 更新平均速度
             if metrics.total_operations == 1 {
                 metrics.avg_transfer_speed = speed;
@@ -89,31 +76,25 @@ impl ZeroCopyMonitor {
                     + speed)
                     / metrics.total_operations as f64;
             }
-
             // 更新峰值速度
             if speed > metrics.peak_transfer_speed {
                 metrics.peak_transfer_speed = speed;
             }
         }
-
         // 计算内存拷贝节省量（假设传统方式需要 2 次拷贝）
         metrics.memory_copy_saved += bytes * 2;
-
         // 计算系统调用减少量（假设零拷贝减少 80% 系统调用）
         metrics.syscalls_reduced += 5; // 每次传输节省 5 次系统调用
     }
-
     /// 记录失败传输
     pub fn record_failure(&self) {
         let mut metrics = self.metrics.lock().unwrap();
         metrics.total_operations += 1;
     }
-
     /// 获取性能指标快照
     pub fn get_metrics(&self) -> ZeroCopyMetrics {
         self.metrics.lock().unwrap().clone()
     }
-
     /// 计算零拷贝成功率
     pub fn calculate_success_rate(&self, total_attempts: u64) -> f64 {
         let metrics: _ = self.metrics.lock().unwrap();
@@ -123,12 +104,10 @@ impl ZeroCopyMonitor {
             0.0
         }
     }
-
     /// 生成性能报告
     pub fn generate_report(&self) -> String {
         let metrics: _ = self.metrics.lock().unwrap();
         let elapsed: _ = self.start_time.elapsed();
-
         format!(
             r#"
 零拷贝 I/O 性能报告
@@ -163,32 +142,25 @@ impl ZeroCopyMonitor {
         )
     }
 }
-
 impl Default for ZeroCopyMonitor {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// 零拷贝 I/O 错误类型
 #[derive(Debug, thiserror::Error)]
 pub enum ZeroCopyError {
     #[error("I/O 错误: {0}")]
     Io(#[from] std::io::Error),
-
     #[error("系统调用不支持: {0}")]
     Unsupported(String),
-
     #[error("资源不足")]
     ResourceExhausted,
-
     #[error("超时错误")]
     Timeout,
-
     #[error("配置错误: {0}")]
     Config(String),
 }
-
 /// 零拷贝 I/O 配置
 #[derive(Debug, Clone)]
 pub struct ZeroCopyConfig {
@@ -203,7 +175,6 @@ pub struct ZeroCopyConfig {
     /// 压缩算法
     pub compression_algorithm: String,
 }
-
 impl Default for ZeroCopyConfig {
     fn default() -> Self {
         Self {

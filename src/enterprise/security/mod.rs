@@ -1,24 +1,19 @@
 //! Enterprise Security Module
 //! Provides enterprise-grade security features including sandbox, encryption, and key management
-
 pub mod sandbox;
 pub mod encryption;
-
 pub use sandbox::*;
 pub use encryption::*;
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// Unified security manager
 #[derive(Debug)]
 pub struct SecurityModule {
     pub sandbox: SecuritySandbox,
     pub kms: KeyManagementService,
 }
-
 impl SecurityModule {
     /// Create a new security module
     pub fn new(
@@ -27,7 +22,6 @@ impl SecurityModule {
     ) -> Result<Self> {
         let sandbox: _ = SecuritySandbox::new(sandbox_config)?;
         let kms: _ = KeyManagementService::new(encryption_config);
-
         Ok(Self {
             sandbox,
             kms,

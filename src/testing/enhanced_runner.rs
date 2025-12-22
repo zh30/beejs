@@ -1,14 +1,12 @@
 //! Enhanced Test Runner
 //! Provides advanced test execution features including parallel execution,
 //! timeout control, test filtering, and retry mechanisms
-
 use crate::testing::test_context::{TestSuite, TestCase, TestResult};
 use crate::testing::parallel_executor::{ParallelExecutor, ParallelConfig};
 use crate::testing::test_timeout::{TestTimeout, TimeoutConfig};
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-
 /// Enhanced test runner configuration
 #[derive(Debug, Clone)]
 pub struct EnhancedRunnerConfig {
@@ -21,7 +19,6 @@ pub struct EnhancedRunnerConfig {
     pub test_filter: Option<TestFilter>,
     pub test_sorter: Option<TestSorter>,
 }
-
 impl Default for EnhancedRunnerConfig {
     fn default() -> Self {
         EnhancedRunnerConfig {
@@ -36,7 +33,6 @@ impl Default for EnhancedRunnerConfig {
         }
     }
 }
-
 /// Test filtering options
 #[derive(Debug, Clone)]
 pub struct TestFilter {
@@ -45,7 +41,6 @@ pub struct TestFilter {
     pub only_tests: bool,
     pub skip_tests: bool,
 }
-
 impl TestFilter {
     pub fn new() -> Self {
         TestFilter {
@@ -55,17 +50,14 @@ impl TestFilter {
             skip_tests: false,
         }
     }
-
     pub fn include(&mut self, pattern: String) -> &mut Self {
         self.include_patterns.push(pattern);
         self
     }
-
     pub fn exclude(&mut self, pattern: String) -> &mut Self {
         self.exclude_patterns.push(pattern);
         self
     }
-
     /// Check if a test matches this filter
     pub fn matches(&self, test_name: &str, suite_name: &str) -> bool {
         // If only_tests is set, only run tests that match include_patterns
@@ -74,32 +66,27 @@ impl TestFilter {
                 .iter()
                 .any(|p| test_name.contains(p) || suite_name.contains(p));
         }
-
         // If skip_tests is set, exclude tests that match exclude_patterns
         if self.skip_tests && !self.exclude_patterns.is_empty() {
             return !self.exclude_patterns
                 .iter()
                 .any(|p| test_name.contains(p) || suite_name.contains(p));
         }
-
         // If include_patterns is set, only run tests that match
         if !self.include_patterns.is_empty() {
             return self.include_patterns
                 .iter()
                 .any(|p| test_name.contains(p) || suite_name.contains(p));
         }
-
         // If exclude_patterns is set, exclude matching tests
         if !self.exclude_patterns.is_empty() {
             return !self.exclude_patterns
                 .iter()
                 .any(|p| test_name.contains(p) || suite_name.contains(p));
         }
-
         true
     }
 }
-
 /// Test sorting options
 #[derive(Debug, Clone)]
 pub enum TestSorter {
@@ -107,7 +94,6 @@ pub enum TestSorter {
     ByDuration,
     Random,
 }
-
 impl TestSorter {
     pub fn sort(&self, tests: &mut [TestCase], suite_name: &str) {
         match self {
@@ -127,7 +113,6 @@ impl TestSorter {
         }
     }
 }
-
 /// Enhanced test runner statistics
 #[derive(Debug, Clone, Default)]
 pub struct EnhancedRunnerStats {
@@ -142,27 +127,21 @@ pub struct EnhancedRunnerStats {
     pub max_duration: Option<Duration>,
     pub avg_duration: Duration,
 }
-
 impl EnhancedRunnerStats {
     pub fn new() -> Self {
         Default::default()
     }
-
     pub fn add_result(&mut self, result: &TestResult, was_retried: bool) {
         self.total_tests += 1;
-
         if was_retried {
             self.retried_tests += 1;
         }
-
         if result.passed {
             self.passed_tests += 1;
         } else {
             self.failed_tests += 1;
         }
-
         self.total_duration += result.duration;
-
         // Update min/max duration
         if self.min_duration.is_none() || result.duration < self.min_duration.unwrap() {
             self.min_duration = Some(result.duration);
@@ -170,23 +149,19 @@ impl EnhancedRunnerStats {
         if self.max_duration.is_none() || result.duration > self.max_duration.unwrap() {
             self.max_duration = Some(result.duration);
         }
-
         // Update average duration
         self.avg_duration = Duration::from_nanos(
             (self.total_duration.as_nanos() / self.total_tests as u128) as u64
         );
     }
-
     pub fn add_skipped(&mut self) {
         self.total_tests += 1;
         self.skipped_tests += 1;
     }
-
     pub fn add_timeout(&mut self) {
         self.total_tests += 1;
         self.timed_out_tests += 1;
     }
-
     pub fn success_rate(&self) -> f64 {
         if self.total_tests == 0 {
             0.0
@@ -194,7 +169,6 @@ impl EnhancedRunnerStats {
             (self.passed_tests as f64 / self.total_tests as f64) * 100.0
         }
     }
-
     pub fn failure_rate(&self) -> f64 {
         if self.total_tests == 0 {
             0.0
@@ -202,7 +176,6 @@ impl EnhancedRunnerStats {
             (self.failed_tests as f64 / self.total_tests as f64) * 100.0
         }
     }
-
     pub fn timeout_rate(&self) -> f64 {
         if self.total_tests == 0 {
             0.0
@@ -211,26 +184,22 @@ impl EnhancedRunnerStats {
         }
     }
 }
-
 /// Enhanced test runner
 pub struct EnhancedRunner {
     pub config: EnhancedRunnerConfig,
     pub parallel_executor: ParallelExecutor,
     pub timeout_handler: TestTimeout,
 }
-
 impl EnhancedRunner {
     pub fn new(config: EnhancedRunnerConfig) -> Self {
         let parallel_executor: _ = ParallelExecutor::new(config.parallel_config.clone());
         let timeout_handler: _ = TestTimeout::new(config.timeout_config.clone());
-
         EnhancedRunner {
             config,
             parallel_executor,
             timeout_handler,
         }
     }
-
     /// Run a single test with retry logic
     pub fn run_test_with_retry(
         &self,
@@ -239,31 +208,24 @@ impl EnhancedRunner {
     ) -> TestResult {
         let mut last_error = None;
         let mut result = None;
-
         for attempt in 0..=self.config.retry_count {
             let test_result: _ = self.run_single_test(suite_name, test);
-
             if test_result.passed {
                 return test_result;
             }
-
             last_error = test_result.error.clone();
-
             // If this is not the last attempt, wait before retry
             if attempt < self.config.retry_count {
                 std::thread::sleep(Duration::from_millis(100));
             }
-
             result = Some(test_result);
         }
-
         // Return the last result (which includes the error)
         result.unwrap_or_else(|| {
             TestResult::new(suite_name.to_string(), test.name.clone())
                 .with_error(last_error.unwrap_or_else(|| "Unknown error".to_string()))
         })
     }
-
     /// Run a test suite with enhanced features
     pub fn run_suite(
         &self,
@@ -271,50 +233,40 @@ impl EnhancedRunner {
         stats: Arc<Mutex<EnhancedRunnerStats>>,
     ) -> Vec<TestResult> {
         let mut results = Vec::new();
-
         // Filter and sort tests
         let mut tests = suite.tests.clone();
-
         // Apply filter
         if let Some(ref filter) = self.config.test_filter {
             tests.retain(|t| filter.matches(&t.name, &suite.name));
         }
-
         // Apply sorter
         if let Some(ref sorter) = self.config.test_sorter {
             sorter.sort(&mut tests, &suite.name);
         }
-
         if tests.is_empty() {
             return results;
         }
-
         // Run beforeAll hook
         if let Some(ref before_all) = suite.before_all {
             // TODO: Execute beforeAll hook
         }
-
         // Run tests
         if self.config.parallel && tests.len() > 1 {
             // Run tests in parallel
             let parallel_results: _ = self
                 .parallel_executor
                 .run_tests_parallel(&suite.name, &tests, self.config.timeout_config.default_timeout);
-
             for result in parallel_results {
                 let was_retried: _ = false; // Parallel tests don't retry
-
                 {
-                    let mut locked_stats = stats..lock().unwrap();
+                    let mut locked_stats = stats.lock().unwrap();
                     if result.passed {
                         locked_stats.add_result(&result, was_retried);
                     } else {
                         locked_stats.add_result(&result, was_retried);
                     }
                 }
-
                 results.push(result.clone());
-
                 // Bail out on first failure if configured
                 if self.config.bail && !result.passed {
                     break;
@@ -324,33 +276,27 @@ impl EnhancedRunner {
             // Run tests sequentially
             for test in tests {
                 let result: _ = self.run_test_with_retry(&suite.name, &test);
-
                 {
-                    let mut locked_stats = stats..lock().unwrap();
+                    let mut locked_stats = stats.lock().unwrap();
                     if result.passed {
                         locked_stats.add_result(&result, false);
                     } else {
                         locked_stats.add_result(&result, false);
                     }
                 }
-
                 results.push(result.clone());
-
                 // Bail out on first failure if configured
                 if self.config.bail && !result.passed {
                     break;
                 }
             }
         }
-
         // Run afterAll hook
         if let Some(ref after_all) = suite.after_all {
             // TODO: Execute afterAll hook
         }
-
         results
     }
-
     /// Run multiple test suites
     pub fn run_suites(
         &self,
@@ -358,7 +304,6 @@ impl EnhancedRunner {
     ) -> (Vec<TestResult>, EnhancedRunnerStats) {
         let stats = Arc::new(Mutex::new(EnhancedRunnerStats::new()));
         let mut all_results = Vec::new();
-
         for suite in suites {
             // Filter suites that have 'only' tests
             let has_only: _ = suite.tests.iter().any(|t| t.only);
@@ -367,41 +312,33 @@ impl EnhancedRunner {
             } else {
                 suite.tests.clone()
             };
-
             // Create filtered suite
             let mut filtered_suite = suite;
             filtered_suite.tests = suite_to_run;
-
             let results: _ = self.run_suite(&filtered_suite, Arc::clone(stats));
             all_results.extend(results);
         }
-
         let final_stats: _ = Arc::try_unwrap(stats)
             .ok()
             .map(|m| m.into_inner().unwrap())
             .unwrap_or_default();
-
         (all_results, final_stats)
     }
-
     /// Run a single test
     fn run_single_test(&self, suite_name: &str, test: &TestCase) -> TestResult {
         let start: _ = Instant::now();
         let mut result = TestResult::new(suite_name.to_string(), test.name.clone());
-
         if test.skip {
             let duration: _ = start.elapsed();
             result.duration = duration;
             return result;
         }
-
         // Determine timeout for this test
         let timeout: _ = if test.timeout > Duration::from_secs(0) {
             test.timeout
         } else {
             self.config.timeout_config.default_timeout
         };
-
         // Execute test with timeout
         match self.timeout_handler.run_async_with_timeout(timeout, || {
             // TODO: Execute actual test using V8
@@ -415,44 +352,35 @@ impl EnhancedRunner {
                 result.error = Some(err.to_string());
             }
         }
-
         let duration: _ = start.elapsed();
         result.duration = duration;
-
         result
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_enhanced_runner_creation() {
         let config: _ = EnhancedRunnerConfig::default();
         let runner: _ = EnhancedRunner::new(config);
         assert!(runner.config.parallel);
     }
-
     #[test]
     fn test_test_filter() {
         let mut filter = TestFilter::new();
         filter.include("test1".to_string());
-
         assert!(filter.matches("test1_example", "suite"));
         assert!(!filter.matches("test2_example", "suite"));
     }
-
     #[test]
     fn test_test_sorter() {
         // Note: This test is simplified to avoid V8 API complexity.
         // Full V8 integration tests are in tests/ directory.
-
         // Create a simple mock test case structure
         let mut tests = Vec::new();
-
         let test_case1: _ = TestCase {
             name: "b_test".to_string(),
             function: unsafe { std::mem::zeroed() }, // Placeholder - not used in sorting
@@ -461,7 +389,6 @@ use std::collections::{HashMap, BTreeMap};
             only: false,
         };
         tests.push(test_case1);
-
         let test_case2: _ = TestCase {
             name: "a_test".to_string(),
             function: unsafe { std::mem::zeroed() }, // Placeholder - not used in sorting
@@ -470,19 +397,15 @@ use std::collections::{HashMap, BTreeMap};
             only: false,
         };
         tests.push(test_case2);
-
         let sorter: _ = TestSorter::ByName;
         sorter.sort(&mut tests, "suite");
-
         assert_eq!(tests[0].name, "a_test");
         assert_eq!(tests[1].name, "b_test");
     }
-
     #[test]
     fn test_enhanced_runner_stats() {
         let mut stats = EnhancedRunnerStats::new();
         assert_eq!(stats.success_rate(), 0.0);
-
         let result: _ = TestResult::new("suite".to_string(), "test".to_string());
         stats.add_result(&result, false);
         assert_eq!(stats.total_tests, 1);

@@ -1,10 +1,8 @@
 //! TypeScript 编译器实现
 //! 将 TypeScript 代码转译为 JavaScript
-
 use anyhow::{Result, bail};
 use std::collections::HashMap;
 use std::path::Path;
-
 /// TypeScript 编译器配置
 #[derive(Debug, Clone)]
 pub struct TypeScriptCompilerConfig {
@@ -19,7 +17,6 @@ pub struct TypeScriptCompilerConfig {
     pub es_module_interop: bool,
     pub allow_synthetic_default_imports: bool,
 }
-
 impl Default for TypeScriptCompilerConfig {
     fn default() -> Self {
         Self {
@@ -36,7 +33,6 @@ impl Default for TypeScriptCompilerConfig {
         }
     }
 }
-
 #[derive(Debug, Clone)]
 pub enum TypeScriptTarget {
     ES2015,
@@ -50,7 +46,6 @@ pub enum TypeScriptTarget {
     ES2023,
     ESNext,
 }
-
 #[derive(Debug, Clone)]
 pub enum TypeScriptModule {
     None,
@@ -61,7 +56,6 @@ pub enum TypeScriptModule {
     ES2022,
     NodeNext,
 }
-
 /// TypeScript 编译错误
 #[derive(Debug, Clone)]
 pub struct TypeScriptError {
@@ -72,20 +66,17 @@ pub struct TypeScriptError {
     pub column: Option<u32>,
     pub severity: ErrorSeverity,
 }
-
 #[derive(Debug, Clone)]
 pub enum ErrorSeverity {
     Error,
     Warning,
     Info,
 }
-
 /// TypeScript 编译器主结构
 pub struct TypeScriptCompiler {
     config: TypeScriptCompilerConfig,
     diagnostics: Vec<TypeScriptError>,
 }
-
 impl TypeScriptCompiler {
     /// 创建新的 TypeScript 编译器
     pub fn new(config: TypeScriptCompilerConfig) -> Self {
@@ -94,59 +85,47 @@ impl TypeScriptCompiler {
             diagnostics: Vec::new(),
         }
     }
-
     /// 编译 TypeScript 文件
     pub fn compile_file(&mut self, file_path: &Path) -> Result<CompilationOutput> {
         let source: _ = std::fs::read_to_string(file_path)?;
         let file_name: _ = file_path.to_string_lossy().to_string();
         self.compile_source(&source, &file_name)
     }
-
     /// 编译 TypeScript 源代码
     pub fn compile_source(&mut self, source: &str, file_name: &str) -> Result<CompilationOutput> {
         self.diagnostics.clear();
-
         // 第一步：词法分析
         let tokens: _ = self.lexical_analysis(source, file_name)?;
-
         // 第二步：语法分析
         let ast: _ = self.syntax_analysis(&tokens, file_name)?;
-
         // 第三步：类型检查（简化实现）
         self.type_check(&ast, file_name)?;
-
         // 第四步：转译为 JavaScript
         let js_code: _ = self.transpile(&ast)?;
-
         // 第五步：生成 Source Map
         let source_map: _ = if self.config.source_map {
             Some(self.generate_source_map(source, &js_code, file_name)?)
         } else {
             None
         };
-
         Ok(CompilationOutput {
             js_code,
             source_map,
             diagnostics: self.diagnostics.clone(),
         })
     }
-
     /// 词法分析 - 将源代码分解为记号
     fn lexical_analysis(&self, source: &str, _file_name: &str) -> Result<Vec<Token>> {
         let mut tokens = Vec::new();
         let mut chars: Vec<char> = source.chars().collect();
         let mut pos = 0;
-
         while pos < chars.len() {
             let ch: _ = chars[pos];
-
             // 跳过空白字符
             if ch.is_whitespace() {
                 pos += 1;
                 continue;
             }
-
             // 处理注释
             if ch == '/' {
                 if pos + 1 < chars.len() {
@@ -173,7 +152,6 @@ impl TypeScriptCompiler {
                     }
                 }
             }
-
             // 处理标识符和关键字
             if ch.is_alphabetic() || ch == '_' || ch == '$' {
                 let start: _ = pos;
@@ -215,7 +193,6 @@ impl TypeScriptCompiler {
                 tokens.push(token);
                 continue;
             }
-
             // 处理数字
             if ch.is_digit(10) {
                 let start: _ = pos;
@@ -227,14 +204,12 @@ impl TypeScriptCompiler {
                 tokens.push(Token::Number(number));
                 continue;
             }
-
             // 处理字符串
             if ch == '\'' || ch == '"' || ch == '`' {
                 let quote: _ = ch;
                 let _start: _ = pos;
                 pos += 1;
                 let mut string_chars = Vec::new();
-
                 while pos < chars.len() {
                     let c: _ = chars[pos];
                     if c == '\\' {
@@ -263,7 +238,6 @@ impl TypeScriptCompiler {
                 tokens.push(Token::String(String::from_iter(string_chars), quote));
                 continue;
             }
-
             // 处理操作符和符号
             tokens.push(match ch {
                 '(' => Token::LParen,
@@ -344,23 +318,18 @@ impl TypeScriptCompiler {
                 '|' => Token::Pipe,
                 _ => Token::Unknown(ch.to_string()),
             });
-
             pos += 1;
         }
-
         tokens.push(Token::Eof);
         Ok(tokens)
     }
-
     /// 语法分析 - 生成抽象语法树
     fn syntax_analysis(&self, tokens: &[Token], _file_name: &str) -> Result<ASTNode> {
         // 简化的语法分析器
         // 实际实现需要完整的递归下降解析器或 LL/LR 解析器
-
         let mut parser = Parser::new(tokens.to_vec());
         parser.parse()
     }
-
     /// 类型检查
     fn type_check(&self, _ast: &ASTNode, _file_name: &str) -> Result<()> {
         // TODO: 实现类型检查
@@ -370,13 +339,11 @@ impl TypeScriptCompiler {
         // 4. 检查泛型
         Ok(())
     }
-
     /// 转译为 JavaScript
     fn transpile(&self, ast: &ASTNode) -> Result<String> {
         let mut emitter = CodeEmitter::new(self.config.clone());
         emitter.emit(ast)
     }
-
     /// 生成 Source Map
     fn generate_source_map(&self, ts_code: &str, js_code: &str, file_name: &str) -> Result<String> {
         // 简化的 Source Map 生成
@@ -388,7 +355,6 @@ impl TypeScriptCompiler {
             ts_code.replace('\n', "\\n").replace('"', "\\\"")))
     }
 }
-
 /// 记号类型
 #[derive(Debug, Clone)]
 pub enum Token {
@@ -450,20 +416,17 @@ pub enum Token {
     Unknown(String),
     Eof,
 }
-
 /// 枚举成员
 #[derive(Debug, Clone)]
 pub struct EnumMember {
     pub name: String,
     pub value: Option<EnumValue>,
 }
-
 #[derive(Debug, Clone)]
 pub enum EnumValue {
     Number(u32),
     String(String),
 }
-
 /// 抽象语法树节点
 #[derive(Debug, Clone)]
 pub enum ASTNode {
@@ -495,7 +458,6 @@ pub enum ASTNode {
     Expression(ASTExpression),
     Statement(ASTStatement),
 }
-
 #[derive(Debug, Clone)]
 pub enum ASTExpression {
     Identifier(String),
@@ -526,7 +488,6 @@ pub enum ASTExpression {
         return_type: Option<String>,
     },
 }
-
 #[derive(Debug, Clone)]
 pub enum ASTStatement {
     Block(Vec<ASTNode>),
@@ -538,13 +499,11 @@ pub enum ASTStatement {
         alternate: Option<Box<ASTNode>>,
     },
 }
-
 /// 解析器
 struct Parser {
     tokens: Vec<Token>,
     position: usize,
 }
-
 impl Parser {
     fn new(tokens: Vec<Token>) -> Self {
         Self {
@@ -552,17 +511,13 @@ impl Parser {
             position: 0,
         }
     }
-
     fn parse(&mut self) -> Result<ASTNode> {
         let mut statements = Vec::new();
-
         while !self.is_at_end() {
             statements.push(self.parse_statement()?);
         }
-
         Ok(ASTNode::Program(statements))
     }
-
     fn parse_statement(&mut self) -> Result<ASTNode> {
         match self.current_token() {
             Token::Let | Token::Const | Token::Var => {
@@ -594,22 +549,17 @@ impl Parser {
             }
         }
     }
-
     fn parse_return_statement(&mut self) -> Result<ASTNode> {
         self.consume(Token::Return)?;
-
         // Check if there's an expression or just a semicolon
         let expr: _ = if self.current_token_eq(&Token::SemiColon) {
             None
         } else {
             Some(self.parse_expression()?)
         };
-
         self.consume(Token::SemiColon)?;
-
         Ok(ASTNode::Statement(ASTStatement::Return(expr)))
     }
-
     fn parse_variable_declaration(&mut self) -> Result<ASTNode> {
         let kind_token: _ = self.consume_any(&[Token::Let, Token::Const, Token::Var])?;
         let kind: _ = match kind_token {
@@ -618,13 +568,11 @@ impl Parser {
             Token::Var => "var",
             _ => unreachable!(),
         };
-
         let name_token = self.consume(Token::Identifier("".to_string()))?;
         let name: _ = match name_token {
             Token::Identifier(name) => name,
             _ => bail!("Expected identifier"),
         };
-
         // 可能的类型注解
         let type_annotation: _ = if self.current_token_eq(&Token::Colon) {
             self.consume(Token::Colon)?;
@@ -632,7 +580,6 @@ impl Parser {
         } else {
             None
         };
-
         // 可能的初始化器
         let initializer: _ = if self.current_token_eq(&Token::Eq) {
             self.consume(Token::Eq)?;
@@ -654,12 +601,10 @@ impl Parser {
         } else {
             None
         };
-
         // 检查是否有分号
         if self.current_token_eq(&Token::SemiColon) {
             self.consume(Token::SemiColon)?;
         }
-
         Ok(ASTNode::VariableDeclaration {
             kind: kind.to_string(),
             name,
@@ -667,16 +612,13 @@ impl Parser {
             initializer,
         })
     }
-
     fn parse_function_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Function)?;
-
         let name_token = self.consume(Token::Identifier("".to_string()))?;
         let name: _ = match name_token {
             Token::Identifier(name) => name,
             _ => bail!("Expected function name"),
         };
-
         self.consume(Token::LParen)?;
         let mut params = Vec::new();
         while !self.current_token_eq(&Token::RParen) {
@@ -685,22 +627,18 @@ impl Parser {
                 Token::Identifier(name) => name,
                 _ => bail!("Expected parameter name"),
             };
-
             let param_type: _ = if self.current_token_eq(&Token::Colon) {
                 self.consume(Token::Colon)?;
                 self.parse_type_annotation()
             } else {
                 None
             };
-
             params.push((param_name, param_type));
-
             if self.current_token_eq(&Token::Comma) {
                 self.consume(Token::Comma)?;
             }
         }
         self.consume(Token::RParen)?;
-
         // 可能的返回类型
         let return_type: _ = if self.current_token_eq(&Token::Colon) {
             self.consume(Token::Colon)?;
@@ -708,14 +646,12 @@ impl Parser {
         } else {
             None
         };
-
         self.consume(Token::LBrace)?;
         let mut body = Vec::new();
         while !self.current_token_eq(&Token::RBrace) {
             body.push(self.parse_statement()?);
         }
         self.consume(Token::RBrace)?;
-
         Ok(ASTNode::FunctionDeclaration {
             name,
             params,
@@ -723,35 +659,28 @@ impl Parser {
             body,
         })
     }
-
     fn parse_class_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Class)?;
-
         let name_token = self.consume(Token::Identifier("".to_string()))?;
         let name: _ = match name_token {
             Token::Identifier(name) => name,
             _ => bail!("Expected class name"),
         };
-
         self.consume(Token::LBrace)?;
         let mut members = Vec::new();
         while !self.current_token_eq(&Token::RBrace) {
             members.push(self.parse_statement()?);
         }
         self.consume(Token::RBrace)?;
-
         Ok(ASTNode::ClassDeclaration { name, members })
     }
-
     fn parse_interface_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Interface)?;
-
         let name_token = self.consume(Token::Identifier("".to_string()))?;
         let name: _ = match name_token {
             Token::Identifier(name) => name,
             _ => bail!("Expected interface name"),
         };
-
         self.consume(Token::LBrace)?;
         let mut properties = HashMap::new();
         while !self.current_token_eq(&Token::RBrace) {
@@ -760,42 +689,33 @@ impl Parser {
                 Token::Identifier(name) => name,
                 _ => bail!("Expected property name"),
             };
-
             self.consume(Token::Colon)?;
             let prop_type: _ = self.parse_type_annotation();
             properties.insert(prop_name, prop_type.unwrap_or_else(|| "any".to_string()));
-
             if self.current_token_eq(&Token::SemiColon) {
                 self.consume(Token::SemiColon)?;
             }
         }
         self.consume(Token::RBrace)?;
-
         Ok(ASTNode::InterfaceDeclaration { name, properties })
     }
-
     fn parse_enum_declaration(&mut self) -> Result<ASTNode> {
         self.consume(Token::Enum)?;
-
         let name_token = self.consume(Token::Identifier("".to_string()))?;
         let name: _ = match name_token {
             Token::Identifier(name) => name,
             _ => bail!("Expected enum name"),
         };
-
         self.consume(Token::LBrace)?;
         let mut members = Vec::new();
         let mut current_value: Option<u32> = None;
-
         while !self.current_token_eq(&Token::RBrace) {
             let member_name_token = self.consume(Token::Identifier("".to_string()))?;
             let member_name: _ = match member_name_token {
                 Token::Identifier(name) => name,
                 _ => bail!("Expected enum member name"),
             };
-
             let mut member_value = None;
-
             // 检查是否有显式值 (如: North = 0)
             if self.current_token_eq(&Token::Eq) {
                 self.consume(Token::Eq)?;
@@ -825,22 +745,17 @@ impl Parser {
                     current_value = Some(1);
                 }
             }
-
             members.push(EnumMember { name: member_name, value: member_value });
-
             if self.current_token_eq(&Token::Comma) {
                 self.consume(Token::Comma)?;
             }
         }
         self.consume(Token::RBrace)?;
-
         Ok(ASTNode::EnumDeclaration { name, members })
     }
-
     fn parse_expression(&mut self) -> Result<ASTExpression> {
         // 解析主表达式 (标识符、字面量、括号表达式)
         let mut expr = self.parse_primary_expression()?;
-
         // 处理箭头函数
         if self.current_token_eq(&Token::FatArrow) {
             // 检查是否是带括号的参数列表
@@ -862,7 +777,6 @@ impl Parser {
             };
             return self.parse_arrow_function_expression(params);
         }
-
         // 处理后缀操作符 (成员访问、函数调用、二元运算符)
         loop {
             match self.current_token() {
@@ -935,18 +849,14 @@ impl Parser {
                 _ => break,
             }
         }
-
         Ok(expr)
     }
-
     fn parse_arrow_function_from_assignment(&mut self) -> Result<ASTExpression> {
         // 解析箭头函数的参数部分
         let mut params = Vec::new();
-
         if self.current_token_eq(&Token::LParen) {
             // 带括号的参数列表: (a, b, c)
             self.consume(Token::LParen)?;
-
             // 处理空参数列表的情况
             if !self.current_token_eq(&Token::RParen) {
                 while !self.current_token_eq(&Token::RParen) {
@@ -955,7 +865,6 @@ impl Parser {
                         Token::Identifier(name) => name,
                         _ => bail!("Expected parameter name"),
                     };
-
                     // 检查参数类型注解
                     let param_type: _ = if self.current_token_eq(&Token::Colon) {
                         self.consume(Token::Colon)?;
@@ -963,15 +872,12 @@ impl Parser {
                     } else {
                         None
                     };
-
                     params.push((param_name, param_type));
-
                     if self.current_token_eq(&Token::Comma) {
                         self.consume(Token::Comma)?;
                     }
                 }
             }
-
             self.consume(Token::RParen)?;
         } else if self.current_token_eq(&Token::Identifier("".to_string())) {
             // 单个参数无括号: x
@@ -980,7 +886,6 @@ impl Parser {
                 Token::Identifier(name) => name,
                 _ => bail!("Expected parameter name"),
             };
-
             // 检查参数类型注解
             let param_type: _ = if self.current_token_eq(&Token::Colon) {
                 self.consume(Token::Colon)?;
@@ -988,12 +893,10 @@ impl Parser {
             } else {
                 None
             };
-
             params.push((param_name, param_type));
         } else {
             bail!("Expected parameter list or parameter name");
         }
-
         // 检查返回类型注解
         let return_type: _ = if self.current_token_eq(&Token::Colon) {
             self.consume(Token::Colon)?;
@@ -1001,34 +904,27 @@ impl Parser {
         } else {
             None
         };
-
         // 检查 FatArrow
         self.consume(Token::FatArrow)?;
-
         // 解析函数体
         let body: _ = self.parse_expression()?;
-
         Ok(ASTExpression::ArrowFunctionExpression {
             params,
             body: Box::new(body),
             return_type,
         })
     }
-
     fn parse_arrow_function_expression(&mut self, mut params: Vec<(String, Option<String>)>) -> Result<ASTExpression> {
         // 消耗 FatArrow token
         self.consume(Token::FatArrow)?;
-
         // 解析函数体
         let body: _ = self.parse_expression()?;
-
         Ok(ASTExpression::ArrowFunctionExpression {
             params,
             body: Box::new(body),
             return_type: None,
         })
     }
-
     fn parse_postfix(&mut self, mut expr: ASTExpression) -> Result<ASTExpression> {
         // Handle postfix operators after parsing right side of binary expression
         loop {
@@ -1066,7 +962,6 @@ impl Parser {
         }
         Ok(expr)
     }
-
     fn parse_primary_expression(&mut self) -> Result<ASTExpression> {
         match self.current_token() {
             Token::Identifier(ref name) => {
@@ -1098,11 +993,9 @@ impl Parser {
             _ => bail!("Unexpected token in expression: {:?}", self.current_token()),
         }
     }
-
     fn parse_object_literal(&mut self) -> Result<ASTExpression> {
         self.consume(Token::LBrace)?;
         let mut properties = Vec::new();
-
         while !self.current_token_eq(&Token::RBrace) {
             // 解析属性名
             let prop_name_token = self.consume(Token::Identifier("".to_string()))?;
@@ -1110,45 +1003,34 @@ impl Parser {
                 Token::Identifier(name) => name,
                 _ => bail!("Expected property name"),
             };
-
             self.consume(Token::Colon)?;
-
             // 解析属性值
             let prop_value: _ = self.parse_expression()?;
             properties.push((prop_name, prop_value));
-
             // 处理逗号分隔符
             if self.current_token_eq(&Token::Comma) {
                 self.consume(Token::Comma)?;
             }
         }
-
         self.consume(Token::RBrace)?;
-
         Ok(ASTExpression::ObjectLiteral { properties })
     }
-
     fn parse_type_annotation(&mut self) -> Option<String> {
         self.parse_union_type()
     }
-
     fn parse_union_type(&mut self) -> Option<String> {
         // 解析第一个类型
         let first_type: _ = self.parse_basic_type()?;
-
         let mut types = vec![first_type];
-
         // 检查是否有更多类型（通过 | 连接）
         while self.current_token_eq(&Token::Pipe) {
             self.advance(); // 消耗 |
-
             if let Some(t) = self.parse_basic_type() {
                 types.push(t);
             } else {
                 break;
             }
         }
-
         // 如果只有一个类型，返回它；否则返回联合类型
         if types.len() == 1 {
             Some(types[0].clone())
@@ -1156,7 +1038,6 @@ impl Parser {
             Some(types.join(" | "))
         }
     }
-
     fn parse_basic_type(&mut self) -> Option<String> {
         match self.current_token() {
             Token::Identifier(ref name) => {
@@ -1178,7 +1059,6 @@ impl Parser {
             _ => None,
         }
     }
-
     fn consume(&mut self, expected: Token) -> Result<Token> {
         if self.current_token_eq(&expected) {
             Ok(self.advance())
@@ -1186,7 +1066,6 @@ impl Parser {
             bail!("Expected {:?}", expected);
         }
     }
-
     fn consume_any(&mut self, expected: &[Token]) -> Result<Token> {
         for token in expected {
             if self.current_token_eq(token) {
@@ -1195,32 +1074,26 @@ impl Parser {
         }
         bail!("Expected one of {:?}", expected);
     }
-
     fn current_token(&self) -> &Token {
         &self.tokens[self.position]
     }
-
     fn current_token_eq(&self, token: &Token) -> bool {
         matches!(self.current_token(), t if std::mem::discriminant(t) == std::mem::discriminant(token))
     }
-
     fn advance(&mut self) -> Token {
         let token: _ = self.tokens[self.position].clone();
         self.position += 1;
         token
     }
-
     fn is_at_end(&self) -> bool {
         matches!(self.current_token(), Token::Eof)
     }
 }
-
 /// 代码生成器
 struct CodeEmitter {
     config: TypeScriptCompilerConfig,
     output: String,
 }
-
 impl CodeEmitter {
     fn new(config: TypeScriptCompilerConfig) -> Self {
         Self {
@@ -1228,12 +1101,10 @@ impl CodeEmitter {
             output: String::new(),
         }
     }
-
     fn emit(&mut self, node: &ASTNode) -> Result<String> {
         self.emit_node(node);
         Ok(self.output.clone())
     }
-
     fn emit_node(&mut self, node: &ASTNode) {
         match node {
             ASTNode::Program(statements) => {
@@ -1250,19 +1121,16 @@ impl CodeEmitter {
                 self.output.push_str(kind);
                 self.output.push(' ');
                 self.output.push_str(name);
-
                 // 跳过类型注解
                 if let Some(_) = type_annotation {
                     // 在转译时移除类型注解
                 }
-
                 if let Some(init) = initializer {
                     self.output.push_str(" = ");
                     if let ASTNode::Expression(expr) = init.as_ref() {
                         self.emit_expression(expr);
                     }
                 }
-
                 self.output.push_str(";\n");
             }
             ASTNode::FunctionDeclaration {
@@ -1274,7 +1142,6 @@ impl CodeEmitter {
                 self.output.push_str("function ");
                 self.output.push_str(name);
                 self.output.push('(');
-
                 for (i, (param_name, _)) in params.iter().enumerate() {
                     if i > 0 {
                         self.output.push_str(", ");
@@ -1282,24 +1149,19 @@ impl CodeEmitter {
                     self.output.push_str(param_name);
                     // 跳过类型注解
                 }
-
                 self.output.push_str(") {\n");
-
                 for stmt in body {
                     self.emit_node(stmt);
                 }
-
                 self.output.push_str("}\n");
             }
             ASTNode::ClassDeclaration { name, members } => {
                 self.output.push_str("class ");
                 self.output.push_str(name);
                 self.output.push_str(" {\n");
-
                 for member in members {
                     self.emit_node(member);
                 }
-
                 self.output.push_str("}\n");
             }
             ASTNode::InterfaceDeclaration { .. } => {
@@ -1310,7 +1172,6 @@ impl CodeEmitter {
                 self.output.push_str("var ");
                 self.output.push_str(name);
                 self.output.push_str(" = {\n");
-
                 for (i, member) in members.iter().enumerate() {
                     if i > 0 {
                         self.output.push_str(",\n");
@@ -1318,7 +1179,6 @@ impl CodeEmitter {
                     self.output.push_str("    ");
                     self.output.push_str(&member.name);
                     self.output.push_str(": ");
-
                     match &member.value {
                         Some(EnumValue::Number(n)) => {
                             self.output.push_str(&n.to_string());
@@ -1331,7 +1191,6 @@ impl CodeEmitter {
                         }
                     }
                 }
-
                 self.output.push_str("\n};\n");
             }
             ASTNode::Expression(expr) => {
@@ -1363,7 +1222,6 @@ impl CodeEmitter {
             }
         }
     }
-
     fn emit_expression(&mut self, expr: &ASTExpression) {
         match expr {
             ASTExpression::Identifier(name) => {
@@ -1389,14 +1247,12 @@ impl CodeEmitter {
             } => {
                 self.emit_expression(callee);
                 self.output.push('(');
-
                 for (i, arg) in arguments.iter().enumerate() {
                     if i > 0 {
                         self.output.push_str(", ");
                     }
                     self.emit_expression(arg);
                 }
-
                 self.output.push(')');
             }
             ASTExpression::MemberExpression {
@@ -1442,10 +1298,8 @@ impl CodeEmitter {
                     self.output.push_str(param_name);
                 }
                 self.output.push_str(") => ");
-
                 // 转译函数体
                 self.emit_expression(body);
-
                 // 跳过返回类型注解（在转译时移除）
                 if let Some(_) = return_type {
                     // 已移除
@@ -1454,7 +1308,6 @@ impl CodeEmitter {
         }
     }
 }
-
 /// 编译输出
 #[derive(Debug, Clone)]
 pub struct CompilationOutput {
@@ -1462,19 +1315,16 @@ pub struct CompilationOutput {
     pub source_map: Option<String>,
     pub diagnostics: Vec<TypeScriptError>,
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_lexical_analysis() {
         let compiler: _ = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
         let source: _ = "let x: number = 5;";
         let tokens: _ = compiler.lexical_analysis(source, "test.ts").unwrap();
-
         assert!(tokens.iter().any(|t| matches!(t, Token::Let)));
         assert!(tokens.iter().any(|t| matches!(t, Token::Identifier(_))));
         assert!(tokens.iter().any(|t| matches!(t, Token::Colon)));
@@ -1482,23 +1332,19 @@ use std::collections::{HashMap, BTreeMap};
         assert!(tokens.iter().any(|t| matches!(t, Token::Eq)));
         assert!(tokens.iter().any(|t| matches!(t, Token::Number(_))));
     }
-
     #[test]
     fn test_compile_simple_typescript() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
         let source: _ = "let x: number = 5;";
         let result: _ = compiler.compile_source(source, "test.ts").unwrap();
-
         assert!(result.js_code.contains("let x: _ = 5));"));
         assert!(!result.js_code.contains(": number"));
     }
-
     #[test]
     fn test_compile_function() {
         let mut compiler = TypeScriptCompiler::new(TypeScriptCompilerConfig::default());
         let source: _ = "function add(a: number, b: number): number { return a + b; }";
         let result: _ = compiler.compile_source(source, "test.ts").unwrap();
-
         assert!(result.js_code.contains("function add"));
         assert!(result.js_code.contains("a, b"));
         assert!(result.js_code.contains("return a + b));"));

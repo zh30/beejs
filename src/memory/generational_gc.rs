@@ -5,7 +5,6 @@ use std::thread;
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 分代垃圾回收器 - 基于对象生命周期的智能垃圾回收
 /// 通过分代策略和并发回收，最小化 GC 停顿时间，提升性能
 pub struct GenerationalGC {
@@ -22,7 +21,6 @@ pub struct GenerationalGC {
     /// 停止标志
     stop_flag: Arc<AtomicUsize>,
 }
-
 /// 年轻代 - 新创建的对象首先进入此代
 #[derive(Debug)]
 struct YoungGeneration {
@@ -37,7 +35,6 @@ struct YoungGeneration {
     /// 最后 GC 时间
     last_gc: Instant,
 }
-
 /// 老年代 - 从年轻代晋升的长生命周期对象
 #[derive(Debug)]
 struct OldGeneration {
@@ -50,7 +47,6 @@ struct OldGeneration {
     /// 创建时间
     created_at: Instant,
 }
-
 /// 对象信息
 #[derive(Debug, Clone)]
 struct ObjectInfo {
@@ -67,7 +63,6 @@ struct ObjectInfo {
     /// 晋升阈值
     promotion_threshold: usize,
 }
-
 /// GC 统计信息
 pub struct GCStats {
     /// 年轻代 GC 次数
@@ -87,7 +82,6 @@ pub struct GCStats {
     /// 晋升失败次数
     pub promotion_failures: AtomicU64,
 }
-
 impl Default for GCStats {
     fn default() -> Self {
         Self {
@@ -102,7 +96,6 @@ impl Default for GCStats {
         }
     }
 }
-
 /// GC 配置
 #[derive(Debug, Clone)]
 pub struct GCConfig {
@@ -125,7 +118,6 @@ pub struct GCConfig {
     /// 压缩阈值 (老年代使用率)
     pub compaction_threshold: f64,
 }
-
 impl Default for GCConfig {
     fn default() -> Self {
         Self {
@@ -141,7 +133,6 @@ impl Default for GCConfig {
         }
     }
 }
-
 impl GenerationalGC {
     /// 创建新的分代 GC
     pub fn new(config: GCConfig) -> Self {
@@ -156,7 +147,6 @@ impl GenerationalGC {
             promoted_objects: AtomicU64::new(0),
             promotion_failures: AtomicU64::new(0),
         });
-
         let young_gen: _ = Arc::new(Mutex::new(YoungGeneration {)),
             live_objects: HashMap::new())
             free_space: config.young_gen_size,
@@ -164,14 +154,12 @@ impl GenerationalGC {
             created_at: Instant::now(),
             last_gc: Instant::now(),
         }));
-
         let old_gen: _ = Arc::new(Mutex::new(OldGeneration {)),
             live_objects: HashMap::new())
             total_space: config.old_gen_size,
             compaction_count: AtomicUsize::new(0),
             created_at: Instant::now(),
         }));
-
         // 启动 GC 线程
         let gc_thread: _ = Some(Self::start_gc_thread(
             Arc::clone(young_gen),
@@ -180,7 +168,6 @@ impl GenerationalGC {
             Arc::clone(stop_flag),
             config.clone(),
         ));
-
         Self {
             young_gen,
             old_gen,
@@ -190,7 +177,6 @@ impl GenerationalGC {
             stop_flag,
         }
     }
-
     /// 分配对象
     pub fn allocate(&self, size: usize) -> Option<usize> {
         let address: _ = self.allocate_in_young_gen(size);
@@ -200,16 +186,13 @@ impl GenerationalGC {
         }
         address
     }
-
     /// 在年轻代分配对象
     fn allocate_in_young_gen(&self, size: usize) -> Option<usize> {
         let mut young_gen = self.young_gen.write().unwrap();
-
         // 检查空间是否足够
         if young_gen.free_space >= size {
             let address: _ = self.generate_address();
             let now: _ = Instant::now();
-
             young_gen.live_objects.insert(address, ObjectInfo {
                 address,
                 size,
@@ -218,7 +201,6 @@ impl GenerationalGC {
                 age: 0,
                 promotion_threshold: self.config.promotion_age,
             });
-
             young_gen.free_space -= size;
             Some(address)
         } else {
@@ -228,7 +210,6 @@ impl GenerationalGC {
             self.allocate_in_young_gen(size)
         }
     }
-
     /// 生成对象地址
     fn generate_address(&self) -> usize {
         // 简单的地址生成，实际实现中应该使用真实的内存地址
@@ -236,51 +217,40 @@ impl GenerationalGC {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos() as usize;
-
         let random: _ = fastrand::usize(..);
         timestamp ^ random
     }
-
     /// 触发年轻代 GC
     fn trigger_young_gc(&self) {
         let start_time: _ = Instant::now();
         self.stats.young_gc_count.fetch_add(1, Ordering::Relaxed);
-
         let mut young_gen = self.young_gen.write().unwrap();
-
         // 标记-清除：标记存活对象，清除死亡对象
         let (live_objects, collected_bytes) = self.mark_and_sweep(&young_gen.live_objects);
-
         // 更新统计
         self.stats.total_collected_objects.fetch_add(
             (young_gen.live_objects.len() - live_objects.len()) as u64,
             Ordering::Relaxed
         );
         self.stats.total_collected_bytes.fetch_add(collected_bytes, Ordering::Relaxed);
-
         // 晋升存活对象
         let promoted_objects: _ = self.promote_objects(&mut young_gen, &live_objects);
         self.stats.promoted_objects.fetch_add(promoted_objects as u64, Ordering::Relaxed);
-
         young_gen.last_gc = Instant::now();
-
         // 计算停顿时间
         let pause_time: _ = start_time.elapsed();
         let pause_ns: _ = pause_time.as_nanos() as u64;
         self.stats.total_pause_time_ns.fetch_add(pause_ns, Ordering::Relaxed);
-
         // 更新最大停顿时间
         let current_max: _ = self.stats.max_pause_time_ns.load(Ordering::Relaxed);
         if pause_ns > current_max {
             self.stats.max_pause_time_ns.store(pause_ns, Ordering::Relaxed);
         }
     }
-
     /// 标记-清除算法
     fn mark_and_sweep(&self, objects: &HashMap<usize, ObjectInfo>) -> (HashMap<usize, ObjectInfo>, u64) {
         let mut live_objects = HashMap::new();
         let mut collected_bytes = 0u64;
-
         // 模拟标记过程：检查对象是否被引用
         for (addr, obj_info) in objects.iter() {
             if self.is_object_reachable(*addr) {
@@ -294,22 +264,18 @@ impl GenerationalGC {
                 collected_bytes += obj_info.size as u64;
             }
         }
-
         (live_objects, collected_bytes)
     }
-
     /// 检查对象是否可达
     fn is_object_reachable(&self, _address: usize) -> bool {
         // 简化的可达性检查：实际实现中需要分析引用关系
         // 这里使用随机模拟，70% 的对象存活
         fastrand::f32() > 0.3
     }
-
     /// 晋升对象到老年代
     fn promote_objects(&self, young_gen: &mut YoungGeneration, live_objects: &HashMap<usize, ObjectInfo>) -> usize {
         let mut promoted_count = 0;
         let mut old_gen = self.old_gen.write().unwrap();
-
         for (addr, obj_info) in live_objects.iter() {
             // 检查是否应该晋升
             if obj_info.age >= obj_info.promotion_threshold {
@@ -318,55 +284,43 @@ impl GenerationalGC {
                 promoted_count += 1;
             }
         }
-
         // 从年轻代移除已晋升的对象
         young_gen.live_objects.retain(|addr, _| !old_gen.live_objects.contains_key(addr));
-
         promoted_count
     }
-
     /// 触发老年代 GC
     fn trigger_old_gc(&self) {
         let start_time: _ = Instant::now();
         self.stats.old_gc_count.fetch_add(1, Ordering::Relaxed);
-
         let mut old_gen = self.old_gen.write().unwrap();
-
         // 老年代使用率
         let usage_ratio: _ = old_gen.live_objects.values()
             .map(|obj| obj.size)
             .sum::<usize>() as f64 / old_gen.total_space as f64;
-
         // 如果超过压缩阈值，执行压缩
         if usage_ratio > self.config.compaction_threshold {
             self.compact_old_generation(&mut old_gen);
             old_gen.compaction_count.fetch_add(1, Ordering::Relaxed);
         }
-
         // 标记-清除老年代
         let (live_objects, collected_bytes) = self.mark_and_sweep(&old_gen.live_objects);
         old_gen.live_objects = live_objects;
-
         // 更新统计
         self.stats.total_collected_bytes.fetch_add(collected_bytes, Ordering::Relaxed);
-
         // 计算停顿时间
         let pause_time: _ = start_time.elapsed();
         let pause_ns: _ = pause_time.as_nanos() as u64;
         self.stats.total_pause_time_ns.fetch_add(pause_ns, Ordering::Relaxed);
     }
-
     /// 压缩老年代
     fn compact_old_generation(&self, old_gen: &mut OldGeneration) {
         // 简化的压缩实现：重建对象集合
         let objects: Vec<_> = old_gen.live_objects.values().cloned().collect();
         old_gen.live_objects.clear();
-
         for obj in objects {
             old_gen.live_objects.insert(obj.address, obj);
         }
     }
-
     /// 启动 GC 线程
     fn start_gc_thread(
         young_gen: Arc<RwLock<YoungGeneration>>,
@@ -377,17 +331,14 @@ impl GenerationalGC {
     ) -> thread::JoinHandle<()> {
         thread::spawn(move || {
             let mut last_gc = Instant::now();
-
             while stop_flag.load(Ordering::Relaxed) == 0 {
                 let now: _ = Instant::now();
-
                 // 检查是否需要 GC
                 if now.duration_since(last_gc) > Duration::from_millis(config.gc_interval_ms) {
                     // 检查年轻代使用率
                     if let Ok(young_gen_guard) = young_gen.read() {
                         let usage_ratio: _ = (young_gen_guard.total_space - young_gen_guard.free_space) as f64
                             / young_gen_guard.total_space as f64;
-
                         if usage_ratio > config.young_gen_threshold {
                             drop(young_gen_guard);
                             // 触发年轻代 GC
@@ -399,15 +350,12 @@ impl GenerationalGC {
                             );
                         }
                     }
-
                     last_gc = now;
                 }
-
                 thread::sleep(Duration::from_millis(10));
             }
         })
     }
-
     /// 内部 GC 触发方法
     fn trigger_gc_internal(
         young_gen: Arc<RwLock<YoungGeneration>>,
@@ -419,7 +367,6 @@ impl GenerationalGC {
         if let Ok(young_gen) = young_gen.read() {
             let usage_ratio: _ = (young_gen.total_space - young_gen.free_space) as f64
                 / young_gen.total_space as f64;
-
             if usage_ratio > config.young_gen_threshold {
                 drop(young_gen);
                 // 触发年轻代 GC
@@ -427,12 +374,10 @@ impl GenerationalGC {
             }
         }
     }
-
     /// 获取 GC 统计信息
     pub fn get_stats(&self) -> GCStatsSnapshot {
         let young_gen: _ = self.young_gen.read().unwrap();
         let old_gen: _ = self.old_gen.read().unwrap();
-
         GCStatsSnapshot {
             young_gc_count: self.stats.young_gc_count.load(Ordering::Relaxed),
             old_gc_count: self.stats.old_gc_count.load(Ordering::Relaxed),
@@ -456,13 +401,11 @@ impl GenerationalGC {
             },
         }
     }
-
     /// 手动触发完整 GC
     pub fn trigger_full_gc(&self) {
         self.trigger_young_gc();
         self.trigger_old_gc();
     }
-
     /// 停止 GC
     pub fn stop(&mut self) {
         self.stop_flag.store(1, Ordering::Relaxed);
@@ -471,7 +414,6 @@ impl GenerationalGC {
         }
     }
 }
-
 /// GC 统计快照
 #[derive(Debug, Clone)]
 pub struct GCStatsSnapshot {
@@ -487,7 +429,6 @@ pub struct GCStatsSnapshot {
     pub old_gen_usage_ratio: f64,
     pub avg_pause_time_ms: f64,
 }
-
 impl Drop for GenerationalGC {
     fn drop(&mut self) {
         self.stop();

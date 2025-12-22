@@ -2,13 +2,10 @@
 //! Stage 91 Phase 4.1 - 系统信息命令
 //!
 //! 实现 `beejs info` 命令，显示运行时和系统信息
-
 use std::env;
 use std::path::Path;
 use std::time::Duration;
-
 use super::output_formatter::OutputFormatter;
-
 /// 系统信息结构
 #[derive(Debug, Default)]
 pub struct SystemInfo {
@@ -41,54 +38,40 @@ pub struct SystemInfo {
     /// 已安装的全局包数量
     pub global_packages: usize,
 }
-
 impl SystemInfo {
     /// 收集系统信息
     pub fn collect() -> Self {
         let mut info = Self::default();
-
         // Beejs 版本
         info.beejs_version = env!("CARGO_PKG_VERSION").to_string();
-
         // 操作系统信息
         info.os = Self::get_os_info();
         info.arch = std::env::consts::ARCH.to_string();
-
         // CPU 信息
         info.cpu_count = num_cpus::get();
-
         // 内存信息 (简化版本)
         info.total_memory_mb = Self::get_total_memory_mb();
         info.available_memory_mb = Self::get_available_memory_mb();
-
         // V8 版本
         info.v8_version = Self::get_v8_version();
-
         // Rust 版本
         info.rust_version = Self::get_rust_version();
-
         // 目录信息
         info.cwd = env::current_dir()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|_| "unknown".to_string());
-
         info.home_dir = dirs::home_dir()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_else(|| "unknown".to_string());
-
         info.temp_dir = env::temp_dir().to_string_lossy().to_string();
-
         // 环境检测
         info.is_ci = Self::detect_ci();
         info.is_docker = Self::detect_docker();
-
         info
     }
-
     fn get_os_info() -> String {
         let os_name: _ = std::env::consts::OS;
         let family: _ = std::env::consts::FAMILY;
-
         // 尝试获取更详细的版本信息
         #[cfg(target_os = "macos")]
         {
@@ -102,7 +85,6 @@ impl SystemInfo {
                 }
             }
         }
-
         #[cfg(target_os = "linux")]
         {
             if let Ok(content) = std::fs::read_to_string("/etc/os-release") {
@@ -114,10 +96,8 @@ impl SystemInfo {
                 }
             }
         }
-
         format!("{} ({})", os_name, family)
     }
-
     fn get_total_memory_mb() -> u64 {
         #[cfg(target_os = "macos")]
         {
@@ -135,7 +115,6 @@ impl SystemInfo {
                 }
             }
         }
-
         #[cfg(target_os = "linux")]
         {
             if let Ok(content) = std::fs::read_to_string("/proc/meminfo") {
@@ -151,10 +130,8 @@ impl SystemInfo {
                 }
             }
         }
-
         0
     }
-
     fn get_available_memory_mb() -> u64 {
         #[cfg(target_os = "macos")]
         {
@@ -177,7 +154,6 @@ impl SystemInfo {
                 }
             }
         }
-
         #[cfg(target_os = "linux")]
         {
             if let Ok(content) = std::fs::read_to_string("/proc/meminfo") {
@@ -193,16 +169,13 @@ impl SystemInfo {
                 }
             }
         }
-
         0
     }
-
     fn get_v8_version() -> String {
         // V8 版本通常在编译时确定
         // rusty_v8 0.22 对应 V8 ~10.x
         "10.x (rusty_v8 0.22)".to_string()
     }
-
     fn get_rust_version() -> String {
         // 尝试获取 rustc 版本
         if let Ok(output) = std::process::Command::new("rustc")
@@ -215,7 +188,6 @@ impl SystemInfo {
         }
         "unknown".to_string()
     }
-
     fn detect_ci() -> bool {
         // 检测常见的 CI 环境变量
         env::var("CI").is_ok()
@@ -225,7 +197,6 @@ impl SystemInfo {
             || env::var("TRAVIS").is_ok()
             || env::var("JENKINS_URL").is_ok()
     }
-
     fn detect_docker() -> bool {
         // 检测是否在 Docker 容器中
         Path::new("/.dockerenv").exists()
@@ -234,13 +205,11 @@ impl SystemInfo {
                 .unwrap_or(false)
     }
 }
-
 /// Info 命令执行器
 pub struct InfoCommand {
     formatter: OutputFormatter,
     verbose: bool,
 }
-
 impl InfoCommand {
     /// 创建新的 info 命令
     pub fn new(verbose: bool) -> Self {
@@ -249,13 +218,10 @@ impl InfoCommand {
             verbose,
         }
     }
-
     /// 执行 info 命令
     pub fn execute(&self) -> anyhow::Result<()> {
         let info: _ = SystemInfo::collect();
-
         self.formatter.print_banner();
-
         // Runtime Information
         self.formatter.title("Runtime Information");
         self.formatter
@@ -264,7 +230,6 @@ impl InfoCommand {
             .key_value_with_icon("⚙️", "V8 Engine", &info.v8_version);
         self.formatter
             .key_value_with_icon("🦀", "Rust", &info.rust_version);
-
         // System Information
         self.formatter.title("System Information");
         self.formatter
@@ -273,7 +238,6 @@ impl InfoCommand {
             .key_value_with_icon("🔧", "Architecture", &info.arch);
         self.formatter
             .key_value_with_icon("🧠", "CPU Cores", &info.cpu_count.to_string());
-
         if info.total_memory_mb > 0 {
             self.formatter.key_value_with_icon(
                 "💾",
@@ -284,22 +248,18 @@ impl InfoCommand {
                 ),
             );
         }
-
         // Environment
         self.formatter.title("Environment");
         self.formatter
             .key_value_with_icon("📂", "Working Directory", &info.cwd);
         self.formatter
             .key_value_with_icon("🏠", "Home Directory", &info.home_dir);
-
         if self.verbose {
             self.formatter
                 .key_value_with_icon("📁", "Temp Directory", &info.temp_dir);
         }
-
         // Environment Detection
         self.formatter.title("Environment Detection");
-
         if info.is_ci {
             self.formatter
                 .key_value_with_icon("🔄", "CI Environment", "Yes");
@@ -307,7 +267,6 @@ impl InfoCommand {
             self.formatter
                 .key_value_with_icon("🔄", "CI Environment", "No");
         }
-
         if info.is_docker {
             self.formatter
                 .key_value_with_icon("🐳", "Docker Container", "Yes");
@@ -315,16 +274,12 @@ impl InfoCommand {
             self.formatter
                 .key_value_with_icon("🐳", "Docker Container", "No");
         }
-
         // Features
         self.formatter.title("Available Features");
         self.print_features();
-
         println!();
-
         Ok(())
     }
-
     fn print_features(&self) {
         let features: _ = [
             ("TypeScript", true, "Native TypeScript execution"),
@@ -338,11 +293,9 @@ impl InfoCommand {
             ("WASM", true, "WebAssembly support"),
             ("Hot Reload", true, "File watching and hot reload"),
         ];
-
         for (name, enabled, desc) in features {
             let status: _ = if enabled { "✓" } else { "✗" };
             let status_color: _ = if enabled { "\x1b[32m" } else { "\x1b[31m" };
-
             if self.formatter.color_enabled {
                 println!(
                     "  {}{}\x1b[0m {} {}",
@@ -369,11 +322,9 @@ impl InfoCommand {
             }
         }
     }
-
     /// 输出 JSON 格式的信息
     pub fn execute_json(&self) -> anyhow::Result<()> {
         let info: _ = SystemInfo::collect();
-
         let json: _ = serde_json::json!({
             "beejs": {
                 "version": info.beejs_version,
@@ -394,34 +345,28 @@ impl InfoCommand {
                 "is_docker": info.is_docker,
             }
         });
-
         println!("{}", serde_json::to_string_pretty(&json)?);
         Ok(())
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_system_info_collect() {
         let info: _ = SystemInfo::collect();
-
         assert!(!info.beejs_version.is_empty());
         assert!(!info.os.is_empty());
         assert!(!info.arch.is_empty());
         assert!(info.cpu_count > 0);
     }
-
     #[test]
     fn test_info_command_execute() {
         let cmd: _ = InfoCommand::new(false);
         assert!(cmd.execute().is_ok());
     }
-
     #[test]
     fn test_info_command_json() {
         let cmd: _ = InfoCommand::new(false);

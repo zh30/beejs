@@ -1,12 +1,10 @@
 // 启动优化器
 // 优化运行时启动性能，减少首次执行开销
-
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, Duration};
 use crate::RuntimeLite;
 use rusty_v8 as v8;
-
 /// 内存预分配器
 pub struct MemoryPreallocator {
     /// 预分配大小（字节）
@@ -16,7 +14,6 @@ pub struct MemoryPreallocator {
     /// 创建时间
     created_at: SystemTime,
 }
-
 impl MemoryPreallocator {
     /// 创建新的内存预分配器
     pub fn new(prealloc_size: usize) -> Self {
@@ -26,39 +23,32 @@ impl MemoryPreallocator {
             created_at: SystemTime::now(),
         }
     }
-
     /// 预分配内存
     pub fn preallocate(&self, _runtime: &mut RuntimeLite) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Note: Memory preallocation will be implemented with proper V8 integration
         // For now, this is a placeholder
-
         // 更新统计
         {
             let mut stats = self.stats.lock().unwrap();
             stats.preallocations_performed += 1;
             stats.preallocated_bytes += self.prealloc_size;
         }
-
         Ok(())
     }
-
     /// 预分配常用对象
     fn preallocate_objects(&self, _scope: &mut v8::HandleScope) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Note: Object preallocation will be implemented with proper V8 integration
         Ok(())
     }
-
     /// 获取统计信息
     pub fn get_stats(&self) -> MemoryStats {
         self.stats.lock().unwrap().clone()
     }
-
     /// 获取预分配器年龄
     pub fn age(&self) -> Duration {
         self.created_at.elapsed().unwrap_or_default()
     }
 }
-
 /// 内存预分配统计
 #[derive(Debug, Clone)]
 pub struct MemoryStats {
@@ -67,7 +57,6 @@ pub struct MemoryStats {
     pub cache_hits: u64,
     pub cache_misses: u64,
 }
-
 impl MemoryStats {
     pub fn new() -> Self {
         Self {
@@ -77,7 +66,6 @@ impl MemoryStats {
             cache_misses: 0,
         }
     }
-
     pub fn hit_rate(&self) -> f64 {
         let total: _ = self.cache_hits + self.cache_misses;
         if total > 0 {
@@ -87,13 +75,11 @@ impl MemoryStats {
         }
     }
 }
-
 impl Default for MemoryStats {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// JIT 预编译器
 pub struct JITPrecompiler {
     /// 预编译统计
@@ -103,7 +89,6 @@ pub struct JITPrecompiler {
     /// 预编译的函数
     precompiled_functions: HashMap<String, PrecompiledFunction>,
 }
-
 impl JITPrecompiler {
     /// 创建新的 JIT 预编译器
     pub fn new() -> Self {
@@ -113,33 +98,27 @@ impl JITPrecompiler {
             precompiled_functions: HashMap::new(),
         }
     }
-
     /// 预编译代码
     pub fn precompile_code(&self, _runtime: &mut RuntimeLite, code: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Note: JIT precompilation will be implemented with proper V8 integration
         // For now, this is a placeholder
-
         // 更新统计
         {
             let mut stats = self.stats.lock().unwrap();
             stats.precompiled_functions += 1;
             stats.total_bytes_compiled += code.len();
         }
-
         Ok(())
     }
-
     /// 获取统计信息
     pub fn get_stats(&self) -> JITStats {
         self.stats.lock().unwrap().clone()
     }
-
     /// 获取预编译器年龄
     pub fn age(&self) -> Duration {
         self.created_at.elapsed().unwrap_or_default()
     }
 }
-
 /// JIT 预编译统计
 #[derive(Debug, Clone)]
 pub struct JITStats {
@@ -149,7 +128,6 @@ pub struct JITStats {
     pub cache_hits: u64,
     pub cache_misses: u64,
 }
-
 impl JITStats {
     pub fn new() -> Self {
         Self {
@@ -160,7 +138,6 @@ impl JITStats {
             cache_misses: 0,
         }
     }
-
     pub fn hit_rate(&self) -> f64 {
         let total: _ = self.cache_hits + self.cache_misses;
         if total > 0 {
@@ -170,13 +147,11 @@ impl JITStats {
         }
     }
 }
-
 impl Default for JITStats {
     fn default() -> Self {
         Self::new()
     }
 }
-
 /// 预编译函数信息
 #[derive(Debug, Clone)]
 struct PrecompiledFunction {
@@ -185,36 +160,29 @@ struct PrecompiledFunction {
     compiled_at: SystemTime,
     size_bytes: usize,
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_memory_preallocator_creation() {
         let preallocator: _ = MemoryPreallocator::new(1024);
         let stats: _ = preallocator.get_stats();
-
         assert_eq!(stats.preallocations_performed, 0);
         assert_eq!(stats.preallocated_bytes, 0);
     }
-
     #[test]
     fn test_jit_precompiler_creation() {
         let precompiler: _ = JITPrecompiler::new();
         let stats: _ = precompiler.get_stats();
-
         assert_eq!(stats.precompiled_functions, 0);
         assert_eq!(stats.total_bytes_compiled, 0);
     }
-
     #[test]
     fn test_stats_hit_rate() {
         let stats: _ = MemoryStats::new();
         assert_eq!(stats.hit_rate(), 0.0);
-
         let mut stats = JITStats::new();
         stats.cache_hits = 80;
         stats.cache_misses = 20;

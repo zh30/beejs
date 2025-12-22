@@ -11,7 +11,6 @@
 //! - AI 推理性能基准测试
 //! - 内存和资源基准测试
 //! - 自动化性能回归检测
-
 pub mod startup;
 pub mod execution;
 pub mod memory;
@@ -19,13 +18,11 @@ pub mod concurrent;
 pub mod javascript_core;
 pub mod ai_inference_core;
 pub mod memory_resource;
-
 use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// 性能指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MetricType {
@@ -36,7 +33,6 @@ pub enum MetricType {
     Latency,
     Throughput,
 }
-
 /// 性能指标数据点
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetricDataPoint {
@@ -45,7 +41,6 @@ pub struct MetricDataPoint {
     pub unit: String,
     pub metadata: HashMap<String, String>,
 }
-
 /// 基准测试结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkResult {
@@ -62,7 +57,6 @@ pub struct BenchmarkResult {
     pub data_points: Vec<MetricDataPoint>,
     pub metadata: HashMap<String, String>,
 }
-
 /// 内存统计数据
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryStats {
@@ -71,7 +65,6 @@ pub struct MemoryStats {
     pub heap_allocated: usize, // Heap allocated bytes
     pub heap_used: usize,      // Heap used bytes
 }
-
 impl Default for MemoryStats {
     fn default() -> Self {
         Self {
@@ -82,7 +75,6 @@ impl Default for MemoryStats {
         }
     }
 }
-
 /// 基准测试配置
 #[derive(Debug, Clone)]
 pub struct BenchmarkConfig {
@@ -92,7 +84,6 @@ pub struct BenchmarkConfig {
     pub save_raw_data: bool,
     pub compare_with_baseline: bool,
 }
-
 impl Default for BenchmarkConfig {
     fn default() -> Self {
         Self {
@@ -104,14 +95,12 @@ impl Default for BenchmarkConfig {
         }
     }
 }
-
 /// 基准测试框架
 #[derive(Clone)]
 pub struct BenchmarkFramework {
     config: BenchmarkConfig,
     baseline_results: HashMap<String, BenchmarkResult>,
 }
-
 impl BenchmarkFramework {
     /// 创建新的基准测试框架
     pub fn new(config: BenchmarkConfig) -> Self {
@@ -120,12 +109,10 @@ impl BenchmarkFramework {
             baseline_results: HashMap::new(),
         }
     }
-
     /// 创建默认配置的基准测试框架
     pub fn new_default() -> Self {
         Self::new(BenchmarkConfig::default())
     }
-
     /// 运行基准测试
     pub fn run_benchmark<F, T>(
         &self,
@@ -138,12 +125,10 @@ impl BenchmarkFramework {
     {
         let mut durations = Vec::with_capacity(self.config.iterations);
         let mut data_points = Vec::new();
-
         // 预热阶段
         for _ in 0..self.config.warmup_iterations {
             let _: _ = test_fn();
         }
-
         // 正式测试
         let start_time: _ = Instant::now();
         for i in 0..self.config.iterations {
@@ -151,7 +136,6 @@ impl BenchmarkFramework {
             let _: _ = test_fn();
             let iter_duration: _ = iter_start.elapsed();
             durations.push(iter_duration);
-
             if self.config.save_raw_data {
                 data_points.push(MetricDataPoint {
                     timestamp: std::time::SystemTime::now()
@@ -168,12 +152,10 @@ impl BenchmarkFramework {
             }
         }
         let total_duration: _ = start_time.elapsed();
-
         // 计算统计信息
         let avg_duration: _ = durations.iter().sum::<Duration>() / self.config.iterations as u32;
         let min_duration: _ = durations.iter().min().copied().unwrap_or_default();
         let max_duration: _ = durations.iter().max().copied().unwrap_or_default();
-
         // 计算标准差
         let mean: _ = avg_duration.as_secs_f64();
         let variance: _ = durations
@@ -185,14 +167,12 @@ impl BenchmarkFramework {
             .sum::<f64>()
             / self.config.iterations as f64;
         let std_deviation: _ = variance.sqrt();
-
         // 计算每秒操作数
         let operations_per_second: _ = if avg_duration.as_secs_f64() > 0.0 {
             1.0 / avg_duration.as_secs_f64()
         } else {
             0.0
         };
-
         BenchmarkResult {
             name: name.to_string(),
             metric_type,
@@ -208,7 +188,6 @@ impl BenchmarkFramework {
             metadata: HashMap::new(),
         }
     }
-
     /// 运行带内存监控的基准测试
     pub fn run_benchmark_with_memory<F, T>(
         &self,
@@ -221,12 +200,10 @@ impl BenchmarkFramework {
     {
         let mut durations = Vec::with_capacity(self.config.iterations);
         let mut memory_stats = Vec::new();
-
         // 预热阶段
         for _ in 0..self.config.warmup_iterations {
             let _: _ = test_fn();
         }
-
         // 正式测试
         let start_time: _ = Instant::now();
         for _ in 0..self.config.iterations {
@@ -237,12 +214,10 @@ impl BenchmarkFramework {
             memory_stats.push(self.get_memory_stats());
         }
         let total_duration: _ = start_time.elapsed();
-
         // 计算统计信息
         let avg_duration: _ = durations.iter().sum::<Duration>() / self.config.iterations as u32;
         let min_duration: _ = durations.iter().min().copied().unwrap_or_default();
         let max_duration: _ = durations.iter().max().copied().unwrap_or_default();
-
         // 计算标准差
         let mean: _ = avg_duration.as_secs_f64();
         let variance: _ = durations
@@ -254,14 +229,12 @@ impl BenchmarkFramework {
             .sum::<f64>()
             / self.config.iterations as f64;
         let std_deviation: _ = variance.sqrt();
-
         // 计算每秒操作数
         let operations_per_second: _ = if avg_duration.as_secs_f64() > 0.0 {
             1.0 / avg_duration.as_secs_f64()
         } else {
             0.0
         };
-
         // 获取平均内存统计
         let avg_memory: _ = memory_stats.iter().fold(MemoryStats::default(), |acc, stats| {
             MemoryStats {
@@ -271,7 +244,6 @@ impl BenchmarkFramework {
                 heap_used: acc.heap_used + stats.heap_used,
             }
         });
-
         BenchmarkResult {
             name: name.to_string(),
             metric_type,
@@ -292,7 +264,6 @@ impl BenchmarkFramework {
             metadata: HashMap::new(),
         }
     }
-
     /// 获取当前内存统计
     fn get_memory_stats(&self) -> MemoryStats {
         // 简化实现 - 在实际应用中会使用平台特定的 API
@@ -303,13 +274,11 @@ impl BenchmarkFramework {
             heap_used: 0,
         }
     }
-
     /// 比较基准测试结果与基线
     pub fn compare_with_baseline(&self, result: &BenchmarkResult) -> Option<PerformanceDelta> {
         if let Some(baseline) = self.baseline_results.get(&result.name) {
             let time_delta: _ = result.avg_duration.as_secs_f64() - baseline.avg_duration.as_secs_f64();
             let ops_delta: _ = result.operations_per_second - baseline.operations_per_second;
-
             Some(PerformanceDelta {
                 name: result.name.clone(),
                 time_delta_percent: (time_delta / baseline.avg_duration.as_secs_f64()) * 100.0,
@@ -320,18 +289,15 @@ impl BenchmarkFramework {
             None
         }
     }
-
     /// 设置基线结果
     pub fn set_baseline(&mut self, result: BenchmarkResult) {
         self.baseline_results.insert(result.name.clone(), result);
     }
-
     /// 获取所有基线结果
     pub fn get_baselines(&self) -> &HashMap<String, BenchmarkResult> {
         &self.baseline_results
     }
 }
-
 /// 性能变化分析
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceDelta {
@@ -340,7 +306,6 @@ pub struct PerformanceDelta {
     pub ops_delta_percent: f64,
     pub regression_detected: bool,
 }
-
 impl BenchmarkResult {
     /// 格式化基准测试结果摘要
     pub fn format_summary(&self) -> String {
@@ -367,7 +332,6 @@ impl BenchmarkResult {
             self.memory_stats
         )
     }
-
     /// 检查性能是否在可接受范围内
     pub fn is_within_threshold(&self, threshold_percent: f64) -> bool {
         let mean: _ = self.avg_duration.as_secs_f64();

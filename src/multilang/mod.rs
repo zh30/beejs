@@ -1,16 +1,12 @@
 //! Multi-language Support Module
 //! Provides seamless integration between Beejs and multiple programming languages
-
 use std::sync::Arc;
-
 pub mod python_runtime;
 pub mod go_runtime;
 pub mod rust_native;
-
 pub use python_runtime::*;
 pub use go_runtime::*;
 pub use rust_native::*;
-
 /// Multi-language runtime manager
 #[derive(Debug)]
 pub struct MultiLanguageRuntime {
@@ -18,7 +14,6 @@ pub struct MultiLanguageRuntime {
     go: Option<GoRuntime>,
     rust: Arc<RustOptimizer>,
 }
-
 impl MultiLanguageRuntime {
     /// Create a new multi-language runtime
     pub fn new() -> Self {
@@ -28,19 +23,16 @@ impl MultiLanguageRuntime {
             rust: Arc::new(Mutex::new(RustOptimizer::new()))
         }
     }
-
     /// Initialize Python runtime
     pub fn init_python(&mut self, bee_api: Arc<go_runtime::BeeAPI>) -> Result<()> {
         self.python = Some(PythonRuntime::new(bee_api)?);
         Ok(())
     }
-
     /// Initialize Go runtime
     pub fn init_go(&mut self, bee_api: Arc<go_runtime::BeeAPI>) -> Result<()> {
         self.go = Some(GoRuntime::new(bee_api)?);
         Ok(())
     }
-
     /// Execute code in specified language
     pub async fn execute(
         &self,
@@ -71,51 +63,40 @@ impl MultiLanguageRuntime {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_multilang_runtime() {
         let mut runtime = MultiLanguageRuntime::new();
-
         // Test Python execution
         let python_api: _ = Arc::new(Mutex::new(go_runtime::BeeAPI {)),
             runtime: Arc::new(MockBeeRuntime))
         });
         runtime.init_python(python_api).unwrap();
-
         let result: _ = runtime.execute("python", "print('Hello Python')").await;
         assert!(result.is_ok());
-
         // Test Go execution
         let go_api: _ = Arc::new(Mutex::new(go_runtime::BeeAPI {)),
             runtime: Arc::new(MockBeeRuntime))
         });
         runtime.init_go(go_api).unwrap();
-
         let result: _ = runtime.execute("go", "fmt.Println('Hello Go')").await;
         assert!(result.is_ok());
-
         // Test Rust execution
         let result: _ = runtime.execute("rust", "fn main() { println!('Hello'); }").await;
         assert!(result.is_ok());
     }
-
     struct MockBeeRuntime;
-
     impl BeeRuntimeInterface for MockBeeRuntime {
         fn execute_script(&self, script: &str) -> Result<String> {
             Ok(format!("Executed: {}", script))
         }
-
         fn get_variable(&self, _name: &str) -> Result<String> {
             Ok("mock_value".to_string())
         }
-
         fn set_variable(&self, _name: &str, _value: &str) -> Result<()> {
             Ok(())
         }

@@ -1,12 +1,10 @@
 //! Edge Caching Strategy
 //! Multi-layer intelligent caching for optimal performance
-
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio::time::{Duration, Instant};
 use anyhow::Result;
-
 /// Multi-layer edge cache
 #[derive(Debug)]
 pub struct EdgeCache {
@@ -17,14 +15,12 @@ pub struct EdgeCache {
     predictor: Arc<RwLock<CachePredictor>>,   // AI-powered prediction
     stats: Arc<RwLock<CacheStats>>,
 }
-
 #[derive(Debug)]
 struct L1Cache {
     capacity: usize,
     data: HashMap<String, CacheEntry>,
     access_order: Vec<String>, // LRU tracking
 }
-
 #[derive(Debug, Clone)]
 struct CacheEntry {
     key: String,
@@ -33,27 +29,23 @@ struct CacheEntry {
     ttl: Duration,
     access_count: u64,
 }
-
 #[derive(Debug)]
 struct L2Cache {
     region: String,
     capacity: usize,
     data: HashMap<String, CacheEntry>,
 }
-
 #[derive(Debug)]
 struct L3Cache {
     endpoint: String,
     capacity: usize,
     data: HashMap<String, CacheEntry>,
 }
-
 #[derive(Debug)]
 struct CachePredictor {
     access_patterns: HashMap<String, Vec<String>>,
     predictions: HashMap<String, Vec<String>>,
 }
-
 #[derive(Debug, Clone)]
 pub struct CacheStats {
     pub l1_hits: u64,
@@ -65,7 +57,6 @@ pub struct CacheStats {
     pub total_operations: u64,
     pub hit_ratio: f64,
 }
-
 impl EdgeCache {
     /// Create a new edge cache with specified layers
     pub fn new(name: &str, l1_capacity: usize) -> Result<Self> {
@@ -87,7 +78,6 @@ impl EdgeCache {
             }))
         })
     }
-
     /// Set a value in the cache
     pub async fn set(&self, key: &str, value: &[u8]) -> Result<()> {
         let entry: _ = CacheEntry {
@@ -97,7 +87,6 @@ impl EdgeCache {
             ttl: Duration::from_secs(300), // 5 minutes default TTL
             access_count: 0,
         };
-
         // Try L1 cache first
         {
             let mut l1 = self.l1_cache.write().await;
@@ -107,43 +96,35 @@ impl EdgeCache {
                 l1.insert(key, entry.clone())?;
             }
         }
-
         // Also store in L2
         {
             let mut l2 = self.l2_cache.write().await;
             let _: _ = l2.insert(key, entry.clone());
         }
-
         // Also store in L3
         {
             let mut l3 = self.l3_cache.write().await;
             let _: _ = l3.insert(key, entry.clone());
         }
-
         Ok(())
     }
-
     /// Get a value from the cache (multi-layer)
     pub async fn get(&self, key: &str) -> Result<Option<Vec<u8> {
         let _start: _ = Instant::now();
-
         // Try L1 cache first
         {
             let mut l1 = self.l1_cache.write().await;
             if let Some(entry) = l1.get(key)? {
                 // Update stats
                 self.update_stats(true, true, false, false, false, false).await;
-
                 // Record access pattern for prediction
                 {
                     let mut predictor = self.predictor.write().await;
                     predictor.record_access(key);
                 }
-
                 return Ok(Some(entry.value));
             }
         }
-
         // L1 miss, try L2
         {
             let mut l2 = self.l2_cache.write().await;
@@ -153,14 +134,11 @@ impl EdgeCache {
                     let mut l1 = self.l1_cache.write().await;
                     let _: _ = l1.insert(key, entry.clone());
                 }
-
                 // Update stats
                 self.update_stats(false, false, true, false, false, false).await;
-
                 return Ok(Some(entry.value));
             }
         }
-
         // L2 miss, try L3
         {
             let mut l3 = self.l3_cache.write().await;
@@ -174,20 +152,15 @@ impl EdgeCache {
                     let mut l1 = self.l1_cache.write().await;
                     let _: _ = l1.insert(key, entry.clone());
                 }
-
                 // Update stats
                 self.update_stats(false, false, false, false, true, false).await;
-
                 return Ok(Some(entry.value));
             }
         }
-
         // Cache miss at all levels
         self.update_stats(false, false, false, false, false, true).await;
-
         Ok(None)
     }
-
     /// Invalidate a specific key
     pub async fn invalidate(&self, key: &str) -> Result<()> {
         // Remove from all layers
@@ -203,16 +176,13 @@ impl EdgeCache {
             let mut l3 = self.l3_cache.write().await;
             let _: _ = l3.remove(key);
         }
-
         Ok(())
     }
-
     /// Get cache statistics
     pub async fn get_stats(&self) -> Result<CacheStats> {
         let stats: _ = self.stats.read().await;
         Ok(stats.clone())
     }
-
     /// Update cache statistics
     async fn update_stats(
         &self,
@@ -225,14 +195,12 @@ impl EdgeCache {
     ) {
         let mut stats = self.stats.write().await;
         stats.total_operations += 1;
-
         if l1_hit { stats.l1_hits += 1; }
         if l1_miss { stats.l1_misses += 1; }
         if l2_hit { stats.l2_hits += 1; }
         if l2_miss { stats.l2_misses += 1; }
         if l3_hit { stats.l3_hits += 1; }
         if l3_miss { stats.l3_misses += 1; }
-
         // Calculate hit ratio
         let total_hits: _ = stats.l1_hits + stats.l2_hits + stats.l3_hits;
         stats.hit_ratio = if stats.total_operations > 0 {
@@ -241,7 +209,6 @@ impl EdgeCache {
             0.0
         };
     }
-
     /// Clear all caches
     pub async fn clear(&self) -> Result<()> {
         {
@@ -256,21 +223,17 @@ impl EdgeCache {
             let mut l3 = self.l3_cache.write().await;
             l3.clear();
         }
-
         Ok(())
     }
-
     /// Preload frequently accessed items
     pub async fn preload(&self, keys: &[String]) -> Result<()> {
         for key in keys {
             // Check if key exists, if not we might want to fetch it
             let _: _ = self.get(key).await;
         }
-
         Ok(())
     }
 }
-
 /// L1 Cache Implementation (Edge Node)
 impl L1Cache {
     fn new(capacity: usize) -> Self {
@@ -280,18 +243,14 @@ impl L1Cache {
             access_order: Vec::new(),
         }
     }
-
     fn insert(&mut self, key: &str, entry: CacheEntry) -> Result<()> {
         if self.data.len() >= self.capacity && !self.data.contains_key(key) {
             return Err(anyhow::anyhow!("Cache is full"));
         }
-
         self.data.insert(key.to_string(), entry);
         self.update_access_order(key);
-
         Ok(())
     }
-
     fn get(&mut self, key: &str) -> Result<Option<CacheEntry>> {
         if let Some(entry) = self.data.get_mut(key) {
             entry.access_count += 1;
@@ -299,31 +258,26 @@ impl L1Cache {
         self.update_access_order(key);
         Ok(self.data.get(key).cloned())
     }
-
     fn remove(&mut self, key: &str) -> Result<()> {
         self.data.remove(key);
         self.access_order.retain(|k| k != key);
         Ok(())
     }
-
     fn update_access_order(&mut self, key: &str) {
         self.access_order.retain(|k| k != key);
         self.access_order.push(key.to_string());
     }
-
     fn evict_lru(&mut self) {
         if let Some(lru_key) = self.access_order.first().cloned() {
             self.data.remove(&lru_key);
             self.access_order.remove(0);
         }
     }
-
     fn clear(&mut self) {
         self.data.clear();
         self.access_order.clear();
     }
 }
-
 /// L2 Cache Implementation (Regional)
 impl L2Cache {
     fn new(region: &str, capacity: usize) -> Result<Self> {
@@ -333,32 +287,26 @@ impl L2Cache {
             data: HashMap::new(),
         })
     }
-
     fn insert(&mut self, key: &str, entry: CacheEntry) -> Result<()> {
         if self.data.len() >= self.capacity {
             // Simple eviction: remove oldest entry
             let oldest_key: _ = self.data.keys().next().unwrap().clone();
             self.data.remove(&oldest_key);
         }
-
         self.data.insert(key.to_string(), entry);
         Ok(())
     }
-
     fn get(&mut self, key: &str) -> Result<Option<CacheEntry>> {
         Ok(self.data.get(key).cloned())
     }
-
     fn remove(&mut self, key: &str) -> Result<()> {
         self.data.remove(key);
         Ok(())
     }
-
     fn clear(&mut self) {
         self.data.clear();
     }
 }
-
 /// L3 Cache Implementation (Central Data Center)
 impl L3Cache {
     fn new(endpoint: &str, capacity: usize) -> Result<Self> {
@@ -368,32 +316,26 @@ impl L3Cache {
             data: HashMap::new(),
         })
     }
-
     fn insert(&mut self, key: &str, entry: CacheEntry) -> Result<()> {
         if self.data.len() >= self.capacity {
             // LRU eviction
             let oldest_key: _ = self.data.keys().next().unwrap().clone();
             self.data.remove(&oldest_key);
         }
-
         self.data.insert(key.to_string(), entry);
         Ok(())
     }
-
     fn get(&mut self, key: &str) -> Result<Option<CacheEntry>> {
         Ok(self.data.get(key).cloned())
     }
-
     fn remove(&mut self, key: &str) -> Result<()> {
         self.data.remove(key);
         Ok(())
     }
-
     fn clear(&mut self) {
         self.data.clear();
     }
 }
-
 /// Cache Predictor for intelligent preloading
 impl CachePredictor {
     fn new() -> Self {
@@ -402,22 +344,18 @@ impl CachePredictor {
             predictions: HashMap::new(),
         }
     }
-
     fn record_access(&mut self, key: &str) {
         // Record access pattern
         let pattern: _ = self.access_patterns.entry(key.to_string()).or_insert_with(Vec::new);
         pattern.push(format!("access-{}", std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
-
         // Keep only last 100 accesses
         if pattern.len() > 100 {
             pattern.remove(0);
         }
     }
-
     fn predict(&mut self, recent_accesses: &[String]) -> Result<Vec<String> {
         let mut predictions = Vec::new();
-
         // Simple prediction: if keys are accessed together, predict they will be accessed together
         for key in recent_accesses {
             if let Some(pattern) = self.access_patterns.get(key) {
@@ -425,122 +363,96 @@ impl CachePredictor {
                 predictions.push(key.clone());
             }
         }
-
         Ok(predictions)
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_edge_cache_creation() {
         let cache: _ = EdgeCache::new("test-cache", 100);
         assert!(cache.is_ok());
     }
-
     #[tokio::test]
     async fn test_l1_cache_set_get() {
         let cache: _ = EdgeCache::new("test-cache", 100).unwrap();
         cache.set("key1", b"value1").await.unwrap();
-
         let result: _ = cache.get("key1").await.unwrap();
         assert_eq!(result, Some(b"value1".to_vec());
     }
-
     #[tokio::test]
     async fn test_cache_invalidation() {
         let cache: _ = EdgeCache::new("test-cache", 100).unwrap();
         cache.set("key1", b"value1").await.unwrap();
-
         cache.invalidate("key1").await.unwrap();
-
         let result: _ = cache.get("key1").await.unwrap();
         assert_eq!(result, None);
     }
-
     #[tokio::test]
     async fn test_cache_hit_ratio() {
         let cache: _ = EdgeCache::new("test-cache", 100).unwrap();
-
         // Add items to cache
         for i in 0..100 {
             cache.set(&format!("key_{}", i), b"value").await.unwrap();
         }
-
         // Access items
         for i in 0..100 {
             cache.get(&format!("key_{}", i)).await.unwrap();
         }
-
         let stats: _ = cache.get_stats().await.unwrap();
         assert!(stats.hit_ratio > 0.95);
     }
-
     #[tokio::test]
     async fn test_multi_layer_cache() {
         let cache: _ = EdgeCache::new("test-cache", 10).unwrap();
-
         // Set a value
         cache.set("test-key", b"test-value").await.unwrap();
-
         // Get from L1
         let result1: _ = cache.get("test-key").await.unwrap();
         assert!(result1.is_some());
-
         // Clear L1 and get from L2
         {
             let mut l1 = cache.l1_cache.write().await;
             l1.clear();
         }
-
         let result2: _ = cache.get("test-key").await.unwrap();
         assert!(result2.is_some());
     }
-
     #[tokio::test]
     async fn test_cache_predictor() {
         let cache: _ = EdgeCache::new("test-cache", 100).unwrap();
-
         // Record access patterns
         cache.set("user_1", b"data").await.unwrap();
         cache.set("user_2", b"data").await.unwrap();
-
         // Access patterns might predict future accesses
         let recent: _ = vec!["user_1".to_string(), "user_2".to_string()];
         let predictions: _ = cache.predictor.write().await.predict(&recent);
         assert!(predictions.is_ok());
     }
-
     #[tokio::test]
     async fn test_cache_performance() {
         let cache: _ = EdgeCache::new("test-cache", 1000).unwrap();
-
         let start: _ = Instant::now();
         for i in 0..1000 {
             cache.set(&format!("key_{}", i), b"value").await.unwrap();
         }
         let set_time: _ = start.elapsed();
-
         let get_start: _ = Instant::now();
         for i in 0..1000 {
             cache.get(&format!("key_{}", i)).await.unwrap();
         }
         let get_time: _ = get_start.elapsed();
-
         // Use more lenient timeouts for CI environments
         assert!(set_time.as_millis() < 500, "Set operation took too long: {}ms", set_time.as_millis());
         assert!(get_time.as_millis() < 200, "Get operation took too long: {}ms", get_time.as_millis());
     }
-
     #[tokio::test]
     async fn test_concurrent_cache_access() {
         let cache: _ = Arc::new(Mutex::new(EdgeCache::new("test-cache", 1000)),.unwrap());
         let mut handles = vec![];
-
         for i in 0..10 {
             let cache_clone: _ = Arc::clone(cache);
             let handle: _ = tokio::spawn(async move {
@@ -552,11 +464,9 @@ use std::collections::{HashMap, BTreeMap};
             });
             handles.push(handle);
         }
-
         for handle in handles {
             handle.await.unwrap();
         }
-
         let stats: _ = cache.get_stats().await.unwrap();
         assert!(stats.total_operations >= 1000);  // Expect at least 1000 operations (10 tasks * 100 ops)
     }

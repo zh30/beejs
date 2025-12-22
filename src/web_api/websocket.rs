@@ -1,6 +1,5 @@
 //! WebSocket API implementation for Web standard
 //! Provides real WebSocket client with network connectivity
-
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::HashMap;
@@ -9,7 +8,6 @@ use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use futures_util::{StreamExt, SinkExt};
-
 /// WebSocket ready state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReadyState {
@@ -18,7 +16,6 @@ pub enum ReadyState {
     Closing = 2,
     Closed = 3,
 }
-
 /// WebSocket event type
 #[derive(Debug, Clone)]
 pub enum WebSocketEvent {
@@ -28,7 +25,6 @@ pub enum WebSocketEvent {
     Close(Option<u16>, Option<String>),
     Error(String),
 }
-
 /// Command sent to WebSocket connection
 #[derive(Debug)]
 pub enum WebSocketCommand {
@@ -36,7 +32,6 @@ pub enum WebSocketCommand {
     SendBinary(Vec<u8>),
     Close(Option<u16>, Option<String>),
 }
-
 /// WebSocket connection handle
 pub struct WebSocketConnection {
     pub id: u64,
@@ -45,14 +40,12 @@ pub struct WebSocketConnection {
     pub cmd_tx: mpsc::UnboundedSender<WebSocketCommand>,
     pub event_rx: Arc<Mutex<mpsc::UnboundedReceiver<WebSocketEvent>>>,
 }
-
 /// Global WebSocket manager
 pub struct WebSocketManager {
     connections: Arc<Mutex<HashMap<u64, WebSocketConnection>>>,
     next_id: AtomicU64,
     runtime: Arc<Runtime>,
 }
-
 impl WebSocketManager {
     pub fn new() -> Self {
         let runtime: _ = Runtime::new().expect("Failed to create tokio runtime");
@@ -62,18 +55,14 @@ impl WebSocketManager {
             runtime: Arc::new(Mutex::new(runtime)),
         }
     }
-
     /// Create a new WebSocket connection
     pub fn connect(&self, url: String) -> Result<u64> {
         let id: _ = self.next_id.fetch_add(1, Ordering::SeqCst);
         let ready_state: _ = Arc::new(Mutex::new(ReadyState::Connecting));
         let ready_state_clone: _ = ready_state.clone();
-
         let (cmd_tx, mut cmd_rx) = mpsc::unbounded_channel::<WebSocketCommand>();
         let (event_tx, event_rx) = mpsc::unbounded_channel::<WebSocketEvent>();
-
         let url_clone: _ = url.clone();
-
         // Spawn connection task
         self.runtime.spawn(async move {
             match connect_async(&url_clone).await {
@@ -83,12 +72,9 @@ impl WebSocketManager {
                         let mut state = ready_state_clone.lock().unwrap();
                         *state = ReadyState::Open;
                     }
-
                     // Send open event
                     let _: _ = event_tx.send(WebSocketEvent::Open);
-
                     let (mut write, mut read) = ws_stream.split();
-
                     // Spawn task for reading messages
                     let event_tx_clone: _ = event_tx.clone();
                     let ready_state_read: _ = ready_state_clone.clone();
@@ -127,7 +113,6 @@ impl WebSocketManager {
                             *state = ReadyState::Closed;
                         }
                     });
-
                     // Handle commands (send/close)
                     while let Some(cmd) = cmd_rx.recv().await {
                         match cmd {
@@ -163,7 +148,6 @@ impl WebSocketManager {
                             }
                         }
                     }
-
                     // Abort read task
                     read_task.abort();
                 }
@@ -176,7 +160,6 @@ impl WebSocketManager {
                 }
             }
         });
-
         let connection: _ = WebSocketConnection {
             id,
             url,
@@ -184,11 +167,9 @@ impl WebSocketManager {
             cmd_tx,
             event_rx: Arc::new(Mutex::new(event_rx)),
         };
-
         self.connections.lock().unwrap().insert(id, connection);
         Ok(id)
     }
-
     /// Send message on a WebSocket connection
     pub fn send(&self, id: u64, message: String) -> Result<()> {
         let connections: _ = self.connections.lock().unwrap();
@@ -203,7 +184,6 @@ impl WebSocketManager {
             Err(anyhow::anyhow!("WebSocket not found: {}", id))
         }
     }
-
     /// Close a WebSocket connection
     pub fn close(&self, id: u64, code: Option<u16>, reason: Option<String>) -> Result<()> {
         let connections: _ = self.connections.lock().unwrap();
@@ -214,13 +194,11 @@ impl WebSocketManager {
             Err(anyhow::anyhow!("WebSocket not found: {}", id))
         }
     }
-
     /// Get ready state of a WebSocket connection
     pub fn get_ready_state(&self, id: u64) -> Option<ReadyState> {
         let connections: _ = self.connections.lock().unwrap();
         connections.get(&id).map(|conn| *conn.ready_state.lock().unwrap())
     }
-
     /// Poll for events (non-blocking)
     pub fn poll_events(&self, id: u64) -> Vec<WebSocketEvent> {
         let connections: _ = self.connections.lock().unwrap();
@@ -235,17 +213,14 @@ impl WebSocketManager {
             Vec::new()
         }
     }
-
     /// Remove a closed connection
     pub fn remove(&self, id: u64) {
         self.connections.lock().unwrap().remove(&id);
     }
 }
-
 // Global WebSocket manager instance
 use once_cell::sync::Lazy;
 pub static WS_MANAGER: Lazy<WebSocketManager> = Lazy::new(|| WebSocketManager::new());
-
 /// Setup WebSocket API in V8 context
 pub fn setup_websocket_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,
@@ -254,32 +229,25 @@ pub fn setup_websocket_api(
     // Create WebSocket constructor
     let websocket_template: _ = v8::FunctionTemplate::new(scope, websocket_constructor_callback);
     let constructor: _ = websocket_template.get_function(scope).unwrap();
-
     // Set WebSocket to global
     let global: _ = context.global(scope);
     let websocket_key: _ = v8::String::new(scope, "WebSocket").unwrap();
     global.set(scope, websocket_key.into(), constructor.into());
-
     // Add ReadyState constants to constructor
     let connecting_key: _ = v8::String::new(scope, "CONNECTING").unwrap();
     let connecting_val: _ = v8::Integer::new(scope, 0).into();
     constructor.set(scope, connecting_key.into(), connecting_val);
-
     let open_key: _ = v8::String::new(scope, "OPEN").unwrap();
     let open_val: _ = v8::Integer::new(scope, 1).into();
     constructor.set(scope, open_key.into(), open_val);
-
     let closing_key: _ = v8::String::new(scope, "CLOSING").unwrap();
     let closing_val: _ = v8::Integer::new(scope, 2).into();
     constructor.set(scope, closing_key.into(), closing_val);
-
     let closed_key: _ = v8::String::new(scope, "CLOSED").unwrap();
     let closed_val: _ = v8::Integer::new(scope, 3).into();
     constructor.set(scope, closed_key.into(), closed_val);
-
     Ok(())
 }
-
 /// WebSocket constructor callback
 fn websocket_constructor_callback(
     scope: &mut v8::HandleScope,
@@ -295,7 +263,6 @@ fn websocket_constructor_callback(
         scope.throw_exception(error_obj.into());
         return;
     };
-
     // Validate URL
     if url.is_empty() || (!url.starts_with("ws://") && !url.starts_with("wss://")) {
         let error: _ = v8::String::new(scope, "Invalid WebSocket URL").unwrap();
@@ -303,7 +270,6 @@ fn websocket_constructor_callback(
         scope.throw_exception(error_obj.into());
         return;
     }
-
     // Create real WebSocket connection
     let ws_id: _ = match WS_MANAGER.connect(url.clone()) {
         Ok(id) => id,
@@ -314,86 +280,65 @@ fn websocket_constructor_callback(
             return;
         }
     };
-
     // Create JavaScript object with WebSocket properties
     let ws_obj: _ = v8::Object::new(scope);
-
     // Store WebSocket ID as internal property
     let id_key: _ = v8::String::new(scope, "__wsId").unwrap();
     let id_val: v8::Local<v8::Value> = v8::Number::new(scope, ws_id as f64).into();
     ws_obj.set(scope, id_key.into(), id_val);
-
     // Set properties directly
     let url_key: _ = v8::String::new(scope, "url").unwrap();
     let url_val: v8::Local<v8::Value> = v8::String::new(scope, &url).unwrap().into();
     ws_obj.set(scope, url_key.into(), url_val);
-
     let ready_state_key: _ = v8::String::new(scope, "readyState").unwrap();
     let ready_state_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
     ws_obj.set(scope, ready_state_key.into(), ready_state_val);
-
     let buffered_key: _ = v8::String::new(scope, "bufferedAmount").unwrap();
     let buffered_val: v8::Local<v8::Value> = v8::Integer::new(scope, 0).into();
     ws_obj.set(scope, buffered_key.into(), buffered_val);
-
     let ext_key: _ = v8::String::new(scope, "extensions").unwrap();
     let ext_val: v8::Local<v8::Value> = v8::String::new(scope, "").unwrap().into();
     ws_obj.set(scope, ext_key.into(), ext_val);
-
     let protocol_key: _ = v8::String::new(scope, "protocol").unwrap();
     let protocol_val: v8::Local<v8::Value> = v8::String::new(scope, "").unwrap().into();
     ws_obj.set(scope, protocol_key.into(), protocol_val);
-
     let binary_type_key: _ = v8::String::new(scope, "binaryType").unwrap();
     let binary_type_val: v8::Local<v8::Value> = v8::String::new(scope, "arraybuffer").unwrap().into();
     ws_obj.set(scope, binary_type_key.into(), binary_type_val);
-
     // Set event handler properties (initial null)
     let null_val: v8::Local<v8::Value> = v8::null(scope).into();
-
     let onopen_key: _ = v8::String::new(scope, "onopen").unwrap();
     ws_obj.set(scope, onopen_key.into(), null_val);
-
     let onmessage_key: _ = v8::String::new(scope, "onmessage").unwrap();
     let null_val: v8::Local<v8::Value> = v8::null(scope).into();
     ws_obj.set(scope, onmessage_key.into(), null_val);
-
     let onclose_key: _ = v8::String::new(scope, "onclose").unwrap();
     let null_val: v8::Local<v8::Value> = v8::null(scope).into();
     ws_obj.set(scope, onclose_key.into(), null_val);
-
     let onerror_key: _ = v8::String::new(scope, "onerror").unwrap();
     let null_val: v8::Local<v8::Value> = v8::null(scope).into();
     ws_obj.set(scope, onerror_key.into(), null_val);
-
     // Add methods
     let send_key: _ = v8::String::new(scope, "send").unwrap();
     let send_func: _ = v8::Function::new(scope, websocket_send_callback).unwrap();
     ws_obj.set(scope, send_key.into(), send_func.into());
-
     let close_key: _ = v8::String::new(scope, "close").unwrap();
     let close_func: _ = v8::Function::new(scope, websocket_close_callback).unwrap();
     ws_obj.set(scope, close_key.into(), close_func.into());
-
     let add_event_key: _ = v8::String::new(scope, "addEventListener").unwrap();
     let add_event_func: _ = v8::Function::new(scope, websocket_add_event_listener_callback).unwrap();
     ws_obj.set(scope, add_event_key.into(), add_event_func.into());
-
     let remove_event_key: _ = v8::String::new(scope, "removeEventListener").unwrap();
     let remove_event_func: _ = v8::Function::new(scope, websocket_remove_event_listener_callback).unwrap();
     ws_obj.set(scope, remove_event_key.into(), remove_event_func.into());
-
     let poll_events_key: _ = v8::String::new(scope, "_pollEvents").unwrap();
     let poll_events_func: _ = v8::Function::new(scope, websocket_poll_events_callback).unwrap();
     ws_obj.set(scope, poll_events_key.into(), poll_events_func.into());
-
     let update_ready_key: _ = v8::String::new(scope, "_updateReadyState").unwrap();
     let update_ready_func: _ = v8::Function::new(scope, websocket_update_ready_state_callback).unwrap();
     ws_obj.set(scope, update_ready_key.into(), update_ready_func.into());
-
     retval.set(ws_obj.into());
 }
-
 /// Get WebSocket ID from JS object
 fn get_ws_id(scope: &mut v8::HandleScope, this: v8::Local<v8::Object>) -> Option<u64> {
     let id_key: _ = v8::String::new(scope, "__wsId").unwrap();
@@ -404,7 +349,6 @@ fn get_ws_id(scope: &mut v8::HandleScope, this: v8::Local<v8::Object>) -> Option
         None
     }
 }
-
 /// WebSocket send callback
 fn websocket_send_callback(
     scope: &mut v8::HandleScope,
@@ -416,7 +360,6 @@ fn websocket_send_callback(
         let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
         return;
     }
-
     let this: _ = args.this();
     let ws_id: _ = match get_ws_id(scope, this) {
         Some(id) => id,
@@ -426,16 +369,13 @@ fn websocket_send_callback(
             return;
         }
     };
-
     let data: _ = args.get(0);
     let message: _ = data.to_string(scope).unwrap().to_rust_string_lossy(scope);
-
     if let Err(e) = WS_MANAGER.send(ws_id, message) {
         let error: _ = v8::String::new(scope, &format!("WebSocket send failed: {}", e)).unwrap();
         let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
     }
 }
-
 /// WebSocket close callback
 fn websocket_close_callback(
     scope: &mut v8::HandleScope,
@@ -451,25 +391,21 @@ fn websocket_close_callback(
             return;
         }
     };
-
     let code: _ = if args.length() > 0 && args.get(0).is_number() {
         Some(args.get(0).number_value(scope).unwrap() as u16)
     } else {
         None
     };
-
     let reason: _ = if args.length() > 1 && args.get(1).is_string() {
         Some(args.get(1).to_string(scope).unwrap().to_rust_string_lossy(scope))
     } else {
         None
     };
-
     if let Err(e) = WS_MANAGER.close(ws_id, code, reason) {
         let error: _ = v8::String::new(scope, &format!("WebSocket close failed: {}", e)).unwrap();
         let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
     }
 }
-
 /// WebSocket addEventListener callback
 fn websocket_add_event_listener_callback(
     scope: &mut v8::HandleScope,
@@ -481,23 +417,19 @@ fn websocket_add_event_listener_callback(
         let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
         return;
     }
-
     let event_type: _ = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
     let listener: _ = args.get(1);
-
     if !listener.is_function() {
         let error: _ = v8::String::new(scope, "Listener must be a function").unwrap();
         let error_obj: _ = v8::Exception::error(scope, error); scope.throw_exception(error_obj.into());
         return;
     }
-
     // Store listener in appropriate on* property
     let this: _ = args.this();
     let prop_name: _ = format!("on{}", event_type);
     let prop_key: _ = v8::String::new(scope, &prop_name).unwrap();
     this.set(scope, prop_key.into(), listener);
 }
-
 /// WebSocket removeEventListener callback
 fn websocket_remove_event_listener_callback(
     scope: &mut v8::HandleScope,
@@ -510,7 +442,6 @@ fn websocket_remove_event_listener_callback(
         scope.throw_exception(error_obj.into());
         return;
     }
-
     let event_type: _ = args.get(0).to_string(scope).unwrap().to_rust_string_lossy(scope);
     let this: _ = args.this();
     let prop_name: _ = format!("on{}", event_type);
@@ -518,7 +449,6 @@ fn websocket_remove_event_listener_callback(
     let null_val: v8::Local<v8::Value> = v8::null(scope).into();
     this.set(scope, prop_key.into(), null_val);
 }
-
 /// Poll for WebSocket events (used internally for event loop integration)
 fn websocket_poll_events_callback(
     scope: &mut v8::HandleScope,
@@ -533,13 +463,10 @@ fn websocket_poll_events_callback(
             return;
         }
     };
-
     let events: _ = WS_MANAGER.poll_events(ws_id);
     let arr: _ = v8::Array::new(scope, events.len() as i32);
-
     for (i, event) in events.iter().enumerate() {
         let event_obj: _ = v8::Object::new(scope);
-
         match event {
             WebSocketEvent::Open => {
                 let type_key: _ = v8::String::new(scope, "type").unwrap();
@@ -550,7 +477,6 @@ fn websocket_poll_events_callback(
                 let type_key: _ = v8::String::new(scope, "type").unwrap();
                 let type_val: _ = v8::String::new(scope, "message").unwrap();
                 event_obj.set(scope, type_key.into(), type_val.into());
-
                 let data_key: _ = v8::String::new(scope, "data").unwrap();
                 let data_val: _ = v8::String::new(scope, data).unwrap();
                 event_obj.set(scope, data_key.into(), data_val.into());
@@ -559,7 +485,6 @@ fn websocket_poll_events_callback(
                 let type_key: _ = v8::String::new(scope, "type").unwrap();
                 let type_val: _ = v8::String::new(scope, "message").unwrap();
                 event_obj.set(scope, type_key.into(), type_val.into());
-
                 // Convert to ArrayBuffer (simplified as string for now)
                 let data_key: _ = v8::String::new(scope, "data").unwrap();
                 let data_str: _ = String::from_utf8_lossy(data);
@@ -570,13 +495,11 @@ fn websocket_poll_events_callback(
                 let type_key: _ = v8::String::new(scope, "type").unwrap();
                 let type_val: _ = v8::String::new(scope, "close").unwrap();
                 event_obj.set(scope, type_key.into(), type_val.into());
-
                 if let Some(c) = code {
                     let code_key: _ = v8::String::new(scope, "code").unwrap();
                     let code_val: _ = v8::Integer::new(scope, *c as i32);
                     event_obj.set(scope, code_key.into(), code_val.into());
                 }
-
                 if let Some(r) = reason {
                     let reason_key: _ = v8::String::new(scope, "reason").unwrap();
                     let reason_val: _ = v8::String::new(scope, r).unwrap();
@@ -587,19 +510,15 @@ fn websocket_poll_events_callback(
                 let type_key: _ = v8::String::new(scope, "type").unwrap();
                 let type_val: _ = v8::String::new(scope, "error").unwrap();
                 event_obj.set(scope, type_key.into(), type_val.into());
-
                 let msg_key: _ = v8::String::new(scope, "message").unwrap();
                 let msg_val: _ = v8::String::new(scope, msg).unwrap();
                 event_obj.set(scope, msg_key.into(), msg_val.into());
             }
         }
-
         arr.set_index(scope, i as u32, event_obj.into());
     }
-
     rv.set(arr.into());
 }
-
 /// Update readyState from native state
 fn websocket_update_ready_state_callback(
     scope: &mut v8::HandleScope,
@@ -614,24 +533,19 @@ fn websocket_update_ready_state_callback(
             return;
         }
     };
-
     let state: _ = WS_MANAGER.get_ready_state(ws_id).unwrap_or(ReadyState::Closed);
     let state_int: _ = state as i32;
-
     // Update the readyState property
     let ready_state_key: _ = v8::String::new(scope, "readyState").unwrap();
     let ready_state_val: _ = v8::Integer::new(scope, state_int);
     this.set(scope, ready_state_key.into(), ready_state_val.into());
-
     rv.set(ready_state_val.into());
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_ready_state_constants() {
         assert_eq!(ReadyState::Connecting as u8, 0);
@@ -639,7 +553,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(ReadyState::Closing as u8, 2);
         assert_eq!(ReadyState::Closed as u8, 3);
     }
-
     #[test]
     fn test_websocket_manager_creation() {
         // Just test that the manager can be created

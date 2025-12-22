@@ -1,10 +1,8 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// Debugger Configuration
 ///
 /// Configuration settings for the debugger engine.
-
 /// Debugger configuration
 #[derive(Debug, Clone)]
 pub struct DebugConfig {
@@ -21,7 +19,6 @@ pub struct DebugConfig {
     /// Maximum variables to inspect per scope
     pub max_variables_per_scope: usize,
 }
-
 impl Default for DebugConfig {
     fn default() -> Self {
         Self {

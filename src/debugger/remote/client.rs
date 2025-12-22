@@ -1,33 +1,28 @@
 //! Remote Debug Client Module
 //!
 //! Provides client-side remote debugging capabilities
-
 use anyhow::Result;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
 /// Connection manager
 pub struct ConnectionManager {
     connections: std::collections::HashMap<String, Connection>,
 }
-
 #[derive(Debug, Clone)]
 struct Connection {
     id: String,
     name: String,
     created_at: String,
 }
-
 impl ConnectionManager {
     pub fn new() -> Self {
         Self {
             connections: std::collections::HashMap::new(),
         }
     }
-
     pub async fn create_connection(&mut self, name: String) -> Result<String> {
         let conn_id: _ = format!("conn_{}", self.connections.len());
         let conn: _ = Connection {
@@ -38,33 +33,27 @@ impl ConnectionManager {
         self.connections.insert(conn_id.clone(), conn);
         Ok(conn_id)
     }
-
     pub async fn get_connection(&self, conn_id: &str) -> Option<&Connection> {
         self.connections.get(conn_id)
     }
-
     pub async fn close_connection(&mut self, conn_id: &str) -> Result<()> {
         self.connections.remove(conn_id);
         Ok(())
     }
 }
-
 /// Event dispatcher
 pub struct EventDispatcher {
     // Event handling
 }
-
 impl EventDispatcher {
     pub fn new() -> Self {
         Self {}
     }
-
     pub async fn dispatch(&self, event: &DebugEvent) -> Result<()> {
         // TODO: Dispatch event to handlers
         Ok(())
     }
 }
-
 /// Debug event types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum DebugEvent {
@@ -80,23 +69,19 @@ pub enum DebugEvent {
     ExecutionPaused,
     ExecutionContinued,
 }
-
 /// State synchronization
 pub struct StateSync {
     // State management
 }
-
 impl StateSync {
     pub fn new() -> Self {
         Self {}
     }
-
     pub async fn sync_state(&self, state: &DebugState) -> Result<()> {
         // TODO: Synchronize debug state
         Ok(())
     }
 }
-
 /// Debug state
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DebugState {
@@ -105,7 +90,6 @@ pub struct DebugState {
     pub call_stack: Vec<StackFrameInfo>,
     pub variables: std::collections::HashMap<String, String>,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StackFrameInfo {
     pub function: String,

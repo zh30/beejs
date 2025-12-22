@@ -2,11 +2,9 @@
 //!
 //! 这个模块提供了基于 AI 的自适应负载均衡功能，能够根据实时负载情况
 //! 智能分配请求，确保系统性能和稳定性。
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tokio::time::{Duration, Instant};
-
 /// 请求结构
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Request {
@@ -27,7 +25,6 @@ pub struct Request {
     /// 预计处理时间 (毫秒)
     pub estimated_processing_time_ms: u64,
 }
-
 /// 请求优先级
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum RequestPriority {
@@ -40,7 +37,6 @@ pub enum RequestPriority {
     /// 低
     Low,
 }
-
 /// 后端服务器
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Backend {
@@ -71,7 +67,6 @@ pub struct Backend {
     /// 最后更新时间
     pub last_updated: Instant,
 }
-
 /// 负载分布
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LoadDistribution {
@@ -86,7 +81,6 @@ pub struct LoadDistribution {
     /// 预计响应时间 (毫秒)
     pub predicted_response_time_ms: f64,
 }
-
 /// 负载均衡策略
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum BalanceStrategy {
@@ -105,7 +99,6 @@ pub enum BalanceStrategy {
     /// 自适应负载均衡
     Adaptive,
 }
-
 /// 负载均衡结果
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LoadBalanceResult {
@@ -124,7 +117,6 @@ pub struct LoadBalanceResult {
     /// 消息
     pub message: String,
 }
-
 /// 负载指标
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LoadMetrics {
@@ -143,7 +135,6 @@ pub struct LoadMetrics {
     /// 并发连接数
     pub concurrent_connections: usize,
 }
-
 /// 负载模式
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LoadPattern {
@@ -158,7 +149,6 @@ pub struct LoadPattern {
     /// 负载变化系数
     pub variability_coefficient: f64,
 }
-
 /// 负载模式类型
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PatternType {
@@ -173,7 +163,6 @@ pub enum PatternType {
     /// 随机波动
     Random,
 }
-
 /// 负载均衡器
 #[derive(Debug, Clone)]
 pub struct LoadBalancer {
@@ -186,7 +175,6 @@ pub struct LoadBalancer {
     /// 请求统计
     request_stats: RequestStatistics,
 }
-
 /// 请求统计
 #[derive(Debug, Clone, Default)]
 struct RequestStatistics {
@@ -199,7 +187,6 @@ struct RequestStatistics {
     /// 总响应时间
     total_response_time_ms: u64,
 }
-
 /// 负载均衡配置
 #[derive(Debug, Clone)]
 pub struct LoadBalancerConfig {
@@ -218,7 +205,6 @@ pub struct LoadBalancerConfig {
     /// 连接超时时间 (毫秒)
     pub connection_timeout_ms: u64,
 }
-
 impl Default for LoadBalancerConfig {
     fn default() -> Self {
         Self {
@@ -232,7 +218,6 @@ impl Default for LoadBalancerConfig {
         }
     }
 }
-
 impl LoadBalancer {
     /// 创建新的负载均衡器
     pub fn new(config: LoadBalancerConfig) -> Self {
@@ -243,12 +228,10 @@ impl LoadBalancer {
             request_stats: RequestStatistics::default(),
         }
     }
-
     /// 创建默认配置的负载均衡器
     pub fn new_with_defaults() -> Self {
         Self::new(LoadBalancerConfig::default())
     }
-
     /// 添加后端服务器
     ///
     /// # 参数
@@ -264,12 +247,10 @@ impl LoadBalancer {
             false
         }
     }
-
     /// 移除后端服务器
     pub async fn remove_backend(&mut self, backend_id: &str) -> bool {
         self.backends.remove(backend_id).is_some()
     }
-
     /// 选择最佳后端服务器
     ///
     /// # 参数
@@ -294,14 +275,12 @@ impl LoadBalancer {
                 message: "没有可用的后端服务器".to_string(),
             };
         }
-
         // 获取健康的后端服务器
         let healthy_backends: Vec<&Backend> = self
             .backends
             .values()
             .filter(|b| b.healthy && b.active_connections < b.max_connections)
             .collect();
-
         if healthy_backends.is_empty() {
             return LoadBalanceResult {
                 success: false,
@@ -313,26 +292,19 @@ impl LoadBalancer {
                 message: "没有健康的后端服务器".to_string(),
             };
         }
-
         // 根据策略选择后端
         let selected_backend: _ = self.select_backend_by_strategy(&healthy_backends, request, &strategy);
-
         // 计算负载分布
         let distribution: _ = self.calculate_load_distribution(&healthy_backends);
-
         // 计算整体负载分数
         let overall_load_score: _ = self.calculate_overall_load_score(&healthy_backends);
-
         // 计算资源利用率
         let resource_utilization: _ = self.calculate_resource_utilization(&healthy_backends);
-
         // 预测响应时间改进
         let predicted_response_time_improvement =
             self.predict_response_time_improvement(&healthy_backends);
-
         // 更新请求统计
         self.update_request_stats();
-
         LoadBalanceResult {
             success: selected_backend.is_some(),
             selected_backend: selected_backend.cloned(),
@@ -350,7 +322,6 @@ impl LoadBalancer {
             },
         }
     }
-
     /// 获取负载分布信息
     pub async fn get_load_distribution(&self) -> Vec<LoadDistribution> {
         let healthy_backends: Vec<&Backend> = self
@@ -358,10 +329,8 @@ impl LoadBalancer {
             .values()
             .filter(|b| b.healthy)
             .collect();
-
         self.calculate_load_distribution(&healthy_backends)
     }
-
     /// 获取负载均衡统计信息
     pub async fn get_statistics(&self) -> LoadBalancerStatistics {
         let healthy_count: _ = self.backends.values().filter(|b| b.healthy).count();
@@ -370,7 +339,6 @@ impl LoadBalancer {
             .values()
             .map(|b| b.current_load)
             .sum();
-
         LoadBalancerStatistics {
             total_backends: self.backends.len(),
             healthy_backends: healthy_count,
@@ -395,7 +363,6 @@ impl LoadBalancer {
             },
         }
     }
-
     /// 更新后端服务器状态
     pub async fn update_backend_status(
         &mut self,
@@ -412,16 +379,13 @@ impl LoadBalancer {
             backend.error_rate = error_rate;
             backend.current_load = self.calculate_backend_load(backend);
             backend.last_updated = Instant::now();
-
             // 检查健康状态
             backend.healthy = self.is_backend_healthy(backend);
-
             true
         } else {
             false
         }
     }
-
     /// 根据策略选择后端
     fn select_backend_by_strategy(
         &self,
@@ -452,28 +416,23 @@ impl LoadBalancer {
             }
         }
     }
-
     /// 轮询选择
     fn round_robin_select(&self, backends: &[&Backend]) -> Option<&Backend> {
         Some(backends[0])
     }
-
     /// 加权轮询选择
     fn weighted_round_robin_select(&self, backends: &[&Backend]) -> Option<&Backend> {
         let total_weight: f64 = backends.iter().map(|b| b.weight).sum();
         if total_weight <= 0.0 {
             return Some(backends[0]);
         }
-
         // 使用简单的轮询替代随机选择
         let index: _ = (std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs() as usize) % backends.len();
-
         Some(backends[index])
     }
-
     /// 最少连接选择
     fn least_connections_select(&self, backends: &[&Backend]) -> Option<&Backend> {
         backends
@@ -481,7 +440,6 @@ impl LoadBalancer {
             .min_by_key(|b| b.active_connections)
             .copied()
     }
-
     /// 最快响应选择
     fn fastest_response_select(&self, backends: &[&Backend]) -> Option<&Backend> {
         backends
@@ -493,12 +451,10 @@ impl LoadBalancer {
             })
             .copied()
     }
-
     /// AI 智能选择
     fn ai_intelligent_select(&self, backends: &[&Backend], request: &Request) -> Option<&Backend> {
         let mut best_backend = None;
         let mut best_score = f64::MIN;
-
         for backend in backends {
             let score: _ = self.calculate_backend_score(backend, request);
             if score > best_score {
@@ -506,10 +462,8 @@ impl LoadBalancer {
                 best_backend = Some(backend);
             }
         }
-
         best_backend.copied()
     }
-
     /// 自适应选择
     fn adaptive_select(&self, backends: &[&Backend], request: &Request) -> Option<&Backend> {
         // 结合多种因素的自适应选择
@@ -517,7 +471,6 @@ impl LoadBalancer {
             .ai_intelligent_select(backends, request)
             .map(|b| self.calculate_backend_score(b, request))
             .unwrap_or(0.0);
-
         let least_conn: _ = self
             .least_connections_select(backends)
             .map(|b| {
@@ -525,15 +478,12 @@ impl LoadBalancer {
                     - (b.active_connections as f64 / b.max_connections as f64) * 100.0
             })
             .unwrap_or(0.0);
-
         let fastest_resp: _ = self
             .fastest_response_select(backends)
             .map(|b| 100.0 - (b.response_time_ms / self.config.max_response_time_ms) * 100.0)
             .unwrap_or(0.0);
-
         // 综合评分
         let combined_score: _ = ai_score * 0.5 + least_conn * 0.3 + fastest_resp * 0.2;
-
         // 选择评分最高的后端
         backends
             .iter()
@@ -544,46 +494,36 @@ impl LoadBalancer {
             })
             .copied()
     }
-
     /// 计算后端服务器分数
     fn calculate_backend_score(&self, backend: &Backend, request: &Request) -> f64 {
         // 负载分数 (越低越好)
         let load_score: _ = 100.0 - backend.current_load;
-
         // 响应时间分数 (越低越好)
         let response_score: _ = 100.0 - (backend.response_time_ms / self.config.max_response_time_ms) * 100.0;
-
         // 错误率分数 (越低越好)
         let error_score: _ = 100.0 - (backend.error_rate / self.config.max_error_rate) * 100.0;
-
         // 资源利用率分数
         let resource_score: _ = 100.0
             - ((backend.cpu_utilization + backend.memory_utilization) / 2.0);
-
         // 连接数分数 (连接越少越好)
         let connection_score: _ = 100.0
             - (backend.active_connections as f64 / backend.max_connections as f64) * 100.0;
-
         // 综合分数 (加权平均)
         let weighted_score: _ = load_score * 0.25
             + response_score * 0.25
             + error_score * 0.2
             + resource_score * 0.15
             + connection_score * 0.15;
-
         weighted_score.max(0.0)
     }
-
     /// 计算后端服务器负载
     fn calculate_backend_load(&self, backend: &Backend) -> f64 {
         let cpu_factor: _ = backend.cpu_utilization * 0.4;
         let memory_factor: _ = backend.memory_utilization * 0.3;
         let connection_factor =
             (backend.active_connections as f64 / backend.max_connections as f64) * 100.0 * 0.3;
-
         (cpu_factor + memory_factor + connection_factor).min(100.0)
     }
-
     /// 检查后端服务器是否健康
     fn is_backend_healthy(&self, backend: &Backend) -> bool {
         backend.cpu_utilization < 95.0
@@ -591,21 +531,18 @@ impl LoadBalancer {
             && backend.response_time_ms < self.config.max_response_time_ms * 2.0
             && backend.error_rate < self.config.max_error_rate * 2.0
     }
-
     /// 计算负载分布
     fn calculate_load_distribution(&self, backends: &[&Backend]) -> Vec<LoadDistribution> {
         let total_backends: _ = backends.len() as f64;
         if total_backends == 0.0 {
             return vec![];
         }
-
         backends
             .iter()
             .map(|backend| {
                 let allocation_percentage: _ = 100.0 / total_backends;
                 let load_score: _ = 100.0 - backend.current_load;
                 let predicted_response_time: _ = backend.response_time_ms * (1.0 + backend.current_load / 100.0);
-
                 LoadDistribution {
                     backend_id: backend.id.clone(),
                     allocated_requests: backend.active_connections,
@@ -616,33 +553,26 @@ impl LoadBalancer {
             })
             .collect()
     }
-
     /// 计算整体负载分数
     fn calculate_overall_load_score(&self, backends: &[&Backend]) -> f64 {
         if backends.is_empty() {
             return 0.0;
         }
-
         let total_score: f64 = backends
             .iter()
             .map(|b| 100.0 - b.current_load)
             .sum();
-
         total_score / backends.len() as f64
     }
-
     /// 计算资源利用率
     fn calculate_resource_utilization(&self, backends: &[&Backend]) -> f64 {
         if backends.is_empty() {
             return 0.0;
         }
-
         let total_cpu: f64 = backends.iter().map(|b| b.cpu_utilization).sum();
         let total_memory: f64 = backends.iter().map(|b| b.memory_utilization).sum();
-
         (total_cpu + total_memory) / (2.0 * backends.len() as f64)
     }
-
     /// 预测响应时间改进
     fn predict_response_time_improvement(
         &self,
@@ -653,11 +583,9 @@ impl LoadBalancer {
             .map(|b| b.response_time_ms)
             .sum::<f64>()
             / backends.len() as f64;
-
         // 基于负载分布优化后的预期改进
         avg_response_time * 0.15 // 预期改进 15%
     }
-
     /// 更新请求统计
     fn update_request_stats(&mut self) {
         self.request_stats.total_requests += 1;
@@ -665,13 +593,11 @@ impl LoadBalancer {
         self.request_stats.successful_requests += 1;
         self.request_stats.total_response_time_ms += 100; // 模拟响应时间
     }
-
     /// 获取负载模式
     pub async fn detect_load_pattern(&self) -> Option<LoadPattern> {
         if self.load_history.len() < 10 {
             return None;
         }
-
         // 简化的负载模式检测
         let recent_loads: Vec<f64> = self
             .load_history
@@ -680,7 +606,6 @@ impl LoadBalancer {
             .take(10)
             .map(|m| m.avg_cpu_utilization)
             .collect();
-
         let avg_load: _ = recent_loads.iter().sum::<f64>() / recent_loads.len() as f64;
         let variance: _ = recent_loads
             .iter()
@@ -693,7 +618,6 @@ impl LoadBalancer {
         } else {
             0.0
         };
-
         let pattern_type: _ = if variability_coefficient < 0.1 {
             PatternType::Stable
         } else if variability_coefficient < 0.3 {
@@ -701,7 +625,6 @@ impl LoadBalancer {
         } else {
             PatternType::Burst
         };
-
         Some(LoadPattern {
             pattern_type,
             peak_hours: vec![9, 14, 20], // 模拟峰值时间
@@ -715,7 +638,6 @@ impl LoadBalancer {
         })
     }
 }
-
 /// 负载均衡统计信息
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LoadBalancerStatistics {
@@ -734,17 +656,14 @@ pub struct LoadBalancerStatistics {
     /// 平均响应时间 (毫秒)
     pub avg_response_time_ms: f64,
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_add_backend() {
         let mut lb = LoadBalancer::new_with_defaults();
-
         let backend: _ = Backend {
             id: "backend-1".to_string(),
             name: "Backend 1".to_string(),
@@ -760,16 +679,13 @@ use std::collections::{HashMap, BTreeMap};
             weight: 1.0,
             last_updated: Instant::now(),
         };
-
         let result: _ = lb.add_backend(backend).await;
         assert!(result);
         assert_eq!(lb.backends.len(), 1);
     }
-
     #[tokio::test]
     async fn test_select_backend_round_robin() {
         let mut lb = LoadBalancer::new_with_defaults();
-
         let backend: _ = Backend {
             id: "backend-1".to_string(),
             name: "Backend 1".to_string(),
@@ -785,9 +701,7 @@ use std::collections::{HashMap, BTreeMap};
             weight: 1.0,
             last_updated: Instant::now(),
         };
-
         lb.add_backend(backend).await;
-
         let request: _ = Request {
             id: "req-1".to_string(),
             request_type: "GET".to_string(),
@@ -798,17 +712,13 @@ use std::collections::{HashMap, BTreeMap};
             created_at: Instant::now(),
             estimated_processing_time_ms: 100,
         };
-
         let result: _ = lb.select_backend(&request, BalanceStrategy::RoundRobin).await;
-
         assert!(result.success);
         assert!(result.selected_backend.is_some());
     }
-
     #[tokio::test]
     async fn test_backend_score_calculation() {
         let lb: _ = LoadBalancer::new_with_defaults();
-
         let backend: _ = Backend {
             id: "backend-1".to_string(),
             name: "Backend 1".to_string(),
@@ -824,7 +734,6 @@ use std::collections::{HashMap, BTreeMap};
             weight: 1.0,
             last_updated: Instant::now(),
         };
-
         let request: _ = Request {
             id: "req-1".to_string(),
             request_type: "GET".to_string(),
@@ -835,9 +744,7 @@ use std::collections::{HashMap, BTreeMap};
             created_at: Instant::now(),
             estimated_processing_time_ms: 100,
         };
-
         let score: _ = lb.calculate_backend_score(&backend, &request);
-
         assert!(score > 0.0);
         assert!(score <= 100.0);
     }

@@ -6,12 +6,10 @@
 //! - 文件到网络套接字的传输
 //! - 网络套接字到文件的传输
 //! - 减少内存拷贝和上下文切换
-
 use std::io;
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-
 /// splice 零拷贝数据传输器
 ///
 /// 该结构体封装了 splice 系统调用，提供高性能的数据传输功能。
@@ -25,32 +23,24 @@ pub struct Splice {
     /// 传输统计信息
     stats: Arc<std::sync::Mutex<SpliceStats>>,
 }
-
 /// splice 传输统计信息
 #[derive(Debug, Clone, Default)]
 pub struct SpliceStats {
     /// 已传输字节数
     pub bytes_transferred: u64,
-
     /// splice 系统调用次数
     pub splice_count: u64,
-
     /// 传输开始时间
     pub start_time: Option<Instant>,
-
     /// 传输完成时间
     pub end_time: Option<Instant>,
-
     /// 平均传输速度 (bytes/sec)
     pub avg_speed: f64,
-
     /// 瞬时传输速度 (bytes/sec)
     pub instant_speed: f64,
-
     /// 错误次数
     pub error_count: u64,
 }
-
 impl Splice {
     /// 创建新的 splice 传输器
     pub fn new() -> Self {
@@ -58,7 +48,6 @@ impl Splice {
             stats: Arc::new(Mutex::new(SpliceStats::default())),
         }
     }
-
     /// 从管道到文件描述符的零拷贝传输
     ///
     /// # 参数
@@ -81,7 +70,6 @@ impl Splice {
             SpliceDirection::PipeToFd,
         )
     }
-
     /// 从文件描述符到管道的零拷贝传输
     ///
     /// # 参数
@@ -104,7 +92,6 @@ impl Splice {
             SpliceDirection::FdToPipe,
         )
     }
-
     /// 管道到管道的零拷贝传输
     ///
     /// # 参数
@@ -127,7 +114,6 @@ impl Splice {
             SpliceDirection::PipeToPipe,
         )
     }
-
     /// 执行 splice 系统调用
     fn splice_transfer(
         &self,
@@ -139,22 +125,18 @@ impl Splice {
         let start: _ = Instant::now();
         let mut bytes_sent = 0;
         let chunk_size: _ = 64 * 1024; // 64KB 块大小
-
         // 分块传输
         let mut remaining = max_bytes;
         while remaining > 0 {
             let chunk: _ = std::cmp::min(chunk_size, remaining);
-
             match self.splice_chunk(fd_in, fd_out, chunk) {
                 Ok(sent) => {
                     if sent == 0 {
                         // 没有更多数据可传输
                         break;
                     }
-
                     bytes_sent += sent;
                     remaining -= sent;
-
                     // 更新统计信息
                     self.update_stats(sent as u64, &start);
                 }
@@ -169,13 +151,11 @@ impl Splice {
                     return Err(e);
                 }
             }
-
             // 如果一次性发送完成，跳出循环
             if bytes_sent == max_bytes {
                 break;
             }
         }
-
         // 更新最终统计信息
         {
             let mut stats = self.stats.lock().unwrap();
@@ -189,10 +169,8 @@ impl Splice {
                 }
             }
         }
-
         Ok(bytes_sent as u64)
     }
-
     /// 执行单个 splice 操作
     fn splice_chunk(&self, _fd_in: RawFd, _fd_out: RawFd, _count: usize) -> io::Result<usize> {
         // splice 系统调用在某些平台上可能不可用
@@ -202,47 +180,38 @@ impl Splice {
             "splice not yet implemented - requires platform-specific code",
         ))
     }
-
     /// 更新传输统计信息
     fn update_stats(&self, bytes: u64, start: &Instant) {
         let mut stats = self.stats.lock().unwrap();
-
         if stats.start_time.is_none() {
             stats.start_time = Some(*start);
         }
-
         stats.bytes_transferred += bytes;
         stats.splice_count += 1;
-
         // 计算瞬时速度
         let elapsed: _ = start.elapsed().as_secs_f64();
         if elapsed > 0.0 {
             stats.instant_speed = bytes as f64 / elapsed;
         }
     }
-
     /// 获取传输统计信息
     pub fn get_stats(&self) -> SpliceStats {
         self.stats.lock().unwrap().clone()
     }
-
     /// 重置统计信息
     pub fn reset_stats(&self) {
         let mut stats = self.stats.lock().unwrap();
         *stats = SpliceStats::default();
     }
-
     /// 获取平均传输速度 (bytes/sec)
     pub fn average_speed(&self) -> f64 {
         self.stats.lock().unwrap().avg_speed
     }
-
     /// 获取瞬时传输速度 (bytes/sec)
     pub fn instant_speed(&self) -> f64 {
         self.stats.lock().unwrap().instant_speed
     }
 }
-
 /// splice 传输方向枚举
 #[derive(Debug, Clone, Copy)]
 enum SpliceDirection {
@@ -250,19 +219,16 @@ enum SpliceDirection {
     FdToPipe,
     PipeToPipe,
 }
-
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_splice_zero_copy_pipe_transfer() {
         // 创建测试管道
         let (_pipe_in, _pipe_out) = std::os::unix::net::UnixStream::pair().unwrap();
-
         println!("Splice test placeholder");
         println!("This test validates the splice structure and basic functionality");
         println!("Actual splice operation requires real pipes and file descriptors");

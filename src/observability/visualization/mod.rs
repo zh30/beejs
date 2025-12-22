@@ -22,23 +22,18 @@
 //!     .data(vec![10.0, 20.0, 30.0])
 //!     .build()?;
 //! ```
-
 pub mod charts;
 pub mod graphs;
-
 pub use charts::*;
 pub use graphs::*;
-
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
 /// Base visualization trait
 pub trait Visualizable {
     fn render(&self) -> String;
     fn update_data(&mut self, data: Vec<f64>) -> Result<()>;
     fn get_config(&self) -> &VisualizationConfig;
 }
-
 /// Base configuration for all visualizations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VisualizationConfig {
@@ -63,7 +58,6 @@ pub struct VisualizationConfig {
     /// Animation settings
     pub animation: AnimationConfig,
 }
-
 /// Padding configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Padding {
@@ -72,7 +66,6 @@ pub struct Padding {
     pub bottom: u32,
     pub left: u32,
 }
-
 /// Animation configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnimationConfig {
@@ -80,7 +73,6 @@ pub struct AnimationConfig {
     pub duration: u32,
     pub easing: String,
 }
-
 /// Color palette
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ColorPalette {
@@ -92,7 +84,6 @@ pub struct ColorPalette {
     pub warning: String,
     pub error: String,
 }
-
 /// Data point
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataPoint {
@@ -102,7 +93,6 @@ pub struct DataPoint {
     pub color: Option<String>,
     pub metadata: HashMap<String, serde_json::Value>,
 }
-
 /// Data series
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataSeries {
@@ -112,7 +102,6 @@ pub struct DataSeries {
     pub visible: bool,
     pub line_style: LineStyle,
 }
-
 /// Line style configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LineStyle {
@@ -121,7 +110,6 @@ pub struct LineStyle {
     pub cap: String,
     pub join: String,
 }
-
 /// Marker configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarkerConfig {
@@ -130,7 +118,6 @@ pub struct MarkerConfig {
     pub symbol: String,
     pub color: String,
 }
-
 /// Axis configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AxisConfig {
@@ -142,7 +129,6 @@ pub struct AxisConfig {
     pub unit: Option<String>,
     pub format: String,
 }
-
 /// Legend configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LegendConfig {
@@ -150,7 +136,6 @@ pub struct LegendConfig {
     pub position: String,
     pub align: String,
 }
-
 /// Tooltip configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TooltipConfig {
@@ -158,7 +143,6 @@ pub struct TooltipConfig {
     pub trigger: String,
     pub format: String,
 }
-
 /// Grid configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GridConfig {
@@ -167,7 +151,6 @@ pub struct GridConfig {
     pub opacity: f64,
     pub line_width: f64,
 }
-
 /// Zoom configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZoomConfig {
@@ -176,7 +159,6 @@ pub struct ZoomConfig {
     pub zoom_on_drag: bool,
     pub max_zoom: f64,
 }
-
 /// Export configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportConfig {
@@ -184,14 +166,12 @@ pub struct ExportConfig {
     pub quality: u8,
     pub transparent: bool,
 }
-
 /// Event handler
 #[derive(Debug, Clone)]
 pub struct EventHandler {
     pub event_type: String,
     pub callback: Box<dyn Fn(&serde_json::Value) + Send + Sync>,
 }
-
 /// Interactive feature
 #[derive(Debug, Clone)]
 pub struct InteractiveFeature {
@@ -199,14 +179,12 @@ pub struct InteractiveFeature {
     pub enabled: bool,
     pub config: HashMap<String, serde_json::Value>,
 }
-
 /// Responsive configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResponsiveConfig {
     pub enabled: bool,
     pub breakpoints: HashMap<String, u32>,
 }
-
 impl Default for VisualizationConfig {
     fn default() -> Self {
         Self {
@@ -232,7 +210,6 @@ impl Default for VisualizationConfig {
         }
     }
 }
-
 impl Default for Padding {
     fn default() -> Self {
         Self {
@@ -243,7 +220,6 @@ impl Default for Padding {
         }
     }
 }
-
 impl Default for AnimationConfig {
     fn default() -> Self {
         Self {
@@ -253,7 +229,6 @@ impl Default for AnimationConfig {
         }
     }
 }
-
 impl Default for LineStyle {
     fn default() -> Self {
         Self {
@@ -264,7 +239,6 @@ impl Default for LineStyle {
         }
     }
 }
-
 impl Default for MarkerConfig {
     fn default() -> Self {
         Self {
@@ -275,7 +249,6 @@ impl Default for MarkerConfig {
         }
     }
 }
-
 impl Default for AxisConfig {
     fn default() -> Self {
         Self {
@@ -289,7 +262,6 @@ impl Default for AxisConfig {
         }
     }
 }
-
 impl Default for LegendConfig {
     fn default() -> Self {
         Self {
@@ -299,7 +271,6 @@ impl Default for LegendConfig {
         }
     }
 }
-
 impl Default for TooltipConfig {
     fn default() -> Self {
         Self {
@@ -309,7 +280,6 @@ impl Default for TooltipConfig {
         }
     }
 }
-
 impl Default for GridConfig {
     fn default() -> Self {
         Self {
@@ -320,7 +290,6 @@ impl Default for GridConfig {
         }
     }
 }
-
 impl Default for ZoomConfig {
     fn default() -> Self {
         Self {
@@ -331,7 +300,6 @@ impl Default for ZoomConfig {
         }
     }
 }
-
 impl Default for ExportConfig {
     fn default() -> Self {
         Self {
@@ -341,7 +309,6 @@ impl Default for ExportConfig {
         }
     }
 }
-
 impl Default for ResponsiveConfig {
     fn default() -> Self {
         let mut breakpoints = HashMap::new();
@@ -350,20 +317,17 @@ impl Default for ResponsiveConfig {
         breakpoints.insert("md".to_string(), 1024);
         breakpoints.insert("lg".to_string(), 1280);
         breakpoints.insert("xl".to_string(), 1920);
-
         Self {
             enabled: true,
             breakpoints,
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_visualization_config_default() {
         let config: _ = VisualizationConfig::default();
@@ -371,7 +335,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(config.height, 600);
         assert_eq!(config.font_size, 12);
     }
-
     #[test]
     fn test_data_point_creation() {
         let point: _ = DataPoint {
@@ -381,12 +344,10 @@ use std::collections::{HashMap, BTreeMap};
             color: Some("#3b82f6".to_string()),
             metadata: HashMap::new(),
         };
-
         assert_eq!(point.x, 10.0);
         assert_eq!(point.y, 20.0);
         assert_eq!(point.label, Some("Test".to_string()));
     }
-
     #[test]
     fn test_data_series_creation() {
         let series: _ = DataSeries {
@@ -411,12 +372,10 @@ use std::collections::{HashMap, BTreeMap};
             visible: true,
             line_style: LineStyle::default(),
         };
-
         assert_eq!(series.name, "Series 1");
         assert_eq!(series.data.len(), 2);
         assert!(series.visible);
     }
-
     #[test]
     fn test_axis_config() {
         let axis: _ = AxisConfig {
@@ -428,12 +387,10 @@ use std::collections::{HashMap, BTreeMap};
             unit: Some("%".to_string()),
             format: "{.1f}".to_string(),
         };
-
         assert_eq!(axis.min, Some(0.0));
         assert_eq!(axis.max, Some(100.0));
         assert_eq!(axis.unit, Some("%".to_string()));
     }
-
     #[test]
     fn test_line_style() {
         let style: _ = LineStyle {
@@ -442,11 +399,9 @@ use std::collections::{HashMap, BTreeMap};
             cap: "square".to_string(),
             join: "bevel".to_string(),
         };
-
         assert_eq!(style.width, 3.0);
         assert_eq!(style.dash_array, Some(vec![5.0, 5.0]));
     }
-
     #[test]
     fn test_color_palette() {
         let palette: _ = ColorPalette {
@@ -458,11 +413,9 @@ use std::collections::{HashMap, BTreeMap};
             warning: "#eab308".to_string(),
             error: "#ef4444".to_string(),
         };
-
         assert_eq!(palette.primary, "#3b82f6");
         assert_eq!(palette.success, "#22c55e");
     }
-
     #[test]
     fn test_padding_default() {
         let padding: _ = Padding::default();
@@ -471,7 +424,6 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(padding.left, 60);
         assert_eq!(padding.right, 20);
     }
-
     #[test]
     fn test_marker_config() {
         let marker: _ = MarkerConfig {
@@ -480,12 +432,10 @@ use std::collections::{HashMap, BTreeMap};
             symbol: "diamond".to_string(),
             color: "#ef4444".to_string(),
         };
-
         assert!(marker.enabled);
         assert_eq!(marker.size, 8);
         assert_eq!(marker.symbol, "diamond");
     }
-
     #[test]
     fn test_responsive_config() {
         let responsive: _ = ResponsiveConfig::default();
@@ -493,7 +443,6 @@ use std::collections::{HashMap, BTreeMap};
         assert!(responsive.breakpoints.contains_key("md"));
         assert_eq!(responsive.breakpoints["lg"], 1280);
     }
-
     #[test]
     fn test_export_config() {
         let export: _ = ExportConfig {
@@ -501,12 +450,10 @@ use std::collections::{HashMap, BTreeMap};
             quality: 95,
             transparent: true,
         };
-
         assert_eq!(export.format, "png");
         assert_eq!(export.quality, 95);
         assert!(export.transparent);
     }
-
     #[test]
     fn test_grid_config() {
         let grid: _ = GridConfig {
@@ -515,11 +462,9 @@ use std::collections::{HashMap, BTreeMap};
             opacity: 0.3,
             line_width: 2.0,
         };
-
         assert!(!grid.show);
         assert_eq!(grid.opacity, 0.3);
     }
-
     #[test]
     fn test_legend_config() {
         let legend: _ = LegendConfig {
@@ -527,11 +472,9 @@ use std::collections::{HashMap, BTreeMap};
             position: "right".to_string(),
             align: "start".to_string(),
         };
-
         assert!(!legend.show);
         assert_eq!(legend.position, "right");
     }
-
     #[test]
     fn test_tooltip_config() {
         let tooltip: _ = TooltipConfig {
@@ -539,7 +482,6 @@ use std::collections::{HashMap, BTreeMap};
             trigger: "axis".to_string(),
             format: "{.2f}".to_string(),
         };
-
         assert!(tooltip.show);
         assert_eq!(tooltip.trigger, "axis");
     }

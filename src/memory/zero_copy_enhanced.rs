@@ -2,7 +2,6 @@
 //!
 //! 实现 DMA 直接内存访问、内存映射优化、智能内存预取和垃圾回收优化
 //! 目标：实现 80% 内存使用减少，支持 1000-5000x 性能提升
-
 use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 use std::sync::Arc;
 use std::ptr::NonNull;
@@ -11,9 +10,7 @@ use tokio::sync::RwLock;
 use anyhow::{Result, anyhow};
 use libc::{c_void, posix_memalign, mmap, munmap, madvise, MADV_WILLNEED, MADV_SEQUENTIAL, MADV_DONTNEED};
 use memmap2::{Mmap, MmapOptions};
-
 use crate::memory::GLOBAL_MEMORY_STATS;
-
 /// DMA 直接内存访问配置
 #[derive(Debug, Clone)]
 pub struct DmaConfig {
@@ -26,7 +23,6 @@ pub struct DmaConfig {
     /// 内存对齐要求 (通常是页大小)
     pub alignment: usize,
 }
-
 impl Default for DmaConfig {
     fn default() -> Self {
         Self {
@@ -37,7 +33,6 @@ impl Default for DmaConfig {
         }
     }
 }
-
 /// 内存映射配置
 #[derive(Debug, Clone)]
 pub struct MmapConfig {
@@ -50,7 +45,6 @@ pub struct MmapConfig {
     /// 大页大小 (2MB 或 1GB)
     pub huge_page_size: usize,
 }
-
 impl Default for MmapConfig {
     fn default() -> Self {
         Self {
@@ -61,7 +55,6 @@ impl Default for MmapConfig {
         }
     }
 }
-
 /// 智能预取配置
 #[derive(Debug, Clone)]
 pub struct PrefetchConfig {
@@ -74,7 +67,6 @@ pub struct PrefetchConfig {
     /// 启用预测性预取
     pub predictive: bool,
 }
-
 impl Default for PrefetchConfig {
     fn default() -> Self {
         Self {
@@ -85,7 +77,6 @@ impl Default for PrefetchConfig {
         }
     }
 }
-
 /// 增强的零拷贝内存系统
 #[derive(Debug)]
 pub struct EnhancedZeroCopy {
@@ -104,7 +95,6 @@ pub struct EnhancedZeroCopy {
     /// 性能统计
     performance_stats: Arc<PerformanceStats>,
 }
-
 /// DMA 缓冲区
 #[derive(Debug)]
 pub struct DmaBuffer {
@@ -117,7 +107,6 @@ pub struct DmaBuffer {
     /// 引用计数
     pub ref_count: Arc<AtomicUsize>,
 }
-
 /// 内存映射条目
 #[derive(Debug)]
 pub struct MmapEntry {
@@ -132,7 +121,6 @@ pub struct MmapEntry {
     /// 最后访问时间
     pub last_access: Instant,
 }
-
 /// 预取统计
 #[derive(Debug, Default)]
 pub struct PrefetchStats {
@@ -141,7 +129,6 @@ pub struct PrefetchStats {
     pub cache_hits: AtomicUsize,
     pub cache_misses: AtomicUsize,
 }
-
 /// 性能统计
 #[derive(Debug, Default)]
 pub struct PerformanceStats {
@@ -154,7 +141,6 @@ pub struct PerformanceStats {
     pub bytes_saved: AtomicUsize,
     pub time_saved_ms: AtomicUsize,
 }
-
 impl EnhancedZeroCopy {
     /// 创建新的增强零拷贝系统
     pub fn new(
@@ -174,7 +160,6 @@ impl EnhancedZeroCopy {
             performance_stats: Arc::new(Mutex::new(PerformanceStats::default())),
         }
     }
-
     /// 使用默认配置创建
     pub fn default() -> Self {
         Self::new(
@@ -183,13 +168,11 @@ impl EnhancedZeroCopy {
             PrefetchConfig::default(),
         )
     }
-
     /// 分配 DMA 缓冲区
     pub async fn allocate_dma(&self, size: usize) -> Result<DmaBuffer> {
         if size < self.dma_config.dma_threshold {
             return Err(anyhow!("Size {} is below DMA threshold {}", size, self.dma_config.dma_threshold));
         }
-
         // 检查缓冲区池
         {
             let mut buffers = self.dma_buffers.write().await;
@@ -201,7 +184,6 @@ impl EnhancedZeroCopy {
                 }
             }
         }
-
         // 分配新的 DMA 缓冲区
         let ptr: _ = self.allocate_aligned_memory(size, self.dma_config.alignment)?;
         let buffer: _ = DmaBuffer {
@@ -210,11 +192,9 @@ impl EnhancedZeroCopy {
             allocated_at: Instant::now(),
             ref_count: Arc::new(Mutex::new(AtomicUsize::new(1)))
         };
-
         self.performance_stats.dma_operations.fetch_add(1, Ordering::Relaxed);
         Ok(buffer)
     }
-
     /// 释放 DMA 缓冲区
     pub async fn deallocate_dma(&self, mut buffer: DmaBuffer) -> Result<()> {
         // 返回到缓冲区池
@@ -224,36 +204,28 @@ impl EnhancedZeroCopy {
                 buffers.push(buffer);
             }
         }
-
         Ok(())
     }
-
     /// 内存映射文件
     pub async fn mmap_file(&self, path: &str, size: usize) -> Result<Arc<Mmap>> {
         // TODO: 修复缓存借用问题
         // 暂时跳过缓存，直接创建新的内存映射
-
         // 创建新的内存映射
         let mmap: _ = self.create_memory_mapping(path, size)?;
-
         // 添加到缓存
         {
             let mut cache = self.mmap_cache.write().await;
             cache.put(path.to_string(), mmap.clone());
         }
-
         self.performance_stats.mmap_operations.fetch_add(1, Ordering::Relaxed);
         Ok(mmap)
     }
-
     /// 智能预取
     pub async fn smart_prefetch(&self, addr: NonNull<u8>, size: usize) -> Result<()> {
         if !self.mmap_config.enable_prefetch {
             return Ok(());
         }
-
         self.prefetch_stats.total_prefetches.fetch_add(1, Ordering::Relaxed);
-
         // 使用 madvise 进行预取
         unsafe {
             let result: _ = madvise(
@@ -261,7 +233,6 @@ impl EnhancedZeroCopy {
                 size,
                 MADV_WILLNEED,
             );
-
             if result == 0 {
                 self.prefetch_stats.successful_prefetches.fetch_add(1, Ordering::Relaxed);
                 self.performance_stats.prefetch_operations.fetch_add(1, Ordering::Relaxed);
@@ -271,13 +242,11 @@ impl EnhancedZeroCopy {
             }
         }
     }
-
     /// 预测性预取
     pub async fn predictive_prefetch(&self, base_addr: NonNull<u8>, size: usize, access_pattern: AccessPattern) -> Result<()> {
         if !self.prefetch_config.predictive {
             return self.smart_prefetch(base_addr, size).await;
         }
-
         match access_pattern {
             AccessPattern::Sequential => {
                 // 顺序访问：预取后续页面
@@ -300,10 +269,8 @@ impl EnhancedZeroCopy {
                 }
             }
         }
-
         Ok(())
     }
-
     /// 零拷贝数据传输
     pub async fn zero_copy_transfer(
         &self,
@@ -316,18 +283,14 @@ impl EnhancedZeroCopy {
             let _dma_buffer: _ = self.allocate_dma(size).await?;
             // 在实际实现中，这里会使用 DMA 引擎进行数据传输
         }
-
         // 对于小数据，使用 memcpy
         unsafe {
             std::ptr::copy_nonoverlapping(src.as_ptr(), dst.as_ptr(), size);
         }
-
         self.performance_stats.zero_copy_operations.fetch_add(1, Ordering::Relaxed);
         self.performance_stats.bytes_saved.fetch_add(size, Ordering::Relaxed);
-
         Ok(())
     }
-
     /// 获取性能统计
     pub async fn get_performance_stats(&self) -> PerformanceStatsSnapshot {
         PerformanceStatsSnapshot {
@@ -341,7 +304,6 @@ impl EnhancedZeroCopy {
             time_saved_ms: self.performance_stats.time_saved_ms.load(Ordering::Relaxed),
         }
     }
-
     /// 获取预取统计
     pub async fn get_prefetch_stats(&self) -> PrefetchStatsSnapshot {
         PrefetchStatsSnapshot {
@@ -351,17 +313,14 @@ impl EnhancedZeroCopy {
             cache_misses: self.prefetch_stats.cache_misses.load(Ordering::Relaxed),
         }
     }
-
     /// 分配对齐内存
     fn allocate_aligned_memory(&self, size: usize, alignment: usize) -> Result<NonNull<u8>> {
         if !alignment.is_power_of_two() {
             return Err(anyhow!("Alignment must be a power of two"));
         }
-
         unsafe {
             let mut ptr: *mut c_void = std::ptr::null_mut();
             let result: _ = posix_memalign(&mut ptr, alignment, size);
-
             if result == 0 && !ptr.is_null() {
                 Ok(NonNull::new_unchecked(ptr as *mut u8))
             } else {
@@ -369,40 +328,33 @@ impl EnhancedZeroCopy {
             }
         }
     }
-
     /// 创建内存映射
     fn create_memory_mapping(&self, path: &str, size: usize) -> Result<Arc<Mmap>> {
         use std::fs::OpenOptions;
         use std::os::unix::io::AsRawFd;
-
         let file: _ = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
             .truncate(true)
             .open(path)?;
-
         // 设置文件大小
         file.set_len(size as u64)?;
-
         // 创建内存映射
         let mmap: _ = unsafe {
             let mut opts = MmapOptions::new();
             opts.len(size)
                 .map(&file)?
         };
-
         Ok(Arc::new(Mutex::new(mmap)),)
     }
 }
-
 /// 访问模式
 #[derive(Debug, Clone, Copy)]
 pub enum AccessPattern {
     Sequential,
     Random,
 }
-
 /// 性能统计快照
 #[derive(Debug, Clone)]
 pub struct PerformanceStatsSnapshot {
@@ -415,7 +367,6 @@ pub struct PerformanceStatsSnapshot {
     pub bytes_saved: usize,
     pub time_saved_ms: usize,
 }
-
 /// 预取统计快照
 #[derive(Debug, Clone)]
 pub struct PrefetchStatsSnapshot {
@@ -424,7 +375,6 @@ pub struct PrefetchStatsSnapshot {
     pub cache_hits: usize,
     pub cache_misses: usize,
 }
-
 impl PrefetchStatsSnapshot {
     pub fn success_rate(&self) -> f64 {
         if self.total_prefetches == 0 {
@@ -433,7 +383,6 @@ impl PrefetchStatsSnapshot {
             self.successful_prefetches as f64 / self.total_prefetches as f64
         }
     }
-
     pub fn cache_hit_rate(&self) -> f64 {
         let total: _ = self.cache_hits + self.cache_misses;
         if total == 0 {
@@ -443,45 +392,37 @@ impl PrefetchStatsSnapshot {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_enhanced_zero_copy_creation() {
         let zc: _ = EnhancedZeroCopy::default();
         assert!(zc.dma_config.dma_threshold > 0);
         assert!(zc.mmap_config.enable_prefetch);
     }
-
     #[tokio::test]
     async fn test_performance_stats() {
         let zc: _ = EnhancedZeroCopy::default();
         let stats: _ = zc.get_performance_stats().await;
-
         // 初始统计应该都是 0
         assert_eq!(stats.total_allocations, 0);
         assert_eq!(stats.zero_copy_operations, 0);
     }
-
     #[tokio::test]
     async fn test_prefetch_stats() {
         let zc: _ = EnhancedZeroCopy::default();
         let stats: _ = zc.get_prefetch_stats().await;
-
         assert_eq!(stats.total_prefetches, 0);
         assert_eq!(stats.successful_prefetches, 0);
         assert_eq!(stats.success_rate(), 0.0);
     }
-
     #[test]
     fn test_access_pattern() {
         let sequential: _ = AccessPattern::Sequential;
         let random: _ = AccessPattern::Random;
-
         // 测试 Copy trait
         let _sequential_copy: _ = sequential;
         let _random_copy: _ = random;

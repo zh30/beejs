@@ -1,11 +1,8 @@
 //! 自动扩缩容器模块
 //! 负责根据集群负载自动调整节点数量
-
 use tracing::{debug, info};
-
 use std::collections::VecDeque;
 use std::time::{Duration, Instant};
-
 /// 集群指标
 #[derive(Debug, Clone)]
 pub struct ClusterMetrics {
@@ -18,7 +15,6 @@ pub struct ClusterMetrics {
     pub error_rate: f64,           // 错误率 (0.0-1.0)
     pub timestamp: u64, // 使用 u64 而不是 Instant，便于序列化        // 指标采集时间
 }
-
 /// 扩缩容策略
 #[derive(Debug, Clone, PartialEq)]
 pub enum ScalingStrategy {
@@ -26,7 +22,6 @@ pub enum ScalingStrategy {
     Predictive,      // 预测性扩缩容
     Hybrid,          // 混合模式
 }
-
 /// 扩缩容动作
 #[derive(Debug, Clone, PartialEq)]
 pub enum ScalingAction {
@@ -34,7 +29,6 @@ pub enum ScalingAction {
     ScaleDown(usize),     // 缩容节点数
     NoOp,                 // 无操作
 }
-
 /// 扩缩容器配置
 #[derive(Debug, Clone)]
 pub struct AutoscalerConfig {
@@ -44,7 +38,6 @@ pub struct AutoscalerConfig {
     pub min_nodes: usize,            // 最小节点数
     pub max_nodes: usize,            // 最大节点数
 }
-
 /// 扩缩容策略配置
 #[derive(Debug, Clone)]
 pub struct ScalingPolicy {
@@ -53,14 +46,12 @@ pub struct ScalingPolicy {
     pub prediction_window: Duration,
     pub smoothing_factor: f64,       // 平滑因子 (0.0-1.0)
 }
-
 /// 历史指标记录
 #[derive(Debug)]
 struct MetricsHistory {
     metrics: VecDeque<ClusterMetrics>,
     max_history: usize,
 }
-
 impl MetricsHistory {
     fn new(max_history: usize) -> Self {
         Self {
@@ -68,19 +59,16 @@ impl MetricsHistory {
             max_history,
         }
     }
-
     fn add(&mut self, metrics: ClusterMetrics) {
         self.metrics.push_back(metrics);
         if self.metrics.len() > self.max_history {
             self.metrics.pop_front();
         }
     }
-
     fn get_average(&self) -> Option<ClusterMetrics> {
         if self.metrics.is_empty() {
             return None;
         }
-
         let count: _ = self.metrics.len() as f64;
         let sum: _ = self.metrics.iter().fold(
             (0.0, 0.0, 0.0, 0, 0, 0.0, 0.0),
@@ -94,7 +82,6 @@ impl MetricsHistory {
                 acc.6 + m.error_rate,
             )
         );
-
         Some(ClusterMetrics {
             cpu_utilization: sum.0 / count,
             memory_utilization: sum.1 / count,
@@ -106,12 +93,10 @@ impl MetricsHistory {
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         })
     }
-
     fn len(&self) -> usize {
         self.metrics.len()
     }
 }
-
 /// 自动扩缩容器
 #[derive(Debug)]
 pub struct Autoscaler {
@@ -123,7 +108,6 @@ pub struct Autoscaler {
     total_scale_up_events: u64,
     total_scale_down_events: u64,
 }
-
 impl Autoscaler {
     /// 创建新的自动扩缩容器
     pub fn new(config: AutoscalerConfig) -> Self {
@@ -132,7 +116,6 @@ impl Autoscaler {
                 "scale_up_threshold must be greater than scale_down_threshold");
         assert!(config.min_nodes < config.max_nodes,
                 "min_nodes must be less than max_nodes");
-
         Self {
             policy: ScalingPolicy {
                 strategy: ScalingStrategy::Reactive,
@@ -148,66 +131,52 @@ impl Autoscaler {
             config,
         }
     }
-
     /// 创建带策略的自动扩缩容器
     pub fn new_with_policy(config: AutoscalerConfig, policy: ScalingPolicy) -> Self {
         let mut autoscaler = Self::new(config);
         autoscaler.policy = policy;
         autoscaler
     }
-
     /// 检查是否启用
     pub fn is_enabled(&self) -> bool {
         true
     }
-
     /// 记录集群指标
     pub fn record_metrics(&mut self, metrics: ClusterMetrics) {
         self.history.add(metrics);
         self.update_cooldown();
     }
-
     /// 评估是否需要扩缩容
     pub fn evaluate_scaling(&mut self, current_metrics: &ClusterMetrics) -> ScalingAction {
         // 先更新冷却时间
         self.update_cooldown();
-
         // 检查冷却期
         if !self.is_cooldown_complete() {
             debug!("自动扩缩容在冷却期，跳过评估");
             return ScalingAction::NoOp;
         }
-
         // 记录当前指标
         self.record_metrics(current_metrics.clone());
-
         // 获取历史平均值（如果有）
         let avg_metrics: _ = self.history.get_average()
             .unwrap_or_else(|| current_metrics.clone());
-
         // 计算综合负载分数
         let load_score: _ = self.calculate_load_score(&avg_metrics);
-
         // 决策扩缩容
         let action: _ = self.make_scaling_decision(load_score, &avg_metrics);
-
         // 记录扩缩容事件
         if action != ScalingAction::NoOp {
             self.last_scaling_time = Some(Instant::now());
             self.cooldown_remaining = self.config.cooldown_period;
-
             match action {
                 ScalingAction::ScaleUp(_) => self.total_scale_up_events += 1,
                 ScalingAction::ScaleDown(_) => self.total_scale_down_events += 1,
                 ScalingAction::NoOp => {}
             }
-
             info!("自动扩缩容决策: {:?}, 负载分数: {:.2}", action, load_score);
         }
-
         action
     }
-
     /// 计算负载分数
     fn calculate_load_score(&self, metrics: &ClusterMetrics) -> f64 {
         // 当 CPU 或内存超过阈值时，直接返回高分数
@@ -215,7 +184,6 @@ impl Autoscaler {
            metrics.memory_utilization >= self.config.scale_up_threshold {
             return 1.0;
         }
-
         // 加权计算综合负载分数
         let cpu_weight: _ = 0.35;  // 增加 CPU 权重
         let memory_weight: _ = 0.35;  // 增加内存权重
@@ -223,23 +191,18 @@ impl Autoscaler {
         let response_time_weight: _ = 0.10;
         let error_rate_weight: _ = 0.03;
         let task_weight: _ = 0.02;
-
         // 归一化队列深度（假设最大队列为 200）
         let queue_score: _ = (metrics.queue_depth as f64 / 200.0).min(1.0);
-
         // 归一化响应时间（假设最大响应时间为 1000ms）
         let response_time_score: _ = (metrics.response_time_ms as f64 / 1000.0).min(1.0);
-
         // 归一化活跃任务数（假设最大任务数为 200）
         let task_score: _ = (metrics.active_tasks as f64 / 200.0).min(1.0);
-
         let load_score: _ = metrics.cpu_utilization * cpu_weight +
             metrics.memory_utilization * memory_weight +
             queue_score * queue_weight +
             response_time_score * response_time_weight +
             metrics.error_rate * error_rate_weight +
             task_score * task_weight;
-
         debug!("负载分数计算: cpu={:.2}* {:.2} + mem={:.2}* {:.2} + queue={:.2}* {:.2} + rt={:.2}* {:.2} + err={:.2}* {:.2} + task={:.2}* {:.2} = {:.2}",
             metrics.cpu_utilization, cpu_weight,
             metrics.memory_utilization, memory_weight,
@@ -248,10 +211,8 @@ impl Autoscaler {
             metrics.error_rate, error_rate_weight,
             task_score, task_weight,
             load_score);
-
         load_score
     }
-
     /// 制定扩缩容决策
     fn make_scaling_decision(&self, load_score: f64, metrics: &ClusterMetrics) -> ScalingAction {
         // 高负载 -> 扩容
@@ -259,22 +220,18 @@ impl Autoscaler {
             let scale_up_count: _ = self.calculate_scale_up_count(metrics);
             return ScalingAction::ScaleUp(scale_up_count);
         }
-
         // 低负载 -> 缩容
         if load_score <= self.config.scale_down_threshold {
             let scale_down_count: _ = self.calculate_scale_down_count(metrics);
             return ScalingAction::ScaleDown(scale_down_count);
         }
-
         // 正常负载 -> 无操作
         ScalingAction::NoOp
     }
-
     /// 计算扩容节点数
     fn calculate_scale_up_count(&self, metrics: &ClusterMetrics) -> usize {
         // 简化逻辑：基于负载分数调整扩容数量
         let base_count: _ = 1;
-
         // 根据负载分数调整
         let load_factor: _ = if metrics.cpu_utilization > 0.9 {
             2
@@ -283,20 +240,16 @@ impl Autoscaler {
         } else {
             0
         };
-
         (base_count + load_factor).max(1).min(3)
     }
-
     /// 计算缩容节点数
     fn calculate_scale_down_count(&self, metrics: &ClusterMetrics) -> usize {
         // 基于负载程度计算缩容节点数
         let base_count: _ = 1;
-
         // 根据队列深度调整（队列为空才能缩容）
         if metrics.queue_depth > 0 {
             return 0;
         }
-
         // 根据负载分数调整
         let load_factor: _ = if metrics.cpu_utilization < 0.15 {
             1  // 极低负载，额外缩容 1 个节点
@@ -305,10 +258,8 @@ impl Autoscaler {
         } else {
             0  // 正常负载，不缩容
         };
-
         base_count + load_factor
     }
-
     /// 更新冷却时间
     fn update_cooldown(&mut self) {
         if let Some(last_time) = self.last_scaling_time {
@@ -320,17 +271,14 @@ impl Autoscaler {
             }
         }
     }
-
     /// 检查冷却期是否完成
     fn is_cooldown_complete(&self) -> bool {
         self.cooldown_remaining == Duration::ZERO
     }
-
     /// 获取剩余冷却时间
     pub fn get_cooldown_remaining(&self) -> Duration {
         self.cooldown_remaining
     }
-
     /// 获取扩缩容统计
     pub fn get_statistics(&self) -> AutoscalerStats {
         AutoscalerStats {
@@ -341,17 +289,14 @@ impl Autoscaler {
             is_in_cooldown: !self.is_cooldown_complete(),
         }
     }
-
     /// 预测未来负载（简单线性回归）
     pub fn predict_future_load(&self, horizon: Duration) -> Option<f64> {
         if self.history.len() < 5 {
             return None;
         }
-
         // 简单预测：使用最近的指标趋势
         let metrics_vec: Vec<&ClusterMetrics> = self.history.metrics.iter().collect();
         let recent_metrics: _ = &metrics_vec[metrics_vec.len().saturating_sub(5)..];
-
         // 计算负载趋势
         let mut trend = 0.0;
         for i in 1..recent_metrics.len() {
@@ -360,14 +305,12 @@ impl Autoscaler {
             trend += curr_load - prev_load;
         }
         trend /= (recent_metrics.len() - 1) as f64;
-
         // 预测未来负载
         let current_load: _ = self.calculate_load_score(recent_metrics[recent_metrics.len() - 1]);
         let time_factor: _ = (horizon.as_secs_f64() / self.policy.prediction_window.as_secs_f64()).min(1.0);
         Some(current_load + trend * time_factor)
     }
 }
-
 /// 自动扩缩容器统计信息
 #[derive(Debug, Clone)]
 pub struct AutoscalerStats {
@@ -377,7 +320,6 @@ pub struct AutoscalerStats {
     pub history_size: usize,
     pub is_in_cooldown: bool,
 }
-
 impl Default for AutoscalerStats {
     fn default() -> Self {
         Self {
@@ -389,13 +331,11 @@ impl Default for AutoscalerStats {
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_autoscaler_creation() {
         let config: _ = AutoscalerConfig {
@@ -405,12 +345,10 @@ use std::collections::{HashMap, BTreeMap};
             min_nodes: 2,
             max_nodes: 10,
         };
-
         let autoscaler: _ = Autoscaler::new(config);
         assert!(autoscaler.is_enabled());
         assert_eq!(autoscaler.get_cooldown_remaining(), Duration::ZERO);
     }
-
     #[test]
     fn test_scale_up_decision() {
         let mut autoscaler = Autoscaler::new(AutoscalerConfig {
@@ -420,7 +358,6 @@ use std::collections::{HashMap, BTreeMap};
             min_nodes: 2,
             max_nodes: 10,
         });
-
         let high_load_metrics: _ = ClusterMetrics {
             cpu_utilization: 0.85,
             memory_utilization: 0.90,
@@ -431,11 +368,9 @@ use std::collections::{HashMap, BTreeMap};
             error_rate: 0.02,
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
-
         let action: _ = autoscaler.evaluate_scaling(&high_load_metrics);
         assert!(matches!(action, ScalingAction::ScaleUp(_)));
     }
-
     #[test]
     fn test_scale_down_decision() {
         let mut autoscaler = Autoscaler::new(AutoscalerConfig {
@@ -445,7 +380,6 @@ use std::collections::{HashMap, BTreeMap};
             min_nodes: 2,
             max_nodes: 10,
         });
-
         let low_load_metrics: _ = ClusterMetrics {
             cpu_utilization: 0.20,
             memory_utilization: 0.25,
@@ -456,11 +390,9 @@ use std::collections::{HashMap, BTreeMap};
             error_rate: 0.0,
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
-
         let action: _ = autoscaler.evaluate_scaling(&low_load_metrics);
         assert!(matches!(action, ScalingAction::ScaleDown(_)));
     }
-
     #[test]
     fn test_no_scaling_decision() {
         let mut autoscaler = Autoscaler::new(AutoscalerConfig {
@@ -470,7 +402,6 @@ use std::collections::{HashMap, BTreeMap};
             min_nodes: 2,
             max_nodes: 10,
         });
-
         let normal_load_metrics: _ = ClusterMetrics {
             cpu_utilization: 0.50,
             memory_utilization: 0.55,
@@ -481,11 +412,9 @@ use std::collections::{HashMap, BTreeMap};
             error_rate: 0.01,
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
-
         let action: _ = autoscaler.evaluate_scaling(&normal_load_metrics);
         assert!(matches!(action, ScalingAction::NoOp));
     }
-
     #[test]
     fn test_cooldown_period() {
         let mut autoscaler = Autoscaler::new(AutoscalerConfig {
@@ -495,7 +424,6 @@ use std::collections::{HashMap, BTreeMap};
             min_nodes: 2,
             max_nodes: 10,
         });
-
         let high_load_metrics: _ = ClusterMetrics {
             cpu_utilization: 0.85,
             memory_utilization: 0.90,
@@ -506,11 +434,9 @@ use std::collections::{HashMap, BTreeMap};
             error_rate: 0.02,
             timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs(),
         };
-
         // 第一次扩容
         let action: _ = autoscaler.evaluate_scaling(&high_load_metrics);
         assert!(matches!(action, ScalingAction::ScaleUp(_)));
-
         // 冷却期间不应该再次扩容
         let action: _ = autoscaler.evaluate_scaling(&high_load_metrics);
         assert!(matches!(action, ScalingAction::NoOp));

@@ -1,9 +1,7 @@
 //! 智能性能分析器 - Stage 90 Phase 5.4
-
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
-
 /// 分析报告
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalysisReport {
@@ -14,7 +12,6 @@ pub struct AnalysisReport {
     pub insights: Vec<PerformanceInsight>,
     pub recommendations: Vec<String>,
 }
-
 /// 异常检测
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnomalyDetection {
@@ -24,7 +21,6 @@ pub struct AnomalyDetection {
     pub affected_metrics: Vec<String>,
     pub detected_at: DateTime<Utc>,
 }
-
 /// 异常类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum AnomalyType {
@@ -34,7 +30,6 @@ pub enum AnomalyType {
     PatternDeviation,
     ThresholdViolation,
 }
-
 /// 性能洞察
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceInsight {
@@ -44,7 +39,6 @@ pub struct PerformanceInsight {
     pub confidence: f64,
     pub impact_score: f64,
 }
-
 /// 洞察类型
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum InsightType {
@@ -54,35 +48,27 @@ pub enum InsightType {
     Reliability,
     Trend,
 }
-
 /// 智能性能分析器
 pub struct IntelligentAnalyzer {
     analysis_history: Vec<AnalysisReport>,
 }
-
 impl IntelligentAnalyzer {
     pub fn new() -> Self {
         Self {
             analysis_history: Vec::new(),
         }
     }
-
     pub fn analyze(&mut self, metrics: &[crate::ai_monitor::PerformanceMetrics]) -> AnalysisReport {
         let report_id: _ = format!("report_{}", Utc::now().timestamp());
         let timestamp: _ = Utc::now();
-
         // 检测异常
         let anomalies: _ = self.detect_anomalies(metrics);
-
         // 生成洞察
         let insights: _ = self.generate_insights(metrics);
-
         // 计算健康分数
         let overall_health_score: _ = self.calculate_health_score(metrics, &anomalies);
-
         // 生成建议
         let recommendations: _ = self.generate_recommendations(&anomalies, &insights);
-
         let report: _ = AnalysisReport {
             report_id,
             timestamp,
@@ -91,32 +77,26 @@ impl IntelligentAnalyzer {
             insights,
             recommendations,
         };
-
         self.analysis_history.push(report.clone());
         report
     }
-
     fn detect_anomalies(&self, metrics: &[crate::ai_monitor::PerformanceMetrics]) -> Vec<AnomalyDetection> {
         let mut anomalies = Vec::new();
-
         // 按指标类型分组
         let mut grouped: HashMap<String, Vec<_> = HashMap::new();
         for metric in metrics {
             let key: _ = format!("{:?}", metric.metric_type));
             grouped.entry(key).or_insert_with(Vec::new).push(metric);
         }
-
         for (metric_type, metric_list) in grouped {
             if metric_list.len() < 2 {
                 continue;
             }
-
             // 计算平均值和标准差
             let values: Vec<f64> = metric_list.iter().map(|m| m.value).collect();
             let mean: _ = values.iter().sum::<f64>() / values.len() as f64;
             let variance: _ = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
             let std_dev: _ = variance.sqrt();
-
             // 检测尖峰
             let max_value: _ = values.iter().max().unwrap();
             if max_value > mean + 2.0 * std_dev {
@@ -128,13 +108,11 @@ impl IntelligentAnalyzer {
                     detected_at: Utc::now(),
                 });
             }
-
             // 检测趋势变化
             if metric_list.len() > 5 {
                 let recent_avg: f64 = values.iter().rev().take(3).sum::<f64>() / 3.0;
                 let older_avg: f64 = values.iter().take(3).sum::<f64>() / 3.0;
                 let change_ratio: _ = (recent_avg - older_avg) / older_avg;
-
                 if change_ratio.abs() > 0.5 {
                     anomalies.push(AnomalyDetection {
                         anomaly_type: AnomalyType::TrendChange,
@@ -146,13 +124,10 @@ impl IntelligentAnalyzer {
                 }
             }
         }
-
         anomalies
     }
-
     fn generate_insights(&self, metrics: &[crate::ai_monitor::PerformanceMetrics]) -> Vec<PerformanceInsight> {
         let mut insights = Vec::new();
-
         // 分析 CPU 使用率
         if let Some(cpu_metrics) = metrics.iter().find(|m| matches!(m.metric_type, crate::ai_monitor::MetricType::CpuUsage)) {
             if cpu_metrics.value > 80.0 {
@@ -165,7 +140,6 @@ impl IntelligentAnalyzer {
                 });
             }
         }
-
         // 分析响应时间
         if let Some(response_metrics) = metrics.iter().find(|m| matches!(m.metric_type, crate::ai_monitor::MetricType::ResponseTime)) {
             if response_metrics.value > 100.0 {
@@ -178,7 +152,6 @@ impl IntelligentAnalyzer {
                 });
             }
         }
-
         // 分析吞吐量
         if let Some(throughput_metrics) = metrics.iter().find(|m| matches!(m.metric_type, crate::ai_monitor::MetricType::Throughput)) {
             if throughput_metrics.value < 500.0 {
@@ -191,10 +164,8 @@ impl IntelligentAnalyzer {
                 });
             }
         }
-
         insights
     }
-
     fn calculate_health_score(
         &self,
         metrics: &[crate::ai_monitor::PerformanceMetrics],
@@ -203,11 +174,9 @@ impl IntelligentAnalyzer {
         if metrics.is_empty() {
             return 0.0;
         }
-
         // 基于指标值计算健康分数
         let mut total_score = 0.0;
         let mut count = 0.0;
-
         for metric in metrics {
             let score: _ = match metric.metric_type {
                 crate::ai_monitor::MetricType::CpuUsage => {
@@ -230,26 +199,20 @@ impl IntelligentAnalyzer {
                 }
                 _ => 80.0, // 默认分数
             };
-
             total_score += score;
             count += 1.0;
         }
-
         let base_score: _ = if count > 0 { total_score / count } else { 0.0 };
-
         // 根据异常数量降低分数
         let anomaly_penalty: _ = (anomalies.len() as f64 * 5.0).min(30.0);
-
         (base_score - anomaly_penalty).max(0.0).min(100.0)
     }
-
     fn generate_recommendations(
         &self,
         anomalies: &[AnomalyDetection],
         insights: &[PerformanceInsight],
     ) -> Vec<String> {
         let mut recommendations = Vec::new();
-
         // 基于异常生成建议
         for anomaly in anomalies {
             match anomaly.anomaly_type {
@@ -262,7 +225,6 @@ impl IntelligentAnalyzer {
                 _ => {}
             }
         }
-
         // 基于洞察生成建议
         for insight in insights {
             match insight.insight_type {
@@ -275,21 +237,17 @@ impl IntelligentAnalyzer {
                 _ => {}
             }
         }
-
         recommendations
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[test]
     fn test_intelligent_analyzer() {
         let mut analyzer = IntelligentAnalyzer::new();
-
         let metrics: _ = vec![
             crate::ai_monitor::PerformanceMetrics {
                 timestamp: Utc::now(),
@@ -306,7 +264,6 @@ use std::collections::{HashMap, BTreeMap};
                 source: "app".to_string(),
             },
         ];
-
         let report: _ = analyzer.analyze(&metrics);
         assert!(report.overall_health_score >= 0.0);
         assert!(report.overall_health_score <= 100.0);

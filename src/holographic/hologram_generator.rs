@@ -1,7 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 // 全息图像生成器
-
 /// 全息图类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HologramType {
@@ -14,13 +13,11 @@ pub enum HologramType {
     /// 彩色全息
     Color,
 }
-
 impl Default for HologramType {
     fn default() -> Self {
         Self::Phase
     }
 }
-
 /// 全息编码方式
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HologramEncoding {
@@ -33,13 +30,11 @@ pub enum HologramEncoding {
     /// 误差扩散
     ErrorDiffusion,
 }
-
 impl Default for HologramEncoding {
     fn default() -> Self {
         Self::MultiLevel
     }
 }
-
 /// 生成器配置
 #[derive(Debug, Clone)]
 pub struct GeneratorConfig {
@@ -50,7 +45,6 @@ pub struct GeneratorConfig {
     /// 优化迭代次数
     pub optimization_iterations: u32,
 }
-
 impl Default for GeneratorConfig {
     fn default() -> Self {
         Self {
@@ -60,24 +54,20 @@ impl Default for GeneratorConfig {
         }
     }
 }
-
 /// 全息图生成器
 pub struct HologramGenerator {
     /// 配置
     config: GeneratorConfig,
 }
-
 impl HologramGenerator {
     /// 创建全息图生成器
     pub fn new(config: GeneratorConfig) -> Result<Self, GeneratorError> {
         Ok(Self { config })
     }
-
     /// 从点云生成全息图
     pub fn from_point_cloud(&self, points: &[[f32; 3]], resolution: (u32, u32)) -> Result<Hologram, GeneratorError> {
         let (width, height) = resolution;
         let data: _ = vec![0u8; (width * height) as usize];
-
         Ok(Hologram {
             width,
             height,
@@ -86,11 +76,9 @@ impl HologramGenerator {
             point_count: points.len(),
         })
     }
-
     /// 从深度图生成全息图
     pub fn from_depth_map(&self, depth: &[f32], width: u32, height: u32) -> Result<Hologram, GeneratorError> {
         let data: _ = vec![0u8; (width * height) as usize];
-
         Ok(Hologram {
             width,
             height,
@@ -99,12 +87,10 @@ impl HologramGenerator {
             point_count: depth.len(),
         })
     }
-
     /// 从 3D 模型生成全息图
     pub fn from_mesh(&self, vertices: &[[f32; 3]], indices: &[u32], resolution: (u32, u32)) -> Result<Hologram, GeneratorError> {
         let (width, height) = resolution;
         let data: _ = vec![0u8; (width * height) as usize];
-
         Ok(Hologram {
             width,
             height,
@@ -113,13 +99,11 @@ impl HologramGenerator {
             point_count: vertices.len(),
         })
     }
-
     /// 获取配置
     pub fn config(&self) -> &GeneratorConfig {
         &self.config
     }
 }
-
 /// 全息图数据
 #[derive(Debug, Clone)]
 pub struct Hologram {
@@ -134,7 +118,6 @@ pub struct Hologram {
     /// 点数量
     pub point_count: usize,
 }
-
 /// 生成器错误
 #[derive(Debug, Clone)]
 pub enum GeneratorError {
@@ -145,7 +128,6 @@ pub enum GeneratorError {
     /// 输入无效
     InvalidInput(String),
 }
-
 impl std::fmt::Display for GeneratorError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -155,5 +137,4 @@ impl std::fmt::Display for GeneratorError {
         }
     }
 }
-
 impl std::error::Error for GeneratorError {}

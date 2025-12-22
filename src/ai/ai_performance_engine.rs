@@ -1,7 +1,6 @@
 //! AI 性能引擎
 //! 基于机器学习的智能性能优化系统
 //! 提供性能预测、自动调优和自适应调度功能
-
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -9,7 +8,6 @@ use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
 use crate::ai::tensor_optimizer::TensorOptimizer;
 use crate::ai::performance_predictor::PerformancePredictor;
-
 /// 性能指标
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
@@ -32,7 +30,6 @@ pub struct PerformanceMetrics {
     /// 时间戳
     pub timestamp: u64,
 }
-
 /// 性能预测结果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformancePrediction {
@@ -47,7 +44,6 @@ pub struct PerformancePrediction {
     /// 建议的优化参数
     pub optimization_suggestions: Vec<OptimizationSuggestion>,
 }
-
 /// 优化建议
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationSuggestion {
@@ -62,7 +58,6 @@ pub struct OptimizationSuggestion {
     /// 优化类型
     pub optimization_type: OptimizationType,
 }
-
 /// 优化类型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OptimizationType {
@@ -77,7 +72,6 @@ pub enum OptimizationType {
     /// 缓存优化
     Cache,
 }
-
 /// AI 性能引擎配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiPerformanceEngineConfig {
@@ -96,7 +90,6 @@ pub struct AiPerformanceEngineConfig {
     /// 是否启用在线学习
     pub enable_online_learning: bool,
 }
-
 impl Default for AiPerformanceEngineConfig {
     fn default() -> Self {
         Self {
@@ -110,7 +103,6 @@ impl Default for AiPerformanceEngineConfig {
         }
     }
 }
-
 /// AI 性能引擎
 pub struct AiPerformanceEngine {
     /// 配置
@@ -128,7 +120,6 @@ pub struct AiPerformanceEngine {
     /// 训练进度
     training_progress: Arc<Mutex<f64>>,
 }
-
 impl AiPerformanceEngine {
     /// 创建新的 AI 性能引擎
     pub fn new(config: AiPerformanceEngineConfig) -> Self {
@@ -142,31 +133,25 @@ impl AiPerformanceEngine {
             training_progress: Arc::new(Mutex::new(0.0)),
         }
     }
-
     /// 记录性能指标
     pub async fn record_metrics(&self, metrics: PerformanceMetrics) {
         let mut history = self.metrics_history.write().await;
         history.push_back(metrics);
-
         // 保持窗口大小
         if history.len() > self.config.prediction_window {
             history.pop_front();
         }
-
         // 在线学习
         if self.config.enable_online_learning {
             self.train_online().await;
         }
     }
-
     /// 预测性能
     pub async fn predict_performance(&self) -> Result<PerformancePrediction, Box<dyn std::error::Error>> {
         let history: _ = self.metrics_history.read().await;
-
         if history.len() < 10 {
             return Err("历史数据不足，无法进行预测".into());
         }
-
         // 检查缓存
         let cache_key: _ = self.generate_cache_key(&history);
         let cache: _ = self.prediction_cache.lock().unwrap();
@@ -174,85 +159,66 @@ impl AiPerformanceEngine {
             return Ok(prediction.clone());
         }
         drop(cache);
-
         // 使用预测器进行预测
         let predictor: _ = self.predictor.lock().unwrap();
         let history_vec: Vec<PerformanceMetrics> = history.iter().cloned().collect();
         let prediction: _ = predictor.predict(&history_vec)?;
-
         // 缓存预测结果
         let mut cache = self.prediction_cache.lock().unwrap();
         cache.insert(cache_key, prediction.clone());
-
         Ok(prediction)
     }
-
     /// 自动调优
     pub async fn auto_tune(&self) -> Result<Vec<OptimizationSuggestion>, Box<dyn std::error::Error>> {
         let prediction: _ = self.predict_performance().await?;
-
         // 根据预测结果生成优化建议
         let mut suggestions = prediction.optimization_suggestions;
-
         // 基于历史数据进行额外优化
         let history: _ = self.metrics_history.read().await;
         let additional_suggestions: _ = self.generate_suggestions_from_history(&history)?;
         suggestions.extend(additional_suggestions);
-
         // 应用优化建议
         if !suggestions.is_empty() {
             self.apply_optimizations(&suggestions).await?;
         }
-
         Ok(suggestions)
     }
-
     /// 获取当前性能指标
     pub async fn get_current_metrics(&self) -> Option<PerformanceMetrics> {
         let history: _ = self.metrics_history.read().await;
         history.back().cloned()
     }
-
     /// 获取性能趋势
     pub async fn get_performance_trend(&self, duration: Duration) -> Vec<PerformanceMetrics> {
         let history: _ = self.metrics_history.read().await;
         let cutoff: _ = chrono::Utc::now().timestamp() as u64 - duration.as_secs();
-
         history
             .iter()
             .filter(|m| m.timestamp >= cutoff)
             .cloned()
             .collect()
     }
-
     /// 检查性能回归
     pub async fn check_performance_regression(&self, baseline: &[PerformanceMetrics]) -> bool {
         let current: _ = self.get_performance_trend(Duration::from_secs(60)).await;
-
         if current.is_empty() || baseline.is_empty() {
             return false;
         }
-
         let current_avg_latency: f64 = current.iter().map(|m| m.latency).sum::<f64>() / current.len() as f64;
         let baseline_avg_latency: f64 = baseline.iter().map(|m| m.latency).sum::<f64>() / baseline.len() as f64;
-
         // 如果当前延迟比基线高 20%，则认为发生回归
         current_avg_latency > baseline_avg_latency * 1.2
     }
-
     /// 训练模型（在线学习）
     async fn train_online(&self) {
         if *self.is_training.lock().unwrap() {
             return;
         }
-
         let history: _ = self.metrics_history.read().await;
         if history.len() < self.config.batch_size {
             return;
         }
-
         *self.is_training.lock().unwrap() = true;
-
         // TODO: 修复异步训练的 Send 问题
         // 异步训练
         // let predictor: _ = Arc::clone(&self.predictor);
@@ -260,49 +226,41 @@ impl AiPerformanceEngine {
         // let progress: _ = Arc::clone(&self.training_progress);
         // let is_training: _ = Arc::clone(&self.is_training);
         // let history_data: _ = history.iter().cloned().collect::<Vec<_>();
-
         // tokio::spawn(async move {
         //     // 训练预测器
         //     {
-        //         let mut predictor = predictor..lock().unwrap();
+        //         let mut predictor = predictor.lock().unwrap();
         //         predictor.train(&history_data).await;
         //     }
-
         //     // 训练张量优化器
         //     {
         //         let _optimizer_guard: _ = tensor_optimizer.lock().unwrap();
         //         // 简化的训练过程（实际实现中会使用真实数据）
         //         // TODO: 使用真实的历史数据进行训练
         //     }
-
         //     *progress.lock().unwrap() = 1.0;
         //     *is_training.lock().unwrap() = false;
         // });
     }
-
     /// 生成缓存键
     fn generate_cache_key(&self, history: &VecDeque<PerformanceMetrics>) -> String {
         // 简化的缓存键生成：使用最近 10 个指标的特征
         let recent_metrics: Vec<_> = history.iter().rev().take(10).collect();
         format!("{:?}", recent_metrics)
     }
-
     /// 从历史数据生成优化建议
     fn generate_suggestions_from_history(
         &self,
         history: &VecDeque<PerformanceMetrics>,
     ) -> Result<Vec<OptimizationSuggestion>, Box<dyn std::error::Error>> {
         let mut suggestions = Vec::new();
-
         if history.len() < 10 {
             return Ok(suggestions);
         }
-
         // 计算平均指标
         let avg_cpu: _ = history.iter().map(|m| m.cpu_usage).sum::<f64>() / history.len() as f64;
         let avg_memory: _ = history.iter().map(|m| m.memory_usage).sum::<f64>() / history.len() as f64;
         let avg_gc_time: _ = history.iter().map(|m| m.gc_time).sum::<f64>() / history.len() as f64;
-
         // 基于 CPU 使用率生成建议
         if avg_cpu > 80.0 {
             suggestions.push(OptimizationSuggestion {
@@ -321,7 +279,6 @@ impl AiPerformanceEngine {
                 optimization_type: OptimizationType::Concurrency,
             });
         }
-
         // 基于内存使用生成建议
         if avg_memory > 1000.0 {
             suggestions.push(OptimizationSuggestion {
@@ -332,7 +289,6 @@ impl AiPerformanceEngine {
                 optimization_type: OptimizationType::Memory,
             });
         }
-
         // 基于 GC 时间生成建议
         if avg_gc_time > 10.0 {
             suggestions.push(OptimizationSuggestion {
@@ -343,10 +299,8 @@ impl AiPerformanceEngine {
                 optimization_type: OptimizationType::Memory,
             });
         }
-
         Ok(suggestions)
     }
-
     /// 应用优化建议
     async fn apply_optimizations(&self, suggestions: &[OptimizationSuggestion]) -> Result<(), Box<dyn std::error::Error>> {
         for suggestion in suggestions {
@@ -357,37 +311,30 @@ impl AiPerformanceEngine {
                 suggestion.current_value,
                 suggestion.expected_improvement
             );
-
             // TODO: 实际应用优化参数
             // 这里应该调用配置管理器的更新方法
         }
-
         Ok(())
     }
-
     /// 获取训练进度
     pub fn get_training_progress(&self) -> f64 {
         *self.training_progress.lock().unwrap()
     }
-
     /// 重置历史数据
     pub async fn reset_history(&self) {
         let mut history = self.metrics_history.write().await;
         history.clear();
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-
     #[tokio::test]
     async fn test_record_and_predict() {
         let config: _ = AiPerformanceEngineConfig::default();
         let engine: _ = AiPerformanceEngine::new(config);
-
         // 记录一些指标
         for i in 0..20 {
             let metrics: _ = PerformanceMetrics {
@@ -403,19 +350,15 @@ use std::collections::{HashMap, BTreeMap};
             };
             engine.record_metrics(metrics).await;
         }
-
         // 预测性能
         let prediction: _ = engine.predict_performance().await.unwrap();
         println!("预测结果: {:?}", prediction);
-
         assert!(prediction.confidence > 0.0);
     }
-
     #[tokio::test]
     async fn test_auto_tune() {
         let config: _ = AiPerformanceEngineConfig::default();
         let engine: _ = AiPerformanceEngine::new(config);
-
         // 记录高 CPU 使用率的指标
         for _ in 0..20 {
             let metrics: _ = PerformanceMetrics {
@@ -431,11 +374,9 @@ use std::collections::{HashMap, BTreeMap};
             };
             engine.record_metrics(metrics).await;
         }
-
         // 自动调优
         let suggestions: _ = engine.auto_tune().await.unwrap();
         println!("优化建议: {:?}", suggestions);
-
         assert!(!suggestions.is_empty());
     }
 }
