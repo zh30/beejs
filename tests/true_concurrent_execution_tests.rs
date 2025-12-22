@@ -2,7 +2,7 @@
 //! 测试目标：支持 10000+ 并发脚本，吞吐量 50,000 ops/sec
 
 use std::sync::atomic::{Ordering};
-use std::time{Duration, Instant};
+use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
 #[cfg(test)]
@@ -49,7 +49,7 @@ mod tests {
     /// 测试 1: 并发运行时池基本功能
     #[tokio::test]
     async fn test_concurrent_runtime_pool_basic() {
-        use beejs{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
+        use beejs::{ConcurrentConfig, ConcurrentRuntimePool, is_v8_available};
 
         // 检查V8是否可用
         if !is_v8_available() {
@@ -92,7 +92,7 @@ mod tests {
     /// 测试 2: 工作窃取调度器基本功能
     #[tokio::test]
     async fn test_work_stealing_scheduler_basic() {
-        use beejs{WorkStealingScheduler, Task};
+        use beejs::{WorkStealingScheduler, Task};
 
         // 创建工作窃取调度器（4个线程）
         let scheduler: _ = WorkStealingScheduler::new(4);
@@ -159,7 +159,7 @@ mod tests {
     /// 测试 3: 批处理器基本功能
     #[tokio::test]
     async fn test_batch_executor_basic() {
-        use beejs{BatchExecutor, ConcurrentConfig, is_v8_available};
+        use beejs::{BatchExecutor, ConcurrentConfig, is_v8_available};
 
         // 检查V8是否可用
         if !is_v8_available() {
@@ -195,7 +195,7 @@ mod tests {
     /// 测试 4: 1000 脚本并发执行
     #[tokio::test]
     async fn test_concurrent_execution_1000_scripts() {
-        use beejs{BatchExecutor, ConcurrentConfig, is_v8_available};
+        use beejs::{BatchExecutor, ConcurrentConfig, is_v8_available};
 
         // 检查V8是否可用
         if !is_v8_available() {
@@ -389,7 +389,7 @@ mod tests {
     /// 测试 10: 统计信息准确性
     #[tokio::test]
     async fn test_stats_accuracy() {
-        use beejs{BatchExecutor, ConcurrentConfig, is_v8_available};
+        use beejs::{BatchExecutor, ConcurrentConfig, is_v8_available};
 
         // 检查V8是否可用
         if !is_v8_available() {
@@ -438,7 +438,7 @@ mod tests {
     /// 测试 11: 错误处理和恢复
     #[tokio::test]
     async fn test_error_handling_and_recovery() {
-        use beejs{BatchExecutor, ConcurrentConfig, is_v8_available};
+        use beejs::{BatchExecutor, ConcurrentConfig, is_v8_available};
 
         // 检查V8是否可用
         if !is_v8_available() {
@@ -492,7 +492,7 @@ mod tests {
     /// 测试 12: 内存泄漏检测
     #[tokio::test]
     async fn test_memory_leak_detection() {
-        use beejs{BatchExecutor, ConcurrentConfig, is_v8_available};
+        use beejs::{BatchExecutor, ConcurrentConfig, is_v8_available};
 
         // 检查V8是否可用
         if !is_v8_available() {
@@ -582,7 +582,7 @@ mod tests {
     /// 测试 14: 性能基准 - 吞吐量目标
     #[tokio::test]
     async fn test_throughput_benchmark() {
-        use beejs{BatchExecutor, ConcurrentConfig, is_v8_available};
+        use beejs::{BatchExecutor, ConcurrentConfig, is_v8_available};
 
         // 检查V8是否可用
         if !is_v8_available() {
@@ -630,9 +630,9 @@ mod tests {
     /// 测试 15: 线性扩展性
     #[tokio::test]
     async fn test_linear_scalability() {
-        use beejs{BatchExecutor, ConcurrentConfig, is_v8_available};
+        use beejs::{BatchExecutor, ConcurrentConfig, is_v8_available};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
         // 检查V8是否可用
         if !is_v8_available() {

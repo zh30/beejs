@@ -1,7 +1,7 @@
 //! Stage 29.7: 分布式监控与调试测试套件
 //! 测试分布式指标收集、链路追踪和集群可视化控制台功能
 
-use beejs::distributed::distributed_metrics{
+use beejs::distributed::distributed_metrics::{
     MetricsConfig,
     MetricType,
     MetricValue,
@@ -11,14 +11,14 @@ use beejs::distributed::distributed_metrics{
     NodeMetrics,
     SystemMetrics,
 };
-use beejs::distributed::distributed_tracer{
+use beejs::distributed::distributed_tracer::{
     TracingConfig,
     TraceEvent,
     TraceEventType,
     TraceContext,
     PerformanceStats,
 };
-use beejs::distributed::cluster_console{
+use beejs::distributed::cluster_console::{
     ConsoleConfig,
     ClusterOverview,
     NodeStatusDetail,
@@ -34,7 +34,7 @@ use beejs::distributed::cluster_console{
 use std::collections::HashMap;
 use std::time::Duration;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 // ========== 分布式指标测试 ==========
 

@@ -1,14 +1,14 @@
 //! Stage 21.1: V8 Snapshot Production Environment Tests
 //! Tests to verify V8 snapshot is properly enabled and working in production builds
 
-use beejs{v8_snapshot::SnapshotManager, initialize_v8};
+use beejs::{v8_snapshot::SnapshotManager, initialize_v8};
 use std::time::Instant;
 
 #[cfg(test)]
 mod stage_21_v8_snapshot_tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     // Initialize V8 before running tests
     fn init_v8() {

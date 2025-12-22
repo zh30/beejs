@@ -3,13 +3,13 @@
 
 #[cfg(test)]
 mod tests {
-    use beejs{
+    use beejs::{
         WorkStealingScheduler, Task
     };
     use std::sync::Arc;
     use std::time::Duration;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_adaptive_work_stealing() {

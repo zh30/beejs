@@ -1,4 +1,4 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 81 AI 代码生成助手测试套件
 //! 测试 AI 驱动的代码生成、补全和重构功能
 
@@ -8,7 +8,7 @@ mod tests {
     use std::sync::Arc;
     use tokio::runtime::Runtime;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     // 模拟 AI 代码生成器的结构
     pub struct MockCodeGenerator {

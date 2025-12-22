@@ -7,7 +7,7 @@
 //! - 压力测试：稳定性和可靠性
 
 use std::sync::Arc;
-use std::time{Duration, Instant};
+use std::time::{Duration, Instant};
 use tempfile::TempDir;
 use tokio::time::sleep;
 
@@ -271,7 +271,7 @@ mod tests {
         // 对象操作性能测试 - 目标: > 15M ops/sec
         use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
         let start: _ = Instant::now();
         let iterations: _ = 500_000;

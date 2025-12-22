@@ -1,15 +1,15 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 // Stage 71: V8 快照预热系统测试套件
 // 测试 V8 快照生成、加载和预热功能
 
 #[cfg(test)]
 mod v8_snapshot_tests {
     use beejs::runtime_lite::RuntimeLite;
-    use beejs::v8_snapshot{V8Snapshot, SnapshotManager, SnapshotConfig};
-    use beejs::startup_optimizer{MemoryPreallocator, JITPrecompiler};
+    use beejs::v8_snapshot::{V8Snapshot, SnapshotManager, SnapshotConfig};
+    use beejs::startup_optimizer::{MemoryPreallocator, JITPrecompiler};
     use std::sync::Arc;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_v8_snapshot_creation() {

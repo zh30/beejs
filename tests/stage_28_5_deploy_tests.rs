@@ -1,4 +1,4 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 28.5: 部署与打包测试套件
 //!
 //! 测试覆盖:
@@ -9,7 +9,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! - 部署配置生成
 
 use std::collections::HashMap;
-use std::path{Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 // =============================================================================
 // 单文件可执行打包
@@ -328,7 +328,7 @@ services:
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_single_file_bundler_creation() {

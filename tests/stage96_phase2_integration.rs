@@ -1,9 +1,9 @@
 //! Stage 96 Phase 2 Integration Tests
 //! Tests the integration of Kubernetes Operator, Multi-tenancy, and Monitoring
 
-use enterprise{
+use enterprise::{
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
     Operator, OperatorConfig, OperatorEvent,
     TenancyManager, TenantId, TenantStatus, ResourceQuota,
     MonitoringManager, MonitoringConfig, ClusterMetrics,

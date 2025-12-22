@@ -6,7 +6,7 @@
 mod tests {
     use std::ptr::NonNull;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_nonnull_creation() {

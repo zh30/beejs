@@ -9,7 +9,7 @@
 //! - 回归检测
 //! - 性能监控
 
-use beejs::benchmark{
+use beejs::benchmark::{
     BenchmarkEngine, BenchmarkConfig, TestSuite, BenchmarkTest, WorkloadProfile,
     RuntimeComparison, WorkloadExecutor, WorkloadType, WorkloadResult,
     RuntimeDetector, ProcessLauncher, ProcessConfig, ComparisonReport,
@@ -21,7 +21,7 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 use std::time::Duration;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_benchmark_engine_creation() {

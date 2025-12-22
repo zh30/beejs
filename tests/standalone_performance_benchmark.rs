@@ -3,7 +3,7 @@
 //!
 //! 这个测试文件不依赖 Beejs 的核心模块，可以独立运行
 
-use std::time{Duration, Instant};
+use std::time::{Duration, Instant};
 
 /// 简单的性能基准测试
 #[derive(Debug)]
@@ -64,7 +64,7 @@ impl Benchmark {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_benchmark_creation() {

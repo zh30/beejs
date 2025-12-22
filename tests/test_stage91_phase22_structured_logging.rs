@@ -8,13 +8,13 @@
 //! - 异步日志写入
 
 use beejs::observability::StructuredLogger;
-use serde_json{json, Value};
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::Level;
-use tokio::time{sleep, Duration};
+use tokio::time::{sleep, Duration};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_structured_logger_creation() {

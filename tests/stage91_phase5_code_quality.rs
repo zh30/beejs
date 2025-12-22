@@ -8,7 +8,7 @@ mod tests {
     use std::path::Path;
     use tempfile::TempDir;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// ========== 代码格式化测试 ==========
 

@@ -6,20 +6,20 @@
 //! - 端到端可观测性
 //! - 性能验证
 
-use beejs::observability{
+use beejs::observability::{
     ObservableSystem, ObservabilityConfig,
     PrometheusExporter, StructuredLogger,
     CustomMetrics
 };
 use beejs::performance_analyzer::PerformanceAnalyzer;
-use beejs::observability{JaegerTracer, JaegerSpan};
+use beejs::observability::{JaegerTracer, JaegerSpan};
 use serde_json::json;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::time::Duration;
-use tokio::time{sleep, Instant};
+use tokio::time::{sleep, Instant};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_full_observability_pipeline() {

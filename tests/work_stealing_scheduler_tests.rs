@@ -38,7 +38,7 @@ mod tests {
     /// 测试 1: 创建WorkStealingScheduler
     #[tokio::test]
     async fn test_work_stealing_scheduler_creation() {
-        use beejs{WorkStealingScheduler};
+        use beejs::{WorkStealingScheduler};
 
         // 创建4线程的调度器
         let scheduler: _ = WorkStealingScheduler::new(4);
@@ -61,7 +61,7 @@ mod tests {
     /// 测试 2: 本地任务提交和执行
     #[tokio::test]
     async fn test_local_task_submission_and_execution() {
-        use beejs{WorkStealingScheduler, Task};
+        use beejs::{WorkStealingScheduler, Task};
 
         // 创建2线程的调度器
         let scheduler: _ = WorkStealingScheduler::new(2);
@@ -105,7 +105,7 @@ mod tests {
     /// 测试 3: 工作窃取基本功能
     #[tokio::test]
     async fn test_work_stealing_basic() {
-        use beejs{WorkStealingScheduler, Task};
+        use beejs::{WorkStealingScheduler, Task};
 
         // 创建2线程的调度器
         let scheduler: _ = WorkStealingScheduler::new(2);
@@ -261,7 +261,7 @@ mod tests {
     /// 测试 4: 优先级任务调度
     #[tokio::test]
     async fn test_priority_task_scheduling() {
-        use beejs{WorkStealingScheduler, Task};
+        use beejs::{WorkStealingScheduler, Task};
 
         // 创建2线程的调度器
         let scheduler: _ = WorkStealingScheduler::new(2);
@@ -337,7 +337,7 @@ mod tests {
     async fn test_performance_benchmark() {
         use std::time::Instant;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
         // TODO: 性能基准测试
         // 预期:

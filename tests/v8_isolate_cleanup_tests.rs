@@ -1,4 +1,4 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! 测试 V8 Isolate 清理问题
 //! 验证 Isolate 在异常情况下的正确清理
 
@@ -10,7 +10,7 @@ mod tests {
     use std::io::Write;
     use tempfile::NamedTempFile;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试正常情况下的 Isolate 清理
     #[test]

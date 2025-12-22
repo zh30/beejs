@@ -17,7 +17,7 @@ impl MinimalRuntime {
         // Initialize V8 (idempotent - safe to call multiple times)
         crate::initialize_v8()?;
 
-        // Create a new isolate
+        // Create a new isolate with default parameters
         let isolate = v8::Isolate::new(v8::CreateParams::default());
 
         Ok(Self { isolate })
@@ -25,9 +25,10 @@ impl MinimalRuntime {
 
     /// Execute JavaScript code and return the result as a string
     pub fn execute_code(&mut self, code: &str) -> Result<String> {
+        // Create a handle scope for this execution
         let scope = &mut v8::HandleScope::new(&mut self.isolate);
 
-        // Create a context
+        // Create a context with default options
         let context = v8::Context::new(scope);
         let scope = &mut v8::ContextScope::new(scope, context);
 

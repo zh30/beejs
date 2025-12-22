@@ -1,7 +1,7 @@
 //! Stage 29.6: 故障检测与恢复测试套件
 //! 测试智能故障检测、自动恢复和容错机制
 
-use beejs::distributed::fault_tolerance{
+use beejs::distributed::fault_tolerance::{
     FaultDetectionConfig,
     FaultEvent,
     FaultSeverity,
@@ -12,11 +12,11 @@ use beejs::distributed::fault_tolerance{
 };
 use beejs::distributed::health_monitor::HealthMonitor;
 use beejs::distributed::node_manager::NodeManager;
-use beejs::distributed::service_discovery{ServiceDiscovery, DiscoveryConfig};
+use beejs::distributed::service_discovery::{ServiceDiscovery, DiscoveryConfig};
 use std::sync::Arc;
 use std::time::Duration;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_fault_detector_creation() {

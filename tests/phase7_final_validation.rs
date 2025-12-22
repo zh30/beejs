@@ -34,7 +34,7 @@ impl ValidationResult {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     // ============================================
     // 单一测试：综合性能验证

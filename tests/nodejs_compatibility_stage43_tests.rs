@@ -1,10 +1,10 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 43.0: Node.js 兼容性测试
 //! 验证新实现的Node.js API兼容性
 
 use beejs::Runtime;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 #[test]
 fn test_nodejs_crypto_basic() {

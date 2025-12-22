@@ -1,13 +1,13 @@
-use std::time{SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 //! Stage 78 Phase 3: 矩阵运算加速器测试
 //!
 //! 测试矩阵运算加速器的所有功能，包括 BLAS 优化、批处理和布局优化
 
 #[cfg(test)]
 mod matrix_accelerator_tests {
-    use beejs::ai{Matrix, MatrixAccelerator, MatrixPair, AiHardwareFeatures};
+    use beejs::ai::{Matrix, MatrixAccelerator, MatrixPair, AiHardwareFeatures};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试硬件特性检测
     #[test]

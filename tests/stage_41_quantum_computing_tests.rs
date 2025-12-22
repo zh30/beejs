@@ -7,7 +7,7 @@
 //! - 量子优化器 (Quantum Optimizer)
 //! - 经典-量子混合计算
 
-use beejs::quantum_computing{
+use beejs::quantum_computing::{
     Qubit, QubitState, QuantumGate, QuantumCircuit,
     QuantumOptimizer, HybridComputing, QuantumSimulator,
 };
@@ -473,7 +473,7 @@ fn test_quantum_simulation_performance() {
 fn test_circuit_execution_throughput() {
     use std::time::Instant;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     let iterations: _ = 100;
     let start: _ = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();

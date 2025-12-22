@@ -1,4 +1,4 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 56.2 - Script Executor Tests
 //! Tests for the script execution engine including:
 //! - File type detection
@@ -530,7 +530,7 @@ mod script_executor {
     use super::file_type_detection::FileType;
     use super::execution_context::ExecutionContext;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// Script executor configuration
     #[derive(Debug, Clone)]

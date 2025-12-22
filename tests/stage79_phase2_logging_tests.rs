@@ -6,7 +6,7 @@ mod tests {
     use std::collections::HashMap;
     use std::time::SystemTime;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     // 模拟 LogAggregator 结构体（待实现）
     #[allow(dead_code)]

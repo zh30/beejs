@@ -6,20 +6,20 @@
 //! - Performance profiling
 //! - Memory analysis
 
-use beejs::debugger::enhanced{
+use beejs::debugger::enhanced::{
     BreakpointManager, VariableInspector, CallStackView, Repl,
     DebuggerUI, Breakpoint, BreakpointCondition, Variable, Scope, StackFrame,
     HeapSnapshot, ObjectTracer, MemoryAnalyzer, HeapStats,
     PerformanceProfiler, HotReload, PerformanceMetrics,
 };
-use beejs::debugger::remote{
+use beejs::debugger::remote::{
     DebugServer, ConnectionManager, SessionManager,
     WebSocketHandler, DebugProtocol, SessionId, StateSync, DebugEvent, DebugState, StackFrameInfo,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tokio::time{Duration, sleep};
+use tokio::time::{Duration, sleep};
 
 /// Test breakpoint management
 #[tokio::test]
@@ -529,7 +529,7 @@ async fn test_debugger_error_handling() {
 async fn test_debug_adapter_protocol() {
     use beejs::tools::debug_adapter::protocol::dap::DebugAdapterProtocol;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     let dap: _ = DebugAdapterProtocol::new();
 

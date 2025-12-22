@@ -1,5 +1,5 @@
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 //! Standalone CI/CD Unit Tests
 //! Tests for GitOps workflows and CI/CD pipeline integration without cloud_native dependency
 

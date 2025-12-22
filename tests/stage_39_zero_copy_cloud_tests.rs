@@ -1,4 +1,4 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 /// Stage 39.0 网络零拷贝优化与云平台集成测试套件
 /// 测试零拷贝 I/O、云平台适配、智能负载均衡和分布式缓存
 
@@ -6,7 +6,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 mod stage_39_tests {
     use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试 1: 零拷贝文件传输 - sendfile 系统调用
     #[test]

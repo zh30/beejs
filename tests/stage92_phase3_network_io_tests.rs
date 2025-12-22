@@ -3,14 +3,14 @@
 
 #[cfg(test)]
 mod tests {
-    use super::super::network{
+    use super::super::network::{
         zero_copy_network::*, batch_io::*, async_zero_copy::*,
         network_buffer::*, io_uring::*, NetworkIoConfig
     };
-    use std::net{SocketAddr, IpAddr, Ipv4Addr};
+    use std::net::{SocketAddr, IpAddr, Ipv4Addr};
     use tokio;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试零拷贝网络套接字
     #[tokio::test]

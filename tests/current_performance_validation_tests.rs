@@ -220,9 +220,9 @@ mod tests {
     #[test]
     #[ignore = "V8 SnapshotCreator lifecycle issues in test environment"]
     fn test_v8_snapshot_availability() {
-        use beejs{initialize_v8, v8_snapshot::SnapshotManager};
+        use beejs::{initialize_v8, v8_snapshot::SnapshotManager};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
         // 确保V8已初始化
         initialize_v8();

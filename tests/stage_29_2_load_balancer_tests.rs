@@ -15,7 +15,7 @@ mod consistent_hashing_tests {
     #[test]
     fn test_hash_ring_initialization() {
         // 使用 beejs::distributed::load_balancer 模块
-        use beejs::distributed::load_balancer{ConsistentHashRing, HashRingConfig};
+        use beejs::distributed::load_balancer::{ConsistentHashRing, HashRingConfig};
 
         let config: _ = HashRingConfig {
             virtual_nodes: 150,
@@ -30,7 +30,7 @@ mod consistent_hashing_tests {
     /// 测试添加节点到哈希环
     #[test]
     fn test_add_nodes_to_ring() {
-        use beejs::distributed::load_balancer{ConsistentHashRing, HashRingConfig};
+        use beejs::distributed::load_balancer::{ConsistentHashRing, HashRingConfig};
 
         let config: _ = HashRingConfig::default();
         let mut ring = ConsistentHashRing::new(config);
@@ -46,7 +46,7 @@ mod consistent_hashing_tests {
     /// 测试键路由到节点
     #[test]
     fn test_key_routing() {
-        use beejs::distributed::load_balancer{ConsistentHashRing, HashRingConfig};
+        use beejs::distributed::load_balancer::{ConsistentHashRing, HashRingConfig};
 
         let config: _ = HashRingConfig::default();
         let mut ring = ConsistentHashRing::new(config);
@@ -65,7 +65,7 @@ mod consistent_hashing_tests {
     /// 测试节点移除后的最小迁移
     #[test]
     fn test_minimal_key_migration() {
-        use beejs::distributed::load_balancer{ConsistentHashRing, HashRingConfig};
+        use beejs::distributed::load_balancer::{ConsistentHashRing, HashRingConfig};
 
         let config: _ = HashRingConfig::default();
         let mut ring = ConsistentHashRing::new(config);
@@ -104,7 +104,7 @@ mod consistent_hashing_tests {
     /// 测试带权重的节点
     #[test]
     fn test_weighted_nodes() {
-        use beejs::distributed::load_balancer{ConsistentHashRing, HashRingConfig};
+        use beejs::distributed::load_balancer::{ConsistentHashRing, HashRingConfig};
 
         let config: _ = HashRingConfig::default();
         let mut ring = ConsistentHashRing::new(config);
@@ -133,7 +133,7 @@ mod consistent_hashing_tests {
     /// 测试副本节点获取
     #[test]
     fn test_replica_nodes() {
-        use beejs::distributed::load_balancer{ConsistentHashRing, HashRingConfig};
+        use beejs::distributed::load_balancer::{ConsistentHashRing, HashRingConfig};
 
         let config: _ = HashRingConfig::default();
         let mut ring = ConsistentHashRing::new(config);
@@ -161,7 +161,7 @@ mod intelligent_routing_tests {
     /// 测试基于负载的路由
     #[test]
     fn test_load_based_routing() {
-        use beejs::distributed::load_balancer{
+        use beejs::distributed::load_balancer::{
             IntelligentRouter, RouterConfig, RoutingStrategy,
         };
 
@@ -186,7 +186,7 @@ mod intelligent_routing_tests {
     /// 测试基于延迟的路由
     #[test]
     fn test_latency_based_routing() {
-        use beejs::distributed::load_balancer{
+        use beejs::distributed::load_balancer::{
             IntelligentRouter, RouterConfig, RoutingStrategy,
         };
 
@@ -209,7 +209,7 @@ mod intelligent_routing_tests {
     /// 测试多维度综合路由
     #[test]
     fn test_multi_dimensional_routing() {
-        use beejs::distributed::load_balancer{
+        use beejs::distributed::load_balancer::{
             IntelligentRouter, RouterConfig, RoutingStrategy,
         };
 
@@ -244,7 +244,7 @@ mod intelligent_routing_tests {
     /// 测试轮询路由
     #[test]
     fn test_round_robin_routing() {
-        use beejs::distributed::load_balancer{
+        use beejs::distributed::load_balancer::{
             IntelligentRouter, RouterConfig, RoutingStrategy,
         };
 
@@ -275,7 +275,7 @@ mod intelligent_routing_tests {
     /// 测试请求粘滞路由
     #[test]
     fn test_sticky_routing() {
-        use beejs::distributed::load_balancer{
+        use beejs::distributed::load_balancer::{
             IntelligentRouter, RouterConfig, RoutingStrategy,
         };
 
@@ -311,7 +311,7 @@ mod circuit_breaker_tests {
     /// 测试熔断器初始状态
     #[test]
     fn test_circuit_breaker_initial_state() {
-        use beejs::distributed::load_balancer{CircuitBreaker, CircuitBreakerConfig};
+        use beejs::distributed::load_balancer::{CircuitBreaker, CircuitBreakerConfig};
 
         let config: _ = CircuitBreakerConfig {
             failure_threshold: 5,
@@ -329,7 +329,7 @@ mod circuit_breaker_tests {
     /// 测试熔断器开启
     #[test]
     fn test_circuit_breaker_opens_on_failures() {
-        use beejs::distributed::load_balancer{CircuitBreaker, CircuitBreakerConfig};
+        use beejs::distributed::load_balancer::{CircuitBreaker, CircuitBreakerConfig};
 
         let config: _ = CircuitBreakerConfig {
             failure_threshold: 3,
@@ -352,7 +352,7 @@ mod circuit_breaker_tests {
     /// 测试熔断器半开状态
     #[test]
     fn test_circuit_breaker_half_open_state() {
-        use beejs::distributed::load_balancer{CircuitBreaker, CircuitBreakerConfig};
+        use beejs::distributed::load_balancer::{CircuitBreaker, CircuitBreakerConfig};
 
         let config: _ = CircuitBreakerConfig {
             failure_threshold: 2,
@@ -378,7 +378,7 @@ mod circuit_breaker_tests {
     /// 测试熔断器从半开恢复到关闭
     #[test]
     fn test_circuit_breaker_recovery() {
-        use beejs::distributed::load_balancer{CircuitBreaker, CircuitBreakerConfig};
+        use beejs::distributed::load_balancer::{CircuitBreaker, CircuitBreakerConfig};
 
         let config: _ = CircuitBreakerConfig {
             failure_threshold: 2,
@@ -407,7 +407,7 @@ mod circuit_breaker_tests {
     /// 测试熔断器从半开回到打开
     #[test]
     fn test_circuit_breaker_half_open_to_open() {
-        use beejs::distributed::load_balancer{CircuitBreaker, CircuitBreakerConfig};
+        use beejs::distributed::load_balancer::{CircuitBreaker, CircuitBreakerConfig};
 
         let config: _ = CircuitBreakerConfig {
             failure_threshold: 2,
@@ -435,7 +435,7 @@ mod circuit_breaker_tests {
     /// 测试熔断器统计信息
     #[test]
     fn test_circuit_breaker_statistics() {
-        use beejs::distributed::load_balancer{CircuitBreaker, CircuitBreakerConfig};
+        use beejs::distributed::load_balancer::{CircuitBreaker, CircuitBreakerConfig};
 
         let config: _ = CircuitBreakerConfig::default();
         let breaker: _ = CircuitBreaker::new("test-service", config);
@@ -454,7 +454,7 @@ mod circuit_breaker_tests {
     /// 测试多熔断器管理
     #[test]
     fn test_circuit_breaker_registry() {
-        use beejs::distributed::load_balancer{CircuitBreakerRegistry, CircuitBreakerConfig};
+        use beejs::distributed::load_balancer::{CircuitBreakerRegistry, CircuitBreakerConfig};
 
         let config: _ = CircuitBreakerConfig::default();
         let registry: _ = CircuitBreakerRegistry::new(config);
@@ -482,7 +482,7 @@ mod load_balancer_integration_tests {
     /// 测试完整的负载均衡器
     #[tokio::test]
     async fn test_load_balancer_full_integration() {
-        use beejs::distributed::load_balancer{
+        use beejs::distributed::load_balancer::{
             LoadBalancer, LoadBalancerConfig, RoutingStrategy,
         };
 
@@ -508,7 +508,7 @@ mod load_balancer_integration_tests {
     /// 测试负载均衡器请求路由
     #[tokio::test]
     async fn test_load_balancer_request_routing() {
-        use beejs::distributed::load_balancer{
+        use beejs::distributed::load_balancer::{
             LoadBalancer, LoadBalancerConfig, RoutingStrategy, Request,
         };
 
@@ -543,7 +543,7 @@ mod load_balancer_integration_tests {
     /// 测试负载均衡器故障转移
     #[tokio::test]
     async fn test_load_balancer_failover() {
-        use beejs::distributed::load_balancer{
+        use beejs::distributed::load_balancer::{
             LoadBalancer, LoadBalancerConfig, RoutingStrategy, Request,
         };
 
@@ -572,7 +572,7 @@ mod load_balancer_integration_tests {
     /// 测试负载均衡器动态扩缩容
     #[tokio::test]
     async fn test_load_balancer_dynamic_scaling() {
-        use beejs::distributed::load_balancer{
+        use beejs::distributed::load_balancer::{
             LoadBalancer, LoadBalancerConfig,
         };
 
@@ -600,7 +600,7 @@ mod load_balancer_integration_tests {
     /// 测试负载均衡器统计和监控
     #[tokio::test]
     async fn test_load_balancer_monitoring() {
-        use beejs::distributed::load_balancer{
+        use beejs::distributed::load_balancer::{
             LoadBalancer, LoadBalancerConfig, Request,
         };
 
@@ -632,7 +632,7 @@ mod performance_tests {
     /// 测试一致性哈希性能
     #[test]
     fn bench_consistent_hash_lookup() {
-        use beejs::distributed::load_balancer{ConsistentHashRing, HashRingConfig};
+        use beejs::distributed::load_balancer::{ConsistentHashRing, HashRingConfig};
 
         let config: _ = HashRingConfig::default();
         let mut ring = ConsistentHashRing::new(config);
@@ -660,7 +660,7 @@ mod performance_tests {
     /// 测试路由决策性能
     #[test]
     fn bench_routing_decision() {
-        use beejs::distributed::load_balancer{
+        use beejs::distributed::load_balancer::{
             IntelligentRouter, RouterConfig, RoutingStrategy,
         };
 
@@ -697,9 +697,9 @@ mod performance_tests {
     /// 测试熔断器性能
     #[test]
     fn bench_circuit_breaker_operations() {
-        use beejs::distributed::load_balancer{CircuitBreaker, CircuitBreakerConfig};
+        use beejs::distributed::load_balancer::{CircuitBreaker, CircuitBreakerConfig};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
         let config: _ = CircuitBreakerConfig {
             failure_threshold: 100,

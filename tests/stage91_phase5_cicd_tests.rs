@@ -7,7 +7,7 @@ mod tests {
     use std::fs;
     use std::path::Path;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// ========== CI/CD 配置测试 ==========
 

@@ -1,12 +1,12 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 78 Phase 4 测试套件 - 极致性能监控
 
 #[cfg(test)]
 mod tests {
-    use beejs::optimization::adaptive_optimizer{AdaptiveOptimizer, CodeFeatures, WasmCode};
-    use beejs::optimization::performance_monitor{PerformanceMonitor, AccessType, PerformanceMetrics};
+    use beejs::optimization::adaptive_optimizer::{AdaptiveOptimizer, CodeFeatures, WasmCode};
+    use beejs::optimization::performance_monitor::{PerformanceMonitor, AccessType, PerformanceMetrics};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_adaptive_optimizer_creation() {

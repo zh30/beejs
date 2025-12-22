@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use std::sync::Mutex;
+use std::io::{self, Write};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -46,12 +46,55 @@ fn main() -> Result<()> {
     // Handle subcommands
     match cli.command {
         Some(Command::Repl) => {
-            // Run REPL mode
-            let mut repl = beejs::cli::SimpleRepl::new()
-                .expect("Failed to create REPL");
-            if let Err(e) = repl.run() {
-                eprintln!("REPL error: {}", e);
-                std::process::exit(1);
+            // Run REPL mode using MinimalRuntime directly
+            println!("🐝 Beejs REPL - High-performance JavaScript runtime");
+            println!("Type JavaScript code and press Enter to execute.");
+            println!("Type '.exit' or Ctrl+C to quit.");
+            println!();
+
+            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                .expect("Failed to create runtime");
+            let mut buffer = String::new();
+
+            loop {
+                // Print prompt
+                print!("> ");
+                io::stdout().flush()?;
+
+                // Read input
+                buffer.clear();
+                match io::stdin().read_line(&mut buffer) {
+                    Ok(_) => {
+                        let input = buffer.trim();
+
+                        // Check for exit commands
+                        if input == ".exit" || input == ".quit" {
+                            println!("Goodbye! 👋");
+                            break;
+                        }
+
+                        // Skip empty lines
+                        if input.is_empty() {
+                            continue;
+                        }
+
+                        // Execute the code
+                        match runtime.execute_code(input) {
+                            Ok(result) => {
+                                if !result.trim().is_empty() {
+                                    println!("{}", result);
+                                }
+                            }
+                            Err(e) => {
+                                eprintln!("Error: {}", e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error reading input: {}", e);
+                        break;
+                    }
+                }
             }
             return Ok(());
         }

@@ -6,7 +6,7 @@ use beejs::distributed::*;
 use std::collections::HashMap;
 use std::time::Duration;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_service_discovery_gossip_protocol() {

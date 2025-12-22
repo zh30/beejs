@@ -82,7 +82,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_adaptive_gc_controller() {
-        use crate::memory_optimizer::adaptive_gc{AdaptiveGCController, GCEventType};
+        use crate::memory_optimizer::adaptive_gc::{AdaptiveGCController, GCEventType};
 
         let gc: _ = AdaptiveGCController::new();
 
@@ -108,7 +108,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_memory_pattern_analyzer() {
-        use crate::memory_optimizer::pattern_analyzer{
+        use crate::memory_optimizer::pattern_analyzer::{
             MemoryPatternAnalyzer, AllocationRecord, AllocationType,
         };
 
@@ -141,7 +141,7 @@ mod tests {
     #[tokio::test]
     async fn test_intelligent_task_scheduler() {
         use crate::scheduler::ai_scheduler::IntelligentTaskScheduler;
-        use crate::scheduler::ai_scheduler{Task, TaskPriority, ResourceRequirements, ExecutionStatus};
+        use crate::scheduler::ai_scheduler::{Task, TaskPriority, ResourceRequirements, ExecutionStatus};
 
         let scheduler: _ = IntelligentTaskScheduler::new();
 
@@ -184,7 +184,7 @@ mod tests {
 
     #[tokio::test]
     fn test_load_balancer() {
-        use crate::scheduler::load_balancer{LoadBalancer, BalancingStrategy, WorkerLoad};
+        use crate::scheduler::load_balancer::{LoadBalancer, BalancingStrategy, WorkerLoad};
 
         let mut lb = LoadBalancer::new(BalancingStrategy::AIAdaptive);
 
@@ -235,7 +235,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_realtime_performance_monitor() {
-        use crate::monitoring::ai_monitor{RealtimePerformanceMonitor, MetricType, AlertSeverity};
+        use crate::monitoring::ai_monitor::{RealtimePerformanceMonitor, MetricType, AlertSeverity};
 
         let monitor: _ = RealtimePerformanceMonitor::new();
 
@@ -286,7 +286,7 @@ mod tests {
     async fn test_auto_tuner() {
         use crate::monitoring::auto_tuner::AutoTuner;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
         let mut tuner = AutoTuner::new();
 

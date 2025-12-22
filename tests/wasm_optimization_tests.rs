@@ -1,4 +1,4 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 /// Stage 40.0 WebAssembly 极致优化测试套件
 /// 测试 WASM 执行性能、多线程、SIMD 优化、零拷贝加载和缓存
 
@@ -6,7 +6,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 mod wasm_optimization_tests {
     use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
     
     
 

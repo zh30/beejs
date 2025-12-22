@@ -1,15 +1,15 @@
-use std::time{SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 //! 启动时间基准测试
 //! 验证 Beejs 的真实启动时间性能
 
 use beejs::RuntimeLite;
-use std::time{Duration, Instant}, SystemTime, UNIX_EPOCH;
+use std::time::{Duration, Instant}, SystemTime, UNIX_EPOCH;
 
 #[cfg(test)]
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试 1: 空 RuntimeLite 创建时间
     #[test]

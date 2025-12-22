@@ -1,8 +1,8 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use beejs::runtime_lite::cache::MultiLevelCache;
-use tokio::time{Duration, Instant};
+use tokio::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_l1_zero_copy_cache_basic() {

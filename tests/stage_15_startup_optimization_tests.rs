@@ -3,10 +3,10 @@
 
 #[cfg(test)]
 mod startup_optimization_tests {
-    use beejs{RuntimeLite, profiler::{Profiler, ProfilingMode}};
+    use beejs::{RuntimeLite, profiler::{Profiler, ProfilingMode}};
     use std::time::Duration;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试 V8 预初始化优化效果
     /// 预期：预初始化后，V8 创建时间应该显著减少

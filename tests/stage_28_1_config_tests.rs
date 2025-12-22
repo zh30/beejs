@@ -461,7 +461,7 @@ fn test_stage_28_1_config_manager_integration() {
 fn test_stage_28_1_config_performance() {
     use std::time::Instant;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     let mut config = ConfigManager::new();
 

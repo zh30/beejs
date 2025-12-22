@@ -31,6 +31,8 @@ pub mod repl_highlighter;
 pub mod repl_enhanced;
 // Stage 91 Phase 4.3: 快速启动模板系统
 pub mod template_system;
+// Stage v0.1.3: Simple REPL using MinimalRuntime
+pub mod repl_simple;
 
 pub use script_executor::{
     FileType, ModuleSystem, ExecutionContext, ExecutorConfig, ScriptExecutor,
@@ -44,3 +46,5 @@ pub use template_system::{
     DirectoryGenerator, DirectoryStructure, FileEntry, DependencyInstaller, PackageManager,
     ProjectTemplate as TemplateDefinition,
 };
+// Stage v0.1.3: Export Simple REPL
+pub use repl_simple::{SimpleRepl, SimpleReplConfig};

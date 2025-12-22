@@ -1,4 +1,4 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 27.3: Edge Computing Optimization Tests
 //! Tests for CDN integration, edge deployment, global distribution, and caching strategies
 
@@ -8,7 +8,7 @@ mod edge_computing_tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
     
 
     /// CDN Provider Integration Tests

@@ -7,7 +7,7 @@
 //! - 分布式元宇宙网络
 
 use std::collections::HashMap;
-use std::time{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 // ============================================================================
 // 元宇宙渲染引擎测试
@@ -16,7 +16,7 @@ use std::time{Duration, Instant, SystemTime, UNIX_EPOCH};
 #[cfg(test)]
 mod metaverse_engine_tests {
     use super::*;
-    use beejs::metaverse{
+    use beejs::metaverse::{
         engine::{MetaverseEngine, MetaverseConfig},
         RenderMode, XRPlatform,
         SceneObject, Transform, Material,
@@ -54,7 +54,7 @@ mod metaverse_engine_tests {
 
     #[test]
     fn test_xr_runtime_initialization() {
-        use beejs::metaverse::xr_runtime{XRRuntime, XRConfig, XRMode};
+        use beejs::metaverse::xr_runtime::{XRRuntime, XRConfig, XRMode};
 
         let config: _ = XRConfig {
             mode: XRMode::VR,
@@ -73,7 +73,7 @@ mod metaverse_engine_tests {
 
     #[test]
     fn test_webxr_compatibility() {
-        use beejs::metaverse::xr_runtime{XRRuntime, XRConfig, XRMode};
+        use beejs::metaverse::xr_runtime::{XRRuntime, XRConfig, XRMode};
 
         let config: _ = XRConfig {
             mode: XRMode::AR,
@@ -111,7 +111,7 @@ mod metaverse_engine_tests {
 
     #[test]
     fn test_ray_tracing_renderer() {
-        use beejs::metaverse::ray_tracer{RayTracer, RayTracerConfig, BounceLimit};
+        use beejs::metaverse::ray_tracer::{RayTracer, RayTracerConfig, BounceLimit};
 
         let config: _ = RayTracerConfig {
             max_bounces: BounceLimit::Limited(8),
@@ -130,7 +130,7 @@ mod metaverse_engine_tests {
 
     #[test]
     fn test_multiuser_renderer() {
-        use beejs::metaverse::multiuser_renderer{
+        use beejs::metaverse::multiuser_renderer::{
             MultiuserRenderer, AvatarConfig, SyncMode,
         };
 
@@ -154,7 +154,7 @@ mod metaverse_engine_tests {
 
     #[test]
     fn test_spatial_audio_system() {
-        use beejs::metaverse::spatial_audio{
+        use beejs::metaverse::spatial_audio::{
             SpatialAudioSystem, AudioSource, AudioConfig, HRTFProfile,
         };
 
@@ -213,7 +213,7 @@ mod metaverse_engine_tests {
 #[cfg(test)]
 mod holographic_engine_tests {
     use super::*;
-    use beejs::holographic{
+    use beejs::holographic::{
         engine::{HolographicEngine, HolographicConfig},
         HologramType,
         WavefrontPropagator, PropagationMethod,
@@ -354,7 +354,7 @@ mod holographic_engine_tests {
 #[cfg(test)]
 mod immersive_interaction_tests {
     use super::*;
-    use beejs::immersive_interaction{
+    use beejs::immersive_interaction::{
         HandTracking, HandTrackingConfig, HandPose, Gesture,
         EyeTracking, EyeTrackingConfig, GazePoint,
         HapticFeedback, HapticConfig, HapticPattern, HapticIntensity,
@@ -579,7 +579,7 @@ mod immersive_interaction_tests {
 #[cfg(test)]
 mod distributed_metaverse_tests {
     use super::*;
-    use beejs::distributed_metaverse{
+    use beejs::distributed_metaverse::{
         MetaverseNetwork, NetworkConfig, NetworkNode, NodeRole,
         EdgeComputing, EdgeConfig, EdgeTask,
         StateSync, SyncConfig, SyncMode, StateChange,
@@ -797,7 +797,7 @@ mod integration_tests {
     
     use beejs::metaverse::engine::MetaverseEngine;
     use beejs::holographic::engine::HolographicEngine;
-    use beejs::immersive_interaction{HandTracking, EyeTracking};
+    use beejs::immersive_interaction::{HandTracking, EyeTracking};
     use beejs::distributed_metaverse::MetaverseNetwork;
 
     #[test]
@@ -822,7 +822,7 @@ mod integration_tests {
 
     #[test]
     fn test_multiuser_session() {
-        use beejs::metaverse::multiuser_renderer{MultiuserRenderer, SyncMode, AvatarConfig};
+        use beejs::metaverse::multiuser_renderer::{MultiuserRenderer, SyncMode, AvatarConfig};
         
 
         // 创建多用户渲染器
@@ -845,8 +845,8 @@ mod integration_tests {
 
     #[test]
     fn test_holographic_display_integration() {
-        use beejs::holographic{engine::{HolographicEngine, HolographicConfig}, PropagationMethod};
-        use beejs::metaverse{engine::{MetaverseEngine, MetaverseConfig}};
+        use beejs::holographic::{engine::{HolographicEngine, HolographicConfig}, PropagationMethod};
+        use beejs::metaverse::{engine::{MetaverseEngine, MetaverseConfig}};
 
         // 创建全息引擎
         let holo_config: _ = HolographicConfig {
@@ -870,9 +870,9 @@ mod integration_tests {
 
     #[test]
     fn test_immersive_interaction_pipeline() {
-        use beejs::immersive_interaction{
+        use beejs::immersive_interaction::{
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
             HandTracking, HandTrackingConfig,
             EyeTracking, EyeTrackingConfig,
             HapticFeedback, HapticConfig,

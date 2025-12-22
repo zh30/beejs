@@ -57,15 +57,57 @@ mod tests {
         Ok(())
     }
 
-    /// 测试 4: CLI run 命令 (跳过 - CLI 未实现)
+    /// 测试 4: CLI run 命令 (预期失败 - 红色)
     #[tokio::test]
     async fn test_cli_run_command() -> Result<(), Box<dyn std::error::Error>> {
-        // Temporarily skipped - CLI not implemented
-        println!("⏭️  CLI run 命令测试跳过 (CLI 未实现)");
+        // Arrange: 创建临时JS文件
+        let temp_dir = TempDir::new()?;
+        let temp_path = temp_dir.path().join("test.js");
+        std::fs::write(&temp_path, "console.log('Hello from file'); 2 + 2;")?;
+
+        // Act: 模拟CLI run命令执行
+        let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+            .expect("Failed to create MinimalRuntime");
+        let code = std::fs::read_to_string(&temp_path)?;
+
+        let output = runtime.execute_code(&code);
+
+        // Assert: 验证执行成功
+        assert!(output.is_ok(), "CLI run command should succeed");
+        println!("✅ CLI run 命令测试通过: {}", output?);
         Ok(())
     }
 
-    /// 测试 5: 错误处理 (预期失败 - 红色)
+    /// 测试 5: CLI REPL 模式 (预期失败 - 红色)
+    #[tokio::test]
+    async fn test_cli_repl_mode() -> Result<(), Box<dyn std::error::Error>> {
+        // Arrange: 准备REPL输入
+        let repl_inputs = vec![
+            "1 + 1",
+            "2 * 3",
+            "let x = 5; x * 2",
+        ];
+
+        // Act: 模拟REPL模式执行多行输入
+        let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+            .expect("Failed to create MinimalRuntime");
+
+        let mut results = Vec::new();
+        for input in &repl_inputs {
+            let output = runtime.execute_code(input)?;
+            results.push(output);
+        }
+
+        // Assert: 验证REPL模式结果
+        assert_eq!(results[0].trim(), "2", "1 + 1 should equal 2");
+        assert_eq!(results[1].trim(), "6", "2 * 3 should equal 6");
+        assert_eq!(results[2].trim(), "10", "let x = 5; x * 2 should equal 10");
+
+        println!("✅ CLI REPL 模式测试通过: {:?}", results);
+        Ok(())
+    }
+
+    /// 测试 6: 错误处理 (预期失败 - 红色)
     #[tokio::test]
     async fn test_error_handling() -> Result<(), Box<dyn std::error::Error>> {
         // Arrange: 创建 MinimalRuntime
@@ -83,7 +125,7 @@ mod tests {
         Ok(())
     }
 
-    /// 测试 6: 性能基准 - 简单执行 (预期失败 - 红色)
+    /// 测试 7: 性能基准 - 简单执行 (预期失败 - 红色)
     #[tokio::test]
     async fn test_performance_simple_execution() -> Result<(), Box<dyn std::error::Error>> {
         // Arrange: 创建 MinimalRuntime

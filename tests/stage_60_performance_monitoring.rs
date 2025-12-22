@@ -3,7 +3,7 @@
 //!
 //! 本文件展示如何为 Beejs 添加新的性能监控功能
 
-use std::time{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// 性能指标结构
 #[derive(Debug, Clone)]
@@ -66,7 +66,7 @@ impl PerformanceMonitor {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_performance_monitor_creation() {

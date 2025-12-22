@@ -8,14 +8,14 @@
 
 #[cfg(test)]
 mod stage78_phase1_integration_tests {
-    use beejs::wasm{
+    use beejs::wasm::{
         SimdEngine, WasmThreadsManager, ThreadPoolConfig,
         detect_cpu_features,
     };
     use std::sync::Arc;
-    use std::time{Duration, Instant};
+    use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     // ==========================================
     // 集成测试 1: SIMD 自动优化功能验证

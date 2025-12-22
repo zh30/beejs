@@ -9,7 +9,7 @@ use std::time::Duration;
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test 1: BeejsCluster CRD Definition and Validation
     #[tokio::test]

@@ -2,8 +2,8 @@
 //!
 //! 测试激进内联、死代码消除、循环展开、逃逸分析等优化技术
 
-use std::time{Duration, Instant};
-use beejs::jit_optimizer{JITOptimizer, JITThresholds, JITStrategy, OptimizationLevel, CodeComplexity};
+use std::time::{Duration, Instant};
+use beejs::jit_optimizer::{JITOptimizer, JITThresholds, JITStrategy, OptimizationLevel, CodeComplexity};
 
 #[cfg(test)]
 mod advanced_optimizer_tests {
@@ -507,7 +507,7 @@ mod performance_benchmark_tests {
 mod integration_tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试所有优化技术的集成
     #[test]

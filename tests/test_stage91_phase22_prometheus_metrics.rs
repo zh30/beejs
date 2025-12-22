@@ -7,7 +7,7 @@
 //! - 错误指标收集
 //! - 实时指标更新
 
-use beejs::observability{
+use beejs::observability::{
     ObservableSystem, ObservabilityConfig,
     PrometheusExporter, CustomMetrics
 };
@@ -231,7 +231,7 @@ async fn test_concurrent_metrics_recording() {
     // Record metrics concurrently - use Arc to share system
     use std::sync::Arc;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
     let system_arc: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(system))))))));
 
     let mut handles = vec![];

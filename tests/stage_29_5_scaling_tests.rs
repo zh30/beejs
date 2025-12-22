@@ -4,13 +4,13 @@
 #[cfg(test)]
 mod tests {
     
-    use std::time{Duration, Instant};
+    use std::time::{Duration, Instant};
     use tracing::info;
 
     // 导入分布式模块
-    use beejs::distributed{
+    use beejs::distributed::{
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
         scaling_manager::{ScalingManager, ScalingConfig},
         autoscaler::{Autoscaler, AutoscalerConfig, ScalingAction, ClusterMetrics},
         resource_tracker::{ResourceTracker, ResourceConfig},

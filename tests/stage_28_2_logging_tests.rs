@@ -8,9 +8,9 @@
 //! - 性能追踪
 
 use std::collections::HashMap;
-use std::sync::atomic{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 // =============================================================================
 // 日志系统类型定义
@@ -385,7 +385,7 @@ impl Tracer {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     // -------------------------------------------------------------------------
     // 日志系统测试

@@ -1,4 +1,4 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use beejs::Runtime;
 use std::io::Write;
 use tempfile::NamedTempFile;
@@ -6,7 +6,7 @@ use tempfile::NamedTempFile;
 // Add serial_test to ensure integration tests run serially to avoid concurrency issues
 use serial_test::serial;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 #[test]
 #[serial]

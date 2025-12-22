@@ -5,18 +5,18 @@
 mod tests {
     
     
-    use std::time{Duration, Instant};
+    use std::time::{Duration, Instant};
 
     // 导入测试模块
-    use beejs::shared_memory{
+    use beejs::shared_memory::{
         SharedMemoryManager, SharedMemoryConfig
     };
-    use beejs::shared_object_cache{
+    use beejs::shared_object_cache::{
         SharedObjectCache, SharedObjectCacheConfig, SharedValue
     };
     use beejs::memory_mapped_file::MemoryMappedFile;
     // Note: concurrent_execution is private, so we'll skip those tests
-    // use beejs::concurrent_execution{
+    // use beejs::concurrent_execution::{
     //     ConcurrentRuntimePool, ConcurrentConfig
     // };
 
@@ -520,7 +520,7 @@ mod tests {
         use std::thread;
         use std::sync::Arc;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
         let config: _ = SharedMemoryConfig::default();
         let manager: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(SharedMemoryManager::new(config)))))))));

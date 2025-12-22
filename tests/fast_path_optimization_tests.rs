@@ -11,7 +11,7 @@ use std::time::Instant;
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test 1: Simple object literal execution (via V8)
     #[test]

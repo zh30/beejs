@@ -1,4 +1,4 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! ModuleLoader 模块系统测试
 //! 测试驱动的开发 - Stage 60: 模块系统测试套件
 //!
@@ -9,7 +9,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 //! - 内置模块测试
 //! - node_modules 解析测试
 
-use beejs::module_loader{ModuleLoader, Module};
+use beejs::module_loader::{ModuleLoader, Module};
 use std::path::PathBuf;
 
 #[cfg(test)]
@@ -18,7 +18,7 @@ mod tests {
     use serial_test::serial;
     use tempfile::TempDir;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试 1: ModuleLoader 创建
     #[test]

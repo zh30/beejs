@@ -12,13 +12,13 @@
 
 use std::fs;
 use std::path::Path;
-use std::time{Duration, Instant};
+use std::time::{Duration, Instant};
 
 #[cfg(test)]
 mod stage_26_3_tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test 1: Package Manager - Install Dependencies
     /// Verifies `beejs install` command installs dependencies correctly

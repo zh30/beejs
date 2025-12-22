@@ -6,9 +6,9 @@
 //! - 连接排空
 //! - 启动/关闭钩子
 
-use std::sync::atomic{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
-use std::time{Duration, Instant};
+use std::time::{Duration, Instant};
 
 // =============================================================================
 // 健康检查系统类型定义
@@ -649,7 +649,7 @@ fn test_stage_28_3_health_integration() {
 fn test_stage_28_3_lifecycle_integration() {
     use std::sync::atomic::{AtomicU32};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     let cleanup_counter: _ = Arc::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(std::sync::Mutex::new(AtomicU32::new(0)))))))));
     let cleanup_counter_clone: _ = Arc::clone(cleanup_counter);

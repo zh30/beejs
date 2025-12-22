@@ -1,4 +1,4 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Stage 12.1: 快路径字符串方法测试
 //! 测试字符串方法快路径优化
 
@@ -6,7 +6,7 @@ use std::time{SystemTime, UNIX_EPOCH, Duration};
 mod string_fast_path_tests {
     use beejs::RuntimeLite;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_string_length_fast_path() {

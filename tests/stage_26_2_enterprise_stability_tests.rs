@@ -11,13 +11,13 @@
 // - 监控数据实时性 < 100ms
 
 use std::sync::Arc;
-use std::time{Duration, Instant};
+use std::time::{Duration, Instant};
 
 #[cfg(test)]
 mod stage_26_2_tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// Test 1: Memory Leak Detection
     /// Verifies automatic detection and cleanup of memory leaks

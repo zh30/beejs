@@ -7,7 +7,7 @@
 //! - 批量 I/O 优化
 //! - 网络拓扑感知
 
-use std::time{Duration, Instant};
+use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
@@ -15,7 +15,7 @@ use std::collections::HashMap;
 mod network_optimization_tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     /// 测试智能预取功能
     #[tokio::test]

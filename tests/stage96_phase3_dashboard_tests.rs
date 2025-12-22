@@ -11,13 +11,13 @@
 #[cfg(test)]
 mod dashboard_integration_tests {
     use super::super::*;
-    use beejs::observability::dashboard{
+    use beejs::observability::dashboard::{
         DashboardManager, DashboardConfig, Dashboard, PanelConfig, GrafanaClient,
         ChartRenderer, GraphRenderer, TemplateEngine, WebSocketClient,
         ChartType, GraphType, GridPos, QueryTarget, FieldConfig,
         LegendConfig, TooltipConfig, TimeRangeConfig
     };
-    use beejs::observability::visualization{
+    use beejs::observability::visualization::{
         LineChart, BarChart, PieChart, TopologyGraph,
         LineChartBuilder, BarChartBuilder, PieChartBuilder, TopologyGraphBuilder,
         VisualizationConfig, DataPoint, DataSeries, ColorPalette, AxisConfig,
@@ -278,7 +278,7 @@ mod dashboard_integration_tests {
     /// Test chart renderer
     #[tokio::test]
     async fn test_chart_renderer() {
-        use beejs::observability::dashboard::renderer{ChartRenderer, RenderConfig};
+        use beejs::observability::dashboard::renderer::{ChartRenderer, RenderConfig};
 
         let config: _ = RenderConfig::default();
         let renderer: _ = ChartRenderer::new(config);
@@ -341,7 +341,7 @@ mod dashboard_integration_tests {
     /// Test graph renderer
     #[tokio::test]
     async fn test_graph_renderer() {
-        use beejs::observability::dashboard::renderer{GraphRenderer, RenderConfig};
+        use beejs::observability::dashboard::renderer::{GraphRenderer, RenderConfig};
 
         let config: _ = RenderConfig::default();
         let renderer: _ = GraphRenderer::new(config);
@@ -413,7 +413,7 @@ mod dashboard_integration_tests {
     /// Test template engine
     #[tokio::test]
     async fn test_template_engine() {
-        use beejs::observability::dashboard::renderer{TemplateEngine, Template, TemplateFunction};
+        use beejs::observability::dashboard::renderer::{TemplateEngine, Template, TemplateFunction};
 
         let engine: _ = TemplateEngine::new();
 
@@ -440,7 +440,7 @@ mod dashboard_integration_tests {
     /// Test metrics collection
     #[tokio::test]
     async fn test_metrics_collection() {
-        use beejs::observability::dashboard::manager{DashboardManager, DashboardConfig, MetricsCollector};
+        use beejs::observability::dashboard::manager::{DashboardManager, DashboardConfig, MetricsCollector};
 
         let config: _ = DashboardConfig::default();
         let manager: _ = DashboardManager::new(config).await.unwrap();
@@ -462,9 +462,9 @@ mod dashboard_integration_tests {
     /// Test Grafana client conversion
     #[tokio::test]
     async fn test_grafana_client_conversion() {
-        use beejs::observability::dashboard::manager{DashboardManager, DashboardConfig};
+        use beejs::observability::dashboard::manager::{DashboardManager, DashboardConfig};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
         let config: _ = DashboardConfig::default();
         let manager: _ = DashboardManager::new(config).await.unwrap();

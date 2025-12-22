@@ -1,10 +1,10 @@
 //! Platform runtime tests
 //! Tests for mobile and WebAssembly platform support
 
-use beejs::platform{CrossPlatformRuntime, MobileRuntime, WASMRuntime, BeeWasmAPI};
+use beejs::platform::{CrossPlatformRuntime, MobileRuntime, WASMRuntime, BeeWasmAPI};
 use std::sync::Arc;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 #[tokio::test]
 async fn test_mobile_runtime_ios() {

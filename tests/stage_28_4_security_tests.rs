@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time{Duration, Instant};
+use std::time::{Duration, Instant};
 
 // =============================================================================
 // 沙箱执行环境
@@ -220,7 +220,7 @@ impl DataFilter {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_sandbox_manager_creation() {

@@ -3,10 +3,10 @@
 
 #[cfg(test)]
 mod tests {
-    use std::time{Duration, Instant};
+    use std::time::{Duration, Instant};
 
     // 导入现有的性能分析器
-    use beejs::profiler{
+    use beejs::profiler::{
         Profiler, ProfilingMode, ProfileTarget, ProfileResult, ProfilingStats,
     };
 
@@ -548,7 +548,7 @@ mod tests {
     mod integration_tests {
         use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
         #[test]
         fn test_real_world_scenario() {

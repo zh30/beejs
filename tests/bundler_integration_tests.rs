@@ -1,4 +1,4 @@
-use std::time{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{SystemTime, UNIX_EPOCH, Duration};
 //! Bundle Integration Tests
 //!
 //! Tests for the beejs bundle command and bundler functionality
@@ -7,7 +7,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections{HashMap, BTreeMap};
+use std::collections::{HashMap, BTreeMap};
 
 #[test]
 fn test_bundle_command_help() {
