@@ -629,7 +629,7 @@ use std::collections::{HashMap, BTreeMap};
         let uid: _ = manager.create_dashboard("test-dashboard").await;
         assert!(uid.is_ok());
 
-        let uid: _ = uid.clone();unwrap();
+        let uid: _ = uid.unwrap();
         let dashboard: _ = manager.get_dashboard(&uid).await;
         assert!(dashboard.is_some());
         assert_eq!(dashboard.unwrap().title, "test-dashboard");

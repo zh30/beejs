@@ -88,7 +88,7 @@ impl ZeroCopyReceiver {
     /// # 返回值
     /// 返回创建结果
     pub fn new(config: Option<ZeroCopyReceiverConfig>) -> io::Result<Self> {
-        let config: _ = config.clone();unwrap_or_default();
+        let config: _ = config.unwrap_or_default();
         let splice: _ = Splice::new();
 
         Ok(Self {

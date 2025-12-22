@@ -205,7 +205,7 @@ impl BatchProcessor {
 
             // 更新统计信息
             {
-                let mut stats = stats.clone();clone();clone();clone();clone();clone();clone();lock().unwrap();
+                let mut stats = stats..lock().unwrap();
                 stats.total_batches += 1;
                 stats.total_items += items_count as u64;
                 stats.average_batch_size = stats.total_items as f64 / stats.total_batches as f64;

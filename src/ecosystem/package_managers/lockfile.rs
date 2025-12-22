@@ -196,7 +196,7 @@ impl LockfileManager {
 
     /// 解析 yarn.lock 键
     fn parse_yarn_lock_key(&self, key: &str) -> Option<(String, String)> {
-        let key: _ = key.clone();trim().trim_matches('"');
+        let key: _ = key.trim().trim_matches('"');
         if let Some(at_pos) = key.rfind('@') {
             let (name_part, version_part) = key.split_at(at_pos);
             let name: _ = if name_part.starts_with("@scope/") {

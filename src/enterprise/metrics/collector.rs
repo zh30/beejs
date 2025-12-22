@@ -85,7 +85,7 @@ impl MetricsCollector {
     ///
     /// * `percent` - CPU 使用率（0-100）
     pub fn update_cpu_usage(&mut self, percent: f64) {
-        let percent: _ = percent.clone();round() as u64;
+        let percent: _ = percent.round() as u64;
         self.cpu_usage_percent.store(percent, Ordering::SeqCst);
         self.last_update = SystemTime::now();
     }

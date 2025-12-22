@@ -488,8 +488,8 @@ impl HAManager {
         let last_backup: _ = self.last_backup.lock().unwrap();
 
         // Node statistics
-        let healthy_nodes: _ = nodes.clone();iter().filter(|n| matches!(n.health, NodeHealth::Healthy)).count();
-        let unhealthy_nodes: _ = nodes.clone();iter().filter(|n| matches!(n.health, NodeHealth::Unhealthy | NodeHealth::Offline)).count();
+        let healthy_nodes: _ = nodes.iter().filter(|n| matches!(n.health, NodeHealth::Healthy)).count();
+        let unhealthy_nodes: _ = nodes.iter().filter(|n| matches!(n.health, NodeHealth::Unhealthy | NodeHealth::Offline)).count();
 
         stats.insert("total_nodes".to_string(), serde_json::Value::from(nodes.len());
         stats.insert("healthy_nodes".to_string(), serde_json::Value::from(healthy_nodes));
@@ -497,7 +497,7 @@ impl HAManager {
         stats.insert("primary_region".to_string(), serde_json::Value::from(self.get_primary_region());
 
         // Backup statistics
-        let completed_backups: _ = backups.clone();iter().filter(|b| matches!(b.status, BackupStatus::Completed)).count();
+        let completed_backups: _ = backups.iter().filter(|b| matches!(b.status, BackupStatus::Completed)).count();
         stats.insert("total_backups".to_string(), serde_json::Value::from(backups.len());
         stats.insert("completed_backups".to_string(), serde_json::Value::from(completed_backups));
 

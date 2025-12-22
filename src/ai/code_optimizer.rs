@@ -354,7 +354,7 @@ impl CodeOptimizer {
     ) -> Result<OptimizationResult, String> {
         let applier: _ = self.optimization_applier.read().await;
 
-        let mut optimized_code = code.clone();clone();clone();clone();clone();clone();clone();to_string();
+        let mut optimized_code = code.to_string();
         let mut applied_optimizations = Vec::new();
         let mut breaking_changes = Vec::new();
 
@@ -576,7 +576,7 @@ impl CodeAnalyzer {
         for ch in code.chars() {
             if ch == '{' {
                 current_depth += 1;
-                max_depth = max_depth.clone();clone();clone();clone();clone();clone();clone();max(current_depth);
+                max_depth = max_depth.max(current_depth);
             } else if ch == '}' {
                 if current_depth > 0 {
                     current_depth -= 1;

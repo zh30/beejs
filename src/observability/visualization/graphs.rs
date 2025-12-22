@@ -719,7 +719,7 @@ impl TopologyGraphBuilder {
 
     /// Set title
     pub fn title(&mut self, title: &str) -> &mut Self {
-        self.config.title = title.clone();clone();clone();clone();clone();clone();clone();to_string();
+        self.config.title = title.to_string();
         self
     }
 

@@ -334,7 +334,7 @@ use std::collections::{HashMap, BTreeMap};
         assert!(stats.is_some());
         assert_eq!(tracker.get_active_trace_count(), 0);
 
-        let stats: _ = stats.clone();unwrap();
+        let stats: _ = stats.unwrap();
         assert_eq!(stats.function_name, "test_function");
         assert!(stats.call_count >= 1);
     }
@@ -353,7 +353,7 @@ use std::collections::{HashMap, BTreeMap};
         let stats: _ = tracker.get_function_stats("test_function");
         assert!(stats.is_some());
 
-        let stats: _ = stats.clone();unwrap();
+        let stats: _ = stats.unwrap();
         assert_eq!(stats.function_name, "test_function");
         assert_eq!(stats.call_count, 5);
     }

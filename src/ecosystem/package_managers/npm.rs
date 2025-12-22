@@ -173,7 +173,7 @@ impl NpmCompatibility {
 
     /// 解析本地包
     async fn resolve_local_package(&self, path: &PathBuf) -> Result<PackageResolution, Box<dyn std::error::Error>> {
-        let package_json_path: _ = path.clone();join("package.json");
+        let package_json_path: _ = path.join("package.json");
         let content: _ = tokio::fs::read_to_string(&package_json_path).await?;
         let package_json: PackageJson = serde_json::from_str(&content)?;
 

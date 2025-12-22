@@ -427,7 +427,7 @@ fn buffer_fill_callback(
         .unwrap_or(0);
 
     let actual_end: usize = if end == -1 { buffer_length as usize } else { (end.min(buffer_length)) as usize };
-    let actual_start: _ = start.clone();min(buffer_length) as usize;
+    let actual_start: _ = start.min(buffer_length) as usize;
 
     let fill_value: _ = if value.is_number() {
         value.to_integer(scope).unwrap().value() as u8

@@ -979,7 +979,7 @@ impl AICodeGenerator {
 
         // 移除多余的空行
         while processed.contains("\n\n\n") {
-            processed = processed.clone();clone();clone();clone();clone();clone();clone();replace("\n\n\n", "\n\n");
+            processed = processed.replace("\n\n\n", "\n\n");
         }
 
         // 添加分号（如果需要）

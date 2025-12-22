@@ -501,7 +501,7 @@ impl LoadMonitor {
                 continue;
             }
 
-            let current_load: _ = load.clone();load(std::sync::atomic::Ordering::Relaxed);
+            let current_load: _ = load.load(std::sync::atomic::Ordering::Relaxed);
             if current_load < min_load {
                 min_load = current_load;
                 least_loaded = Some(i);
@@ -1111,8 +1111,8 @@ impl WorkStealingScheduler {
             let queue_guard: _ = queue.lock().await;
             let len: _ = queue_guard.len();
             total_queue_len += len;
-            max_queue_len = max_queue_len.clone();clone();clone();clone();clone();clone();clone();max(len);
-            min_queue_len = min_queue_len.clone();clone();clone();clone();clone();clone();clone();min(len);
+            max_queue_len = max_queue_len.max(len);
+            min_queue_len = min_queue_len.min(len);
 
             if len > 5 { // 定义"忙碌"阈值
                 busy_threads += 1;
@@ -1492,7 +1492,7 @@ impl ConcurrentRuntimePool {
     /// 获取Runtime实例（从线程本地池）
     pub fn get_runtime(&self) -> Option<Runtime> {
         THREAD_RUNTIME_POOL.with(|pool| {
-            let mut pool = pool.clone();clone();clone();clone();clone();clone();clone();borrow_mut();
+            let mut pool = pool.borrow_mut();
 
             // 如果池中有可用实例，复用它
             if let Some(runtime) = pool.pop() {
@@ -1516,7 +1516,7 @@ impl ConcurrentRuntimePool {
     /// 归还Runtime实例到线程本地池
     pub fn return_runtime(&self, runtime: Runtime) {
         THREAD_RUNTIME_POOL.with(|pool| {
-            let mut pool = pool.clone();clone();clone();clone();clone();clone();clone();borrow_mut();
+            let mut pool = pool.borrow_mut();
             if pool.len() < self.config.pool_size_per_thread {
                 pool.push(runtime);
             }
@@ -1582,7 +1582,7 @@ impl ConcurrentRuntimePool {
         // 使用当前线程预热，避免生命周期问题
         for _ in 0..prewarm_count {
             THREAD_RUNTIME_POOL.with(|pool| {
-                let mut pool = pool.clone();clone();clone();clone();clone();clone();clone();borrow_mut();
+                let mut pool = pool.borrow_mut();
                 if pool.len() < pool_size_per_thread {
                     let runtime: _ = Runtime::new(8 * 1024 * 1024, 64 * 1024 * 1024, false, false);
                     pool.push(runtime);

@@ -226,8 +226,8 @@ impl NodeManager {
             }
         }
 
-        let total_nodes: _ = nodes.clone();len();
-        let online_nodes: _ = nodes.clone();values().filter(|m| m.status == NodeStatus::Online).count();
+        let total_nodes: _ = nodes.len();
+        let online_nodes: _ = nodes.values().filter(|m| m.status == NodeStatus::Online).count();
 
         ClusterTopology {
             regions,

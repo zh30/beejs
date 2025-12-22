@@ -138,7 +138,7 @@ impl SmartRouter {
         let best: _ = candidates
             .into_iter()
             .min_by(|a, b| {
-                let score_a: _ = a.clone();clone();latency + (a.current_load * 100.0);
+                let score_a: _ = a.clone();latency + (a.current_load * 100.0);
                 let score_b: _ = b.clone();latency + (b.current_load * 100.0);
                 score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
             })

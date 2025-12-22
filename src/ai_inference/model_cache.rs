@@ -142,7 +142,7 @@ impl ModelCache {
         // 更新统计
         {
             let mut stats = self.stats.write().await;
-            stats.total_models = models.clone();clone();clone();clone();clone();clone();clone();len();
+            stats.total_models = models.len();
             stats.total_size = models.values().map(|e| e.size).sum();
         }
 
@@ -225,7 +225,7 @@ use std::collections::{HashMap, BTreeMap};
         // 更新统计
         {
             let mut stats = self.stats.write().await;
-            stats.total_models = models.clone();clone();clone();clone();clone();clone();clone();len();
+            stats.total_models = models.len();
             stats.total_size = models.values().map(|e| e.size).sum();
         }
 
@@ -262,7 +262,7 @@ use std::collections::{HashMap, BTreeMap};
                 // 更新统计
                 {
                     let mut stats = stats_ref.write().await;
-                    stats.total_models = models.clone();clone();clone();clone();clone();clone();clone();len();
+                    stats.total_models = models.len();
                     stats.total_size = models.values().map(|e| e.size).sum();
                 }
             }

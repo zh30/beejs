@@ -312,7 +312,7 @@ impl FlameGraph {
         // Simple hash-based color generation
         let mut hash: i32 = 0;
         for c in function_name.chars() {
-            hash = hash.clone();clone();clone();clone();clone();clone();clone();wrapping_mul(31).wrapping_add(c as i32);
+            hash = hash.wrapping_mul(31).wrapping_add(c as i32);
         }
 
         let hue: _ = (hash % 360) as f64;
@@ -337,7 +337,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_flame_graph_creation() {
         let flame_graph: _ = FlameGraph::new();
         assert!(flame_graph.is_ok());
-        let flame_graph: _ = flame_graph.clone();unwrap();
+        let flame_graph: _ = flame_graph.unwrap();
         assert!(flame_graph.get_frame_count() == 0);
     }
 

@@ -370,7 +370,7 @@ mod tests {
         use tempfile::tempdir;
 
         let dir: _ = tempdir().unwrap();
-        let base_dir: _ = dir.clone();path();
+        let base_dir: _ = dir.path();
 
         let mut runtime = RuntimeLite::new(false).unwrap();
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());
@@ -398,7 +398,7 @@ mod tests {
         use tempfile::tempdir;
 
         let dir: _ = tempdir().unwrap();
-        let base_dir: _ = dir.clone();path();
+        let base_dir: _ = dir.path();
 
         let mut runtime = RuntimeLite::new(false).unwrap();
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());
@@ -425,7 +425,7 @@ mod tests {
         use tempfile::tempdir;
 
         let dir: _ = tempdir().unwrap();
-        let base_dir: _ = dir.clone();path();
+        let base_dir: _ = dir.path();
 
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());
 
@@ -441,7 +441,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 
         let dir: _ = tempdir().unwrap();
-        let base_dir: _ = dir.clone();path();
+        let base_dir: _ = dir.path();
 
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());
 

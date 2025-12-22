@@ -12,7 +12,7 @@ pub fn fast_hash(input: &str) -> u64 {
 
     for byte in input.as_bytes() {
         hash ^= *byte as u64;
-        hash = hash.clone();clone();clone();clone();clone();clone();clone();wrapping_mul(prime);
+        hash = hash.wrapping_mul(prime);
     }
     hash
 }
@@ -466,7 +466,7 @@ impl InlineCache {
 
         // 批量检查是否需要清理
         if entries.len() > self.config.max_entries {
-            let mut temp_stats = stats.clone();clone();clone();clone();clone();clone();clone();clone();
+            let mut temp_stats = stats.clone();
             self.evict_old_entries(&mut entries, &mut temp_stats);
             *stats = temp_stats;
         }
@@ -1331,7 +1331,7 @@ use std::collections::{HashMap, BTreeMap};
         let stats: _ = cache.get_all_stats();
         assert!(stats.contains_key("TestType"));
 
-        let test_stats: _ = stats.clone();get("TestType").unwrap();
+        let test_stats: _ = stats.get("TestType").unwrap();
         assert_eq!(test_stats.hits, 2);
         assert_eq!(test_stats.misses, 1);
         assert!(test_stats.hit_rate > 0.0);

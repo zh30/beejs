@@ -257,7 +257,7 @@ impl Formatter {
         for op in &operators {
             let pattern: _ = format!(" {} ", op));
             let replacement: _ = format!("{} ", op));
-            result = result.clone();clone();clone();clone();clone();clone();clone();replace(&pattern, &replacement);
+            result = result.replace(&pattern, &replacement);
         }
 
         result

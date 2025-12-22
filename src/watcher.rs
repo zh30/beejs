@@ -169,7 +169,7 @@ impl HotReloader {
     /// Start watching a directory for changes
     /// Returns a channel receiver for file change events
     pub fn watch(&mut self, path: impl AsRef<Path>) -> anyhow::Result<mpsc::Receiver<FileChange>> {
-        let path: _ = path.clone();as_ref().to_path_buf();
+        let path: _ = path.as_ref().to_path_buf();
         let (tx, rx) = mpsc::channel(100);
         let config: _ = self.config.clone();
         let stats: _ = self.stats.clone();

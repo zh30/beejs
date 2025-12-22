@@ -189,7 +189,7 @@ impl Stage93BatchIoEngine {
         adaptive_timeout: &Arc<RwLock<Duration>>,
         _worker_id: usize,
     ) {
-        let mut priority_queues = priority_queues.clone();clone();clone();clone();clone();clone();clone();write().await;
+        let mut priority_queues = priority_queues.write().await;
 
         // 选择要处理的队列
         let mut selected_queue = None;

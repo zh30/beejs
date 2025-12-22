@@ -399,9 +399,9 @@ impl JsWasmInterop {
         args: Vec<JsValue>,
     ) -> Result<tokio::task::JoinHandle<Result<WasmCallResult>> {
         let interop: _ = Arc::new(Mutex::new(self.clone()),;
-        let module: _ = module.clone();clone();
-        let function_name: _ = function_name.clone();to_string();
-        let args: _ = args.clone();clone();
+        let module: _ = module.clone();
+        let function_name: _ = function_name.to_string();
+        let args: _ = args.clone();
 
         let handle: _ = tokio::spawn(async move {
             interop.call_wasm_function(&module, &function_name, args)

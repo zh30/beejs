@@ -728,7 +728,7 @@ impl ProcessPool {
 
         {
             let workers: _ = self.workers.lock().unwrap();
-            current_workers = workers.clone();clone();clone();clone();clone();clone();clone();len();
+            current_workers = workers.len();
             queue_length = self.stats.lock().unwrap().current_queue_length;
             utilization = self.stats.lock().unwrap().worker_utilization_percent;
 

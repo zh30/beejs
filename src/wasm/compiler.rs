@@ -210,7 +210,7 @@ use std::collections::{HashMap, BTreeMap};
         let js_code: _ = "export function add(a, b) { return a + b; }";
         let wasm_bytes: _ = compiler.generate_demo_wasm(js_code);
         assert!(wasm_bytes.is_ok());
-        let wasm_bytes: _ = wasm_bytes.clone();unwrap();
+        let wasm_bytes: _ = wasm_bytes.unwrap();
         assert!(!wasm_bytes.is_empty());
     }
 

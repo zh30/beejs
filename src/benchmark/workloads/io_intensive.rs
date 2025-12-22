@@ -39,7 +39,7 @@ impl IOWorkload {
         // 并行执行 I/O 任务
         let handles: Vec<_> = (0..concurrency)
             .map(|_| {
-                let operation: _ = operation.clone();clone();
+                let operation: _ = operation.clone();
                 let iterations: _ = iterations;
                 tokio::spawn(async move {
                     Self::run_io_tasks(operation, iterations).await

@@ -331,7 +331,7 @@ impl PredictiveScaler {
         tokio::time::sleep(std::time::Duration::from_millis(80)).await;
 
         // 简单的调度算法：按优先级排序
-        let mut sorted_tasks = tasks.clone();clone();clone();clone();to_vec();
+        let mut sorted_tasks = tasks.to_vec();
         sorted_tasks.sort_by(|a, b| b.priority.cmp(&a.priority));
 
         let mut scheduled_tasks = Vec::new();

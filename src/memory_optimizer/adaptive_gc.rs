@@ -256,7 +256,7 @@ impl AdaptiveGCController {
     /// 获取最近的 GC 事件
     pub async fn get_recent_events(&self, count: usize) -> Vec<GCEvent> {
         let events: _ = self.recent_events.read().await;
-        let count: _ = count.clone();min(events.len());
+        let count: _ = count.min(events.len());
         events.iter().rev().take(count).cloned().collect()
     }
 
@@ -305,7 +305,7 @@ use std::collections::{HashMap, BTreeMap};
         gc.update_heap_metrics(80_000_000, 100_000_000, 5_000_000.0, 2_000_000.0).await;
 
         // 检查是否需要 GC
-        let should_gc: _ = gc.clone();should_gc().await;
+        let should_gc: _ = gc.should_gc().await;
         // 基于我们的阈值，这可能为 false
         assert!(true); // 简化测试
     }

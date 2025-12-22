@@ -571,7 +571,7 @@ fn normalize_path(path: &str, is_windows: bool) -> String {
     let other_separator: _ = if is_windows { '/' } else { '\\' };
 
     let separator_str: _ = separator.to_string();
-    let replaced_path: _ = path.clone();replace(other_separator, &separator_str);
+    let replaced_path: _ = path.replace(other_separator, &separator_str);
     let mut parts: Vec<&str> = replaced_path
         .split(separator)
         .filter(|s| !s.is_empty() && *s != ".")

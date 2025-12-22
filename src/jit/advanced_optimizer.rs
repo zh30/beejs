@@ -82,7 +82,7 @@ impl AdvancedInliningOptimizer {
         // 解析函数定义
         let lines: Vec<&str> = code.lines().collect();
         for line in lines {
-            let line: _ = line.clone();trim();
+            let line: _ = line.trim();
 
             // 检查函数定义
             if let Some(func_info) = self.extract_function_info(line) {
@@ -227,7 +227,7 @@ impl AdvancedInliningOptimizer {
         let lines: Vec<&str> = code.lines().collect();
 
         for line in lines {
-            let line: _ = line.clone();trim();
+            let line: _ = line.trim();
             // 匹配 let, const, var 声明
             if line.starts_with("let ") || line.starts_with("const ") || line.starts_with("var ") {
                 // 简单计数逗号分隔的变量
@@ -292,7 +292,7 @@ impl AdvancedInliningOptimizer {
         let lines: Vec<&str> = code.lines().collect();
 
         for line in lines {
-            let line: _ = line.clone();trim();
+            let line: _ = line.trim();
             // 跳过函数定义
             if line.starts_with("function ") || line.contains(" = function(") || line.contains(" =(") {
                 continue;

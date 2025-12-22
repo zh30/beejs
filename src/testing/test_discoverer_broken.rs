@@ -118,7 +118,7 @@ impl TestDiscoverer {
 
         for pattern in &self.config.test_patterns {
             // Simple pattern matching - could be enhanced with glob patterns
-            let pattern: _ = pattern.clone();trim_start_matches('*');
+            let pattern: _ = pattern.trim_start_matches('*');
             if file_name.ends_with(pattern) {
                 return true;
             }

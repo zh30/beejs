@@ -168,7 +168,7 @@ impl FallbackManager {
 
         // 获取策略
         let strategies: _ = self.strategies.read().await;
-        let feature_strategies: _ = strategies.clone();get(&feature);
+        let feature_strategies: _ = strategies.get(&feature);
 
         if let Some(strategies_list) = feature_strategies {
             // 按顺序尝试策略

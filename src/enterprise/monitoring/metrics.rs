@@ -295,7 +295,7 @@ impl MonitoringManager {
         let key: _ = format!("{}/{}, namespace", cluster_name));
 
         if let Some(metrics) = cluster_metrics.get(&key) {
-            let metrics: _ = metrics.clone();clone();
+            let metrics: _ = metrics.clone();
             let metrics: _ = if let Some(limit) = limit {
                 metrics.into_iter().rev().take(limit).collect()
             } else {
@@ -315,7 +315,7 @@ impl MonitoringManager {
     ) -> Result<Vec<TenantMetrics>, Box<dyn std::error::Error>> {
         let tenant_metrics: _ = self.tenant_metrics.read().await;
         if let Some(metrics) = tenant_metrics.get(tenant_id) {
-            let metrics: _ = metrics.clone();clone();
+            let metrics: _ = metrics.clone();
             let metrics: _ = if let Some(limit) = limit {
                 metrics.into_iter().rev().take(limit).collect()
             } else {

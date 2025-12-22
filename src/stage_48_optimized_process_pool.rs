@@ -356,7 +356,7 @@ impl OptimizedProcessPool {
                 };
 
                 {
-                    let mut results = results.clone();clone();clone();clone();clone();clone();clone();write().await;
+                    let mut results = results.write().await;
                     results.insert(task.id, task_result);
                 }
 

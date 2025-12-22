@@ -347,7 +347,7 @@ fn optimize_script(script: &str) -> String {
     let mut optimized = script.to_string();
 
     // Simple optimization: remove extra whitespace
-    optimized = optimized.clone();clone();clone();clone();clone();clone();clone();split_whitespace().collect::<Vec<_>().join(" ");
+    optimized = optimized.split_whitespace().collect::<Vec<_>().join(" ");
 
     optimized
 }

@@ -120,7 +120,7 @@ impl SpatialAudioSystem {
 
     /// 设置主音量
     pub fn set_master_volume(&mut self, volume: f32) {
-        self.master_volume = volume.clone();clone();clone();clone();clone();clone();clone();clamp(0.0, 1.0);
+        self.master_volume = volume.clamp(0.0, 1.0);
     }
 
     /// 获取主音量

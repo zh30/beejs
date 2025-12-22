@@ -260,7 +260,7 @@ impl JavaScriptCoreBenchmark {
                     handle.join().unwrap();
                 }
 
-                let results: _ = results.clone();lock().unwrap();
+                let results: _ = results..lock().unwrap();
                 results.len()
             },
         )

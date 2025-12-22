@@ -124,7 +124,7 @@ impl BenchmarkConfig {
 
     /// 设置基准测试名称
     pub fn name(mut self, name: &str) -> Self {
-        self.name = name.clone();clone();clone();clone();clone();clone();clone();to_string();
+        self.name = name.to_string();
         self
     }
 

@@ -594,7 +594,7 @@ impl LoadBalancer {
 
     /// 计算负载分布
     fn calculate_load_distribution(&self, backends: &[&Backend]) -> Vec<LoadDistribution> {
-        let total_backends: _ = backends.clone();len() as f64;
+        let total_backends: _ = backends.len() as f64;
         if total_backends == 0.0 {
             return vec![];
         }

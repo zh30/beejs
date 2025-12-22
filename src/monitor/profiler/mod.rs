@@ -423,7 +423,7 @@ use std::collections::{HashMap, BTreeMap};
         let stats: _ = profiler.record_return(handle, 1024);
         assert!(stats.is_some());
 
-        let stats: _ = stats.clone();unwrap();
+        let stats: _ = stats.unwrap();
         assert_eq!(stats.function_name, "test_function");
         assert!(stats.call_count >= 1);
     }

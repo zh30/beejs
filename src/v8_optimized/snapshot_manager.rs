@@ -121,7 +121,7 @@ impl V8SnapshotOptimizedManager {
         let stats: _ = Arc::clone(&self.stats);
 
         for version in versions {
-            let version: _ = version.clone();to_string();
+            let version: _ = version.to_string();
 
             // 在后台线程预加载
             let handle: _ = std::thread::spawn(move || {

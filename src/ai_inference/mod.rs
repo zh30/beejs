@@ -46,7 +46,7 @@ use std::collections::{HashMap, BTreeMap};
         let tensor: _ = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]);
         assert!(tensor.is_ok());
 
-        let tensor: _ = tensor.clone();unwrap();
+        let tensor: _ = tensor.unwrap();
         let shape: _ = tensor.shape();
         assert_eq!(*shape, vec![2, 2]);
     }
@@ -56,7 +56,7 @@ use std::collections::{HashMap, BTreeMap};
         let gpu: _ = GPUSimpleAccelerator::new().await;
         assert!(gpu.is_ok());
 
-        let gpu: _ = gpu.clone();unwrap();
+        let gpu: _ = gpu.unwrap();
         let available: _ = gpu.is_available();
         // GPU 可能不可用，但 API 应该工作
         assert!(available || !available);
@@ -67,7 +67,7 @@ use std::collections::{HashMap, BTreeMap};
         let cache: _ = ModelCache::new(100).await;
         assert!(cache.is_ok());
 
-        let cache: _ = cache.clone();unwrap();
+        let cache: _ = cache.unwrap();
         let result: _ = cache.get("nonexistent_model").await;
         assert!(result.is_ok());
     }

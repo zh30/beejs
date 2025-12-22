@@ -72,7 +72,7 @@ impl MemoryLayoutOptimizer {
     /// Optimize object field layout for cache efficiency
     pub fn optimize_object_layout(&self, fields: &[String]) -> OptimizedLayout {
         // Sort fields by access frequency (simplified heuristic)
-        let mut sorted_fields = fields.clone();to_vec();
+        let mut sorted_fields = fields.to_vec();
         sorted_fields.sort_by(|a, b| {
             // Simulate frequency-based sorting
             b.len().cmp(&a.len())

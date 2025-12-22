@@ -326,7 +326,7 @@ impl PnpmStoreManager {
 
     /// 获取包路径
     pub async fn get_package_path(&self, name: &str, version: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
-        let sanitized_name: _ = name.clone();replace('/', "_");
+        let sanitized_name: _ = name.replace('/', "_");
         let package_dir: _ = self.store_path
             .join(&sanitized_name)
             .join(version);

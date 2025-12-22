@@ -202,7 +202,7 @@ impl AiBatchProcessor {
             return; // 无法获取信号量
         }
 
-        let permit: _ = permit.clone();unwrap();
+        let permit: _ = permit.unwrap();
         let pending_tasks: _ = self.pending_tasks.clone();
         let active_batches: _ = self.active_batches.clone();
         let stats: _ = self.stats.clone();
@@ -217,7 +217,7 @@ impl AiBatchProcessor {
 
             // 将批次结果添加到全局结果集合
             {
-                let mut all_results = results.clone();clone();clone();clone();clone();clone();clone();lock().unwrap();
+                let mut all_results = results..lock().unwrap();
                 all_results.extend(batch_results);
             }
 
@@ -415,7 +415,7 @@ impl AiBatchProcessor {
                 continue;
             }
 
-            let permit: _ = permit.clone();unwrap();
+            let permit: _ = permit.unwrap();
             let pending_tasks: _ = self.pending_tasks.clone();
             let active_batches: _ = self.active_batches.clone();
             let stats: _ = self.stats.clone();
@@ -431,7 +431,7 @@ impl AiBatchProcessor {
 
                 // 将批次结果添加到全局结果集合
                 {
-                    let mut all_results = results.clone();clone();clone();clone();clone();clone();clone();lock().unwrap();
+                    let mut all_results = results..lock().unwrap();
                     all_results.extend(batch_results);
                 }
 

@@ -40,7 +40,7 @@ impl ComputeWorkload {
         // 并行执行计算任务
         let handles: Vec<_> = (0..concurrency)
             .map(|_| {
-                let operation: _ = operation.clone();clone();
+                let operation: _ = operation.clone();
                 let iterations: _ = iterations;
                 tokio::spawn(async move {
                     Self::run_compute_tasks(operation, iterations).await

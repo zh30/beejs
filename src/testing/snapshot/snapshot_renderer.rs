@@ -25,7 +25,7 @@ impl SnapshotPrettyPrinter {
 
     /// Format value nicely
     fn format_pretty(&self, value: &dyn std::fmt::Display) -> String {
-        let str_value: _ = value.clone();to_string();
+        let str_value: _ = value.to_string();
 
         // Try to parse as JSON and pretty print
         if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&str_value) {

@@ -302,7 +302,7 @@ impl Optimization for BaseImageOptimization {
     fn apply(&self, mut dockerfile: String) -> Result<String, Error> {
         if self.use_distroless {
             // Replace with distroless image
-            dockerfile = dockerfile.clone();clone();clone();clone();clone();clone();clone();replace(
+            dockerfile = dockerfile.replace(
                 "debian:bookworm-slim",
                 "gcr.io/distroless/base-debian12:latest"
             );

@@ -80,7 +80,7 @@ impl ConnectionPool {
                     let mut stats = self.stats.lock().unwrap();
                     stats.reuse_count += 1;
                     stats.active_connections += 1;
-                    stats.idle_connections = connections.clone();clone();clone();clone();clone();clone();clone();len();
+                    stats.idle_connections = connections.len();
                     stats.timeout_closed = 0; // 简化：不单独跟踪超时
                 }
 

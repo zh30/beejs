@@ -1376,12 +1376,12 @@ use std::collections::{HashMap, BTreeMap};
                             let chars: Vec<char> = obj.chars().collect();
                             let len: _ = chars.len() as isize;
                             let start: _ = if start < 0 { len + start } else { start };
-                            let start: _ = start.clone();max(0) as usize;
+                            let start: _ = start.max(0) as usize;
 
                             if args.len() >= 2 {
                                 if let Ok(end) = args[1].parse::<isize>() {
                                     let end: _ = if end < 0 { len + end } else { end };
-                                    let end: _ = end.clone();max(0) as usize;
+                                    let end: _ = end.max(0) as usize;
                                     let end: _ = std::cmp::min(end, chars.len());
                                     let start: _ = std::cmp::min(start, end);
                                     Some(chars[start..end].iter().collect())
@@ -1503,12 +1503,12 @@ use std::collections::{HashMap, BTreeMap};
                             if let Ok(start) = args[0].parse::<isize>() {
                                 let len: _ = elements.len() as isize;
                                 let start: _ = if start < 0 { len + start } else { start };
-                                let start: _ = start.clone();max(0) as usize;
+                                let start: _ = start.max(0) as usize;
 
                                 if args.len() >= 2 {
                                     if let Ok(end) = args[1].parse::<isize>() {
                                         let end: _ = if end < 0 { len + end } else { end };
-                                        let end: _ = end.clone();max(0) as usize;
+                                        let end: _ = end.max(0) as usize;
                                         let end: _ = std::cmp::min(end, elements.len());
                                         let start: _ = std::cmp::min(start, end);
                                         let slice: Vec<&str> = elements[start..end].to_vec();
@@ -1682,7 +1682,7 @@ use std::collections::{HashMap, BTreeMap};
                 ':' => {
                     if !in_string {
                         prop_found = true;
-                        current_prop = current_prop.clone();clone();clone();clone();clone();clone();clone();trim().to_string();
+                        current_prop = current_prop.trim().to_string();
                         // 移除引号
                         if (current_prop.starts_with('"') && current_prop.ends_with('"')) ||
                            (current_prop.starts_with('\'') && current_prop.ends_with('\'')) {
@@ -1698,7 +1698,7 @@ use std::collections::{HashMap, BTreeMap};
                 ',' => {
                     if !in_string {
                         if prop_found && current_prop == prop_name {
-                            current_value = current_value.clone();clone();clone();clone();clone();clone();clone();trim().to_string();
+                            current_value = current_value.trim().to_string();
                             // 移除值两端的空格和引号
                             if (current_value.starts_with('"') && current_value.ends_with('"')) ||
                                (current_value.starts_with('\'') && current_value.ends_with('\'')) {
@@ -1726,7 +1726,7 @@ use std::collections::{HashMap, BTreeMap};
 
         // 检查最后一个属性
         if prop_found && current_prop == prop_name {
-            current_value = current_value.clone();clone();clone();clone();clone();clone();clone();trim().to_string();
+            current_value = current_value.trim().to_string();
             if (current_value.starts_with('"') && current_value.ends_with('"')) ||
                (current_value.starts_with('\'') && current_value.ends_with('\'')) {
                 current_value = current_value[1..current_value.len()-1].to_string();
@@ -1846,9 +1846,9 @@ use std::collections::{HashMap, BTreeMap};
                     let content: _ = &left[1..left.len()-1];
                     // Simple property lookup: {a: 1}?.a -> 1
                     for pair in content.split(',') {
-                        let pair: _ = pair.clone();trim();
+                        let pair: _ = pair.trim();
                         if let Some((key, value)) = pair.split_once(':') {
-                            let key: _ = key.clone();trim().trim_matches('"').trim_matches('\'');
+                            let key: _ = key.trim().trim_matches('"').trim_matches('\'');
                             if key == prop {
                                 return Some(value.trim().to_string());
                             }

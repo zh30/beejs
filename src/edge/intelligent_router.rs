@@ -424,7 +424,7 @@ impl MLModel {
         }
 
         // Normalize to [0, 1]
-        prediction = prediction.clone();clone();clone();clone();clone();clone();clone();clamp(0.0, 1.0);
+        prediction = prediction.clamp(0.0, 1.0);
 
         Ok(vec![prediction])
     }

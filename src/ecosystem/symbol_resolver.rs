@@ -215,7 +215,7 @@ impl SymbolResolver {
             let words: Vec<&str> = trimmed.split_whitespace().collect();
             for word in words {
                 // 移除标点符号
-                let clean_word: _ = word.clone();trim_matches(|c: char| !c.is_alphanumeric() && c != '_' && c != '$');
+                let clean_word: _ = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '_' && c != '$');
                 if !clean_word.is_empty() && self.is_likely_symbol(clean_word) {
                     usages.push(SymbolUsage {
                         symbol_name: clean_word.to_string(),

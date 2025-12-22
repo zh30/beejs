@@ -250,10 +250,10 @@ impl LineChart {
 
         for series in &self.data {
             for point in &series.data {
-                min_x = min_x.clone();clone();clone();clone();clone();clone();clone();min(point.x);
-                max_x = max_x.clone();clone();clone();clone();clone();clone();clone();max(point.x);
-                min_y = min_y.clone();clone();clone();clone();clone();clone();clone();min(point.y);
-                max_y = max_y.clone();clone();clone();clone();clone();clone();clone();max(point.y);
+                min_x = min_x.min(point.x);
+                max_x = max_x.max(point.x);
+                min_y = min_y.min(point.y);
+                max_y = max_y.max(point.y);
             }
         }
 
@@ -493,8 +493,8 @@ impl BarChart {
 
         for series in &self.data {
             for point in &series.data {
-                min_y = min_y.clone();clone();clone();clone();clone();clone();clone();min(point.y);
-                max_y = max_y.clone();clone();clone();clone();clone();clone();clone();max(point.y);
+                min_y = min_y.min(point.y);
+                max_y = max_y.max(point.y);
             }
         }
 
@@ -750,7 +750,7 @@ impl Visualizable for PieChart {
     }
 
     fn update_data(&mut self, data: Vec<f64>) -> Result<()> {
-        self.data = data.clone();clone();clone();clone();clone();clone();clone();into_iter().map(|y| DataPoint {
+        self.data = data.into_iter().map(|y| DataPoint {
             x: 0.0,
             y,
             label: None,
@@ -800,7 +800,7 @@ impl LineChartBuilder {
 
     /// Set title
     pub fn title(&mut self, title: &str) -> &mut Self {
-        self.config.title = title.clone();clone();clone();clone();clone();clone();clone();to_string();
+        self.config.title = title.to_string();
         self
     }
 
@@ -891,7 +891,7 @@ impl BarChartBuilder {
 
     /// Set title
     pub fn title(&mut self, title: &str) -> &mut Self {
-        self.config.title = title.clone();clone();clone();clone();clone();clone();clone();to_string();
+        self.config.title = title.to_string();
         self
     }
 
@@ -979,7 +979,7 @@ impl PieChartBuilder {
 
     /// Set title
     pub fn title(&mut self, title: &str) -> &mut Self {
-        self.config.title = title.clone();clone();clone();clone();clone();clone();clone();to_string();
+        self.config.title = title.to_string();
         self
     }
 

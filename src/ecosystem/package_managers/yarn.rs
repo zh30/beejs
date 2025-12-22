@@ -370,7 +370,7 @@ impl YarnLockParser {
 
     /// 解析包键
     pub fn parse_package_key(&self, key: &str) -> Result<(String, String), Box<dyn std::error::Error>> {
-        let key: _ = key.clone();trim().trim_matches('"');
+        let key: _ = key.trim().trim_matches('"');
         if let Some(at_pos) = key.rfind('@') {
             let (name_part, version_part) = key.split_at(at_pos);
             let name: _ = if name_part.starts_with("@scope/") {

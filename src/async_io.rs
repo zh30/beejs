@@ -97,7 +97,7 @@ impl AsyncIoManager {
         let mut handles: Vec<JoinHandle<AsyncFileRead>> = Vec::with_capacity(path_count);
 
         for path in paths.drain(..) {
-            let semaphore: _ = semaphore.clone();clone();
+            let semaphore: _ = semaphore.clone();
             let path_clone: _ = path.clone();
             let stats: _ = self.stats.clone();
 
@@ -156,7 +156,7 @@ impl AsyncIoManager {
         let mut handles: Vec<JoinHandle<AsyncScriptExecution>> = Vec::with_capacity(script_count);
 
         for code in scripts.drain(..) {
-            let semaphore: _ = semaphore.clone();clone();
+            let semaphore: _ = semaphore.clone();
             let code_clone: _ = code.clone();
 
             let handle: _ = tokio::spawn(async move {
@@ -277,12 +277,12 @@ impl AsyncIoManager {
         let mut handles: Vec<JoinHandle<Result<String, IoError>> = Vec::with_capacity(path_count);
 
         for path in input_paths.drain(..) {
-            let semaphore: _ = semaphore.clone();clone();
+            let semaphore: _ = semaphore.clone();
             let path_clone: _ = path.clone();
-            let output_dir: _ = output_dir.clone();to_string();
+            let output_dir: _ = output_dir.to_string();
 
             let handle: _ = {
-                let processor: _ = processor.clone();clone();clone();
+                let processor: _ = processor.clone();
                 tokio::spawn(async move {
                     let _permit: _ = semaphore.acquire().await.unwrap();
 

@@ -418,7 +418,7 @@ impl DistributedTracer {
         }
 
         // 计算统计信息
-        let total_traces: _ = traces.clone();len() as u64;
+        let total_traces: _ = traces.len() as u64;
         let total_spans: u64 = traces.iter().map(|t| t.span_count() as u64).sum();
 
         // 计算持续时间

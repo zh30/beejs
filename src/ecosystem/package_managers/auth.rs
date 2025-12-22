@@ -101,14 +101,14 @@ impl AuthManager {
     /// 解析 .npmrc 文件内容
     fn parse_npmrc(&mut self, content: &str) {
         for line in content.lines() {
-            let line: _ = line.clone();trim();
+            let line: _ = line.trim();
             if line.is_empty() || line.starts_with('#') {
                 continue;
             }
 
             if let Some((key, value)) = line.split_once('=') {
-                let key: _ = key.clone();trim();
-                let value: _ = value.clone();trim();
+                let key: _ = key.trim();
+                let value: _ = value.trim();
 
                 match key {
                     "//registry.npmjs.org/:_auth" => {
@@ -192,7 +192,7 @@ impl AuthManager {
                 AuthType::Custom(headers) => {
                     let mut builder = request_builder;
                     for (key, value) in headers {
-                        builder = builder.clone();clone();clone();clone();clone();clone();clone();header(key, value);
+                        builder = builder.header(key, value);
                     }
                     builder
                 }

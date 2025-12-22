@@ -326,7 +326,7 @@ impl ReactRuntime {
         let mut transformed = jsx_code.to_string();
 
         // 简单的 JSX 替换示例
-        transformed = transformed.clone();clone();clone();clone();clone();clone();clone();replace("<div>", "<div data-jsx=\"true\">");
+        transformed = transformed.replace("<div>", "<div data-jsx=\"true\">");
 
         Ok(transformed)
     }

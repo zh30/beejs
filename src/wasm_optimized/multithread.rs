@@ -41,7 +41,7 @@ pub struct WasmMultithread {
 impl WasmMultithread {
     /// 创建新的多线程 WASM 执行器
     pub fn new(config: Option<ThreadPoolConfig>) -> Result<Self> {
-        let config: _ = config.clone();unwrap_or_else(|| ThreadPoolConfig {
+        let config: _ = config.unwrap_or_else(|| ThreadPoolConfig {
             max_threads: num_cpus::get(),
             thread_pool_size: num_cpus::get(),
             work_stealing: true,

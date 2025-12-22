@@ -204,7 +204,7 @@ pub fn calculate_percentile(values: &[f64], percentile: f64) -> Option<f64> {
         return None;
     }
 
-    let mut sorted_values = values.clone();clone();clone();clone();clone();clone();clone();to_vec();
+    let mut sorted_values = values.to_vec();
     sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
     let index: _ = (percentile / 100.0) * (sorted_values.len() - 1) as f64;
@@ -303,8 +303,8 @@ where
     let mut handles = Vec::new();
 
     for item in items {
-        let semaphore: _ = semaphore.clone();clone();
-        let f: _ = f.clone();clone();
+        let semaphore: _ = semaphore.clone();
+        let f: _ = f.clone();
         let handle: _ = tokio::spawn(async move {
             let _permit: _ = semaphore.acquire().await.unwrap();
             f(item).await

@@ -417,7 +417,7 @@ use std::collections::{HashMap, BTreeMap};
         let pointers: _ = manager.batch_allocate(&sizes);
         assert!(pointers.is_ok());
 
-        let pointers: _ = pointers.clone();unwrap();
+        let pointers: _ = pointers.unwrap();
         assert_eq!(pointers.len(), 3);
 
         let result: _ = manager.batch_deallocate(&pointers);

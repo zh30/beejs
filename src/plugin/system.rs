@@ -175,7 +175,7 @@ impl PluginManager {
         let mut author = "unknown".to_string();
 
         for line in code.lines() {
-            let line: _ = line.clone();trim();
+            let line: _ = line.trim();
 
             // Extract metadata from @beejs-meta comments
             if line.starts_with("// @beejs-meta") {

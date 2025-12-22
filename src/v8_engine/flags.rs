@@ -285,7 +285,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_v8_flags_conversion() {
         let flags: _ = V8EngineFlags::high_performance();
-        let v8_flags: _ = flags.clone();to_v8_flags();
+        let v8_flags: _ = flags.to_v8_flags();
         assert!(v8_flags.contains(&"--turbofan".to_string()));
         assert!(v8_flags.iter().any(|f| f.contains("turbo_optimization_level=4")));
         assert!(v8_flags.contains(&"--sparkplug".to_string()));

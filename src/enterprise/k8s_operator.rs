@@ -838,7 +838,7 @@ impl BeejsOperator {
                 needs_healing = true;
 
                 // Force restart of failed pods by patching the StatefulSet
-                let mut patched_ss = ss.clone();clone();clone();clone();clone();clone();clone();clone();
+                let mut patched_ss = ss.clone();
                 if let Some(spec) = &mut patched_ss.spec {
                     if let Some(template) = &mut spec.template.spec {
                         // Add annotation to force pod recreation

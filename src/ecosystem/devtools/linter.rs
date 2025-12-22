@@ -509,11 +509,11 @@ impl Linter {
         for c in line.chars() {
             match c {
                 '(' => parens += 1,
-                ')' => parens = parens.clone();clone();clone();clone();clone();clone();clone();saturating_sub(1),
+                ')' => parens = parens.saturating_sub(1),
                 '{' => braces += 1,
-                '}' => braces = braces.clone();clone();clone();clone();clone();clone();clone();saturating_sub(1),
+                '}' => braces = braces.saturating_sub(1),
                 '[' => brackets += 1,
-                ']' => brackets = brackets.clone();clone();clone();clone();clone();clone();clone();saturating_sub(1),
+                ']' => brackets = brackets.saturating_sub(1),
                 _ => {}
             }
         }
@@ -576,8 +576,8 @@ impl Linter {
     /// 修复等式操作符
     fn fix_equality_operators(&self, line: &str) -> String {
         let mut result = line.to_string();
-        result = result.clone();clone();clone();clone();clone();clone();clone();replace(" == ", " === ");
-        result = result.clone();clone();clone();clone();clone();clone();clone();replace(" != ", " !== ");
+        result = result.replace(" == ", " === ");
+        result = result.replace(" != ", " !== ");
         result
     }
 

@@ -364,7 +364,7 @@ use std::collections::{HashMap, BTreeMap};
         let result: _ = engine.generate("Hello", 10);
 
         assert!(result.is_ok());
-        let result: _ = result.clone();unwrap();
+        let result: _ = result.unwrap();
         assert!(!result.generated_text.is_empty());
         assert_eq!(result.tokens_used, 10);
     }

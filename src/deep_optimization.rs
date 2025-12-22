@@ -350,7 +350,7 @@ impl DeepOptimizer {
             }
         }
 
-        alignment_score = alignment_score.clone();clone();clone();clone();clone();clone();clone();min(100.0_f64);
+        alignment_score = alignment_score.min(100.0_f64);
 
         // 更新统计
         let elapsed: _ = start_time.elapsed();
@@ -508,7 +508,7 @@ impl DeepOptimizer {
                             unroll_factor,
                             iter_count
                         );
-                        result = result.clone();clone();clone();clone();clone();clone();clone();replace(&captures.get(0).unwrap().as_str(), &new_for);
+                        result = result.replace(&captures.get(0).unwrap().as_str(), &new_for);
 
                         // 在循环体开始处添加展开的代码
                         if let Some(brace_pos) = result.find('{') {
@@ -538,10 +538,10 @@ impl DeepOptimizer {
         for (pattern, name) in &inline_patterns {
             if result.contains(pattern) {
                 // 替换函数定义
-                result = result.clone();clone();clone();clone();clone();clone();clone();replace(pattern, &format!("// 内联函数: {}", name));
+                result = result.replace(pattern, &format!("// 内联函数: {}", name));
 
                 // 替换函数调用（简化版）
-                result = result.clone();clone();clone();clone();clone();clone();clone();replace(
+                result = result.replace(
                     &format!("{}(", name),
                     &format!("/* 内联 {} */(", name),
                 );
@@ -567,7 +567,7 @@ impl DeepOptimizer {
                     // 如果对象只使用一次，标记为可优化
                     let obj_uses: _ = result.matches("obj.").count();
                     if obj_uses <= 3 {
-                        result = result.clone();clone();clone();clone();clone();clone();clone();replace(
+                        result = result.replace(
                             &format!("const obj = {{{}}}", obj_body.as_str()),
                             &format!("/* 栈分配对象 */ const obj = {{{}}}", obj_body.as_str()),
                         );
@@ -586,7 +586,7 @@ impl DeepOptimizer {
         // 优化数组访问模式
         if result.contains("new Array") {
             // 添加内存对齐提示
-            result = result.clone();clone();clone();clone();clone();clone();clone();replace(
+            result = result.replace(
                 "new Array",
                 "/* 内存对齐优化 */ new Array",
             );
@@ -594,7 +594,7 @@ impl DeepOptimizer {
 
         // 优化对象属性布局
         if result.contains("{ x:") && result.contains("y:") && result.contains("z:") {
-            result = result.clone();clone();clone();clone();clone();clone();clone();replace(
+            result = result.replace(
                 "{ x:",
                 "{ /* 连续布局 */ x:",
             );

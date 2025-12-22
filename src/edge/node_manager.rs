@@ -192,7 +192,7 @@ impl EdgeNodeManager {
         tokio::time::sleep(Duration::from_millis(10)).await;
 
         let metrics: _ = self.load_balancer.metrics.read().await;
-        let node_metrics: _ = metrics.clone();get(node_id);
+        let node_metrics: _ = metrics.get(node_id);
 
         let health: _ = NodeHealth {
             node_id: node_id.clone(),

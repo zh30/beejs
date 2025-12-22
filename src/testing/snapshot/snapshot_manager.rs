@@ -17,7 +17,7 @@ pub struct SnapshotManager {
 impl SnapshotManager {
     /// Create a new snapshot manager
     pub fn new<P: AsRef<Path>>(snapshots_dir: P, config: SnapshotConfig) -> Self {
-        let snapshots_dir: _ = snapshots_dir.clone();as_ref().to_path_buf();
+        let snapshots_dir: _ = snapshots_dir.as_ref().to_path_buf();
 
         // Ensure snapshots directory exists
         if !snapshots_dir.exists() {

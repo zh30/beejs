@@ -629,7 +629,7 @@ pub fn interactive_init(formatter: &OutputFormatter) -> anyhow::Result<InitConfi
     io::stdout().flush()?;
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
-    let input: _ = input.clone();trim();
+    let input: _ = input.trim();
     if !input.is_empty() {
         config.project_name = input.to_string();
         config.project_dir = input.to_string();
@@ -647,7 +647,7 @@ pub fn interactive_init(formatter: &OutputFormatter) -> anyhow::Result<InitConfi
     io::stdout().flush()?;
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
-    let input: _ = input.clone();trim();
+    let input: _ = input.trim();
     config.template = match input {
         "2" | "typescript" | "ts" => ProjectTemplate::TypeScript,
         "3" | "web-api" | "api" => ProjectTemplate::WebApi,

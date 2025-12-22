@@ -310,7 +310,7 @@ impl MemoryLeakDetector {
 
                 leak_details.push(leak_detail);
                 total_leaked_bytes += info.size;
-                oldest_leak_age = oldest_leak_age.clone();clone();clone();clone();clone();clone();clone();max(age_seconds);
+                oldest_leak_age = oldest_leak_age.max(age_seconds);
 
                 *leak_type_distribution.entry(info.object_type).or_insert(0) += 1;
 

@@ -253,7 +253,7 @@ impl HybridComputing {
         let padded_size: _ = 1 << required_qubits;
 
         // 填充数据
-        let mut padded_data = data.clone();clone();clone();clone();clone();clone();clone();to_vec();
+        let mut padded_data = data.to_vec();
         padded_data.resize(padded_size, 0.0);
 
         // 归一化

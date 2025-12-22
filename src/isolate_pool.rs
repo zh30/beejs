@@ -85,7 +85,7 @@ impl IsolatePool {
             return Ok(());
         }
 
-        let actual_count: _ = count.clone();min(self.max_size);
+        let actual_count: _ = count.min(self.max_size);
         let mut pool = self.available.lock().map_err(|e| e.to_string())?;
 
         // 智能预热策略：根据池大小自适应
@@ -183,7 +183,7 @@ impl IsolatePool {
             pool.push_back(isolate);
         }
 
-        *in_use = in_use.clone();clone();clone();clone();clone();clone();clone();saturating_sub(1);
+        *in_use = in_use.saturating_sub(1);
     }
 
     /// 获取池的统计信息（增强版）

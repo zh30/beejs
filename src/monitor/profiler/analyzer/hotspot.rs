@@ -274,7 +274,7 @@ impl HotspotAnalyzer {
             };
         }
 
-        let mut sorted_times = times.clone();clone();clone();clone();clone();clone();clone();to_vec();
+        let mut sorted_times = times.to_vec();
         sorted_times.sort();
 
         let total_time: Duration = times.iter().sum();
@@ -335,7 +335,7 @@ impl HotspotAnalyzer {
             };
         }
 
-        let mut sorted_memory = memory.clone();clone();clone();clone();clone();clone();clone();to_vec();
+        let mut sorted_memory = memory.to_vec();
         sorted_memory.sort();
 
         let total_memory: usize = memory.iter().sum();

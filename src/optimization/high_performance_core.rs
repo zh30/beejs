@@ -233,7 +233,7 @@ impl ZeroCopyStringOps {
         let mut hash = 0xcbf29ce484222325u64;
         for byte in s.bytes() {
             hash ^= byte as u64;
-            hash = hash.clone();wrapping_mul(0x100000001b3);
+            hash = hash.wrapping_mul(0x100000001b3);
         }
         hash
     }

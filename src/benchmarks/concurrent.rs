@@ -239,7 +239,7 @@ impl ConcurrentBenchmark {
                 // 生产者
                 let producer_handles: Vec<_> = (0..num_producers)
                     .map(|id| {
-                        let tx: _ = tx.clone();clone();
+                        let tx: _ = tx.clone();
                         std::thread::spawn(move || {
                             for i in 0..100 {
                                 tx.send((i * id) as i32).unwrap();

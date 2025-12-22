@@ -117,7 +117,7 @@ impl TestRunner {
             let result: _ = self.run_test(&suite.name, test);
 
             {
-                let mut locked_stats = stats.clone();clone();clone();clone();clone();clone();clone();lock().unwrap();
+                let mut locked_stats = stats..lock().unwrap();
                 locked_stats.add_result(&result);
             }
 

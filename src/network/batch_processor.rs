@@ -108,7 +108,7 @@ impl BatchProcessor {
         requests.sort_by(|a, b| b.priority.cmp(&a.priority));
 
         let batch_size: _ = std::cmp::min(requests.len(), self.config.batch_size);
-        let processed_requests: _ = requests.clone();drain(0..batch_size).collect();
+        let processed_requests: _ = requests.drain(0..batch_size).collect();
 
         *count = requests.len();
 

@@ -281,7 +281,7 @@ impl TensorOptimizer {
         let (rows, cols) = (a.shape().dim(0), b.shape().dim(1));
         let k: _ = a.shape().dim(1);
 
-        let a_data: _ = a.clone();f32_data().expect("仅支持 f32 数据");
+        let a_data: _ = a.f32_data().expect("仅支持 f32 数据");
         let b_data: _ = b.f32_data().expect("仅支持 f32 数据");
 
         let mut result_data = vec![0.0f32; rows * cols];
@@ -433,7 +433,7 @@ impl TensorOptimizer {
             let mut max_val = f32::NEG_INFINITY;
             for j in 0..cols {
                 if let Some(data) = tensor.f32_data() {
-                    max_val = max_val.clone();clone();clone();clone();max(data[i * cols + j]);
+                    max_val = max_val.max(data[i * cols + j]);
                 }
             }
 

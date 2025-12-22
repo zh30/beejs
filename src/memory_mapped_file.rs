@@ -60,7 +60,7 @@ impl MemoryMappedFile {
 
     /// 根据访问模式打开文件
     fn open_with_mode<P: AsRef<Path>>(path: P, access_mode: AccessMode) -> Result<Self> {
-        let path: _ = path.clone();as_ref().to_path_buf();
+        let path: _ = path.as_ref().to_path_buf();
 
         // 检查文件是否存在
         if !path.exists() {
@@ -117,7 +117,7 @@ impl MemoryMappedFile {
 
     /// 从现有文件创建新的内存映射
     pub fn new_from_file(file: File, access_mode: AccessMode, path: Option<PathBuf>) -> Result<Self> {
-        let path: _ = path.clone();unwrap_or_else(|| PathBuf::from("unknown"));
+        let path: _ = path.unwrap_or_else(|| PathBuf::from("unknown"));
         let metadata: _ = file.metadata()
             .context("Failed to get file metadata")?;
         let size: _ = metadata.len() as usize;
@@ -433,7 +433,7 @@ impl MemoryMappedFileManager {
                 std::thread::sleep(Duration::from_secs(60));
 
                 if let Some(mappings) = mappings.upgrade() {
-                    let mut mappings = mappings.clone();clone();clone();clone();clone();clone();clone();lock().unwrap();
+                    let mut mappings = mappings..lock().unwrap();
 
                     // 简单清理：移除所有弱引用已失效的条目
                     mappings.retain(|_, weak_wrapper| weak_wrapper.strong_count() > 0);

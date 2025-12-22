@@ -134,7 +134,7 @@ impl AlertNotifier for HttpWebhookNotifier {
 
         // Add custom headers
         for (key, value) in &self.headers {
-            request = request.clone();clone();clone();clone();clone();clone();clone();header(key, value);
+            request = request.header(key, value);
         }
 
         let response: _ = request.send()

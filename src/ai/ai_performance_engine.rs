@@ -264,7 +264,7 @@ impl AiPerformanceEngine {
         // tokio::spawn(async move {
         //     // 训练预测器
         //     {
-        //         let mut predictor = predictor.clone();clone();clone();clone();lock().unwrap();
+        //         let mut predictor = predictor..lock().unwrap();
         //         predictor.train(&history_data).await;
         //     }
 

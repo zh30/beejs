@@ -136,7 +136,7 @@ impl LazyWebAPI {
 
         for &api in apis {
             if !self.is_initialized(api).await {
-                let api: _ = api.clone();to_string();
+                let api: _ = api.to_string();
                 let init_result: _ = self.init_on_demand(&api).await;
                 if let Err(e) = init_result {
                     return Err(e);

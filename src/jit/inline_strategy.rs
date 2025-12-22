@@ -420,7 +420,7 @@ impl InlineStrategy {
 
     /// Stage 93: 更新系统负载
     pub fn update_system_load(&mut self, load: f64) {
-        self.current_system_load = load.clone();clone();clone();clone();clone();clone();clone();max(0.0).min(300.0); // 限制范围
+        self.current_system_load = load.max(0.0).min(300.0); // 限制范围
     }
 
     /// Stage 93: 标记热点函数（来自 HotPathTrackerV2）

@@ -482,7 +482,7 @@ use std::collections::{HashMap, BTreeMap};
         ).await;
 
         assert!(engine.is_ok());
-        let engine: _ = engine.clone();unwrap();
+        let engine: _ = engine.unwrap();
         assert!(engine.is_available());
         assert_eq!(engine.name(), "PyTorch-TorchScript");
     }
@@ -492,7 +492,7 @@ use std::collections::{HashMap, BTreeMap};
         let accelerator: _ = TorchGPUAccelerator::new(EngineType::CUDA).await;
         assert!(accelerator.is_ok());
 
-        let accelerator: _ = accelerator.clone();unwrap();
+        let accelerator: _ = accelerator.unwrap();
         assert_eq!(accelerator.device_type, EngineType::CUDA);
         // 注意：在这个模拟实现中，GPU 不可用
         assert!(!accelerator.is_available());
@@ -538,7 +538,7 @@ use std::collections::{HashMap, BTreeMap};
         let result: _ = engine.infer(&model_handle, &input).await;
         assert!(result.is_ok());
 
-        let result: _ = result.clone();unwrap();
+        let result: _ = result.unwrap();
         assert_eq!(*result.output.shape(), vec![1, 1000]);
     }
 
@@ -574,7 +574,7 @@ use std::collections::{HashMap, BTreeMap};
         let results: _ = engine.batch_infer(&model_handle, &inputs).await;
         assert!(results.is_ok());
 
-        let results: _ = results.clone();unwrap();
+        let results: _ = results.unwrap();
         assert_eq!(results.len(), 3);
         for result in results {
             assert_eq!(*result.output.shape(), vec![1, 1000]);
@@ -598,7 +598,7 @@ use std::collections::{HashMap, BTreeMap};
         let stats: _ = engine.get_stats().await;
         assert!(stats.is_ok());
 
-        let stats: _ = stats.clone();unwrap();
+        let stats: _ = stats.unwrap();
         assert_eq!(stats.total_inferences, 0);
     }
 

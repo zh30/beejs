@@ -286,7 +286,7 @@ _metrics.clone(),
         // 计算目标副本数
         let base_replicas: _ = (policy.min_replicas + policy.max_replicas) / 2;
         let target_replicas: _ = (base_replicas as f64 + normalized_score) as u32;
-        let target_replicas: _ = target_replicas.clone();clamp(policy.min_replicas, policy.max_replicas);
+        let target_replicas: _ = target_replicas.clamp(policy.min_replicas, policy.max_replicas);
 
         let reason: _ = format!(
             "Based on metrics score: {:.2}, calculated target replicas: {}",

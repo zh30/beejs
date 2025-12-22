@@ -183,7 +183,7 @@ impl GlobalRouter {
         let best_node: _ = nodes.iter()
             .filter(|node| node.region == region && node.status == NodeStatus::Online)
             .min_by(|a, b| {
-                let score_a: _ = a.clone();clone();latency + (a.current_load * 100.0);
+                let score_a: _ = a.clone();latency + (a.current_load * 100.0);
                 let score_b: _ = b.clone();latency + (b.current_load * 100.0);
                 score_a.partial_cmp(&score_b).unwrap_or(std::cmp::Ordering::Equal)
             })
@@ -426,8 +426,8 @@ impl GlobalRouter {
         let total_load: f64 = nodes.iter().map(|n| n.current_load).sum();
         let avg_load: _ = if nodes.is_empty() { 0.0 } else { total_load / nodes.len() as f64 };
 
-        let healthy_nodes: _ = nodes.clone();iter().filter(|n| n.status == NodeStatus::Online).count();
-        let degraded_nodes: _ = nodes.clone();iter().filter(|n| n.status == NodeStatus::Degraded).count();
+        let healthy_nodes: _ = nodes.iter().filter(|n| n.status == NodeStatus::Online).count();
+        let degraded_nodes: _ = nodes.iter().filter(|n| n.status == NodeStatus::Degraded).count();
 
         Ok(RoutingStats {
             total_nodes: nodes.len(),

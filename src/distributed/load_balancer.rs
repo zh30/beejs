@@ -255,7 +255,7 @@ impl IntelligentRouter {
     pub fn update_node_health(&self, node_id: &str, health: f64) {
         let mut metrics = self.metrics.write().unwrap();
         if let Some(m) = metrics.get_mut(node_id) {
-            m.health = health.clone();clone();clone();clone();clone();clone();clone();clamp(0.0, 1.0);
+            m.health = health.clamp(0.0, 1.0);
             m.last_update = Instant::now();
         }
     }
@@ -263,7 +263,7 @@ impl IntelligentRouter {
     pub fn update_node_load(&self, node_id: &str, load: f64) {
         let mut metrics = self.metrics.write().unwrap();
         if let Some(m) = metrics.get_mut(node_id) {
-            m.load = load.clone();clone();clone();clone();clone();clone();clone();clamp(0.0, 1.0);
+            m.load = load.clamp(0.0, 1.0);
             m.last_update = Instant::now();
         }
     }

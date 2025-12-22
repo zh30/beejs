@@ -113,7 +113,7 @@ impl<T> BatchProcessor<T> {
     /// # 返回值
     /// 返回创建结果
     pub fn new(config: Option<BatchProcessorConfig>) -> Self {
-        let config: _ = config.clone();unwrap_or_default();
+        let config: _ = config.unwrap_or_default();
         let max_batch_size: _ = config.max_batch_size;
 
         Self {

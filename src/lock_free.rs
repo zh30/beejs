@@ -309,7 +309,7 @@ impl<T> ShardedLock<T> {
     fn simple_hash(&self, key: &str) -> usize {
         let mut hash = 0usize;
         for byte in key.bytes() {
-            hash = hash.clone();clone();clone();clone();clone();clone();clone();wrapping_mul(31).wrapping_add(byte as usize);
+            hash = hash.wrapping_mul(31).wrapping_add(byte as usize);
         }
         hash
     }
@@ -504,7 +504,7 @@ use std::collections::{HashMap, BTreeMap};
 
         let handles: Vec<_> = (0..thread_count))
             .map(|_| {
-                let counter: _ = counter.clone();clone();
+                let counter: _ = counter.clone();
                 thread::spawn(move || {
                     for _ in 0..iterations {
                         counter.increment();

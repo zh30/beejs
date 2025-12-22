@@ -133,7 +133,7 @@ impl DeadCodeEliminationOptimizer {
                 if let Some(eq_pos) = after_keyword.find('=') {
                     let var_names: _ = &after_keyword[..eq_pos];
                     for var_name in var_names.split(',') {
-                        let var_name: _ = var_name.clone();trim();
+                        let var_name: _ = var_name.trim();
                         if self.is_valid_identifier(var_name) {
                             var_usages.insert(
                                 var_name.to_string(),

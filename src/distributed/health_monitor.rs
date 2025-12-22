@@ -175,7 +175,7 @@ impl HealthMonitor {
     /// 记录健康检查结果
     async fn record_health_result(&self, result: HealthCheckResult) {
         let mut history = self.health_history.write().await;
-        let node_history: _ = history.clone();entry(result.node_id.clone()).or_insert_with(Vec::new);
+        let node_history: _ = history.entry(result.node_id.clone()).or_insert_with(Vec::new);
 
         node_history.push(result);
 

@@ -132,7 +132,7 @@ impl MemoryMapper {
     /// # 返回值
     /// 返回创建结果
     pub fn new(config: Option<MemoryMapperConfig>) -> io::Result<Self> {
-        let config: _ = config.clone();unwrap_or_default();
+        let config: _ = config.unwrap_or_default();
 
         Ok(Self {
             config,

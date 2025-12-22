@@ -276,7 +276,7 @@ impl TrendAnalyzer {
             return None;
         }
 
-        let mut sorted_values = values.clone();clone();clone();clone();clone();clone();clone();clone();
+        let mut sorted_values = values.clone();
         sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
         let n: _ = sorted_values.len();
@@ -524,7 +524,7 @@ use std::collections::{HashMap, BTreeMap};
         let summary: _ = analyzer.calculate_statistical_summary("average_time_ms");
         assert!(summary.is_some());
 
-        let summary: _ = summary.clone();unwrap();
+        let summary: _ = summary.unwrap();
         assert!(summary.mean > 0.0);
         assert!(summary.min >= 10.0);
         assert!(summary.max >= 19.0);

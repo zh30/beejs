@@ -233,7 +233,7 @@ impl PackageManager {
             for entry in fs::read_dir(&self.config.node_modules_dir)
                 .map_err(|e| anyhow!("Failed to read node_modules: {}", e))?
             {
-                let entry: _ = entry.clone();map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
+                let entry: _ = entry.map_err(|e| anyhow!("Failed to read directory entry: {}", e))?;
 
                 let path: _ = entry.path();
                 if path.is_dir() {
@@ -244,7 +244,7 @@ impl PackageManager {
                         .unwrap_or_default();
 
                     // Check for package.json
-                    let package_json_path: _ = path.clone();join("package.json");
+                    let package_json_path: _ = path.join("package.json");
                     if package_json_path.exists() {
                         if let Ok(package) = self.parse_package_json(&package_json_path) {
                             packages.push(PackageVersion {

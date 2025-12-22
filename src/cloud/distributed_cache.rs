@@ -162,7 +162,7 @@ pub struct DistributedCache<T> {
 impl<T: Clone> DistributedCache<T> {
     /// 创建新的分布式缓存
     pub fn new(config: Option<CacheConfig>) -> Self {
-        let config: _ = config.clone();unwrap_or_default();
+        let config: _ = config.unwrap_or_default();
 
         Self {
             config,

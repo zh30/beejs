@@ -116,7 +116,7 @@ impl Bundler {
             ModuleType::JavaScript | ModuleType::TypeScript | ModuleType::JSX | ModuleType::TSX => {
                 // Parse import statements
                 for line in code.lines() {
-                    let line: _ = line.clone();trim();
+                    let line: _ = line.trim();
 
                     // ES6 imports: import x from 'y'
                     if let Some(start) = line.find("from '") {
@@ -266,15 +266,15 @@ impl Bundler {
         let mut result = code.to_string();
 
         // Remove type annotations (simplified)
-        result = result.clone();clone();clone();clone();clone();clone();clone();replace(": string", "");
-        result = result.clone();clone();clone();clone();clone();clone();clone();replace(": number", "");
-        result = result.clone();clone();clone();clone();clone();clone();clone();replace(": boolean", "");
-        result = result.clone();clone();clone();clone();clone();clone();clone();replace(": any", "");
+        result = result.replace(": string", "");
+        result = result.replace(": number", "");
+        result = result.replace(": boolean", "");
+        result = result.replace(": any", "");
 
         // Convert interfaces (very simplified - remove interface blocks)
         let lines: Vec<&str> = result.lines()
             .filter(|line| {
-                let line: _ = line.clone();trim();
+                let line: _ = line.trim();
                 !line.starts_with("interface") && !line.starts_with("}")
             })
             .collect();

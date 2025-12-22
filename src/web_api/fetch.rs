@@ -268,7 +268,7 @@ async fn execute_fetch(
     // Add headers
     let mut req_builder = request;
     for (key, value) in headers {
-        req_builder = req_builder.clone();clone();clone();clone();clone();clone();clone();header(&key, &value);
+        req_builder = req_builder.header(&key, &value);
     }
 
     let response: _ = req_builder.send().await?;

@@ -180,7 +180,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_profiler_creation() {
         let profiler: _ = Profiler::new(ProfilingMode::Detailed);
         assert!(profiler.is_ok());
-        let profiler: _ = profiler.clone();unwrap();
+        let profiler: _ = profiler.unwrap();
         assert_eq!(profiler.get_mode(), ProfilingMode::Detailed);
     }
 

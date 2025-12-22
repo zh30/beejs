@@ -229,7 +229,7 @@ impl PerformanceMonitor {
                 continue;
             }
 
-            let mut sorted_values = values.clone();clone();clone();clone();clone();clone();clone();clone();
+            let mut sorted_values = values.clone();
             sorted_values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 
             let count: _ = sorted_values.len() as u64;

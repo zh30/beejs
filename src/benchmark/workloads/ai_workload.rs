@@ -36,7 +36,7 @@ impl AIWorkload {
         // 并行执行 AI 任务
         let handles: Vec<_> = (0..concurrency)
             .map(|_| {
-                let operation: _ = operation.clone();clone();
+                let operation: _ = operation.clone();
                 let iterations: _ = iterations;
                 tokio::spawn(async move {
                     Self::run_ai_tasks(operation, iterations).await

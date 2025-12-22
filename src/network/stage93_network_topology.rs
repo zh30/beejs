@@ -125,7 +125,7 @@ impl Stage93TopologyDiscoverer {
 
             let task: _ = tokio::spawn(async move {
                 if let Some(node) = Self::probe_host(ip, &config).await {
-                    let mut topology = topology.clone();clone();clone();clone();clone();clone();clone();lock().unwrap();
+                    let mut topology = topology..lock().unwrap();
                     topology.nodes.insert(ip, node);
                 }
             });

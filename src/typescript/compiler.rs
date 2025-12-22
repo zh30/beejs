@@ -1070,12 +1070,12 @@ impl Parser {
     fn parse_primary_expression(&mut self) -> Result<ASTExpression> {
         match self.current_token() {
             Token::Identifier(ref name) => {
-                let name: _ = name.clone();clone();
+                let name: _ = name.clone();
                 self.advance();
                 Ok(ASTExpression::Identifier(name))
             }
             Token::Number(ref num) => {
-                let num: _ = num.clone();clone();
+                let num: _ = num.clone();
                 self.advance();
                 Ok(ASTExpression::Literal(num))
             }
@@ -1160,18 +1160,18 @@ impl Parser {
     fn parse_basic_type(&mut self) -> Option<String> {
         match self.current_token() {
             Token::Identifier(ref name) => {
-                let name: _ = name.clone();clone();
+                let name: _ = name.clone();
                 self.advance();
                 Some(name)
             }
             Token::String(ref s, quote) => {
-                let s: _ = s.clone();clone();
+                let s: _ = s.clone();
                 let quote_char: _ = *quote;
                 self.advance();
                 Some(format!("{}{}{}", quote_char, s, quote_char))
             }
             Token::Number(ref n) => {
-                let n: _ = n.clone();clone();
+                let n: _ = n.clone();
                 self.advance();
                 Some(n)
             }

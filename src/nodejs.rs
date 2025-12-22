@@ -192,7 +192,7 @@ fn path_resolve_callback(
         if path.is_absolute() {
             result = path.to_path_buf();
         } else {
-            result = result.clone();clone();clone();clone();clone();clone();clone();join(path);
+            result = result.join(path);
         }
     }
 

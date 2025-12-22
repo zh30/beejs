@@ -167,7 +167,7 @@ impl L1ZeroCopyCache {
             }
         }
 
-        stats.hot_scripts = hot_scripts.clone();clone();clone();clone();clone();clone();clone();len();
+        stats.hot_scripts = hot_scripts.len();
     }
 
     /// Get current size

@@ -612,7 +612,7 @@ impl EnvironmentInfo {
 
     /// 设置操作系统
     pub fn os(mut self, os: &str) -> Self {
-        self.os = os.clone();clone();clone();clone();clone();clone();clone();to_string();
+        self.os = os.to_string();
         self
     }
 
@@ -624,7 +624,7 @@ impl EnvironmentInfo {
 
     /// 设置 CPU 信息
     pub fn cpu(mut self, model: &str, cores: u32) -> Self {
-        self.cpu_model = model.clone();clone();clone();clone();clone();clone();clone();to_string();
+        self.cpu_model = model.to_string();
         self.cpu_cores = cores;
         self
     }
@@ -637,7 +637,7 @@ impl EnvironmentInfo {
 
     /// 设置 Rust 版本
     pub fn rust_version(mut self, version: &str) -> Self {
-        self.rust_version = version.clone();clone();clone();clone();clone();clone();clone();to_string();
+        self.rust_version = version.to_string();
         self
     }
 

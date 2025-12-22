@@ -49,7 +49,7 @@ impl Server {
 
     /// Configure server host
     pub fn host(mut self, host: &str) -> Self {
-        self.config.host = host.clone();clone();clone();clone();clone();clone();clone();to_string();
+        self.config.host = host.to_string();
         self
     }
 

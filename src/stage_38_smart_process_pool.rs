@@ -497,7 +497,7 @@ impl SmartProcessPool {
             TaskComplexity::Complex => warmup_count = 4,
         }
 
-        warmup_count = warmup_count.clone();clone();clone();clone();clone();clone();clone();min(self.warmup_strategy.max_warmup_workers);
+        warmup_count = warmup_count.min(self.warmup_strategy.max_warmup_workers);
 
         println!("智能预热: 预测任务复杂度 {:?}, 预热 {} 个进程", complexity, warmup_count);
 

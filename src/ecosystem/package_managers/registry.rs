@@ -208,7 +208,7 @@ impl BatchPackageQuery {
         let mut handles = Vec::new();
 
         for name in package_names {
-            let semaphore: _ = semaphore.clone();clone();
+            let semaphore: _ = semaphore.clone();
             let name_clone: _ = name.clone();
             let client: _ = self.client.clone();
 
@@ -245,7 +245,7 @@ impl BatchPackageQuery {
         let mut handles = Vec::new();
 
         for name in package_names {
-            let semaphore: _ = semaphore.clone();clone();
+            let semaphore: _ = semaphore.clone();
             let name_clone: _ = name.clone();
             let client: _ = self.client.clone();
 

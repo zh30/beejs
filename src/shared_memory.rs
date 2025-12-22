@@ -153,7 +153,7 @@ impl SharedMemoryManager {
         id: String,
         size: Option<usize>,
     ) -> Result<SharedMemoryHandle> {
-        let size: _ = size.clone();unwrap_or(self.config.region_size);
+        let size: _ = size.unwrap_or(self.config.region_size);
 
         // 检查是否已存在
         {
@@ -449,7 +449,7 @@ impl SharedMemoryManager {
                 std::thread::sleep(config.gc_interval);
 
                 if let Some(regions) = regions.upgrade() {
-                    let mut regions = regions.clone();clone();clone();clone();clone();clone();clone();lock().unwrap();
+                    let mut regions = regions..lock().unwrap();
                     let now: _ = Instant::now();
                     let mut cleaned = 0;
 
@@ -591,7 +591,7 @@ impl SharedMemoryManager {
 
                 // 分析访问模式并预取
                 if let (Some(regions), Some(patterns)) = (regions.upgrade(), patterns.upgrade()) {
-                    let patterns: _ = patterns.clone();lock().unwrap();
+                    let patterns: _ = patterns..lock().unwrap();
 
                     // 查找高频访问模式
                     let hot_patterns: Vec<&AccessPattern> = patterns.iter()

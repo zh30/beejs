@@ -249,7 +249,7 @@ impl BenchmarkEngine {
 
         // 保存结果
         {
-            let mut results = results.clone();clone();clone();clone();clone();clone();clone();lock().await;
+            let mut results = results..lock().await;
             results.add_result(result);
         }
 

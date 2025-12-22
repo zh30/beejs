@@ -84,13 +84,13 @@ impl ModuleLoader {
             module_name
         };
 
-        path = path.clone();clone();clone();clone();clone();clone();clone();join(relative_part);
+        path = path.join(relative_part);
 
         // First, check if the path exists as-is (for directories with index.js)
         if path.exists() {
             // If it's a directory, try to find index.js
             if path.is_dir() {
-                let index_path: _ = path.clone();join("index.js");
+                let index_path: _ = path.join("index.js");
                 if index_path.exists() {
                     return Ok(index_path);
                 }
@@ -100,7 +100,7 @@ impl ModuleLoader {
         }
 
         // If not found, try adding .js extension
-        let mut js_path = path.clone();clone();clone();clone();clone();clone();clone();clone();
+        let mut js_path = path.clone();
         if !path.extension().is_some() {
             js_path.set_extension("js");
         }
@@ -148,7 +148,7 @@ impl ModuleLoader {
                     // Get main entry point
                     if let Some(main) = package["main"].as_str() {
                         let mut main_path = node_modules.clone();
-                        main_path = main_path.clone();clone();clone();clone();clone();clone();clone();join(main);
+                        main_path = main_path.join(main);
 
                         // Add .js extension if not present
                         if !main_path.extension().is_some() {

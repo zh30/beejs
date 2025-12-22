@@ -164,7 +164,7 @@ impl CommunityPortal {
     /// 获取模块评分
     pub async fn get_module_rating(&self, module_id: &str) -> Result<ModuleRatingSummary, Box<dyn std::error::Error>> {
         let ratings: _ = self.ratings.read().await;
-        let module_ratings: _ = ratings.clone();get(module_id).cloned().unwrap_or_default();
+        let module_ratings: _ = ratings.get(module_id).cloned().unwrap_or_default();
 
         if module_ratings.is_empty() {
             return Ok(ModuleRatingSummary {
@@ -224,7 +224,7 @@ impl CommunityPortal {
         }
 
         let ratings: _ = self.ratings.read().await;
-        let module_ratings: _ = ratings.clone();get(module_id).cloned().unwrap_or_default();
+        let module_ratings: _ = ratings.get(module_id).cloned().unwrap_or_default();
 
         let total_downloads: _ = registry.as_ref().map(|m| m.name.len() * 100).unwrap_or(0) as u64; // 模拟下载数
         let rating_summary: _ = self.get_module_rating(module_id).await?;
@@ -350,7 +350,7 @@ impl ModuleRegistry {
                     || m.description.to_lowercase().contains(&query_lower)
                     || m.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower));
 
-                let matches_category: _ = category.clone();is_none() || Some(&m.category) == category.as_ref();
+                let matches_category: _ = category.is_none() || Some(&m.category) == category.as_ref();
 
                 matches_query && matches_category
             })

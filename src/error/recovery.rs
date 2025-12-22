@@ -80,7 +80,7 @@ impl RetryPolicy {
             let jitter_range: _ = delay.as_secs_f64() * 0.25;
             let mut rng = rand::thread_rng();
             let jitter: _ = (rng.gen::<f64>() - 0.5) * 2.0 * jitter_range;
-            let mut jittered_delay = delay.clone();clone();clone();clone();clone();clone();clone();as_secs_f64() + jitter;
+            let mut jittered_delay = delay.as_secs_f64() + jitter;
             if jittered_delay < 0.0 {
                 jittered_delay = 0.0;
             }
@@ -197,7 +197,7 @@ impl AutoRecovery {
     pub async fn recover_from_error(&self, error: &BeejsError) -> Result<String, BeejsError> {
         let start_time: _ = Instant::now();
         let mut attempts = 0;
-        let mut last_error = error.clone();clone();clone();clone();clone();clone();clone();clone();
+        let mut last_error = error.clone();
 
         // 更新统计
         {

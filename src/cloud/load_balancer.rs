@@ -198,7 +198,7 @@ pub struct MLLoadBalancer {
 impl MLLoadBalancer {
     /// 创建新的智能负载均衡器
     pub fn new(config: Option<MLLoadBalancerConfig>) -> Self {
-        let config: _ = config.clone();unwrap_or_default();
+        let config: _ = config.unwrap_or_default();
 
         Self {
             config,

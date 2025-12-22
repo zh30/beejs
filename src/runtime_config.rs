@@ -246,7 +246,7 @@ impl AutoTuner {
         info!("开始手动调优");
 
         let config: _ = self.config_manager.get_config().await;
-        let mut tuned_config = config.clone();clone();clone();clone();clone();clone();clone();clone();
+        let mut tuned_config = config.clone();
         let mut changes = Vec::new();
 
         // 基于性能指标调整 V8 配置
