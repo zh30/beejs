@@ -1,5 +1,7 @@
-use std::collections::{HashMap};
-use std::sync::{Arc, Mutex};
+use std::collections::{HashMap, BTreeMap};
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicUsize, AtomicBool, Ordering};
 // Beejs: 高性能 JavaScript/TypeScript 运行时
 //
 // Stage 92: 企业级性能突破与 AI 原生优化
@@ -16,8 +18,7 @@ use std::sync::{Arc, Mutex};
 // - 自动化 CI/CD 集成
 
 use rusty_v8 as v8;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::hash::Hash;
 use std::task::Context;
 // 模块声明
@@ -38,10 +39,10 @@ use std::task::Context;
 //     pub mod model_interface;
 // }
 // pub mod benchmarks;  // Temporarily disabled due to compilation errors
-// pub mod performance_analyzer;  // Temporarily disabled - depends on benchmarks
 // pub mod performance_reporter;  // Temporarily disabled - depends on benchmarks
-// pub mod performance_regression;  // Temporarily disabled - depends on benchmarks
-// pub mod performance_comparison;  // Stage 37.0: 性能对比引擎 - disabled
+pub mod performance_regression;  // Enabled - provides regression detection
+pub mod performance_analyzer;  // Enabled - provides performance analysis
+pub mod performance_comparison;  // Enabled - provides performance comparison
 pub mod automation;
 pub mod analysis;
 pub mod monitor;
