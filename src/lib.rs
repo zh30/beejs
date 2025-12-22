@@ -68,7 +68,7 @@ pub mod runtime_minimal;  // Minimal runtime for basic JavaScript execution
 // pub mod package_manager;  // Temporarily disabled - compilation issues
 // pub mod watcher;  // Temporarily disabled - compilation issues
 // pub mod repl;  // Temporarily disabled - compilation issues
-// pub mod cli;  // Temporarily disabled - compilation issues
+// pub mod cli;  // Stage 93: CLI tools - Temporarily disabled due to compilation errors
 // pub mod edge;  // Temporarily disabled - incomplete implementation
 // pub mod web_api;  // Temporarily disabled - compilation issues
 // pub mod debugger;  // Temporarily disabled - compilation issues

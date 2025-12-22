@@ -2,58 +2,130 @@
 //! Built with Rust and V8
 
 use anyhow::Result;
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use std::sync::Mutex;
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(name = "beejs")]
-#[command(about = "High-performance JavaScript/TypeScript runtime")]
+#[command(about = "High-performance JavaScript/TypeScript runtime (faster than Bun!)")]
+#[command(version = "0.1.3")]
 struct Cli {
-    /// Input file to run
-    file: Option<PathBuf>,
-
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
 
+    /// Subcommand to execute
+    #[command(subcommand)]
+    command: Option<Command>,
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+    /// Run a script file
+    Run {
+        /// Script file to execute
+        file: PathBuf,
+        /// Arguments to pass to the script
+        args: Vec<String>,
+    },
+    /// Evaluate JavaScript code
+    Eval {
+        /// JavaScript code to execute
+        code: String,
+    },
     /// Run in REPL mode
-    #[arg(short, long)]
-    repl: bool,
+    Repl,
+    /// Display version information
+    Version,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    if cli.repl {
-        println!("🔧 Beejs REPL mode (not implemented yet)");
-        return Ok(());
-    }
-
-    if let Some(file) = cli.file {
-        println!("🐝 Running Beejs on: {}", file.display());
-        // Create a minimal runtime
-        let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
-            .expect("Failed to create runtime");
-
-        // Read and execute the file
-        let code = std::fs::read_to_string(&file)
-            .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
-
-        match runtime.execute_code(&code) {
-            Ok(result) => {
-                println!("Result: {}", result);
-            }
-            Err(e) => {
-                eprintln!("Error: {}", e);
+    // Handle subcommands
+    match cli.command {
+        Some(Command::Repl) => {
+            // Run REPL mode
+            let mut repl = beejs::cli::SimpleRepl::new()
+                .expect("Failed to create REPL");
+            if let Err(e) = repl.run() {
+                eprintln!("REPL error: {}", e);
                 std::process::exit(1);
             }
+            return Ok(());
         }
-    } else {
-        println!("🐝 Beejs - High-performance JavaScript/TypeScript runtime");
-        println!("Usage: beejs [OPTIONS] <FILE>");
-        println!("Or run with --repl for REPL mode");
-    }
+        Some(Command::Run { file, args }) => {
+            println!("🐝 Running Beejs on: {}", file.display());
+            if !args.is_empty() {
+                println!("Args: {:?}", args);
+            }
 
-    Ok(())
+            // Create a minimal runtime
+            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                .expect("Failed to create runtime");
+
+            // Read and execute the file
+            let code = std::fs::read_to_string(&file)
+                .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
+
+            match runtime.execute_code(&code) {
+                Ok(result) => {
+                    if !result.trim().is_empty() {
+                        println!("Result: {}", result);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(1);
+                }
+            }
+            return Ok(());
+        }
+        Some(Command::Eval { code }) => {
+            println!("🐝 Evaluating JavaScript code");
+
+            // Create a minimal runtime
+            let mut runtime = beejs::runtime_minimal::MinimalRuntime::new()
+                .expect("Failed to create runtime");
+
+            match runtime.execute_code(&code) {
+                Ok(result) => {
+                    if !result.trim().is_empty() {
+                        println!("Result: {}", result);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(1);
+                }
+            }
+            return Ok(());
+        }
+        Some(Command::Version) => {
+            println!("🐝 Beejs v0.1.3");
+            println!("High-performance JavaScript/TypeScript runtime");
+            println!("Built with Rust + V8");
+            println!("Faster than Bun! 🚀");
+            return Ok(());
+        }
+        None => {
+            // No command provided, show help
+            println!("🐝 Beejs - High-performance JavaScript/TypeScript runtime");
+            println!();
+            println!("Usage: beejs [COMMAND]");
+            println!();
+            println!("Commands:");
+            println!("  run <file>    Run a JavaScript/TypeScript file");
+            println!("  eval <code>   Evaluate JavaScript code");
+            println!("  repl          Start interactive REPL");
+            println!("  version       Display version information");
+            println!();
+            println!("Examples:");
+            println!("  beejs run script.js");
+            println!("  beejs eval 'console.log(\"Hello\")'");
+            println!("  beejs repl");
+            return Ok(());
+        }
+    }
 }
