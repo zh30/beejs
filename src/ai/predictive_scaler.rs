@@ -164,7 +164,7 @@ pub struct ResourceRequirements {
 pub struct Schedule {
     pub tasks: Vec<ScheduledTask>,
     pub total_duration: Duration,
-    pub resource_utilization: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, std::collections::HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, String, f64, std::collections::HashMap<String, f64, String, f64>>>>,
+    pub resource_utilization: HashMap<String, f64>,
 }
 
 /// 已调度的任务
@@ -188,13 +188,13 @@ pub struct PredictiveScaler {
 #[derive(Debug, Clone)]
 pub struct ResourcePredictor {
     model: Arc<PredictionModel>,
-    historical_data: Arc<RwLock<Vec<Metrics>>,
+    historical_data: Arc<RwLock<Vec<Metrics>>>,
 }
 
 /// 趋势分析器
 #[derive(Debug, Clone)]
 pub struct TrendAnalyzer {
-    patterns: Arc<RwLock<HashMap<String, SeasonalityPattern, std::collections::HashMap<String, SeasonalityPattern, String, SeasonalityPattern, std::collections::HashMap<String, SeasonalityPattern, std::collections::HashMap<String, SeasonalityPattern, String, SeasonalityPattern, String, SeasonalityPattern, std::collections::HashMap<String, SeasonalityPattern, String, SeasonalityPattern>>>>,
+    patterns: Arc<RwLock<HashMap<String, SeasonalityPattern>>>,
     anomaly_detector: Arc<AnomalyDetector>,
 }
 
@@ -202,14 +202,14 @@ pub struct TrendAnalyzer {
 #[derive(Debug, Clone)]
 pub struct AutoScaler {
     current_capacity: Arc<RwLock<ResourceAllocation>>,
-    scaling_history: Arc<RwLock<Vec<ScalingAction>>,
+    scaling_history: Arc<RwLock<Vec<ScalingAction>>>,
 }
 
 /// 预测模型
 #[derive(Debug, Clone)]
 pub struct PredictionModel {
     model_type: ModelType,
-    parameters: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, std::collections::HashMap<String, f64, std::collections::HashMap<String, f64, String, f64, String, f64, std::collections::HashMap<String, f64, String, f64>>>>,
+    parameters: HashMap<String, f64>,
 }
 
 /// 模型类型

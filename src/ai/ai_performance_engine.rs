@@ -122,7 +122,7 @@ pub struct AiPerformanceEngine {
     /// 张量优化器
     pub tensor_optimizer: Arc<Mutex<TensorOptimizer>>,
     /// 预测缓存
-    pub prediction_cache: Arc<Mutex<HashMap<String, PerformancePrediction, std::collections::HashMap<String, PerformancePrediction, String, PerformancePrediction>>>>,
+    pub prediction_cache: Arc<Mutex<HashMap<String, PerformancePrediction>>>,
     /// 是否正在训练
     is_training: Arc<Mutex<bool>>,
     /// 训练进度

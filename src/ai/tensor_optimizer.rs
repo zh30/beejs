@@ -166,7 +166,7 @@ impl Tensor {
 /// 梯度结构
 #[derive(Debug, Clone)]
 pub struct Gradients {
-    tensors: HashMap<String, Tensor, std::collections::HashMap<String, Tensor, String, Tensor, std::collections::HashMap<String, Tensor, std::collections::HashMap<String, Tensor, String, Tensor, String, Tensor, std::collections::HashMap<String, Tensor, String, Tensor>>>>,
+    tensors: HashMap<String, Tensor>,
 }
 
 impl Gradients {
@@ -308,7 +308,7 @@ impl TensorOptimizer {
         match loss.data() {
             TensorData::F32(data) => {
                 let grad_data: Vec<f32> = data.iter().map(|&x| 1.0).collect();
-                gradients.add("loss".to_string(), Tensor::new(loss.shape().clone(), TensorData::F32(grad_data));
+                gradients.add("loss".to_string(), Tensor::new(loss.shape().clone(), TensorData::F32(grad_data)));
             }
             _ => {
                 // 其他数据类型的梯度计算
