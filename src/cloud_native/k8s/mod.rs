@@ -13,8 +13,14 @@ pub use crd::{
     WorkloadPhase,
 };
 
-// TODO: Add Operator controller
-// pub mod operator;
+/// Re-export Operator types
+pub use operator::{
+    ClusterController, ClusterDiff, ClusterLifecycle, ClusterState, ControllerError,
+    LifecycleError, ReconcileResult, WorkloadDiff, WorkloadLifecycle, WorkloadState,
+};
+
+/// Operator controller for managing resources
+pub mod operator;
 
 // TODO: Add HPA autoscaling
 // pub mod autoscaling;
