@@ -4,7 +4,7 @@
 //! 包括零拷贝参数传递、批量调用优化、智能缓存等功能
 use anyhow::{Result, Context, anyhow};
 use wasmtime::{Instance, Store, Func, Val};
-use std::sync::{Arc, Mutex};
+
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
 /// JavaScript 值枚举

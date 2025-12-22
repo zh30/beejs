@@ -1,7 +1,7 @@
 // 启动优化器
 // 优化运行时启动性能，减少首次执行开销
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+
 use std::time::{SystemTime, Duration};
 use crate::RuntimeLite;
 use rusty_v8 as v8;

@@ -468,7 +468,7 @@ pub fn create_low_latency_queue() -> AiAsyncQueue {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_queue_creation() {
         let queue: _ = AiAsyncQueue::new(QueueConfig::default());

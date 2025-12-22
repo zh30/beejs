@@ -1,12 +1,7 @@
 //! Stage 91 Phase 2.3: 运行时配置管理
 //! 提供动态配置管理、配置验证和自动调优功能
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs;
-use std::path::Path;
-use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 /// 运行时配置管理器
 pub struct RuntimeConfigManager {
     /// 当前配置
@@ -895,7 +890,6 @@ impl Default for RuntimeConfig {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[tokio::test]
     async fn test_runtime_config_manager_creation() {
         let manager: _ = RuntimeConfigManager::new();
@@ -1050,6 +1044,3 @@ mod tests {
     }
 }
 // 添加 AtomicBool 的导入
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};

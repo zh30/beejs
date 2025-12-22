@@ -2,7 +2,7 @@
 //! 自动检测网络拓扑，优化路由策略和连接管理
 use std::collections::HashMap;
 use std::net::IpAddr;
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 use tokio::net::{TcpStream, UdpSocket};
 use tokio::time::timeout;

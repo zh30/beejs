@@ -14,7 +14,6 @@ pub mod cloudflare;
 pub mod vercel;
 pub mod load_balancer;
 pub mod distributed_cache;
-use std::collections::HashMap;
 /// 云平台类型
 #[derive(Debug, Clone, PartialEq)]
 pub enum CloudProvider {
@@ -255,5 +254,3 @@ pub use crate::cloud::distributed_cache::{
 pub use crate::cloud::aws::{AwsAdapter, AwsCredentials};
 /// Cloudflare 适配器
 pub use crate::cloud::cloudflare::CloudflareAdapter;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};

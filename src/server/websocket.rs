@@ -3,7 +3,7 @@
 //! Separate WebSocket server that runs alongside the HTTP server
 //! to handle real-time code execution and streaming output.
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::{accept_async, tungstenite::Message};
 use futures_util::{StreamExt, SinkExt};

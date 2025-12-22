@@ -9,7 +9,7 @@ pub mod l2_smart;
 pub mod l3_mmap;
 pub mod prefetcher;
 // TODO: Remove unused export: pub use prefetcher::PatternAnalyzer;
-use std::sync::{Arc, RwLock};
+
 use tokio::sync::Mutex;
 /// Cache key type - uses FNV-1a hash for fast lookups
 pub type CacheKey = u64;

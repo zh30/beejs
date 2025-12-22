@@ -598,7 +598,7 @@ impl Default for Linter {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_lint_syntax_errors() {
         let linter: _ = Linter::new();

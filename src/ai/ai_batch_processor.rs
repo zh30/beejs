@@ -1,7 +1,7 @@
 //! AI批量处理器
 //! 专为AI推理工作负载设计的高性能批量处理系统
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 use tokio::sync::Semaphore;
 /// AI任务类型

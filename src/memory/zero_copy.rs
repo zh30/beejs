@@ -5,7 +5,7 @@
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::VecDeque;
 use std::ptr::NonNull;
-use std::sync::{Arc, Mutex};
+
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use crate::memory::GLOBAL_MEMORY_STATS;

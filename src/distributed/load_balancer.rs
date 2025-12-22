@@ -683,7 +683,7 @@ impl LoadBalancer {
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex};
     #[test]
     fn test_consistent_hash_basic() {
         let config: _ = HashRingConfig::default();

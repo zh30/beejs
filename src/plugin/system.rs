@@ -2,7 +2,7 @@
 //! Supports both Rust and JavaScript plugins with sandboxing
 use anyhow::Result;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+
 /// Plugin metadata
 #[derive(Debug, Clone)]
 pub struct PluginMetadata {

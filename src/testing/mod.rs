@@ -27,7 +27,7 @@ pub use enhanced_runner::{EnhancedRunner, EnhancedRunnerConfig};
 pub use parallel_executor::{ParallelExecutor, ParallelConfig};
 pub use test_timeout::{TestTimeout, TimeoutConfig};
 /// Global test registry for collecting test cases during file execution
-use std::sync::{Mutex, OnceLock};
+use std::sync::{OnceLock};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{BTreeMap};

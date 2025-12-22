@@ -5,7 +5,7 @@ use crate::testing::test_context::{TestSuite, TestCase, TestResult};
 use crate::testing::parallel_executor::{ParallelExecutor, ParallelConfig};
 use crate::testing::test_timeout::{TestTimeout, TimeoutConfig};
 use std::time::{Duration, Instant};
-use std::sync::{Arc, Mutex};
+
 use std::collections::HashMap;
 /// Enhanced test runner configuration
 #[derive(Debug, Clone)]

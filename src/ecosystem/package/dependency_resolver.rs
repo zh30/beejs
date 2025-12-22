@@ -147,7 +147,7 @@ impl DependencyResolver {
     ) -> Result<Vec<DownloadResult>, Box<dyn std::error::Error>> {
         use tokio::task;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
         // 并发下载
         let mut handles = vec![];
         for package in packages {

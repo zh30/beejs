@@ -33,10 +33,10 @@ pub use community::*;
 pub use analytics::*;
 // 共享类型定义
 pub mod types {
-    use std::collections::{HashMap, HashSet};
-    use serde::{Serialize, Deserialize};
+
+
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     /// 版本号
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Version {

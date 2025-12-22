@@ -1,7 +1,7 @@
 //! AI模型统一接口
 //! 提供标准化的AI模型调用和管理接口
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 /// AI模型类型
 #[derive(Debug, Clone, PartialEq)]

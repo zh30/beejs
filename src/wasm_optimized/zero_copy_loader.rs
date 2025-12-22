@@ -2,18 +2,10 @@
 //!
 //! 实现 WASM 模块的零拷贝加载，支持内存映射文件
 //! 实现 < 10ms 的加载时间和 90%+ 缓存命中率
-use std::sync::Arc;
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn};
-use std::num::NonZero;
-use wasmtime::{Engine, Module, Config};
-use anyhow::{Result, Context};
+use wasmtime::{Config, Engine, Module};
+use anyhow::{Context, Result};
 use memmap2::{Mmap, MmapOptions};
-use lru::LruCache;
-use tokio::sync::RwLock;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
 /// 零拷贝加载结果
 #[derive(Debug, Clone)]
 pub struct ZeroCopyLoadResult {

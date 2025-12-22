@@ -385,7 +385,7 @@ impl Default for DeadCodeEliminationOptimizer {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[test]
     fn test_unused_variable_detection() {
         let optimizer: _ = DeadCodeEliminationOptimizer::new();

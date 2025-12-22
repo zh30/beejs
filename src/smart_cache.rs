@@ -9,7 +9,7 @@
 //! - 预热机制
 // use serde::{Deserialize, Serialize};  // Unused import
 use std::collections::{HashMap, VecDeque};
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 /// 缓存条目
 #[derive(Debug, Clone)]
@@ -404,7 +404,7 @@ pub fn create_persistent_cache<T>(max_size: usize) -> SmartCache<T> {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[test]
     fn test_cache_creation() {
         let cache: _ = SmartCache::<String>::with_default_config();

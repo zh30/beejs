@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 /// JIT编译阈值配置
 #[derive(Debug, Clone)]
@@ -312,7 +312,7 @@ impl JITOptimizer {
     /// 判断是否应该编译（Stage 25.2 新增）
     pub fn should_compile(&self, code: &str, complexity: CodeComplexity) -> JITDecision {
         // 使用代码的简单哈希作为键
-        use std::hash::{Hash, Hasher};
+
         use std::collections::hash_map::DefaultHasher;
         let mut hasher = DefaultHasher::new();
         code.hash(&mut hasher);

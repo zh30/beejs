@@ -562,7 +562,7 @@ pub struct SchedulerStatistics {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_add_task() {
         let mut scheduler = Scheduler::new_with_defaults();

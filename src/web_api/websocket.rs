@@ -544,7 +544,7 @@ fn websocket_update_ready_state_callback(
 #[cfg(test)]
 mod tests {
     use super::*;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_ready_state_constants() {

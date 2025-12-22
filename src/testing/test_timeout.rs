@@ -1,6 +1,6 @@
 //! Test Timeout Management
 //! Handles test execution timeouts and cancellation
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 use crossbeam::channel::{unbounded, Receiver, Sender};
 use rayon::prelude::*;

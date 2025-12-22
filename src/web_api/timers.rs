@@ -5,7 +5,7 @@ use once_cell::sync::Lazy;
 use rusty_v8 as v8;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+
 /// Global timer ID counter
 static TIMER_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 /// Generate next timer ID

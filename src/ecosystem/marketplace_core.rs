@@ -474,7 +474,7 @@ impl PluginMarketplace {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+
         let mut hasher = DefaultHasher::new();
         query.query.hash(&mut hasher);
         query.filters.hash(&mut hasher);

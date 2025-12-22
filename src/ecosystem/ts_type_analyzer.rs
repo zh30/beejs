@@ -5,7 +5,7 @@
 use super::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// TypeScript 类型分析器
 #[derive(Debug)]
 pub struct TypeAnalyzer {

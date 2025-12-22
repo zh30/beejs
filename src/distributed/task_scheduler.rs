@@ -308,7 +308,7 @@ impl TaskDistributor {
             "random" => {
                 use rand::Rng;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
                 let mut rng = rand::thread_rng();
                 if compatible_nodes.is_empty() {
                     None

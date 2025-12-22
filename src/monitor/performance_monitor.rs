@@ -2,7 +2,7 @@
 //! 负责实时收集、聚合和分析性能指标
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 /// 性能指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -328,7 +328,7 @@ impl ThresholdSeverity {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[test]
     fn test_performance_monitor_creation() {
         let monitor: _ = PerformanceMonitor::with_default_config();

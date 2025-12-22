@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::os::unix::io::AsRawFd;
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 /// 内存映射类型
 #[derive(Debug, Clone, Copy, PartialEq)]

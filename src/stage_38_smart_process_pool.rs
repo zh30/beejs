@@ -13,7 +13,7 @@
 use anyhow::{Context, Result};
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::{mpsc, RwLock};
 use tokio::time::sleep;
@@ -707,7 +707,7 @@ pub struct PerformanceBottleneckPrediction {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_smart_prewarm() {
         let config: _ = ProcessPoolConfig::default();

@@ -1,0 +1,116 @@
+//! Minimal Runtime Example - standalone test
+//! This example demonstrates the core functionality without dependencies on the full beejs codebase
+
+use rusty_v8 as v8;
+
+fn main() {
+    println!("🚀 Starting Minimal Runtime Example\n");
+
+    // Initialize V8
+    v8::V8::initialize_platform(v8::new_default_platform().unwrap());
+    v8::V8::initialize();
+
+    // Create runtime
+    match create_and_test_runtime() {
+        Ok(()) => println!("\n✅ All tests passed!"),
+        Err(e) => {
+            eprintln!("\n❌ Test failed: {}", e);
+            std::process::exit(1);
+        }
+    }
+}
+
+fn create_and_test_runtime() -> Result<(), String> {
+    println!("📦 Creating Minimal Runtime...");
+
+    // Create isolate
+    let isolate = v8::Isolate::new(v8::CreateParams::default());
+    let scope = &mut v8::HandleScope::new(isolate);
+    let context = v8::Context::new(scope);
+    let context_global = v8::Global::new(scope, context);
+
+    let runtime = MinimalRuntime {
+        isolate: scope.into_owned(),
+        context: context_global,
+    };
+
+    println!("✅ Runtime created successfully\n");
+
+    // Test 1: Simple arithmetic
+    println!("🧪 Test 1: Simple arithmetic (1 + 1)");
+    match runtime.execute("1 + 1") {
+        Ok(result) => {
+            assert_eq!(result, "2", "1 + 1 should equal 2");
+            println!("   Result: {} ✓", result);
+        }
+        Err(e) => return Err(format!("Test 1 failed: {}", e)),
+    }
+
+    // Test 2: Multiple statements
+    println!("\n🧪 Test 2: Multiple statements (let x = 5; let y = 10; x + y)");
+    match runtime.execute("let x = 5; let y = 10; x + y") {
+        Ok(result) => {
+            assert_eq!(result, "15", "x + y should equal 15");
+            println!("   Result: {} ✓", result);
+        }
+        Err(e) => return Err(format!("Test 2 failed: {}", e)),
+    }
+
+    // Test 3: String output
+    println!("\n🧪 Test 3: String output ('Hello, World!')");
+    match runtime.execute("'Hello, World!'") {
+        Ok(result) => {
+            assert_eq!(result, "Hello, World!");
+            println!("   Result: {} ✓", result);
+        }
+        Err(e) => return Err(format!("Test 3 failed: {}", e)),
+    }
+
+    // Test 4: Function call
+    println!("\n🧪 Test 4: Function call (console.log)");
+    match runtime.execute("console.log('Test message');") {
+        Ok(result) => {
+            println!("   console.log executed successfully ✓");
+        }
+        Err(e) => return Err(format!("Test 4 failed: {}", e)),
+    }
+
+    // Test 5: Array operations
+    println!("\n🧪 Test 5: Array operations ([1, 2, 3].length)");
+    match runtime.execute("[1, 2, 3].length") {
+        Ok(result) => {
+            assert_eq!(result, "3");
+            println!("   Result: {} ✓", result);
+        }
+        Err(e) => return Err(format!("Test 5 failed: {}", e)),
+    }
+
+    Ok(())
+}
+
+struct MinimalRuntime {
+    isolate: v8::OwnedIsolate,
+    context: v8::Global<v8::Context>,
+}
+
+impl MinimalRuntime {
+    fn execute(&self, code: &str) -> Result<String, String> {
+        let isolate = &self.isolate;
+        let mut scope = v8::HandleScope::new(isolate);
+
+        let context = v8::Local::new(&mut scope, &self.context);
+        let mut ctx_scope = v8::ContextScope::new(&mut scope, context);
+
+        let source = v8::String::new(&mut ctx_scope, code)
+            .ok_or("Failed to create source string")?;
+
+        let script = v8::Script::compile(&mut ctx_scope, source)
+            .ok_or("Failed to compile script")?;
+
+        let result = script.run(&mut ctx_scope)
+            .ok_or("Script execution failed")?;
+
+        let result_str = result.to_string(&mut ctx_scope);
+        Ok(result_str.to_string())
+    }
+}

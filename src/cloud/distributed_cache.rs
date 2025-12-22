@@ -8,7 +8,7 @@
 //! - 缓存一致性协议
 //! - 布隆过滤器
 use std::collections::{HashMap, VecDeque};
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 /// 缓存条目
 #[derive(Debug, Clone)]
@@ -502,7 +502,7 @@ impl<T: Clone> Default for DistributedCache<T> {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     /// 测试创建分布式缓存
     #[test]
     fn test_distributed_cache_creation() {

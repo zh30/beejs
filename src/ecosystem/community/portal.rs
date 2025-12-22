@@ -348,7 +348,7 @@ impl Default for CommunityPortal {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_share_module() {
         let portal: _ = CommunityPortal::new();

@@ -306,7 +306,7 @@ impl Default for AdvancedInliningOptimizer {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[test]
     fn test_aggressive_inlining_basic() {
         let optimizer: _ = AdvancedInliningOptimizer::new();

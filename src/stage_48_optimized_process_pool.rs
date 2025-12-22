@@ -8,7 +8,7 @@
 //! 5. JIT 缓存 - 复用编译后的代码
 use anyhow::{Context, Result};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use tokio::sync::{Semaphore, RwLock};

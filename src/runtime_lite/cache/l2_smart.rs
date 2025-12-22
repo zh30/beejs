@@ -301,7 +301,7 @@ impl Default for L2SmartCache {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+
     #[test]
     fn test_l2_basic_operations() {
         let mut cache = L2SmartCache::new();

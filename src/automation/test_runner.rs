@@ -17,7 +17,7 @@ use crate::performance_regression::{
     PerformanceRegressionDetector
 };
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::task::JoinHandle;
 use thiserror::Error;

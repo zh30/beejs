@@ -4,7 +4,7 @@ use anyhow::Result;
 use reqwest;
 use rusty_v8 as v8;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+
 use tokio::runtime::Runtime;
 /// Fetch API configuration
 #[derive(Debug, Clone)]

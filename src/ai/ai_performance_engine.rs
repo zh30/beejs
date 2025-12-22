@@ -2,7 +2,7 @@
 //! 基于机器学习的智能性能优化系统
 //! 提供性能预测、自动调优和自适应调度功能
 use std::collections::{HashMap, VecDeque};
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
@@ -330,7 +330,7 @@ impl AiPerformanceEngine {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_record_and_predict() {
         let config: _ = AiPerformanceEngineConfig::default();

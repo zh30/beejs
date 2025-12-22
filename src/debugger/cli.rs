@@ -4,7 +4,7 @@
 //! with support for breakpoints, stepping, and variable inspection.
 use anyhow::Result;
 use std::io::{self, Write};
-use std::sync::{Arc, Mutex};
+
 use crate::debugger::DebuggerEngine;
 use crate::RuntimeLite;
 /// Interactive debug command

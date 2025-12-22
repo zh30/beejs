@@ -572,7 +572,7 @@ mod tests {
     use super::*;
     use chrono::Utc;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+
     #[tokio::test]
     async fn test_memory_pattern_analysis() {
         let analyzer: _ = MemoryPatternAnalyzer::new();

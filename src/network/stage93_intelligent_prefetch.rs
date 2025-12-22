@@ -1,11 +1,7 @@
 //! Stage 93 智能预取系统
 //! 基于 AI 的网络数据预取优化，预测性加载减少延迟
-use std::collections::{HashMap, VecDeque, BTreeMap};
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
-use tokio::sync::RwLock;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+
+
 /// 访问模式类型
 #[derive(Debug, Clone, PartialEq)]
 pub enum AccessPattern {

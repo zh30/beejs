@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+
 use std::time::{Duration, Instant};
 /// L3 Cache entry for memory-mapped files
 #[derive(Debug, Clone)]

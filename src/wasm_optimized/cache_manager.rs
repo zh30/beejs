@@ -2,18 +2,9 @@
 //!
 //! 实现智能缓存管理，支持 LRU、LFU、TTL 策略
 //! 实现 99%+ 缓存命中率和 < 1ms 缓存访问延迟
-use std::sync::Arc;
-use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use tracing::{debug, info, warn};
-use std::num::NonZero;
-use wasmtime::Module;
-use anyhow::{Result, Context};
-use lru::LruCache;
-use tokio::sync::RwLock;
-use serde::{Serialize, Deserialize};
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 /// 缓存条目
 #[derive(Debug, Clone)]
 pub struct CacheEntry {

@@ -1,7 +1,7 @@
 //! V8 事件循环实现
 //! 为 Beejs 提供异步 JavaScript 执行支持
 use rusty_v8 as v8;
-use std::sync::{Arc, Mutex};
+
 // use std::task::{Context, Poll}; // 未使用的导入
 use std::time::{Duration, Instant};
 use tokio::time::sleep;

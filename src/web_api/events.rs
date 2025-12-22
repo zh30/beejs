@@ -3,7 +3,7 @@
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+
 /// Event type enum
 #[derive(Debug, Clone)]
 pub enum EventType {

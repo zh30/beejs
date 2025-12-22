@@ -394,7 +394,7 @@ impl Default for LoopUnrollingOptimizer {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[test]
     fn test_simple_for_loop_analysis() {
         let optimizer: _ = LoopUnrollingOptimizer::new();

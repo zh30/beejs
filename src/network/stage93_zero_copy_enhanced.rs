@@ -259,7 +259,7 @@ impl Stage93ZeroCopySocket {
 }
 use std::time::Instant;
 use std::collections::VecDeque;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 /// 增强零拷贝监听器
 pub struct Stage93ZeroCopyListener {

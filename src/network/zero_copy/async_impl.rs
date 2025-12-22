@@ -9,7 +9,7 @@ use std::io::{self, Seek, SeekFrom};
 use tokio::io::AsyncWriteExt;
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::pin::Pin;
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::sync::{Mutex as TokioMutex, Semaphore};

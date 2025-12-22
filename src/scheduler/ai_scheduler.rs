@@ -234,7 +234,7 @@ fn current_timestamp() -> u64 {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[tokio::test]
     async fn test_intelligent_task_scheduler() {
         let scheduler: _ = IntelligentTaskScheduler::new();

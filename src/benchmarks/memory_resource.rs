@@ -87,7 +87,7 @@ impl MemoryResourceBenchmark {
             MetricType::OperationsPerSecond,
             || {
                 // 模拟内存池操作
-                use std::sync::{Arc, Mutex};
+
                 use std::thread;
                 let pool_size: _ = 100;
                 let pool: _ = Arc::new(Mutex::new(Vec::with_capacity(pool_size)));

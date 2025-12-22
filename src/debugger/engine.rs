@@ -3,9 +3,7 @@
 //! The main debugger engine that coordinates all debugging functionality,
 //! integrates with V8's debugging capabilities, and provides the high-level
 //! API for debugging operations.
-use std::collections::HashMap;
-use rusty_v8 as v8;
-use std::sync::{Arc, Mutex};
+
 use crate::debugger::{
     breakpoint::{BreakpointManager, Breakpoint},
     stack_trace::{StackTrace, StackFrame},
@@ -15,9 +13,6 @@ use crate::debugger::{
     config::DebugConfig,
     v8_stubs::{DebugEvent as V8DebugEvent, DebugExecutionState},
 };
-use crate::runtime_lite::RuntimeLite;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
 /// Debug execution state
 #[derive(Debug, Clone, PartialEq)]
 pub enum DebugState {

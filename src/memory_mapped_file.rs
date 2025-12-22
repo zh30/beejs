@@ -394,7 +394,7 @@ mod tests {
     use super::*;
     use std::io::Write;
     use tempfile::NamedTempFile;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{RwLock};
 use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_readonly_mapping() {

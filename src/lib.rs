@@ -568,12 +568,77 @@ pub fn console_debug_callback(
 ) {
     println!("console.debug called");
 }
+
+/// Minimal Runtime for testing and simple scripts
+/// Contains only bare minimum V8 setup for JavaScript execution
+pub struct MinimalRuntime {
+    isolate: v8::OwnedIsolate,
+    context: v8::Global<v8::Context>,
+}
+
+impl MinimalRuntime {
+    /// Create a new minimal runtime
+    pub fn new() -> Result<Self, String> {
+        let isolate = v8::Isolate::new(v8::CreateParams::default());
+        let scope = &mut v8::HandleScope::new(isolate);
+        let context = v8::Context::new(scope);
+        let context_global = v8::Global::new(scope, context);
+
+        Ok(MinimalRuntime {
+            isolate: scope.into_owned(),
+            context: context_global,
+        })
+    }
+
+    /// Execute JavaScript code and return the result as a string
+    pub fn execute(&self, code: &str) -> Result<String, String> {
+        let isolate = &self.isolate;
+        let mut scope = v8::HandleScope::new(isolate);
+
+        let context = v8::Local::new(&mut scope, &self.context);
+        let mut ctx_scope = v8::ContextScope::new(&mut scope, context);
+
+        let source = v8::String::new(&mut ctx_scope, code)
+            .ok_or("Failed to create source string")?;
+
+        let script = v8::Script::compile(&mut ctx_scope, source)
+            .ok_or("Failed to compile script")?;
+
+        let result = script.run(&mut ctx_scope)
+            .ok_or("Script execution failed")?;
+
+        let result_str = result.to_string(&mut ctx_scope);
+        Ok(result_str.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::time::Duration;
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+
+    #[test]
+    fn test_minimal_runtime_creation() {
+        let runtime = MinimalRuntime::new();
+        assert!(runtime.is_ok());
+    }
+
+    #[test]
+    fn test_minimal_js_execution() {
+        let runtime = MinimalRuntime::new().unwrap();
+        let result = runtime.execute("1 + 1");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "2");
+    }
+
+    #[test]
+    fn test_minimal_js_function() {
+        let runtime = MinimalRuntime::new().unwrap();
+        let result = runtime.execute("let x = 5; let y = 10; x + y;");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "15");
+    }
+
     #[test]
     fn test_runtime_creation() {
         let runtime: _ = Runtime::new(4, 512 * 1024 * 1024, true, false);

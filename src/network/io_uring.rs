@@ -1,12 +1,6 @@
 //! io_uring 引擎
 //! 基于 Linux io_uring 的高性能异步 I/O
 use super::{NetworkConfig, NetworkStats};
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::{RwLock, mpsc};
-use std::collections::HashMap;
-use std::sync::{Mutex, RwLock};
-use std::collections::{BTreeMap};
 /// io_uring 配置
 #[derive(Debug, Clone)]
 pub struct UringConfig {

@@ -7,7 +7,7 @@ use std::time::{SystemTime, Duration};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use std::sync::{Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
 /// 事件类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum IncidentType {

@@ -1,7 +1,7 @@
 //! Parallel Test Executor
 //! Executes tests concurrently using thread pools
 use crate::testing::test_context::{TestSuite, TestCase, TestResult};
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 use rayon::prelude::*;
 /// Parallel execution configuration

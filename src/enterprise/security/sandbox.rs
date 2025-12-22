@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex};
+
 use tracing::{info, warn, error, debug};
 /// Sandbox configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

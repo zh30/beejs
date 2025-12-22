@@ -2,7 +2,7 @@
 //!
 //! Orchestrates the interaction between RuntimeLite and DebuggerEngine
 //! to provide a complete debugging experience.
-use std::sync::{Arc, Mutex};
+
 use std::path::PathBuf;
 use anyhow::{Context, Result};
 use crate::{RuntimeLite, debugger::{DebuggerEngine, DebugConfig}};

@@ -2,7 +2,7 @@
 //! Tracks code coverage during test execution
 use super::*;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+
 /// Coverage tracking configuration
 #[derive(Debug, Clone)]
 pub struct CoverageTrackingConfig {

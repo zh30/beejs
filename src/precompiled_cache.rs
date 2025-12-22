@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, Instant};
 /// 预编译模块缓存统计
 #[derive(Debug, Clone, Default)]

@@ -4,7 +4,7 @@ use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
+
 use std::time::{Duration, SystemTime, Instant};
 use tokio::time::sleep;
 use tracing::{info, warn, debug, error};

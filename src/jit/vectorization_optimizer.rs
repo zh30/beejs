@@ -358,7 +358,7 @@ impl VectorizationOptimizer {
 mod tests {
     use super::*;
 use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
+use std::collections::{BTreeMap};
     #[test]
     fn test_vectorization_optimizer_creation() {
         let config: _ = VectorizationConfig::default();

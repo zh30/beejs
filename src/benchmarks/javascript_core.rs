@@ -197,7 +197,7 @@ impl JavaScriptCoreBenchmark {
             "concurrent_execution_performance",
             MetricType::ExecutionTime,
             || {
-                use std::sync::{Arc, Mutex};
+
                 use std::thread;
                 let num_threads: _ = 10;
                 let results: _ = Arc::new(Mutex::new(Vec::new()));

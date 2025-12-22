@@ -3,7 +3,7 @@ use serde_json;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+
 /// Module loader for handling require() and module system
 #[derive(Debug, Clone)]
 pub struct ModuleLoader {
