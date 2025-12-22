@@ -73,7 +73,7 @@ pub mod ecosystem_lite;  // Stage 91 Phase 3: 生态系统集成 - 简化版
 pub mod ai_inference;
 // pub mod multilang;  // Stage 88 Phase 1: 多语言支持 - temporarily disabled
 // pub mod platform;  // Stage 88 Phase 2: 跨平台运行时 - temporarily disabled
-// pub mod cloudnative;  // Stage 88 Phase 4: 云原生集成 - temporarily disabled
+pub mod cloud_native;  // Stage 94 Phase 3: 云原生集成
 
 // Stage 83: Enterprise modules
 // pub mod enterprise;  // Stage 88 Phase 3: 企业级解决方案 - temporarily disabled
@@ -265,6 +265,43 @@ pub use ai::ai_batch_processor::{
 // 重新导出 AI 内存池相关类型
 pub use ai::ai_memory_pool::{
     AiMemoryPool, ModelMemoryConfig, create_llm_memory_pool,
+};
+
+// 重新导出云原生集成相关类型
+pub use cloud_native::{
+    // Kubernetes CRDs
+    BeejsCluster, BeejsClusterSpec, BeejsWorkload, BeejsWorkloadSpec,
+    ClusterPhase, Condition, ConditionStatus, ConditionType,
+    DistributedConfig, HPAConfig, MonitoringConfig, NetworkPolicyConfig,
+    PodAffinity, PodAntiAffinity, PreferredSchedulingTerm,
+    ResourceRequirements, RetryConfig, SecurityConfig, SecurityContext,
+    ServiceDiscoveryConfig, ServiceMonitorConfig, Toleration, WorkloadPhase,
+
+    // Container
+    MultiStageBuilder, BuilderStage, RuntimeStage, Optimization,
+    SecurityScanner, ContainerImage, ImageLayer, Vulnerability,
+    VulnerabilitySeverity, ComplianceIssue, ComplianceSeverity,
+    Secret, ScanReport, ScanConfig, Optimizer, OptimizationStrategy,
+    OptimizationSuggestion, ImpactLevel, LayerMinimizationStrategy,
+    BaseImageOptimizationStrategy, CacheOptimizationStrategy,
+    SecurityHardeningStrategy, SizeOptimizationStrategy,
+    DockerfileError, SecurityError,
+
+    // Service Mesh
+    IstioConfigManager, IstioConfig, IstioService, TrafficPolicyConfig,
+    LoadBalancerAlgorithm, ConnectionPoolConfig, OutlierDetectionConfig,
+    TrafficManager, FaultType, TrafficSplit, DistributedTracer,
+    TraceContext, SpanRecord, SpanStatus, SpanEvent, PerformanceAnalysis,
+    MetricsCollector, RequestMetrics, LatencyMetrics, ErrorMetrics,
+    MetricsReport, IstioError,
+
+    // CI/CD
+    GitOpsManager, ArgoCDApplication, FluxHelmRelease, PipelineManager,
+    GitHubActionsWorkflow, GitLabCIPipeline, JenkinsPipeline,
+    DeploymentStrategy, BlueGreenDeployment, CanaryDeployment,
+    RollingDeployment, PipelineStage, PipelineStatus, PipelineEvent,
+    GitOpsConfig, PipelineConfig, DeploymentConfig, DeploymentStatus,
+    CICDError,
 };
 
 // 重新导出智能进程池相关类型

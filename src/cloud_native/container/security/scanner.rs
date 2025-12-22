@@ -167,11 +167,11 @@ impl SecurityScanner {
 
         // Define secret patterns
         let secret_patterns = vec![
-            ("AWS_ACCESS_KEY_ID", r"(?i)aws_access_key_id\s*[=:]\s*['\"]?[A-Z0-9]{16,}['\"]?"),
-            ("AWS_SECRET_ACCESS_KEY", r"(?i)aws_secret_access_key\s*[=:]\s*['\"]?[A-Z0-9/+=]{40,}['\"]?"),
+            ("AWS_ACCESS_KEY_ID", r#"(?i)aws_access_key_id\s*[=:]\s*['\"]?[A-Z0-9]{16,}['\"]?"#),
+            ("AWS_SECRET_ACCESS_KEY", r#"(?i)aws_secret_access_key\s*[=:]\s*['\"]?[A-Z0-9/+=]{40,}['\"]?"#),
             ("PRIVATE_KEY", r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
-            ("API_KEY", r"(?i)(api[_-]?key|apikey)\s*[=:]\s*['\"]?[a-zA-Z0-9]{32,}['\"]?"),
-            ("PASSWORD", r"(?i)password\s*[=:]\s*['\"]?[a-zA-Z0-9]{8,}['\"]?"),
+            ("API_KEY", r#"(?i)(api[_-]?key|apikey)\s*[=:]\s*['\"]?[a-zA-Z0-9]{32,}['\"]?"#),
+            ("PASSWORD", r#"(?i)password\s*[=:]\s*['\"]?[a-zA-Z0-9]{8,}['\"]?"#),
         ];
 
         // Scan files for secrets

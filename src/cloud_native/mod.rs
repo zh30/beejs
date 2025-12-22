@@ -26,11 +26,29 @@ pub use container::{
     SecurityHardeningStrategy, SizeOptimizationStrategy, DockerfileError, SecurityError,
 };
 
-// TODO: Add service_mesh module
-// pub mod service_mesh;
+/// Service Mesh module for Istio/Linkerd
+pub mod service_mesh;
 
-// TODO: Add cicd module
-// pub mod cicd;
+/// Re-export service mesh types
+pub use service_mesh::{
+    IstioConfigManager, IstioConfig, IstioService, TrafficPolicyConfig,
+    LoadBalancerAlgorithm, ConnectionPoolConfig, OutlierDetectionConfig,
+    TrafficManager, FaultType, TrafficSplit, DistributedTracer, TraceContext,
+    SpanRecord, SpanStatus, SpanEvent, PerformanceAnalysis, MetricsCollector,
+    RequestMetrics, LatencyMetrics, ErrorMetrics, MetricsReport, IstioError,
+};
+
+/// CI/CD module for GitOps and pipeline integration
+pub mod cicd;
+
+/// Re-export CI/CD types
+pub use cicd::{
+    GitOpsManager, ArgoCDApplication, FluxHelmRelease, PipelineManager,
+    GitHubActionsWorkflow, GitLabCIPipeline, JenkinsPipeline,
+    DeploymentStrategy, BlueGreenDeployment, CanaryDeployment, RollingDeployment,
+    PipelineStage, PipelineStatus, PipelineEvent, GitOpsConfig,
+    PipelineConfig, DeploymentConfig, DeploymentStatus, CICDError,
+};
 
 #[cfg(test)]
 mod tests {
