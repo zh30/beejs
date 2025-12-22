@@ -11,7 +11,7 @@ use std::collections::{HashMap, BTreeMap};
 
 /// Connection manager
 pub struct ConnectionManager {
-    connections: std::collections::HashMap<String, Connection, std::collections::HashMap<String, Connection, String, Connection>>>>>>>,
+    connections: std::collections::HashMap<String, Connection>,
 }
 
 #[derive(Debug, Clone)]
@@ -103,7 +103,7 @@ pub struct DebugState {
     pub current_file: String,
     pub current_line: u32,
     pub call_stack: Vec<StackFrameInfo>,
-    pub variables: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub variables: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

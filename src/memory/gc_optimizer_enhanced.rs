@@ -240,7 +240,7 @@ pub struct EnhancedGcOptimizer {
     /// GC 统计
     metrics: Arc<GcMetrics>,
     /// GC 事件历史
-    event_history: Arc<Mutex<Vec<GcEvent>>,
+    event_history: Arc<Mutex<Vec<GcEvent>>>,
     /// 是否启用预测性 GC
     predictive_enabled: Arc<AtomicBool>,
     /// 当前 GC 策略
@@ -265,19 +265,19 @@ impl EnhancedGcOptimizer {
     pub fn new(config: GcConfig) -> Self {
         Self {
             config,
-            heap_info: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HeapInfo {
+            heap_info: Arc::new(Mutex::new(HeapInfo {
                 current_size: 0,
                 used_size: 0,
                 peak_size: 0,
                 object_count: 0,
                 allocation_rate: 0.0,
                 collection_rate: 0.0,
-            })))))),
-            predictor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AiGcPredictor::new()))))),
-            metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(GcMetrics::default()))))),
-            event_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
-            predictive_enabled: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicBool::new(true)))))),
-            current_strategy: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(GcStrategy::Standard)))))),
+            })),
+            predictor: Arc::new(Mutex::new(AiGcPredictor::new())),
+            metrics: Arc::new(Mutex::new(GcMetrics::default())),
+            event_history: Arc::new(Mutex::new(Vec::new())),
+            predictive_enabled: Arc::new(Mutex::new(AtomicBool::new(true))),
+            current_strategy: Arc::new(Mutex::new(GcStrategy::Standard)),
         }
     }
 

@@ -134,7 +134,7 @@ impl PnpmCompatibility {
         let mut lockfile = PnpmLockfile::new();
 
         // 安装所有依赖
-        let all_deps: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>> = package_json.dependencies
+        let all_deps: HashMap<String, String> = package_json.dependencies
             .iter()
             .chain(package_json.dev_dependencies.iter())
             .map(|(k, v)| (k.clone(), v.clone())
@@ -242,7 +242,7 @@ impl PnpmCompatibility {
             match spec {
                 PackageSpec::Name(name) => {
                     let resolution: _ = self.resolve_package(spec).await?;
-                    let version_spec: _ = format!("^{}", resolution.version);
+                    let version_spec: _ = format!("^{}", resolution.version));
 
                     if optional {
                         package_json.optional_dependencies.insert(name.clone(), version_spec);
@@ -398,7 +398,7 @@ impl Default for LinkStrategy {
 #[derive(Debug, Default)]
 pub struct PnpmLockfile {
     pub lockfile_version: String,
-    pub packages: HashMap<String, PnpmLockEntry, std::collections::HashMap<String, PnpmLockEntry, String, PnpmLockEntry>>>>>>>,
+    pub packages: HashMap<String, PnpmLockEntry>,
 }
 
 impl PnpmLockfile {
@@ -453,7 +453,7 @@ impl PnpmLockfile {
 
     /// 添加包
     pub fn add_package(&mut self, name: &str, resolution: &PackageResolution) {
-        let package_path: _ = format!("node_modules/{}", name);
+        let package_path: _ = format!("node_modules/{}", name));
         let entry: _ = PnpmLockEntry {
             version: resolution.version.clone(),
             requires: resolution.dependencies.clone(),
@@ -492,6 +492,6 @@ impl PnpmLockfile {
 #[derive(Debug, Clone)]
 pub struct PnpmLockEntry {
     pub version: String,
-    pub requires: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub requires: HashMap<String, String>,
     pub dev: bool,
 }

@@ -11,7 +11,7 @@ use std::collections::{HashMap, BTreeMap};
 /// epoll 事件管理器
 pub struct EpollManager {
     config: NetworkConfig,
-    connections: Arc<Mutex<HashMap<usize, TcpStream, std::collections::HashMap<usize, TcpStream, usize, TcpStream>>>>>>>,
+    connections: Arc<Mutex<HashMap<usize, TcpStream>>>,
     connection_count: Arc<Mutex<usize>>,
 }
 
@@ -20,8 +20,8 @@ impl EpollManager {
     pub fn new(config: NetworkConfig) -> Result<Self, NetworkError> {
         Ok(Self {
             config,
-            connections: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
-            connection_count: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(0)))))),
+            connections: Arc::new(Mutex::new(HashMap::new())),
+            connection_count: Arc::new(Mutex::new(0)),
         })
     }
 

@@ -168,15 +168,15 @@ pub struct HAManager {
     /// Configuration
     config: HAConfig,
     /// Cluster nodes
-    nodes: Arc<Mutex<Vec<ClusterNode>>,
+    nodes: Arc<Mutex<Vec<ClusterNode>>>,
     /// Primary region
     primary_region: Arc<Mutex<String>>,
     /// Failover events
-    failover_events: Arc<Mutex<Vec<FailoverEvent>>,
+    failover_events: Arc<Mutex<Vec<FailoverEvent>>>,
     /// Backups
-    backups: Arc<Mutex<Vec<BackupInfo>>,
+    backups: Arc<Mutex<Vec<BackupInfo>>>,
     /// Last backup time
-    last_backup: Arc<Mutex<Option<SystemTime>>,
+    last_backup: Arc<Mutex<Option<SystemTime>>>,
 }
 
 /// Disaster recovery plan
@@ -191,7 +191,7 @@ pub struct DisasterRecoveryPlan {
     /// Recovery steps
     pub steps: Vec<RecoveryStep>,
     /// Contact information
-    pub contacts: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub contacts: HashMap<String, String>,
 }
 
 /// Recovery step
@@ -224,11 +224,11 @@ impl HAManager {
 
         Ok(Self {
             config,
-            nodes: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
-            primary_region: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(primary_region)))))),
-            failover_events: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
-            backups: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
-            last_backup: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(None)))))),
+            nodes: Arc::new(Mutex::new(Vec::new()))
+            primary_region: Arc::new(Mutex::new(primary_region)))
+            failover_events: Arc::new(Mutex::new(Vec::new()))
+            backups: Arc::new(Mutex::new(Vec::new()))
+            last_backup: Arc::new(Mutex::new(None)))
         })
     }
 
@@ -479,7 +479,7 @@ impl HAManager {
     }
 
     /// Get cluster statistics
-    pub fn get_stats(&self) -> HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>>>>> {
+    pub fn get_stats(&self) -> HashMap<String, serde_json::Value> {
         let mut stats = HashMap::new();
 
         let nodes: _ = self.nodes.lock().unwrap();

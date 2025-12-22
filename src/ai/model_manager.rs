@@ -26,8 +26,8 @@ pub struct ModelInfo {
 /// 模型注册中心
 pub struct ModelRegistry {
     config: ModelRegistryConfig,
-    registered_models: Arc<RwLock<HashMap<String, ModelInfo, std::collections::HashMap<String, ModelInfo, String, ModelInfo>>>>,
-    health_status: Arc<RwLock<HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>>>>,
+    registered_models: Arc<RwLock<HashMap<String, ModelInfo>>>,
+    health_status: Arc<RwLock<HashMap<String, bool>>>,
 }
 
 /// 模型注册配置
@@ -40,8 +40,8 @@ pub struct ModelRegistryConfig {
 /// 模型路由器
 pub struct ModelRouter {
     config: RouterConfig,
-    model_metrics: Arc<RwLock<HashMap<String, ModelMetrics, std::collections::HashMap<String, ModelMetrics, String, ModelMetrics>>>>,
-    route_cache: Arc<RwLock<HashMap<String, (String, Instant), std::collections::HashMap<String, (String, Instant), String, (String, Instant)>>>,>,
+    model_metrics: Arc<RwLock<HashMap<String, ModelMetrics>>>,
+    route_cache: Arc<RwLock<HashMap<String, (String, Instant)>>>,
 }
 
 /// 路由器配置
@@ -76,7 +76,7 @@ pub struct ModelManager {
     config: ManagerConfig,
     registry: ModelRegistry,
     router: ModelRouter,
-    active_models: Arc<RwLock<HashMap<String, ModelHandle, std::collections::HashMap<String, ModelHandle, String, ModelHandle>>>>,
+    active_models: Arc<RwLock<HashMap<String, ModelHandle>>>,
     model_handles: Arc<Mutex<Vec<ModelHandle>>>,
 }
 
@@ -94,8 +94,8 @@ impl ModelRegistry {
     pub fn new(config: ModelRegistryConfig) -> Result<Self, String> {
         Ok(ModelRegistry {
             config: config.clone(),
-            registered_models: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            health_status: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            registered_models: Arc::new(RwLock::new(HashMap::new())),
+            health_status: Arc::new(RwLock::new(HashMap::new())),
         })
     }
 
@@ -147,8 +147,8 @@ impl ModelRouter {
     pub fn new(config: RouterConfig) -> Result<Self, String> {
         Ok(ModelRouter {
             config: config.clone(),
-            model_metrics: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            route_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            model_metrics: Arc::new(RwLock::new(HashMap::new())),
+            route_cache: Arc::new(RwLock::new(HashMap::new())),
         })
     }
 
@@ -264,8 +264,8 @@ impl ModelManager {
             config: config.clone(),
             registry,
             router,
-            active_models: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            model_handles: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
+            active_models: Arc::new(RwLock::new(HashMap::new())),
+            model_handles: Arc::new(Mutex::new(Vec::new())),
         })
     }
 

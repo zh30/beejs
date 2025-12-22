@@ -17,7 +17,7 @@ use std::collections::{HashMap, BTreeMap};
 pub struct DistributedCoordinator {
     consensus: Arc<ConsensusAlgorithm>,
     node_manager: Arc<super::node_manager::EdgeNodeManager>,
-    active_proposals: Arc<RwLock<HashMap<String, Proposal, std::collections::HashMap<String, Proposal, String, Proposal>>>>>>>,
+    active_proposals: Arc<RwLock<HashMap<String, Proposal>>>,
 }
 
 /// Consensus algorithm
@@ -169,9 +169,9 @@ impl DistributedCoordinator {
     /// Create a new distributed coordinator
     pub async fn new(node_manager: Arc<super::node_manager::EdgeNodeManager>) -> Result<Self> {
         let coordinator: _ = DistributedCoordinator {
-            consensus: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ConsensusAlgorithm::new(ConsensusType::SimpleMajority, 3, 5000)))))),
+            consensus: Arc::new(Mutex::new(ConsensusAlgorithm::new(ConsensusType::SimpleMajority, 3, 5000)))
             node_manager,
-            active_proposals: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            active_proposals: Arc::new(Mutex::new(HashMap::new()))
         };
 
         println!("Distributed coordinator initialized");
@@ -258,14 +258,14 @@ impl DistributedCoordinator {
     }
 
     /// Get all healthy nodes
-    async fn get_healthy_nodes(&self) -> Result<Vec<NodeId>> {
+    async fn get_healthy_nodes(&self) -> Result<Vec<NodeId> {
         let nodes: _ = self.node_manager.discover_nodes().await?;
         let healthy_nodes: Vec<NodeId> = nodes.into_iter().map(|n| n.id).collect();
         Ok(healthy_nodes)
     }
 
     /// Collect votes from nodes
-    async fn collect_votes(&self, proposal: &Proposal, nodes: &[NodeId]) -> Result<Vec<Vote>> {
+    async fn collect_votes(&self, proposal: &Proposal, nodes: &[NodeId]) -> Result<Vec<Vote> {
         let mut votes = Vec::new();
 
         // Simulate voting from each node
@@ -290,7 +290,7 @@ impl DistributedCoordinator {
     }
 
     /// Select nodes for a task
-    async fn select_nodes_for_task(&self, task: &Task, nodes: &[EdgeNode]) -> Result<Vec<NodeId>> {
+    async fn select_nodes_for_task(&self, task: &Task, nodes: &[EdgeNode]) -> Result<Vec<NodeId> {
         // Simple selection: pick first few nodes
         let selected: Vec<NodeId> = nodes.iter().take(3).map(|n| n.id.clone()).collect();
         Ok(selected)
@@ -341,7 +341,7 @@ impl FailureDetector {
     }
 
     /// Detect failures
-    pub async fn detect_failures(&self) -> Result<Vec<Failure>> {
+    pub async fn detect_failures(&self) -> Result<Vec<Failure> {
         // Simulate failure detection
         tokio::time::sleep(Duration::from_millis(10)).await;
 
@@ -418,7 +418,7 @@ impl AutoRecoverer {
     }
 
     /// Execute recovery action
-    async fn execute_recovery_action(&self, strategy: &RecoveryStrategy, failure: &Failure) -> Result<Vec<String>> {
+    async fn execute_recovery_action(&self, strategy: &RecoveryStrategy, failure: &Failure) -> Result<Vec<String> {
         let mut actions = Vec::new();
 
         match &strategy.action {

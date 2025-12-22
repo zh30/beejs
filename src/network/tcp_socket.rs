@@ -23,7 +23,7 @@ pub struct ZeroCopyTcpSocket {
     stream: Arc<Mutex<TcpStream>>,
 
     /// 零拷贝发送缓冲区
-    send_buffer: Arc<Mutex<Vec<u8>>,
+    send_buffer: Arc<Mutex<Vec<u8>>>,
 
     /// 发送缓冲区大小
     #[allow(dead_code)]
@@ -60,10 +60,10 @@ impl ZeroCopyTcpSocket {
     /// 返回新的 ZeroCopyTcpSocket 实例
     pub fn new(stream: TcpStream, buffer_size: usize) -> Self {
         let mut socket = Self {
-            stream: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(stream)))))),
-            send_buffer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(buffer_size)))))),
+            stream: Arc::new(Mutex::new(stream)),
+            send_buffer: Arc::new(Mutex::new(Vec::with_capacity(buffer_size))),
             buffer_size,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ZeroCopyStats::default()))))),
+            stats: Arc::new(Mutex::new(ZeroCopyStats::default())),
         };
 
         // 应用 TCP 优化设置
@@ -114,7 +114,7 @@ impl ZeroCopyTcpSocket {
             let _: _ = stream.set_nodelay(true);
 
             // 设置发送缓冲区大小
-            let _: _ = stream.set_write_timeout(Some(Duration::from_secs(30));
+            let _: _ = stream.set_write_timeout(Some(Duration::from_secs(30)));
         }
     }
 

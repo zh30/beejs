@@ -13,7 +13,7 @@ use std::collections::{HashMap, BTreeMap};
 /// Offline execution engine
 #[derive(Debug)]
 pub struct OfflineExecutionEngine {
-    runtime: Arc<RwLock<Option<OfflineRuntime>>,
+    runtime: Arc<RwLock<Option<OfflineRuntime>>>,
     local_cache: Arc<LocalCodeCache>,
     data_store: Arc<OfflineDataStore>,
     dependency_resolver: Arc<DependencyResolver>,
@@ -78,11 +78,11 @@ impl OfflineExecutionEngine {
         data_store: OfflineDataStore,
     ) -> Result<Self> {
         let engine: _ = OfflineExecutionEngine {
-            runtime: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(None)))))),
-            local_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(local_cache)))))),
-            data_store: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(data_store)))))),
-            dependency_resolver: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DependencyResolver::new()))))),
-            sync_manager: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(super::local_cache::SyncManager::new()))))).await?),
+            runtime: Arc::new(Mutex::new(None)))
+            local_cache: Arc::new(Mutex::new(local_cache)))
+            data_store: Arc::new(Mutex::new(data_store)))
+            dependency_resolver: Arc::new(Mutex::new(DependencyResolver::new()))
+            sync_manager: Arc::new(Mutex::new(super::local_cache::SyncManager::new()),.await?),
         };
 
         // Initialize runtime
@@ -188,7 +188,7 @@ impl OfflineExecutionEngine {
     }
 
     /// Load modules from cache
-    async fn load_cached_modules(&self, dependencies: &[Dependency]) -> Result<Vec<String>> {
+    async fn load_cached_modules(&self, dependencies: &[Dependency]) -> Result<Vec<String> {
         let mut loaded_modules = Vec::new();
 
         for dep in dependencies {
@@ -300,7 +300,7 @@ impl DependencyResolver {
     }
 
     /// Resolve dependencies from a script
-    pub async fn resolve(&self, script: &str) -> Result<Vec<Dependency>> {
+    pub async fn resolve(&self, script: &str) -> Result<Vec<Dependency> {
         let mut dependencies = Vec::new();
 
         // Simple dependency extraction (in real implementation, use proper parsing)

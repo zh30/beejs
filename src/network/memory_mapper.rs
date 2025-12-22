@@ -114,7 +114,7 @@ pub struct MemoryMapper {
     /// 配置
     config: MemoryMapperConfig,
     /// 活跃映射区域
-    active_regions: Arc<Mutex<HashMap<u64, MemoryMappedRegion, std::collections::HashMap<u64, MemoryMappedRegion, u64, MemoryMappedRegion>>>>>>>,
+    active_regions: Arc<Mutex<HashMap<u64, MemoryMappedRegion>>>,
     /// 统计信息
     stats: Arc<Mutex<MemoryMapperStats>>,
     /// 映射 ID 生成器
@@ -136,10 +136,10 @@ impl MemoryMapper {
 
         Ok(Self {
             config,
-            active_regions: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MemoryMapperStats::default()))))),
-            next_region_id: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::atomic::AtomicU64::new(1)))))),
-            total_mapped_memory: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)))))),
+            active_regions: Arc::new(Mutex::new(HashMap::new())),
+            stats: Arc::new(Mutex::new(MemoryMapperStats::default())),
+            next_region_id: Arc::new(Mutex::new(std::sync::atomic::AtomicU64::new(1))),
+            total_mapped_memory: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0))),
         })
     }
 
@@ -180,7 +180,7 @@ impl MemoryMapper {
         }
 
         // 执行内存映射
-        let region_id: _ = self.perform_mmap(&file, map_type, map_size, Some(file_path.to_string())?;
+        let region_id: _ = self.perform_mmap(&file, map_type, map_size, Some(file_path.to_string()))?;
 
         // 更新统计信息
         let elapsed: _ = start_time.elapsed();

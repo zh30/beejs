@@ -19,8 +19,6 @@ pub use simd_engine::{
     VectorWidth, SimdStats, detect_cpu_features,
 };
 pub use threads_manager::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
     WasmThreadsManager, WasmThreadHandle, SharedMemoryRegion,
     WasmMutex, WasmAtomic, ThreadPoolConfig, ThreadStats,
 };

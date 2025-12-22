@@ -18,11 +18,11 @@ pub struct V8SnapshotOptimizedManager {
     base_manager: V8SnapshotManager,
 
     /// 多级缓存系统
-    l1_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry, std::collections::HashMap<String, Arc<SnapshotEntry, String, Arc<SnapshotEntry>>>>>>>>,
-    l2_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry, std::collections::HashMap<String, Arc<SnapshotEntry, String, Arc<SnapshotEntry>>>>>>>>,
+    l1_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry>>>>,
+    l2_cache: Arc<Mutex<HashMap<String, Arc<SnapshotEntry>>>>,
 
     /// 预加载快照
-    preloaded_snapshots: Arc<Mutex<Vec<String>>,
+    preloaded_snapshots: Arc<Mutex<Vec<String>>>,
 
     /// 优化统计信息
     stats: Arc<SnapshotOptimizationStats>,
@@ -107,10 +107,10 @@ impl V8SnapshotOptimizedManager {
 
         Ok(Self {
             base_manager,
-            l1_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
-            l2_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
-            preloaded_snapshots: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(SnapshotOptimizationStats::new()))))),
+            l1_cache: Arc::new(Mutex::new(HashMap::new()))
+            l2_cache: Arc::new(Mutex::new(HashMap::new()))
+            preloaded_snapshots: Arc::new(Mutex::new(Vec::new()))
+            stats: Arc::new(Mutex::new(SnapshotOptimizationStats::new()))
         })
     }
 
@@ -126,8 +126,8 @@ impl V8SnapshotOptimizedManager {
             // 在后台线程预加载
             let handle: _ = std::thread::spawn(move || {
                 if let Ok(snapshot_data) = Self::load_snapshot_blocking(&version) {
-                    let entry: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(SnapshotEntry {
-                        data: Arc::new(snapshot_data)))))),
+                    let entry: _ = Arc::new(Mutex::new(SnapshotEntry {)),
+                        data: Arc::new(snapshot_data))
                         created_at: std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
                             .unwrap()
@@ -136,7 +136,7 @@ impl V8SnapshotOptimizedManager {
                             .duration_since(std::time::UNIX_EPOCH)
                             .unwrap()
                             .as_secs(),
-                        access_count: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)))))),
+                        access_count: Arc::new(Mutex::new(AtomicUsize::new(0)))
                         version: version.clone(),
                     });
 
@@ -158,7 +158,7 @@ impl V8SnapshotOptimizedManager {
     }
 
     /// 从优化缓存加载快照（目标 < 1ms）
-    pub fn load_from_snapshot_optimized(&self, version: String) -> Result<Vec<u8>> {
+    pub fn load_from_snapshot_optimized(&self, version: String) -> Result<Vec<u8> {
         let start: _ = Instant::now();
 
         // 1. 尝试 L1 缓存（最快）
@@ -193,8 +193,8 @@ impl V8SnapshotOptimizedManager {
         let load_time: _ = start.elapsed();
 
         // 创建条目并添加到缓存
-        let entry: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(SnapshotEntry {
-            data: Arc::new(snapshot_data.clone()))))),
+        let entry: _ = Arc::new(Mutex::new(SnapshotEntry {)),
+            data: Arc::new(snapshot_data.clone())
             created_at: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -203,7 +203,7 @@ impl V8SnapshotOptimizedManager {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
                 .as_secs(),
-            access_count: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(1)))))),
+            access_count: Arc::new(Mutex::new(AtomicUsize::new(1)))
             version: version.clone(),
         });
 
@@ -262,7 +262,7 @@ impl V8SnapshotOptimizedManager {
     }
 
     /// 阻塞式加载快照
-    fn load_snapshot_blocking(version: &str) -> Result<Vec<u8>> {
+    fn load_snapshot_blocking(version: &str) -> Result<Vec<u8> {
         // 模拟快速加载（实际实现会使用基础管理器）
         // 目标：< 1ms 加载时间
 
@@ -283,7 +283,7 @@ impl V8SnapshotOptimizedManager {
     /// 创建版本化快照
     pub fn create_versioned_snapshot(&self, version: &str) -> Result<String> {
         // 创建包含版本信息的快照数据
-        let snapshot_data: _ = format!("optimized-snapshot-for-{}", version);
+        let snapshot_data: _ = format!("optimized-snapshot-for-{}", version));
 
         eprintln!("✅ Created versioned snapshot: {}", version);
 
@@ -317,7 +317,7 @@ impl V8SnapshotOptimizedManager {
     }
 
     /// 获取缓存的快照（用于测试）
-    pub fn get_cached_snapshot(&self, version: &str) -> Option<Vec<u8>> {
+    pub fn get_cached_snapshot(&self, version: &str) -> Option<Vec<u8> {
         // 尝试从 L1 缓存获取
         if let Some(entry) = self.get_from_l1_cache(version) {
             return Some(entry.data.as_ref().clone());
@@ -332,7 +332,7 @@ impl V8SnapshotOptimizedManager {
     }
 
     /// 创建优化快照（用于测试）
-    pub fn create_optimized_snapshot(&self) -> Result<Vec<u8>> {
+    pub fn create_optimized_snapshot(&self) -> Result<Vec<u8> {
         // 返回 1MB 的快照数据
         Ok(vec![0u8; 1024 * 1024])
     }

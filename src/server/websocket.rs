@@ -61,13 +61,13 @@ impl WebSocketServer {
     pub fn new(config: WebSocketConfig, runtime: Runtime) -> Self {
         Self {
             config,
-            runtime: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(runtime)))))),
+            runtime: Arc::new(Mutex::new(runtime)))
         }
     }
 
     /// Start the WebSocket server
     pub async fn start(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let addr: _ = format!("{}:{}", self.config.host, self.config.port);
+        let addr: _ = format!("{}:{}, self.config.host", self.config.port));
         let listener: _ = TcpListener::bind(&addr).await
             .map_err(|e| format!("Failed to bind WebSocket server to {}: {}", addr, e))?;
 

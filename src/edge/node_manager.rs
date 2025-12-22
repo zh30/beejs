@@ -94,7 +94,7 @@ pub struct NodeMetrics {
 /// Edge Node Manager
 #[derive(Debug)]
 pub struct EdgeNodeManager {
-    nodes: Arc<RwLock<HashMap<NodeId, EdgeNode, std::collections::HashMap<NodeId, EdgeNode, NodeId, EdgeNode>>>>>>>,
+    nodes: Arc<RwLock<HashMap<NodeId, EdgeNode>>>,
     load_balancer: Arc<EdgeLoadBalancer>,
     health_checker: Arc<HealthChecker>,
 }
@@ -103,7 +103,7 @@ pub struct EdgeNodeManager {
 #[derive(Debug)]
 pub struct EdgeLoadBalancer {
     strategy: LoadBalancingStrategy,
-    metrics: Arc<RwLock<HashMap<NodeId, NodeMetrics, std::collections::HashMap<NodeId, NodeMetrics, NodeId, NodeMetrics>>>>>>>,
+    metrics: Arc<RwLock<HashMap<NodeId, NodeMetrics>>>,
 }
 
 /// Health Checker
@@ -126,9 +126,9 @@ impl EdgeNodeManager {
     /// Create a new edge node manager
     pub fn new() -> Self {
         EdgeNodeManager {
-            nodes: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
-            load_balancer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EdgeLoadBalancer::new(LoadBalancingStrategy::ResourceBased)))))),
-            health_checker: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HealthChecker::new(Duration::from_secs(30)))))),
+            nodes: Arc::new(Mutex::new(HashMap::new()))
+            load_balancer: Arc::new(Mutex::new(EdgeLoadBalancer::new(LoadBalancingStrategy::ResourceBased)))
+            health_checker: Arc::new(Mutex::new(HealthChecker::new(Duration::from_secs(30)))
         }
     }
 
@@ -167,7 +167,7 @@ impl EdgeNodeManager {
     }
 
     /// Discover available nodes
-    pub async fn discover_nodes(&self) -> Result<Vec<EdgeNode>> {
+    pub async fn discover_nodes(&self) -> Result<Vec<EdgeNode> {
         let nodes: _ = self.nodes.read().await;
 
         let available_nodes: Vec<EdgeNode> = nodes
@@ -259,7 +259,7 @@ impl EdgeLoadBalancer {
     pub fn new(strategy: LoadBalancingStrategy) -> Self {
         EdgeLoadBalancer {
             strategy,
-            metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            metrics: Arc::new(Mutex::new(HashMap::new()))
         }
     }
 

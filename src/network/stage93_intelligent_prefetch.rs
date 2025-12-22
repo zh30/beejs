@@ -43,17 +43,17 @@ pub struct PrefetchStats {
 
 /// AI 预测器
 pub struct AIPrefetchPredictor {
-    history: Arc<RwLock<VecDeque<(Instant, AccessPattern, usize)>>,
-    pattern_cache: Arc<RwLock<HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>>>>>>,
-    accuracy_tracker: Arc<RwLock<VecDeque<bool>>,
+    history: Arc<RwLock<VecDeque<(Instant, AccessPattern, usize)>>>,
+    pattern_cache: Arc<RwLock<HashMap<String, AccessPattern>>>,
+    accuracy_tracker: Arc<RwLock<VecDeque<bool>>>,
 }
 
 impl AIPrefetchPredictor {
     pub fn new() -> Self {
         Self {
-            history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(VecDeque::with_capacity(10000)))))),
-            pattern_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
-            accuracy_tracker: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(VecDeque::with_capacity(1000)))))),
+            history: Arc::new(Mutex::new(VecDeque::with_capacity(10000))),
+            pattern_cache: Arc::new(Mutex::new(HashMap::new())),
+            accuracy_tracker: Arc::new(Mutex::new(VecDeque::with_capacity(1000))),
         }
     }
 
@@ -170,7 +170,7 @@ impl AIPrefetchPredictor {
 /// 智能预取器
 pub struct Stage93IntelligentPrefetcher {
     predictor: Arc<AIPrefetchPredictor>,
-    prefetch_queue: Arc<RwLock<VecDeque<PrefetchRequest>>,
+    prefetch_queue: Arc<RwLock<VecDeque<PrefetchRequest>>>,
     stats: Arc<RwLock<PrefetchStats>>,
     config: PrefetchConfig,
 }
@@ -200,9 +200,9 @@ impl Default for PrefetchConfig {
 impl Stage93IntelligentPrefetcher {
     pub fn new(config: PrefetchConfig) -> Self {
         Self {
-            predictor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AIPrefetchPredictor::new()))))),
-            prefetch_queue: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(VecDeque::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(PrefetchStats::default()))))),
+            predictor: Arc::new(Mutex::new(AIPrefetchPredictor::new())),
+            prefetch_queue: Arc::new(Mutex::new(VecDeque::new())),
+            stats: Arc::new(Mutex::new(PrefetchStats::default())),
             config,
         }
     }

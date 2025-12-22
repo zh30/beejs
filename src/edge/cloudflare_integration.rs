@@ -48,7 +48,7 @@ impl CloudflareIntegration {
     }
 
     /// Get edge locations from Cloudflare
-    async fn get_edge_locations(&self) -> Result<Vec<String>> {
+    async fn get_edge_locations(&self) -> Result<Vec<String> {
         // Cloudflare has 250+ edge locations globally
         Ok(vec![
             "us-west-1".to_string(),
@@ -65,10 +65,10 @@ impl CloudflareIntegration {
 impl CdnProvider for CloudflareIntegration {
     /// Deploy code to Cloudflare Workers
     async fn deploy(&self, code: &[u8], region: &str) -> Result<DeploymentResult> {
-        let worker_name: _ = format!("beejs-worker-{}", region);
+        let worker_name: _ = format!("beejs-worker-{}", region));
         let deployment_id: _ = self.create_worker(&worker_name, code).await?;
 
-        let route_pattern: _ = format!("*.{}.beejs-edge.com/*", region);
+        let route_pattern: _ = format!("*.{}.beejs-edge.com/*", region));
         self.publish_worker(&worker_name, &route_pattern).await?;
 
         Ok(DeploymentResult {
@@ -129,7 +129,7 @@ impl CdnProvider for CloudflareIntegration {
     }
 
     /// Update Cloudflare configuration
-    async fn update_config(&self, config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>) -> Result<()> {
+    async fn update_config(&self, config: &HashMap<String, String>) -> Result<()> {
         // Update Workers KV, environment variables, etc.
         if let Some(tier) = config.get("tier") {
             println!("Updated Cloudflare tier to: {}", tier);
@@ -201,8 +201,8 @@ pub struct RealtimeMetrics {
 /// Cloudflare Workers Environment Configuration
 #[derive(Debug)]
 pub struct WorkerEnvironment {
-    pub variables: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
-    pub secrets: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub variables: HashMap<String, String>,
+    pub secrets: HashMap<String, String>,
     pub kv_namespaces: Vec<String>,
     pub durable_objects: Vec<String>,
 }

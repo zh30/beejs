@@ -137,7 +137,7 @@ pub trait AnomalyDetector {
     async fn detect_anomaly(&self, metric: &Metric, history: &[Metric]) -> Result<AnomalyResult>;
 
     /// Detect anomalies for multiple metrics
-    async fn detect_batch_anomalies(&self, metrics: &[Metric]) -> Result<Vec<AnomalyResult>>;
+    async fn detect_batch_anomalies(&self, metrics: &[Metric]) -> Result<Vec<AnomalyResult>;
 
     /// Update baseline with new metrics
     async fn update_baseline(&mut self, metrics: &[Metric]) -> Result<()>;
@@ -280,7 +280,7 @@ impl AnomalyDetector for StatisticalAnomalyDetector {
         })
     }
 
-    async fn detect_batch_anomalies(&self, metrics: &[Metric]) -> Result<Vec<AnomalyResult>> {
+    async fn detect_batch_anomalies(&self, metrics: &[Metric]) -> Result<Vec<AnomalyResult> {
         let mut results = Vec::new();
 
         for (i, metric) in metrics.iter().enumerate() {

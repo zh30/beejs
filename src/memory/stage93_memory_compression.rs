@@ -115,13 +115,13 @@ pub struct Stage93MemoryCompressor {
     /// 配置
     config: Stage93CompressionConfig,
     /// 压缩块池
-    compression_pool: Arc<RwLock<LruCache<usize, Arc<CompressionBlock>>,
+    compression_pool: Arc<RwLock<LruCache<usize, Arc<CompressionBlock>>>>,
     /// 解压缩缓存
-    decompress_cache: Arc<RwLock<LruCache<usize, Vec<u8>>,
+    decompress_cache: Arc<RwLock<LruCache<usize, Vec<u8>>>>,
     /// 压缩统计
     stats: Arc<RwLock<CompressionStats>>,
     /// 压缩工作队列
-    work_queue: Arc<Mutex<Vec<CompressionWorkItem>>,
+    work_queue: Arc<Mutex<Vec<CompressionWorkItem>>>,
     /// 活跃压缩数
     active_compressions: AtomicUsize,
     /// 压缩块 ID 计数器
@@ -148,10 +148,10 @@ impl Stage93MemoryCompressor {
 
         Self {
             config,
-            compression_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(LruCache::new(cache_size as u64)))))),
-            decompress_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(LruCache::new(cache_size as u64)))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CompressionStats::default()))))),
-            work_queue: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            compression_pool: Arc::new(Mutex::new(LruCache::new(cache_size as u64)))
+            decompress_cache: Arc::new(Mutex::new(LruCache::new(cache_size as u64)))
+            stats: Arc::new(Mutex::new(CompressionStats::default()))
+            work_queue: Arc::new(Mutex::new(Vec::new()))
             active_compressions: AtomicUsize::new(0),
             next_block_id: AtomicUsize::new(1),
         }
@@ -233,7 +233,7 @@ impl Stage93MemoryCompressor {
     }
 
     /// 解压缩数据
-    pub async fn decompress(&self, compressed_data: &[u8], original_size: usize) -> Result<Vec<u8>> {
+    pub async fn decompress(&self, compressed_data: &[u8], original_size: usize) -> Result<Vec<u8> {
         let start: _ = Instant::now();
 
         // 尝试从缓存获取

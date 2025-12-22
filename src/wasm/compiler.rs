@@ -48,7 +48,7 @@ impl WasmCompiler {
             .context("Failed to create Wasmtime engine")?;
 
         Ok(WasmCompiler {
-            engine: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(engine)))))),
+            engine: Arc::new(Mutex::new(engine)))
             config,
         })
     }
@@ -68,14 +68,14 @@ impl WasmCompiler {
     /// * `wit_path` - 可选的 WIT 文件路径
     ///
     /// # 返回值
-    /// * `Result<Vec<u8>>` - 成功返回 WASM 字节，失败返回错误
+    /// * `Result<Vec<u8>` - 成功返回 WASM 字节，失败返回错误
     ///
     /// # 示例
     /// ```
     /// let js_code: _ = "export function add(a, b) { return a + b; }";
     /// let wasm_bytes: _ = compiler.compile_js_to_wasm(js_code, None)?;
     /// ```
-    pub fn compile_js_to_wasm(&self, js_code: &str, wit_path: Option<&str>) -> Result<Vec<u8>> {
+    pub fn compile_js_to_wasm(&self, js_code: &str, wit_path: Option<&str>) -> Result<Vec<u8> {
         // 注意：实际的 Javy 集成需要额外的设置
         // 这里提供基本的编译框架，实际的 JS -> WASM 编译需要 Javy 工具链
 
@@ -95,8 +95,8 @@ impl WasmCompiler {
     /// * `js_code` - JavaScript 代码（用于生成标识）
     ///
     /// # 返回值
-    /// * `Result<Vec<u8>>` - WASM 字节码
-    fn generate_demo_wasm(&self, js_code: &str) -> Result<Vec<u8>> {
+    /// * `Result<Vec<u8>` - WASM 字节码
+    fn generate_demo_wasm(&self, js_code: &str) -> Result<Vec<u8> {
         use wasm_encoder::*;
 
         let mut module = Module::new();

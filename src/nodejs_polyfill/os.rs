@@ -27,38 +27,41 @@ pub fn register(scope: &mut v8::HandleScope, global: &v8::Local<v8::Object>) {
 }
 
 fn platform(scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue) {
-    #[cfg(target_os = "linux")]
-    let platform: _ = "linux";
-    #[cfg(target_os = "macos")]
-    let platform: _ = "darwin";
-    #[cfg(target_os = "windows")]
-    let platform: _ = "win32";
-    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
-    let platform: _ = "unknown";
+    let platform = if cfg!(target_os = "linux") {
+        "linux"
+    } else if cfg!(target_os = "macos") {
+        "darwin"
+    } else if cfg!(target_os = "windows") {
+        "win32"
+    } else {
+        "unknown"
+    };
 
     retval.set(v8::String::new(scope, platform).unwrap().into());
 }
 
 fn ostype(scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue) {
-    #[cfg(target_os = "linux")]
-    let ostype: _ = "Linux";
-    #[cfg(target_os = "macos")]
-    let ostype: _ = "Darwin";
-    #[cfg(target_os = "windows")]
-    let ostype: _ = "Windows_NT";
-    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
-    let ostype: _ = "Unknown";
+    let ostype = if cfg!(target_os = "linux") {
+        "Linux"
+    } else if cfg!(target_os = "macos") {
+        "Darwin"
+    } else if cfg!(target_os = "windows") {
+        "Windows_NT"
+    } else {
+        "Unknown"
+    };
 
     retval.set(v8::String::new(scope, ostype).unwrap().into());
 }
 
 fn arch(scope: &mut v8::HandleScope, _args: v8::FunctionCallbackArguments, mut retval: v8::ReturnValue) {
-    #[cfg(target_arch = "x86_64")]
-    let arch: _ = "x64";
-    #[cfg(target_arch = "aarch64")]
-    let arch: _ = "arm64";
-    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64"))]
-    let arch: _ = "unknown";
+    let arch = if cfg!(target_arch = "x86_64") {
+        "x64"
+    } else if cfg!(target_arch = "aarch64") {
+        "arm64"
+    } else {
+        "unknown"
+    };
 
     retval.set(v8::String::new(scope, arch).unwrap().into());
 }

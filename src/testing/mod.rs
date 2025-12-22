@@ -36,18 +36,18 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
 
-static TEST_REGISTRY: OnceLock<Mutex<HashMap<String, TestSuite, std::collections::HashMap<String, TestSuite, String, TestSuite>>>>>>> = OnceLock::new();
+static TEST_REGISTRY: OnceLock<Mutex<HashMap<String, TestSuite>>> = OnceLock::new();
 
 /// Register a test suite
 pub fn register_suite(suite: TestSuite) {
-    let registry: _ = TEST_REGISTRY.get_or_init(|| Mutex::new(HashMap::new());
+    let registry = TEST_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()));
     let mut locked = registry.lock().unwrap();
     locked.insert(suite.name.clone(), suite);
 }
 
 /// Get all registered test suites
-pub fn get_all_suites() -> HashMap<String, TestSuite, std::collections::HashMap<String, TestSuite, String, TestSuite>>>>>>> {
-    let registry: _ = TEST_REGISTRY.get_or_init(|| Mutex::new(HashMap::new());
+pub fn get_all_suites() -> HashMap<String, TestSuite> {
+    let registry = TEST_REGISTRY.get_or_init(|| Mutex::new(HashMap::new()));
     let locked: _ = registry.lock().unwrap();
     locked.clone()
 }

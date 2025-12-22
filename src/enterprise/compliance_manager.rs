@@ -55,7 +55,7 @@ pub enum ComplianceSeverity {
 /// Compliance frameworks manager
 #[derive(Debug)]
 pub struct ComplianceFrameworks {
-    frameworks: Arc<RwLock<HashMap<String, ComplianceFrameworkConfig, std::collections::HashMap<String, ComplianceFrameworkConfig, String, ComplianceFrameworkConfig>>>>>>>,
+    frameworks: Arc<RwLock<HashMap<String, ComplianceFrameworkConfig>>>,
 }
 
 /// Framework configuration
@@ -70,7 +70,7 @@ struct ComplianceFrameworkConfig {
 /// Policy engine for compliance rules
 #[derive(Debug)]
 pub struct PolicyEngine {
-    policies: Arc<RwLock<HashMap<String, CompliancePolicy, std::collections::HashMap<String, CompliancePolicy, String, CompliancePolicy>>>>>>>,
+    policies: Arc<RwLock<HashMap<String, CompliancePolicy>>>,
 }
 
 /// Compliance policy
@@ -144,7 +144,7 @@ pub struct ComplianceManager {
 /// Compliance checker
 #[derive(Debug)]
 pub struct ComplianceChecker {
-    framework_checks: HashMap<String, Box<dyn FrameworkCheck, std::collections::HashMap<String, Box<dyn FrameworkCheck, String, Box<dyn FrameworkCheck>>>>>>>,
+    framework_checks: HashMap<String, Box<dyn FrameworkCheck>>,
 }
 
 /// Framework check trait
@@ -156,7 +156,7 @@ pub trait FrameworkCheck: Send + Sync {
 impl ComplianceFrameworks {
     /// Create a new compliance frameworks manager
     pub fn new() -> Self {
-        let frameworks: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))));
+        let frameworks: _ = Arc::new(Mutex::new(HashMap::new()),;
         Self { frameworks }
     }
 
@@ -188,7 +188,7 @@ impl ComplianceFrameworks {
     }
 
     /// List all registered frameworks
-    pub async fn list_frameworks(&self) -> Result<Vec<String>> {
+    pub async fn list_frameworks(&self) -> Result<Vec<String> {
         let frameworks: _ = self.frameworks.read().await;
         Ok(frameworks.keys().cloned().collect())
     }
@@ -204,7 +204,7 @@ impl PolicyEngine {
     /// Create a new policy engine
     pub fn new() -> Self {
         PolicyEngine {
-            policies: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            policies: Arc::new(Mutex::new(HashMap::new()))
         }
     }
 
@@ -224,7 +224,7 @@ impl PolicyEngine {
     }
 
     /// List all policies
-    pub async fn list_policies(&self) -> Result<Vec<String>> {
+    pub async fn list_policies(&self) -> Result<Vec<String> {
         let policies: _ = self.policies.read().await;
         Ok(policies.keys().cloned().collect())
     }
@@ -395,9 +395,9 @@ impl ComplianceManager {
     /// Create a new compliance manager
     pub fn new() -> Self {
         ComplianceManager {
-            frameworks: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ComplianceFrameworks::new()))))),
-            policies: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PolicyEngine::new()))))),
-            checker: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ComplianceChecker::new()))))),
+            frameworks: Arc::new(Mutex::new(ComplianceFrameworks::new()))
+            policies: Arc::new(Mutex::new(PolicyEngine::new()))
+            checker: Arc::new(Mutex::new(ComplianceChecker::new()))
         }
     }
 

@@ -166,7 +166,7 @@ impl Tensor {
 /// 梯度结构
 #[derive(Debug, Clone)]
 pub struct Gradients {
-    tensors: HashMap<String, Tensor, std::collections::HashMap<String, Tensor, String, Tensor>>,
+    tensors: HashMap<String, Tensor>,
 }
 
 impl Gradients {

@@ -111,7 +111,7 @@ impl PerformanceMonitor {
 impl Stage93MemoryOptimizer {
     /// 创建新的 Stage 93 内存优化器
     pub fn new(config: Stage93MemoryOptimizerConfig) -> Self {
-        let performance_monitor: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(PerformanceMonitor::default())))));
+        let performance_monitor: _ = Arc::new(Mutex::new(PerformanceMonitor::default()),;
 
         let zero_copy_optimizer: _ = if config.enable_all_optimizations {
             let base: _ = EnhancedZeroCopy::new(
@@ -189,7 +189,7 @@ impl Stage93MemoryOptimizer {
     }
 
     /// 优化内存分配
-    pub async fn optimized_allocate(&self, size: usize) -> Result<Vec<u8>> {
+    pub async fn optimized_allocate(&self, size: usize) -> Result<Vec<u8> {
         // 使用优化分配器
         if let Some(ref allocator) = self.optimized_allocator {
             if let Some(ptr) = allocator.optimized_allocate(size).await {
@@ -223,7 +223,7 @@ impl Stage93MemoryOptimizer {
     }
 
     /// 智能压缩数据
-    pub async fn smart_compress(&self, data: &[u8], access_frequency: f64) -> Result<Vec<u8>> {
+    pub async fn smart_compress(&self, data: &[u8], access_frequency: f64) -> Result<Vec<u8> {
         if let Some(ref compressor) = self.memory_compressor {
             let result: _ = compressor.smart_compress(data, access_frequency).await?;
             self.performance_monitor.write().await.record_compression();

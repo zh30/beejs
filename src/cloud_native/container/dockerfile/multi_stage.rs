@@ -206,7 +206,7 @@ pub struct BuilderStage {
     pub rust_version: String,
 
     /// Labels to add
-    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub labels: HashMap<String, String>,
 
     /// Strip binaries
     pub strip_binaries: bool,
@@ -215,7 +215,7 @@ pub struct BuilderStage {
     pub optimize_for_size: bool,
 
     /// Additional build args
-    pub build_args: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub build_args: HashMap<String, String>,
 }
 
 impl Default for BuilderStage {
@@ -253,7 +253,7 @@ pub struct RuntimeStage {
     pub user_group: String,
 
     /// Labels to add
-    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub labels: HashMap<String, String>,
 
     /// Additional packages to install
     pub packages: Vec<String>,

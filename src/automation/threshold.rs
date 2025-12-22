@@ -64,7 +64,7 @@ pub struct ThresholdRule {
     pub description: String,
     pub enabled: bool,
     pub priority: u8, // 0-255, 数字越大优先级越高
-    pub conditions: HashMap<String, _, std::collections::HashMap<String, _, String, _>>>>>>, // 额外的条件
+    pub conditions: HashMap<String, _>, // 额外的条件
 }
 
 /// 阈值配置
@@ -93,8 +93,8 @@ pub struct ThresholdHistory {
 pub struct ThresholdStats {
     pub total_rules: usize,
     pub enabled_rules: usize,
-    pub rules_by_level: HashMap<String, _, std::collections::HashMap<String, _, String, _>>>>>>,
-    pub rules_by_type: HashMap<String, _, std::collections::HashMap<String, _, String, _>>>>>>,
+    pub rules_by_level: HashMap<String, _>,
+    pub rules_by_type: HashMap<String, _>,
     pub auto_calibrated_count: usize,
 }
 
@@ -114,7 +114,7 @@ pub struct ThresholdManager {
     config: ThresholdConfig,
     history: Vec<ThresholdHistory>,
     config_dir: PathBuf,
-    adaptive_cache: HashMap<String, _, std::collections::HashMap<String, _, String, _>>>>>>, // 用于自适应阈值的缓存
+    adaptive_cache: HashMap<String, _>, // 用于自适应阈值的缓存
 }
 
 impl ThresholdManager {
@@ -153,10 +153,10 @@ impl ThresholdManager {
         }
 
         let content: _ = fs::read_to_string(&config_path)
-            .map_err(|e| ThresholdError::LoadError(e.to_string())?;
+            .map_err(|e| ThresholdError::LoadError(e.to_string()))?;
 
         self.config = serde_json::from_str(&content)
-            .map_err(|e| ThresholdError::LoadError(e.to_string())?;
+            .map_err(|e| ThresholdError::LoadError(e.to_string()))?;
 
         Ok(())
     }
@@ -166,10 +166,10 @@ impl ThresholdManager {
         let config_path: _ = self.config_dir.join("thresholds.json");
 
         let content: _ = serde_json::to_string_pretty(&self.config)
-            .map_err(|e| ThresholdError::SaveError(e.to_string())?;
+            .map_err(|e| ThresholdError::SaveError(e.to_string()))?;
 
         fs::write(&config_path, content)
-            .map_err(|e| ThresholdError::SaveError(e.to_string())?;
+            .map_err(|e| ThresholdError::SaveError(e.to_string()))?;
 
         Ok(())
     }
@@ -186,7 +186,7 @@ impl ThresholdManager {
         // 检查是否已存在同名规则
         if self.config.rules.iter().any(|r| r.name == rule.name) {
             return Err(ThresholdError::InvalidValue(
-                format!("Rule '{}' already exists", rule.name));
+                format!("Rule '{}' already exists", rule.name)));
         }
 
         self.config.rules.push(rule);
@@ -220,7 +220,7 @@ impl ThresholdManager {
             Ok(())
         } else {
             Err(ThresholdError::ConfigError(
-                format!("Rule '{}' not found", rule_name))
+                format!("Rule '{}' not found", rule_name)))
         }
     }
 
@@ -231,7 +231,7 @@ impl ThresholdManager {
             Ok(())
         } else {
             Err(ThresholdError::ConfigError(
-                format!("Rule '{}' not found", rule_name))
+                format!("Rule '{}' not found", rule_name)))
         }
     }
 
@@ -304,7 +304,7 @@ impl ThresholdManager {
             Ok(adjusted_value)
         } else {
             Err(ThresholdError::ConfigError(
-                format!("Rule '{}' not found", rule_name))
+                format!("Rule '{}' not found", rule_name)))
         }
     }
 
@@ -426,13 +426,13 @@ impl ThresholdManager {
     /// 导出配置
     pub fn export_config(&self) -> Result<String, ThresholdError> {
         serde_json::to_string_pretty(&self.config)
-            .map_err(|e| ThresholdError::SaveError(e.to_string())
+            .map_err(|e| ThresholdError::SaveError(e.to_string()))
     }
 
     /// 导入配置
     pub fn import_config(&mut self, config_json: &str) -> Result<(), ThresholdError> {
         let new_config: ThresholdConfig = serde_json::from_str(config_json)
-            .map_err(|e| ThresholdError::LoadError(e.to_string())?;
+            .map_err(|e| ThresholdError::LoadError(e.to_string()))?;
 
         self.config = new_config;
         Ok(())
@@ -450,7 +450,7 @@ impl ThresholdManager {
             Ok(())
         } else {
             Err(ThresholdError::ConfigError(
-                format!("Rule '{}' not found", rule_name))
+                format!("Rule '{}' not found", rule_name)))
         }
     }
 }

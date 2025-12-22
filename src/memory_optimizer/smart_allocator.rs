@@ -65,7 +65,7 @@ pub struct AllocationMetrics {
 
 /// 智能内存分配器
 pub struct SmartMemoryAllocator {
-    pools: Arc<RwLock<Vec<MemoryPool>>,
+    pools: Arc<RwLock<Vec<MemoryPool>>>,
     metrics: Arc<RwLock<AllocationMetrics>>,
     config: PoolConfig,
 }
@@ -94,20 +94,20 @@ impl SmartMemoryAllocator {
             .collect();
 
         Self {
-            pools: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(pools)))))),
-            metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AllocationMetrics {
+            pools: Arc::new(Mutex::new(pools)))
+            metrics: Arc::new(Mutex::new(AllocationMetrics {)),
                 total_allocations: 0,
                 total_deallocations: 0,
                 cache_hits: 0,
                 cache_misses: 0,
                 average_allocation_time_ns: 0,
-            })))))),
+            }))
             config,
         }
     }
 
     /// 分配内存
-    pub async fn allocate(&self, size: usize) -> Option<Vec<u8>> {
+    pub async fn allocate(&self, size: usize) -> Option<Vec<u8> {
         let start: _ = std::time::Instant::now();
 
         // 查找合适的池

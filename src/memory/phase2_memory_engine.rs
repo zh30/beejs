@@ -88,19 +88,19 @@ pub struct Phase2MemoryStats {
 impl Phase2MemoryEngine {
     /// 创建 Phase 2 内存引擎
     pub fn new(config: Phase2MemoryConfig) -> Self {
-        let zero_copy: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EnhancedZeroCopy::new(
-            config.dma_config.clone()))))),
+        let zero_copy: _ = Arc::new(Mutex::new(EnhancedZeroCopy::new()),
+            config.dma_config.clone())
             config.mmap_config.clone(),
             config.prefetch_config.clone(),
         ));
 
-        let prefetcher: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(SmartPrefetcher::new(
-            zero_copy.clone()))))),
+        let prefetcher: _ = Arc::new(Mutex::new(SmartPrefetcher::new()),
+            zero_copy.clone())
             config.prefetch_strategy.clone(),
         ));
 
-        let gc_optimizer: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EnhancedGcOptimizer::new(
-            config.gc_config.clone()))))),
+        let gc_optimizer: _ = Arc::new(Mutex::new(EnhancedGcOptimizer::new()),
+            config.gc_config.clone()))
         ));
 
         // 启用预测性 GC
@@ -111,7 +111,7 @@ impl Phase2MemoryEngine {
             zero_copy,
             prefetcher,
             gc_optimizer,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Phase2MemoryStats::default()))))),
+            stats: Arc::new(Mutex::new(Phase2MemoryStats::default()))
             started_at: Instant::now(),
         }
     }

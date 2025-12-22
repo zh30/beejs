@@ -28,7 +28,7 @@ pub trait K8sClientInterface: Send + Sync {
     fn create_pod(&self, pod: &K8sPodSpec) -> Result<String>;
     fn delete_pod(&self, pod_name: &str) -> Result<()>;
     fn get_pod_status(&self, pod_name: &str) -> Result<K8sPodStatus>;
-    fn list_pods(&self) -> Result<Vec<K8sPodInfo>>;
+    fn list_pods(&self) -> Result<Vec<K8sPodInfo>;
     fn execute_command(&self, pod_name: &str, command: &[String]) -> Result<String>;
 }
 
@@ -89,7 +89,7 @@ pub struct K8sPodInfo {
 #[derive(Debug)]
 pub struct PodManager {
     client: Arc<K8sClient>,
-    active_pods: Arc<RwLock<HashMap<String, K8sPodInfo, std::collections::HashMap<String, K8sPodInfo, String, K8sPodInfo>>>>>>>,
+    active_pods: Arc<RwLock<HashMap<String, K8sPodInfo>>>,
 }
 
 /// Kubernetes runtime
@@ -144,7 +144,7 @@ impl PodManager {
     pub fn new(client: Arc<K8sClient>) -> Self {
         PodManager {
             client,
-            active_pods: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            active_pods: Arc::new(Mutex::new(HashMap::new()))
         }
     }
 
@@ -182,7 +182,7 @@ impl PodManager {
     }
 
     /// List all active pods
-    pub async fn list_pods(&self) -> Result<Vec<K8sPodInfo>> {
+    pub async fn list_pods(&self) -> Result<Vec<K8sPodInfo> {
         let pods: _ = self.client.list_pods()?;
         let mut active_pods = self.active_pods.write().await;
 
@@ -223,8 +223,8 @@ impl PodManager {
 impl K8sRuntime {
     /// Create a new Kubernetes runtime
     pub fn new(config: K8sConfig) -> Result<Self> {
-        let client: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(K8sClient::new(config.clone()))))), Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MockK8sClient::new(config.clone())))));
-        let pod_manager: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PodManager::new(client.clone())))));
+        let client: _ = Arc::new(Mutex::new(K8sClient::new(config.clone()) Arc::new(Mutex::new(MockK8sClient::new(config.clone()),;
+        let pod_manager: _ = Arc::new(Mutex::new(PodManager::new(client.clone()),;
 
         Ok(K8sRuntime {
             client,
@@ -269,7 +269,7 @@ impl K8sRuntime {
     }
 
     /// Execute script with auto-scaling
-    pub async fn execute_with_autoscale(&self, script: &str, replicas: usize) -> Result<Vec<String>> {
+    pub async fn execute_with_autoscale(&self, script: &str, replicas: usize) -> Result<Vec<String> {
         let mut results = Vec::new();
 
         for i in 0..replicas {
@@ -313,7 +313,7 @@ impl K8sRuntime {
     }
 
     /// Scale pods for a script
-    pub async fn scale_pods(&self, script: &str, target_replicas: usize) -> Result<Vec<String>> {
+    pub async fn scale_pods(&self, script: &str, target_replicas: usize) -> Result<Vec<String> {
         self.execute_with_autoscale(script, target_replicas).await
     }
 }
@@ -358,7 +358,7 @@ impl K8sClientInterface for MockK8sClient {
         })
     }
 
-    fn list_pods(&self) -> Result<Vec<K8sPodInfo>> {
+    fn list_pods(&self) -> Result<Vec<K8sPodInfo> {
         Ok(vec![
             K8sPodInfo {
                 name: "mock-pod-1".to_string(),
@@ -384,7 +384,7 @@ use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_k8s_client_creation() {
         let config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
-        let client: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MockK8sClient::new(config.clone())))));
+        let client: _ = Arc::new(Mutex::new(MockK8sClient::new(config.clone()),;
         let k8s_client: _ = K8sClient::new(config, client);
 
         assert_eq!(k8s_client.config().cluster_url, "https://localhost:6443");
@@ -394,7 +394,7 @@ use std::collections::{HashMap, BTreeMap};
     #[tokio::test]
     async fn test_pod_creation() {
         let config: _ = K8sConfig::new("https://localhost:6443".to_string(), "default".to_string());
-        let client: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(K8sClient::new(config, Arc::new(MockK8sClient::new(config.clone())))));
+        let client: _ = Arc::new(Mutex::new(K8sClient::new(config, Arc::new(MockK8sClient::new(config.clone()),;
         let manager: _ = PodManager::new(client);
 
         let spec: _ = K8sPodSpec {

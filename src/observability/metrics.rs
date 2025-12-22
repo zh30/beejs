@@ -32,9 +32,9 @@ impl CustomMetrics {
         let registry: _ = Registry::new();
         let mut metric_handles = Vec::new();
 
-        let runtime_metrics: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(RuntimeMetrics::new(&registry, &mut metric_handles))))));
-        let performance_metrics: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(PerformanceMetrics::new(&registry, &mut metric_handles))))));
-        let business_metrics: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(BusinessMetrics::new(&registry, &mut metric_handles))))));
+        let runtime_metrics: _ = Arc::new(Mutex::new(RuntimeMetrics::new(&registry, &mut metric_handles)));
+        let performance_metrics: _ = Arc::new(Mutex::new(PerformanceMetrics::new(&registry, &mut metric_handles)));
+        let business_metrics: _ = Arc::new(Mutex::new(BusinessMetrics::new(&registry, &mut metric_handles)));
 
         debug!("Custom metrics system initialized with {} collectors", metric_handles.len());
 
@@ -142,7 +142,7 @@ pub struct RuntimeMetrics {
     /// CPU usage gauge
     cpu_usage_percent: Gauge,
     /// Recent execution durations for P95 calculation
-    recent_executions: Arc<RwLock<VecDeque<Duration>>,
+    recent_executions: Arc<RwLock<VecDeque<Duration>>>,
 }
 
 impl RuntimeMetrics {
@@ -155,8 +155,8 @@ impl RuntimeMetrics {
             "Number of currently executing scripts".to_string(),
         );
         let active_scripts: _ = Gauge::with_opts(active_scripts_opts).unwrap();
-        registry.register(Box::new(active_scripts.clone()).unwrap();
-        metric_handles.push(Box::new(active_scripts.clone());
+        registry.register(Box::new(active_scripts.clone())).unwrap();
+        metric_handles.push(Box::new(active_scripts.clone()));
 
         // Memory usage gauge
         let memory_usage_opts: _ = Opts::new(
@@ -164,8 +164,8 @@ impl RuntimeMetrics {
             "Current memory usage in bytes".to_string(),
         );
         let memory_usage_bytes: _ = Gauge::with_opts(memory_usage_opts).unwrap();
-        registry.register(Box::new(memory_usage_bytes.clone()).unwrap();
-        metric_handles.push(Box::new(memory_usage_bytes.clone());
+        registry.register(Box::new(memory_usage_bytes.clone())).unwrap();
+        metric_handles.push(Box::new(memory_usage_bytes.clone()));
 
         // CPU usage gauge
         let cpu_usage_opts: _ = Opts::new(
@@ -173,14 +173,14 @@ impl RuntimeMetrics {
             "Current CPU usage percentage".to_string(),
         );
         let cpu_usage_percent: _ = Gauge::with_opts(cpu_usage_opts).unwrap();
-        registry.register(Box::new(cpu_usage_percent.clone()).unwrap();
-        metric_handles.push(Box::new(cpu_usage_percent.clone());
+        registry.register(Box::new(cpu_usage_percent.clone())).unwrap();
+        metric_handles.push(Box::new(cpu_usage_percent.clone()));
 
         Self {
             active_scripts,
             memory_usage_bytes,
             cpu_usage_percent,
-            recent_executions: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(VecDeque::new()))))),
+            recent_executions: Arc::new(Mutex::new(VecDeque::new())),
         }
     }
 
@@ -256,8 +256,8 @@ impl PerformanceMetrics {
             "Script execution duration in seconds".to_string(),
         ).buckets(Self::EXECUTION_BUCKETS.to_vec());
         let script_execution_duration: _ = HistogramVec::new(script_execution_opts, &["script_name"]).unwrap();
-        registry.register(Box::new(script_execution_duration.clone()).unwrap();
-        metric_handles.push(Box::new(script_execution_duration.clone());
+        registry.register(Box::new(script_execution_duration.clone())).unwrap();
+        metric_handles.push(Box::new(script_execution_duration.clone()));
 
         // JIT compilation duration
         let jit_compilation_opts: _ = HistogramOpts::new(
@@ -265,8 +265,8 @@ impl PerformanceMetrics {
             "JIT compilation duration in seconds".to_string(),
         ).buckets(Self::JIT_BUCKETS.to_vec());
         let jit_compilation_duration: _ = HistogramVec::new(jit_compilation_opts, &["operation"]).unwrap();
-        registry.register(Box::new(jit_compilation_duration.clone()).unwrap();
-        metric_handles.push(Box::new(jit_compilation_duration.clone());
+        registry.register(Box::new(jit_compilation_duration.clone())).unwrap();
+        metric_handles.push(Box::new(jit_compilation_duration.clone()));
 
         // GC pause duration
         let gc_pause_opts: _ = HistogramOpts::new(
@@ -274,8 +274,8 @@ impl PerformanceMetrics {
             "Garbage collection pause duration in seconds".to_string(),
         ).buckets(Self::GC_BUCKETS.to_vec());
         let gc_pause_duration: _ = HistogramVec::new(gc_pause_opts, &["generation"]).unwrap();
-        registry.register(Box::new(gc_pause_duration.clone()).unwrap();
-        metric_handles.push(Box::new(gc_pause_duration.clone());
+        registry.register(Box::new(gc_pause_duration.clone())).unwrap();
+        metric_handles.push(Box::new(gc_pause_duration.clone()));
 
         // Network latency
         let network_latency_opts: _ = HistogramOpts::new(
@@ -283,8 +283,8 @@ impl PerformanceMetrics {
             "Network operation latency in seconds".to_string(),
         ).buckets(Self::NETWORK_BUCKETS.to_vec());
         let network_latency: _ = HistogramVec::new(network_latency_opts, &["operation"]).unwrap();
-        registry.register(Box::new(network_latency.clone()).unwrap();
-        metric_handles.push(Box::new(network_latency.clone());
+        registry.register(Box::new(network_latency.clone())).unwrap();
+        metric_handles.push(Box::new(network_latency.clone()));
 
         // Network throughput
         let network_throughput_opts: _ = Opts::new(
@@ -292,8 +292,8 @@ impl PerformanceMetrics {
             "Total network throughput in bytes".to_string(),
         );
         let network_throughput: _ = CounterVec::new(network_throughput_opts, &["operation", "direction"]).unwrap();
-        registry.register(Box::new(network_throughput.clone()).unwrap();
-        metric_handles.push(Box::new(network_throughput.clone());
+        registry.register(Box::new(network_throughput.clone())).unwrap();
+        metric_handles.push(Box::new(network_throughput.clone()));
 
         // Execution counter
         let execution_counter_opts: _ = Opts::new(
@@ -301,8 +301,8 @@ impl PerformanceMetrics {
             "Total number of script executions".to_string(),
         );
         let execution_counter: _ = CounterVec::new(execution_counter_opts, &["status"]).unwrap();
-        registry.register(Box::new(execution_counter.clone()).unwrap();
-        metric_handles.push(Box::new(execution_counter.clone());
+        registry.register(Box::new(execution_counter.clone())).unwrap();
+        metric_handles.push(Box::new(execution_counter.clone()));
 
         Self {
             script_execution_duration,
@@ -371,8 +371,8 @@ impl BusinessMetrics {
             "Total number of scripts loaded".to_string(),
         );
         let scripts_loaded: _ = Counter::with_opts(scripts_loaded_opts).unwrap();
-        registry.register(Box::new(scripts_loaded.clone()).unwrap();
-        metric_handles.push(Box::new(scripts_loaded.clone());
+        registry.register(Box::new(scripts_loaded.clone())).unwrap();
+        metric_handles.push(Box::new(scripts_loaded.clone()));
 
         // Packages installed
         let packages_installed_opts: _ = Opts::new(
@@ -380,8 +380,8 @@ impl BusinessMetrics {
             "Total number of packages loaded".to_string(),
         );
         let packages_installed: _ = Counter::with_opts(packages_installed_opts).unwrap();
-        registry.register(Box::new(packages_installed.clone()).unwrap();
-        metric_handles.push(Box::new(packages_installed.clone());
+        registry.register(Box::new(packages_installed.clone())).unwrap();
+        metric_handles.push(Box::new(packages_installed.clone()));
 
         // Hot reloads
         let hot_reloads_opts: _ = Opts::new(
@@ -389,8 +389,8 @@ impl BusinessMetrics {
             "Total number of hot reloads performed".to_string(),
         );
         let hot_reloads: _ = Counter::with_opts(hot_reloads_opts).unwrap();
-        registry.register(Box::new(hot_reloads.clone()).unwrap();
-        metric_handles.push(Box::new(hot_reloads.clone());
+        registry.register(Box::new(hot_reloads.clone())).unwrap();
+        metric_handles.push(Box::new(hot_reloads.clone()));
 
         // Concurrent executions
         let concurrent_executions_opts: _ = Opts::new(
@@ -398,8 +398,8 @@ impl BusinessMetrics {
             "Current number of concurrent script executions".to_string(),
         );
         let concurrent_executions: _ = Gauge::with_opts(concurrent_executions_opts).unwrap();
-        registry.register(Box::new(concurrent_executions.clone()).unwrap();
-        metric_handles.push(Box::new(concurrent_executions.clone());
+        registry.register(Box::new(concurrent_executions.clone())).unwrap();
+        metric_handles.push(Box::new(concurrent_executions.clone()));
 
         // Error counter
         let error_counter_opts: _ = Opts::new(
@@ -407,8 +407,8 @@ impl BusinessMetrics {
             "Total number of script execution errors".to_string(),
         );
         let error_counter: _ = Counter::with_opts(error_counter_opts).unwrap();
-        registry.register(Box::new(error_counter.clone()).unwrap();
-        metric_handles.push(Box::new(error_counter.clone());
+        registry.register(Box::new(error_counter.clone())).unwrap();
+        metric_handles.push(Box::new(error_counter.clone()));
 
         // Success counter
         let success_counter_opts: _ = Opts::new(
@@ -416,8 +416,8 @@ impl BusinessMetrics {
             "Total number of successful script executions".to_string(),
         );
         let success_counter: _ = Counter::with_opts(success_counter_opts).unwrap();
-        registry.register(Box::new(success_counter.clone()).unwrap();
-        metric_handles.push(Box::new(success_counter.clone());
+        registry.register(Box::new(success_counter.clone())).unwrap();
+        metric_handles.push(Box::new(success_counter.clone()));
 
         Self {
             scripts_loaded,

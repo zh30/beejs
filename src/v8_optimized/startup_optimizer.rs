@@ -66,8 +66,8 @@ impl V8StartupOptimizer {
         let config: _ = StartupConfig::default();
 
         Ok(Self {
-            embedded_builtins: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EmbeddedBuiltinsManager::new()))))),
-            snapshot_manager: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(V8SnapshotOptimizedManager::new())))))?),
+            embedded_builtins: Arc::new(Mutex::new(EmbeddedBuiltinsManager::new()))
+            snapshot_manager: Arc::new(Mutex::new(V8SnapshotOptimizedManager::new()),?),
             config,
         })
     }
@@ -75,8 +75,8 @@ impl V8StartupOptimizer {
     /// 使用指定配置创建启动优化器
     pub fn with_config(config: StartupConfig) -> Result<Self> {
         Ok(Self {
-            embedded_builtins: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EmbeddedBuiltinsManager::new()))))),
-            snapshot_manager: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(V8SnapshotOptimizedManager::new())))))?),
+            embedded_builtins: Arc::new(Mutex::new(EmbeddedBuiltinsManager::new()))
+            snapshot_manager: Arc::new(Mutex::new(V8SnapshotOptimizedManager::new()),?),
             config,
         })
     }
@@ -254,7 +254,7 @@ use std::collections::{HashMap, BTreeMap};
 
         assert!(runtime.is_ok(), "Runtime creation should succeed");
         assert!(startup_time < Duration::from_millis(2),
-            "Startup time should be < 2ms, got {:?}", startup_time);
+            "Startup time should be < 2ms, got {:?}", startup_time)));
 
         eprintln!("✓ Startup Time: {:?}", startup_time);
     }

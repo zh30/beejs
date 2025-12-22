@@ -122,7 +122,7 @@ pub trait TrendAnalyzer {
     async fn analyze_trend(&self, metrics: &[Metric]) -> Result<TrendResult>;
 
     /// Predict future values
-    async fn predict_future(&self, metrics: &[Metric], horizon: usize) -> Result<Vec<f64>>;
+    async fn predict_future(&self, metrics: &[Metric], horizon: usize) -> Result<Vec<f64>;
 
     /// Detect trend changes
     async fn detect_trend_change(&self, metrics: &[Metric]) -> Result<bool>;
@@ -342,7 +342,7 @@ impl TrendAnalyzer for LinearTrendAnalyzer {
         }
     }
 
-    async fn predict_future(&self, metrics: &[Metric], horizon: usize) -> Result<Vec<f64>> {
+    async fn predict_future(&self, metrics: &[Metric], horizon: usize) -> Result<Vec<f64> {
         if metrics.len() < self.config.min_data_points {
             return Err(AIOpsError::Config("Insufficient data points".to_string());
         }

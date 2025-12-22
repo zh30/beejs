@@ -30,12 +30,12 @@ impl ZeroCopyIO {
     pub fn new(config: NetworkConfig) -> Result<Self, NetworkError> {
         Ok(Self {
             config,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ZeroCopyIOStats {
+            stats: Arc::new(Mutex::new(ZeroCopyIOStats {
                 total_bytes_sent: 0,
                 zero_copy_operations: 0,
                 memory_usage: 0,
                 failed_operations: 0,
-            })))))),
+            }))
         })
     }
 

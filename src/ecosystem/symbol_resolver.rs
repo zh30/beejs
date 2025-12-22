@@ -11,8 +11,8 @@ use std::collections::{HashMap, BTreeMap};
 /// 符号解析器
 #[derive(Debug)]
 pub struct SymbolResolver {
-    symbol_table: HashMap<String, SymbolInfo, std::collections::HashMap<String, SymbolInfo, String, SymbolInfo>>>>>>>,
-    import_graph: HashMap<String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String>>>>>>>,
+    symbol_table: HashMap<String, SymbolInfo>,
+    import_graph: HashMap<String, HashSet<String>>,
     config: ResolverConfig,
 }
 
@@ -255,7 +255,7 @@ impl SymbolResolver {
         // 在导入的模块中查找
         if let Some(imports) = self.import_graph.get(current_file) {
             for imported_module in imports {
-                let module_symbol_name: _ = format!("{}::{}", imported_module, symbol_name);
+                let module_symbol_name: _ = format!("{}::{}, imported_module", symbol_name));
                 if let Some(symbol) = self.symbol_table.get(&module_symbol_name) {
                     return Some(symbol.clone());
                 }
@@ -266,12 +266,12 @@ impl SymbolResolver {
     }
 
     /// 获取导入图
-    pub fn get_import_graph(&self) -> &HashMap<String, HashSet<String, std::collections::HashMap<String, HashSet<String, String, HashSet<String>>>>>>> {
+    pub fn get_import_graph(&self) -> &HashMap<String, HashSet<String> {
         &self.import_graph
     }
 
     /// 查找循环依赖
-    pub fn find_circular_dependencies(&self) -> Vec<Vec<String>> {
+    pub fn find_circular_dependencies(&self) -> Vec<Vec<String> {
         let mut cycles = Vec::new();
         let mut visited = HashSet::new();
         let mut path = Vec::new();

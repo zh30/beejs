@@ -67,7 +67,7 @@ pub struct ScalingManager {
     config: ScalingConfig,
     autoscaler: Autoscaler,
     resource_tracker: ResourceTracker,
-    nodes: HashMap<String, ScalingNode, std::collections::HashMap<String, ScalingNode, String, ScalingNode>>>>>>>,
+    nodes: HashMap<String, ScalingNode>,
     scaling_history: Vec<ScalingEvent>,
     stats: Arc<Mutex<ScalingStats>>,
     is_running: bool,
@@ -84,9 +84,9 @@ impl ScalingManager {
             autoscaler,
             nodes: HashMap::new(),
             scaling_history: Vec::new(),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ScalingStats::default()))))),
+            stats: Arc::new(Mutex::new(ScalingStats::default())),
             is_running: true,
-            current_load: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(0.0)))))),
+            current_load: Arc::new(Mutex::new(0.0)),
             config,
         }
     }

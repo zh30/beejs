@@ -93,7 +93,7 @@ impl ZeroCopyReceiver {
 
         Ok(Self {
             config,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ZeroCopyReceiverStats::default()))))),
+            stats: Arc::new(Mutex::new(ZeroCopyReceiverStats::default())),
             splice,
             current_pos: 0,
         })

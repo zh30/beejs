@@ -115,7 +115,7 @@ pub struct JaegerTracer {
     /// Configuration
     config: JaegerConfig,
     /// Span buffer
-    span_buffer: Arc<Mutex<Vec<JaegerSpan>>,
+    span_buffer: Arc<Mutex<Vec<JaegerSpan>>>,
     /// Last flush time
     last_flush: Arc<Mutex<Instant>>,
     /// UDP socket for sending spans
@@ -143,9 +143,9 @@ impl JaegerTracer {
 
         Ok(Self {
             config,
-            span_buffer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
-            last_flush: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Instant::now()))))),
-            udp_socket: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(udp_socket)))))),
+            span_buffer: Arc::new(Mutex::new(Vec::new()))
+            last_flush: Arc::new(Mutex::new(Instant::now()))
+            udp_socket: Arc::new(Mutex::new(udp_socket)))
         })
     }
 
@@ -259,7 +259,7 @@ impl JaegerTracer {
         info!("Flushing {} spans to Jaeger", spans_to_send.len());
 
         // Group spans by operation name
-        let mut spans_by_operation: HashMap<String, Vec<JaegerSpan, std::collections::HashMap<String, Vec<JaegerSpan, String, Vec<JaegerSpan>>>>>>> = HashMap::new();
+        let mut spans_by_operation: HashMap<String, Vec<JaegerSpan> = HashMap::new();
         for span in spans_to_send {
             spans_by_operation
                 .entry(span.operation_name.clone())
@@ -296,7 +296,7 @@ impl JaegerTracer {
             .context("Failed to serialize Jaeger message")?;
 
         // Send via UDP
-        let agent_addr: _ = format!("{}:{}", self.config.agent_host, self.config.agent_port);
+        let agent_addr: _ = format!("{}:{}, self.config.agent_host", self.config.agent_port));
         self.udp_socket
             .send_to(json.as_bytes(), agent_addr)
             .context("Failed to send spans to Jaeger agent")?;
@@ -395,7 +395,7 @@ impl JaegerTracer {
     }
 
     /// Get tracer statistics
-    pub fn get_stats(&self) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>> {
+    pub fn get_stats(&self) -> HashMap<String, usize> {
         let buffer: _ = self.span_buffer.lock().unwrap();
         let last_flush: _ = self.last_flush.lock().unwrap();
 

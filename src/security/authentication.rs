@@ -92,13 +92,13 @@ impl MultiFactorAuth {
 /// 令牌管理器
 #[derive(Debug)]
 pub struct TokenManager {
-    tokens: Arc<std::sync::Mutex<HashMap<String, Token, std::collections::HashMap<String, Token, String, Token>>>>>>>,
+    tokens: Arc<std::sync::Mutex<HashMap<String, Token>>>,
 }
 
 impl TokenManager {
     pub fn new() -> Self {
         Self {
-            tokens: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))))),
+            tokens: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))
         }
     }
 
@@ -152,7 +152,7 @@ impl TokenManager {
 pub struct AuthenticationService {
     pub mfa_service: Arc<MultiFactorAuth>,
     pub token_manager: Arc<TokenManager>,
-    users: Arc<std::sync::Mutex<HashMap<String, User, std::collections::HashMap<String, User, String, User>>>>>>>,
+    users: Arc<std::sync::Mutex<HashMap<String, User>>>,
 }
 
 impl AuthenticationService {
@@ -166,9 +166,9 @@ impl AuthenticationService {
         });
 
         Self {
-            mfa_service: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MultiFactorAuth::new()))))),
-            token_manager: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(TokenManager::new()))))),
-            users: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(users)))))),
+            mfa_service: Arc::new(Mutex::new(MultiFactorAuth::new()))
+            token_manager: Arc::new(Mutex::new(TokenManager::new()))
+            users: Arc::new(Mutex::new(std::sync::Mutex::new(users)))
         }
     }
 

@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-//! 实时光线追踪渲染器
+// 实时光线追踪渲染器
 
 /// 弹射次数限制
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

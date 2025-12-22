@@ -189,7 +189,7 @@ impl ActivationLayer {
 
     /// GELU
     fn gelu(x: f32) -> f32 {
-        0.5 * x * (1.0 + (0.7978845608 * (x + 0.044715 * x.powi(3)).tanh())
+        0.5 * x * (1.0 + (0.7978845608 * (x + 0.044715 * x.powi(3)).tanh()))
     }
 }
 

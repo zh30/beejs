@@ -33,7 +33,7 @@ pub struct LogEntry {
     /// 日志消息
     pub message: String,
     /// 上下文信息
-    pub context: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub context: HashMap<String, String>,
 }
 
 impl LogEntry {
@@ -48,7 +48,7 @@ impl LogEntry {
     /// # Returns
     ///
     /// 返回新创建的 LogEntry 实例
-    pub fn new(level: LogLevel, message: String, context: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>) -> Self {
+    pub fn new(level: LogLevel, message: String, context: HashMap<String, String>) -> Self {
         Self {
             timestamp: SystemTime::now(),
             level,
@@ -141,7 +141,7 @@ pub struct LogContext {
     /// 用户 ID
     pub user_id: Option<String>,
     /// 附加标签
-    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub tags: HashMap<String, String>,
 }
 
 impl LogContext {
@@ -201,7 +201,7 @@ impl LogContext {
     /// # Returns
     ///
     /// 返回包含上下文信息的 HashMap
-    pub fn to_hashmap(&self) -> HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>> {
+    pub fn to_hashmap(&self) -> HashMap<String, String> {
         let mut map = HashMap::new();
         map.insert("service".to_string(), self.service.clone());
         map.insert("version".to_string(), self.version.clone());
@@ -587,7 +587,7 @@ pub struct LogFilter {
     pub level: Option<LogLevel>,
     pub time_range: Option<(SystemTime, SystemTime)>,
     pub text_search: Option<String>,
-    pub tags: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub tags: HashMap<String, String>,
 }
 
 /// 搜索结果
@@ -668,7 +668,7 @@ pub struct EnterpriseLogAggregator {
     elasticsearch: Arc<ElasticsearchClient>,
     fluentd: Arc<FluentdClient>,
     local_aggregator: LogAggregator,
-    log_sources: std::collections::BTreeMap<String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource>,
+    log_sources: std::collections::BTreeMap<String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource, String, LogSource>>,
 }
 
 impl EnterpriseLogAggregator {
@@ -679,15 +679,15 @@ impl EnterpriseLogAggregator {
         local_aggregator: LogAggregator,
     ) -> Self {
         Self {
-            elasticsearch: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(elasticsearch)))))),
-            fluentd: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(fluentd)))))),
+            elasticsearch: Arc::new(Mutex::new(elasticsearch)))
+            fluentd: Arc::new(Mutex::new(fluentd)))
             local_aggregator,
             log_sources: std::collections::BTreeMap::new(),
         }
     }
 
     /// 收集日志
-    pub async fn collect_logs(&self, source: LogSource) -> Result<Vec<LogEntry>> {
+    pub async fn collect_logs(&self, source: LogSource) -> Result<Vec<LogEntry> {
         // 模拟从各种源收集日志
         let logs: _ = match source {
             LogSource::Cluster(cluster_id) => {
@@ -735,7 +735,7 @@ impl EnterpriseLogAggregator {
     }
 
     /// 聚合日志
-    pub async fn aggregate_logs(&self, sources: &[LogSource]) -> Result<Vec<LogEntry>> {
+    pub async fn aggregate_logs(&self, sources: &[LogSource]) -> Result<Vec<LogEntry> {
         let mut all_logs = Vec::new();
 
         for source in sources {

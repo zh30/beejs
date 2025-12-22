@@ -473,7 +473,8 @@ impl BarChart {
                     r#"  <text x="{}" y="{}" class="label" text-anchor="middle" dy="-5">{}</text>
 "#,
                     x + self.bar_width / 2.0, y,
-                    format!("{:.1}", point.y));
+                    format!("{:.1}", point.y)
+                ));
             }
         }
 
@@ -1190,7 +1191,7 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_data_point_with_metadata() {
         let mut metadata = HashMap::new();
-        metadata.insert("category".to_string(), serde_json::Value::String("test".to_string());
+        metadata.insert("category".to_string(), serde_json::Value::String("test".to_string()));
 
         let point: _ = DataPoint {
             x: 10.0,
@@ -1202,7 +1203,7 @@ use std::collections::{HashMap, BTreeMap};
 
         assert_eq!(point.x, 10.0);
         assert_eq!(point.y, 20.0);
-        assert_eq!(point.label, Some("Test Point".to_string());
-        assert_eq!(point.color, Some("#3b82f6".to_string());
+        assert_eq!(point.label, Some("Test Point".to_string()));
+        assert_eq!(point.color, Some("#3b82f6".to_string()));
     }
 }

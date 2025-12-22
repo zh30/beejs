@@ -132,8 +132,8 @@ struct Node<T> {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct LockFreeQueue<T> {
-    head: Arc<CachePadded<AtomicPtr<Node<T>>,
-    tail: Arc<CachePadded<AtomicPtr<Node<T>>,
+    head: Arc<CachePadded<AtomicPtr<Node<T>>>>,
+    tail: Arc<CachePadded<AtomicPtr<Node<T>>>>,
     _phantom: std::marker::PhantomData<T>,
 }
 
@@ -151,8 +151,8 @@ impl<T> LockFreeQueue<T> {
         }));
 
         Self {
-            head: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CachePadded::new(AtomicPtr::new(sentinel as usize)))))),
-            tail: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CachePadded::new(AtomicPtr::new(sentinel as usize)))))),
+            head: Arc::new(Mutex::new(CachePadded::new(AtomicPtr::new(sentinel as usize)))
+            tail: Arc::new(Mutex::new(CachePadded::new(AtomicPtr::new(sentinel as usize)))
             _phantom: std::marker::PhantomData,
         }
     }
@@ -276,7 +276,7 @@ impl<T> Drop for LockFreeQueue<T> {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct ShardedLock<T> {
-    shards: Vec<CachePadded<Mutex<T>>,
+    shards: Vec<CachePadded<Mutex<T>>>,
     shard_count: usize,
 }
 
@@ -498,11 +498,11 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_concurrent_operations() {
-        let counter: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LockFreeCounter::new(0))))));
+        let counter: _ = Arc::new(Mutex::new(LockFreeCounter::new(0)),;
         let iterations: _ = 1000;
         let thread_count: _ = 10;
 
-        let handles: Vec<_> = (0..thread_count)
+        let handles: Vec<_> = (0..thread_count))
             .map(|_| {
                 let counter: _ = counter.clone();clone();
                 thread::spawn(move || {
@@ -522,7 +522,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_atomic_stats() {
-        let stats: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicStats::new())))));
+        let stats: _ = Arc::new(Mutex::new(AtomicStats::new()),;
 
         // 记录一些操作
         stats.record_operation();
@@ -599,7 +599,7 @@ pub struct WorkStealingTask {
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct WorkStealingScheduler {
-    queues: Vec<Arc<LockFreeQueue<WorkStealingTask>>,
+    queues: Vec<Arc<LockFreeQueue<WorkStealingTask>>>,
     stealers: Vec<Arc<AtomicUsize>>,
     active_workers: CachePadded<AtomicUsize>,
     cpu_affinity: Vec<Option<CpuAffinity>>,
@@ -615,8 +615,8 @@ impl WorkStealingScheduler {
         let mut cpu_affinity = Vec::with_capacity(num_workers);
 
         for i in 0..num_workers {
-            queues.push(Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LockFreeQueue::new())))));
-            stealers.push(Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))))));
+            queues.push(Arc::new(Mutex::new(LockFreeQueue::new()),;
+            stealers.push(Arc::new(Mutex::new(AtomicUsize::new(0)),;
 
             // 尝试绑定到特定 CPU
             match CpuAffinity::new(i) {
@@ -720,11 +720,11 @@ impl ConcurrencyMonitor {
     /// 创建新的并发监控器
     pub fn new() -> Self {
         Self {
-            active_tasks: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LockFreeCounter::new(0)))))),
-            completed_tasks: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LockFreeCounter::new(0)))))),
-            failed_tasks: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LockFreeCounter::new(0)))))),
-            avg_latency_ns: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LockFreeCounter::new(0)))))),
-            throughput_ops: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LockFreeCounter::new(0)))))),
+            active_tasks: Arc::new(Mutex::new(LockFreeCounter::new(0)))
+            completed_tasks: Arc::new(Mutex::new(LockFreeCounter::new(0)))
+            failed_tasks: Arc::new(Mutex::new(LockFreeCounter::new(0)))
+            avg_latency_ns: Arc::new(Mutex::new(LockFreeCounter::new(0)))
+            throughput_ops: Arc::new(Mutex::new(LockFreeCounter::new(0)))
             start_time: std::time::Instant::now(),
         }
     }

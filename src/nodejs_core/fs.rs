@@ -51,7 +51,7 @@ fn fs_read_file_sync_callback(
         .unwrap_or_else(|| "utf8".to_string());
 
     // 简化实现
-    let content: _ = format!("[File content for: {}]", filename);
+    let content: _ = format!("[File content for: {}]", filename));
     retval.set(v8::String::new(scope, &content).unwrap().into());
 }
 

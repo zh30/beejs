@@ -213,13 +213,13 @@ impl IntelligentScheduler {
 
         Self {
             config: config.clone(),
-            ai_engine: Arc::new(std::sync::Mutex::new(AiPerformanceEngine::new(ai_config))),
-            task_queue: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(config.max_queue_length)))),
-            workers: Arc::new(std::sync::Mutex::new(RwLock::new(workers))),
-            decision_history: Arc::new(std::sync::Mutex::new(RwLock::new(VecDeque::with_capacity(config.prediction_window)))),
+            ai_engine: Arc::new(AiPerformanceEngine::new(ai_config)),
+            task_queue: Arc::new(RwLock::new(VecDeque::with_capacity(config.max_queue_length))),
+            workers: Arc::new(RwLock::new(workers)),
+            decision_history: Arc::new(RwLock::new(VecDeque::with_capacity(config.prediction_window))),
             task_completion_tx,
-            task_completion_rx: Arc::new(std::sync::Mutex::new(task_completion_rx)),
-            stats: Arc::new(std::sync::Mutex::new(Mutex::new(SchedulerStats::default()))),
+            task_completion_rx: Arc::new(Mutex::new(task_completion_rx)),
+            stats: Arc::new(Mutex::new(SchedulerStats::default())),
         }
     }
 
@@ -294,12 +294,12 @@ impl IntelligentScheduler {
                 println!("任务 {} 已调度到工作线程 {}", task.id, worker_idx);
 
                 // 模拟异步任务执行
-                let completion_tx: _ = self.task_completion_tx.clone();
-                let worker_id: _ = worker_idx;
-                let task_id: _ = task.id.clone();
+                let completion_tx = self.task_completion_tx.clone();
+                let _worker_id = worker_idx;
+                let task_id = task.id.clone();
                 tokio::spawn(async move {
                     tokio::time::sleep(Duration::from_millis(task.estimated_duration)).await;
-                    let _: _ = completion_tx.send((task_id, Ok(())));
+                    let _ = completion_tx.send((task_id, Ok(())));
                 });
             } else {
                 // 没有合适的工作线程，重新放回队列
@@ -551,12 +551,12 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_submit_and_schedule_task() {
-        let config: _ = IntelligentSchedulerConfig::default();
-        let ai_config: _ = AiPerformanceEngineConfig::default();
-        let scheduler: _ = Arc::new(std::sync::Mutex::new(Mutex::new(IntelligentScheduler::new(config, ai_config))));
+        let config = IntelligentSchedulerConfig::default();
+        let ai_config = AiPerformanceEngineConfig::default();
+        let scheduler = Arc::new(Mutex::new(IntelligentScheduler::new(config, ai_config)));
 
         // 提交任务
-        let task: _ = Task {
+        let task = Task {
             id: "task-1".to_string(),
             task_type: TaskType::CpuIntensive,
             estimated_duration: 100,

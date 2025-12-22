@@ -140,10 +140,10 @@ pub struct BufferStats {
 /// 缓冲区池
 pub struct BufferPool {
     config: BufferConfig,
-    small_pool: Arc<Mutex<VecDeque<NetworkBuffer>>,
-    medium_pool: Arc<Mutex<VecDeque<NetworkBuffer>>,
-    large_pool: Arc<Mutex<VecDeque<NetworkBuffer>>,
-    huge_pool: Arc<Mutex<VecDeque<NetworkBuffer>>,
+    small_pool: Arc<Mutex<VecDeque<NetworkBuffer>>>,
+    medium_pool: Arc<Mutex<VecDeque<NetworkBuffer>>>,
+    large_pool: Arc<Mutex<VecDeque<NetworkBuffer>>>,
+    huge_pool: Arc<Mutex<VecDeque<NetworkBuffer>>>,
     stats: Arc<Mutex<BufferStats>>,
 }
 
@@ -152,19 +152,19 @@ impl BufferPool {
     pub fn new(default_buffer_size: usize) -> Self {
         let config: _ = BufferConfig::default();
         Self {
-            small_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
+            small_pool: Arc::new(Mutex::new(VecDeque::new())),
             config: config,
-            medium_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
-            large_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
-            huge_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BufferStats {
+            medium_pool: Arc::new(Mutex::new(VecDeque::new())),
+            large_pool: Arc::new(Mutex::new(VecDeque::new())),
+            huge_pool: Arc::new(Mutex::new(VecDeque::new())),
+            stats: Arc::new(Mutex::new(BufferStats {
                 total_buffers_allocated: 0,
                 total_buffers_freed: 0,
                 current_active_buffers: 0,
                 total_bytes_allocated: 0,
                 pool_hit_rate: 0.0,
                 average_buffer_size: 0.0,
-            })))))),
+            })),
         }
     }
 

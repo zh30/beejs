@@ -149,14 +149,14 @@ pub struct CodeOptimizer {
 pub struct CodeAnalyzer {
     performance_engine: Arc<AiPerformanceEngine>,
     auto_optimizer: Arc<AutoOptimizer>,
-    pattern_cache: Arc<RwLock<HashMap<String, Vec<CodePattern, std::collections::HashMap<String, Vec<CodePattern, String, Vec<CodePattern>>>>>>>>,
+    pattern_cache: Arc<RwLock<HashMap<String, Vec<CodePattern>>>,
 }
 
 /// 重构引擎
 #[derive(Debug, Clone)]
 pub struct RefactorEngine {
     llm_engine: Arc<MockLlmEngine>,
-    refactor_templates: HashMap<String, RefactorTemplate, std::collections::HashMap<String, RefactorTemplate, String, RefactorTemplate>>>>>>>,
+    refactor_templates: HashMap<String, RefactorTemplate>,
 }
 
 /// 瓶颈检测器
@@ -217,10 +217,10 @@ pub struct RollbackManager {
 impl CodeOptimizer {
     /// 创建新的代码优化器
     pub fn new() -> Self {
-        let code_analyzer: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CodeAnalyzer::new())))));
-        let refactor_engine: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(RefactorEngine::new())))));
-        let bottleneck_detector: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(BottleneckDetector::new())))));
-        let optimization_applier: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(OptimizationApplier::new())))));
+        let code_analyzer: _ = Arc::new(Mutex::new(CodeAnalyzer::new()),;
+        let refactor_engine: _ = Arc::new(Mutex::new(RefactorEngine::new()),;
+        let bottleneck_detector: _ = Arc::new(Mutex::new(BottleneckDetector::new()),;
+        let optimization_applier: _ = Arc::new(Mutex::new(OptimizationApplier::new()),;
 
         Self {
             code_analyzer,
@@ -411,13 +411,13 @@ impl CodeOptimizer {
 impl CodeAnalyzer {
     pub fn new() -> Self {
         let config: _ = AiPerformanceEngineConfig::default();
-        let performance_engine: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AiPerformanceEngine::new(config))))));
-        let auto_optimizer: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AutoOptimizer::new())))));
+        let performance_engine: _ = Arc::new(Mutex::new(AiPerformanceEngine::new(config)),;
+        let auto_optimizer: _ = Arc::new(Mutex::new(AutoOptimizer::new()),;
 
         Self {
             performance_engine,
             auto_optimizer,
-            pattern_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            pattern_cache: Arc::new(Mutex::new(HashMap::new()))
         }
     }
 
@@ -608,7 +608,7 @@ impl RefactorEngine {
         );
 
         Self {
-            llm_engine: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MockLlmEngine::new(0.92)))))),
+            llm_engine: Arc::new(Mutex::new(MockLlmEngine::new(0.92)))
             refactor_templates,
         }
     }
@@ -689,7 +689,7 @@ impl BottleneckDetector {
 
         Self {
             detection_rules,
-            severity_classifier: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(SeverityClassifier {})))))),
+            severity_classifier: Arc::new(Mutex::new(SeverityClassifier {})))
         }
     }
 }
@@ -697,8 +697,8 @@ impl BottleneckDetector {
 impl OptimizationApplier {
     pub fn new() -> Self {
         Self {
-            validation_engine: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ValidationEngine {})))))),
-            rollback_manager: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RollbackManager {})))))),
+            validation_engine: Arc::new(Mutex::new(ValidationEngine {})))
+            rollback_manager: Arc::new(Mutex::new(RollbackManager {})))
         }
     }
 }

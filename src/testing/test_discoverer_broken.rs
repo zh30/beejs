@@ -128,7 +128,7 @@ impl TestDiscoverer {
     }
 
     /// Load a test file and extract test suites
-    pub fn load_test_file(&self, path: &Path) -> std::io::Result<Vec<TestSuite>> {
+    pub fn load_test_file(&self, path: &Path) -> std::io::Result<Vec<TestSuite> {
         // Read the test file content
         let _code: _ = std::fs::read_to_string(path)
             .map_err(|e| std::io::Error::new(e.kind(), format!("Failed to read test file: {}", e))?;
@@ -157,7 +157,7 @@ impl TestDiscoverer {
     }
 
     /// Load all discovered test files
-    pub fn load_all_tests(&self, discovery: &DiscoveryResult) -> std::io::Result<Vec<TestSuite>> {
+    pub fn load_all_tests(&self, discovery: &DiscoveryResult) -> std::io::Result<Vec<TestSuite> {
         let mut all_suites = Vec::new();
 
         for test_file in &discovery.test_files {

@@ -30,7 +30,7 @@ pub struct WasmStats {
 #[derive(Debug)]
 pub struct WasmExecutor {
     engine: Engine,
-    modules: Arc<std::sync::Mutex<Vec<WasmModule>>,
+    modules: Arc<std::sync::Mutex<Vec<WasmModule>>>,
     stats: Arc<std::sync::Mutex<WasmStats>>,
 }
 
@@ -62,16 +62,16 @@ impl WasmExecutor {
 
         Ok(Self {
             engine,
-            modules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(Vec::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(WasmStats {
+            modules: Arc::new(Mutex::new(std::sync::Mutex::new(Vec::new()))),
+            stats: Arc::new(Mutex::new(std::sync::Mutex::new(WasmStats {
                 total_executions: 0,
-                total_execution_time: Duration::default()))))),
+                total_execution_time: Duration::default(),
                 cache_hit_rate: 0.0,
                 avg_execution_time: Duration::default(),
                 wasmtime_config: Some(format!(
                     "Optimization: SpeedAndSize, Parallel: true, SIMD: true, Threads: true"
                 )),
-            })),
+            }))),
         })
     }
 

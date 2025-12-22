@@ -53,7 +53,7 @@ pub struct InferenceOptions {
     /// 内存优化级别
     pub memory_optimization: Option<MemoryOptimization>,
     /// 自定义配置参数
-    pub custom_options: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub custom_options: std::collections::HashMap<String, String>,
 }
 
 /// 内存优化级别
@@ -105,7 +105,7 @@ pub trait InferenceEngine: Send + Sync {
         &self,
         model: &ModelHandle,
         input: Tensor,
-    ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>>;
+    ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>>>;
 
     /// 获取模型信息
     async fn get_model_info(&self, model: &ModelHandle) -> Result<ModelInfo>;
@@ -146,7 +146,7 @@ pub struct ModelHandle {
     /// 输出形状
     pub output_shape: Vec<usize>,
     /// 模型元数据
-    pub metadata: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub metadata: std::collections::HashMap<String, String>,
 }
 
 /// 模型信息
@@ -222,9 +222,9 @@ pub trait EngineFactory: Send + Sync {
 /// 引擎管理器 - 管理多个推理引擎实例
 pub struct EngineManager {
     /// 引擎工厂注册表
-    factories: std::collections::HashMap<String, Box<dyn EngineFactory, std::collections::HashMap<String, Box<dyn EngineFactory, String, Box<dyn EngineFactory>>>>>>>,
+    factories: std::collections::HashMap<String, Box<dyn EngineFactory>>,
     /// 活跃的引擎实例
-    active_engines: Arc<RwLock<std::collections::HashMap<String, Box<dyn InferenceEngine, std::collections::HashMap<String, Box<dyn InferenceEngine, String, Box<dyn InferenceEngine>>>>>>>>,
+    active_engines: Arc<RwLock<std::collections::HashMap<String, Box<dyn InferenceEngine>>>>,
     /// 默认引擎类型
     default_engine_type: EngineType,
 }
@@ -234,7 +234,7 @@ impl EngineManager {
     pub fn new(default_engine_type: EngineType) -> Self {
         EngineManager {
             factories: std::collections::HashMap::new(),
-            active_engines: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(std::collections::HashMap::new()))))),
+            active_engines: Arc::new(Mutex::new(std::collections::HashMap::new())),
             default_engine_type,
         }
     }
@@ -250,10 +250,10 @@ impl EngineManager {
         factory_name: &str,
         engine_type: Option<EngineType>,
     ) -> Result<Box<dyn InferenceEngine>> {
-        let engine_type: _ = engine_type.clone();unwrap_or_else(|| self.default_engine_type.clone());
+        let engine_type: _ = engine_type.clone().unwrap_or_else(|| self.default_engine_type.clone());
 
         // 检查缓存的引擎
-        let cache_key: _ = format!("{}_{:?}", factory_name, engine_type);
+        let cache_key: _ = format!("{}_{:?}", engine_type, factory_name);
         {
             let active_engines: _ = self.active_engines.read().await;
             if let Some(engine) = active_engines.get(&cache_key) {
@@ -283,8 +283,8 @@ impl EngineManager {
 
     /// 检查引擎是否可用
     pub async fn is_engine_available(&self, factory_name: &str, engine_type: Option<EngineType>) -> bool {
-        let engine_type: _ = engine_type.clone();unwrap_or_else(|| self.default_engine_type.clone());
-        let cache_key: _ = format!("{}_{:?}", factory_name, engine_type);
+        let engine_type: _ = engine_type.clone().unwrap_or_else(|| self.default_engine_type.clone());
+        let cache_key: _ = format!("{}_{:?}", engine_type, factory_name);
 
         {
             let active_engines: _ = self.active_engines.read().await;
@@ -397,7 +397,7 @@ use std::collections::{HashMap, BTreeMap};
                 &self,
                 _model: &ModelHandle,
                 _input: Tensor,
-            ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>> {
+            ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>>> {
                 todo!()
             }
 

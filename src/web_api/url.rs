@@ -57,7 +57,7 @@ impl Url {
                     (host_part.clone(), "".to_string())
                 };
 
-                let origin: _ = format!("{}://{}", protocol, host_part);
+                let origin: _ = format!("{}://{}, protocol", host_part);
 
                 (
                     url_str.to_string(),
@@ -113,7 +113,7 @@ impl Url {
 /// URLSearchParams implementation
 #[derive(Debug, Clone)]
 pub struct UrlSearchParams {
-    params: HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>>>>>,
+    params: HashMap<String, Vec<String>>,
 }
 
 impl UrlSearchParams {
@@ -180,7 +180,7 @@ impl UrlSearchParams {
     pub fn entries(&self) -> Vec<(String, String)> {
         self.params
             .iter()
-            .flat_map(|(k, v)| v.iter().map(|val| (k.clone(), val.clone())
+            .flat_map(|(k, v)| v.iter().map(|val| (k.clone(), val.clone())))
             .collect()
     }
 
@@ -345,11 +345,11 @@ use std::collections::{HashMap, BTreeMap};
     fn test_url_search_params() {
         let mut params = UrlSearchParams::new("?key1=value1&key2=value2&key1=value3");
 
-        assert_eq!(params.get("key1"), Some(&"value1".to_string());
-        assert_eq!(params.get("key2"), Some(&"value2".to_string());
+        assert_eq!(params.get("key1"), Some(&"value1".to_string()));
+        assert_eq!(params.get("key2"), Some(&"value2".to_string()));
 
         params.set("key1".to_string(), "new_value".to_string());
-        assert_eq!(params.get("key1"), Some(&"new_value".to_string());
+        assert_eq!(params.get("key1"), Some(&"new_value".to_string()));
 
         let entries: _ = params.entries();
         assert!(entries.len() >= 1);
@@ -362,7 +362,7 @@ use std::collections::{HashMap, BTreeMap};
         params.append("key".to_string(), "value1".to_string());
         params.append("key".to_string(), "value2".to_string());
 
-        assert_eq!(params.get("key"), Some(&"value1".to_string());
+        assert_eq!(params.get("key"), Some(&"value1".to_string()));
         assert!(params.has("key"));
 
         params.delete("key");

@@ -47,6 +47,7 @@ impl WatchExpression {
                 "{}: <error: {}>",
                 self.expression,
                 self.error_message.as_ref().unwrap_or(&"Unknown error".to_string())
+            )
         } else if let Some(ref value) = self.last_value {
             let type_str: _ = self.value_type.as_ref()
                 .map(|t| format!(" ({})", t))
@@ -69,7 +70,7 @@ impl WatchExpression {
 /// Manages a collection of watch expressions
 #[derive(Debug)]
 pub struct WatchManager {
-    watches: HashMap<String, WatchExpression, std::collections::HashMap<String, WatchExpression, String, WatchExpression>>>>>>>,
+    watches: HashMap<String, WatchExpression>,
     /// Order in which watches were added (for consistent display)
     order: Vec<String>,
 }

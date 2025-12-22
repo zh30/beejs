@@ -210,9 +210,9 @@ use std::collections::{HashMap, BTreeMap};
         let complexity: _ = CodeAnalyzer::analyze_complexity("const x = 1;");
 
         let speed_flags: _ = CodeAnalyzer::get_optimization_flags(&OptimizeMode::Speed, &complexity);
-        assert!(speed_flags.contains(&"--optimize-for-speed".to_string());
+        assert!(speed_flags.contains(&"--optimize-for-speed".to_string()));
 
         let size_flags: _ = CodeAnalyzer::get_optimization_flags(&OptimizeMode::Size, &complexity);
-        assert!(size_flags.contains(&"--optimize-for-size".to_string());
+        assert!(size_flags.contains(&"--optimize-for-size".to_string()));
     }
 }

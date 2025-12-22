@@ -75,7 +75,7 @@ pub struct LayoutConfig {
     /// 行高
     pub row_height: u32,
     /// 响应式断点
-    pub breakpoints: HashMap<String, BreakpointConfig, std::collections::HashMap<String, BreakpointConfig, String, BreakpointConfig>>>>>>>,
+    pub breakpoints: HashMap<String, BreakpointConfig>,
 }
 
 /// 断点配置
@@ -127,7 +127,7 @@ pub struct DashboardData {
     /// 实时指标
     pub real_time_metrics: Vec<MetricValue>,
     /// 聚合指标
-    pub aggregated_metrics: HashMap<MetricType, f64, std::collections::HashMap<MetricType, f64, MetricType, f64>>>>>>>,
+    pub aggregated_metrics: HashMap<MetricType, f64>,
     /// 活跃告警
     pub active_alerts: Vec<AlertInstance>,
     /// 连接统计
@@ -178,14 +178,14 @@ impl WebDashboard {
             config,
             data_store,
             alert_system,
-            layout: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(layout)))))),
-            connection_stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ConnectionStats {
+            layout: Arc::new(Mutex::new(layout)),
+            connection_stats: Arc::new(Mutex::new(ConnectionStats {
                 current_connections: 0,
                 total_connections: 0,
                 peak_connections: 0,
                 disconnected_count: 0,
-            })))))),
-            last_update: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Instant::now()))))),
+            })),
+            last_update: Arc::new(Mutex::new(Instant::now())),
         }
     }
 
@@ -461,14 +461,14 @@ impl WebDashboard {
         html.push_str("<div class=\"stats-grid\">\n");
         html.push_str(&format!(
             "<div class=\"stat-card\">\n<h3>Active Alerts</h3>\n<p class=\"stat-value\">{}</p>\n</div>\n",
-            dashboard_data.active_alerts.len());
+            dashboard_data.active_alerts.len()));
         html.push_str(&format!(
             "<div class=\"stat-card\">\n<h3>Connections</h3>\n<p class=\"stat-value\">{}</p>\n</div>\n",
             dashboard_data.connection_stats.current_connections
         ));
         html.push_str(&format!(
             "<div class=\"stat-card\">\n<h3>Metrics</h3>\n<p class=\"stat-value\">{}</p>\n</div>\n",
-            dashboard_data.real_time_metrics.len());
+            dashboard_data.real_time_metrics.len()));
         html.push_str("</div>\n");
 
         // 图表区域
@@ -492,7 +492,7 @@ impl WebDashboard {
                 html.push_str(&format!(
                     "<li class=\"alert alert-{}\">{}</li>\n",
                     alert.severity.as_str().to_lowercase(),
-                    self.escape_html(&alert.message));
+                    self.escape_html(&alert.message)));
             }
             html.push_str("</ul>\n</div>\n");
         }
@@ -753,16 +753,16 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_dashboard_creation() {
-        let data_store: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DataStore::with_default_config())))));
-        let alert_system: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AlertSystem::with_default_config())))));
+        let data_store: _ = Arc::new(Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(Mutex::new(AlertSystem::with_default_config()));
         let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
         assert!(dashboard.get_layout().is_ok());
     }
 
     #[test]
     fn test_get_dashboard_data() {
-        let data_store: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DataStore::with_default_config())))));
-        let alert_system: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AlertSystem::with_default_config())))));
+        let data_store: _ = Arc::new(Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(Mutex::new(AlertSystem::with_default_config()));
         let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
 
         assert!(dashboard.get_dashboard_data().is_ok());
@@ -770,8 +770,8 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_generate_html() {
-        let data_store: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DataStore::with_default_config())))));
-        let alert_system: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AlertSystem::with_default_config())))));
+        let data_store: _ = Arc::new(Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(Mutex::new(AlertSystem::with_default_config()));
         let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
 
         let html: _ = dashboard.generate_html().unwrap();
@@ -782,20 +782,20 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_escape_html() {
-        let data_store: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DataStore::with_default_config())))));
-        let alert_system: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AlertSystem::with_default_config())))));
+        let data_store: _ = Arc::new(Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(Mutex::new(AlertSystem::with_default_config()));
         let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
 
         let input: _ = "<script>alert('xss')</script>";
         let output: _ = dashboard.escape_html(input);
         assert!(!output.contains("<script>"));
-        assert!(output.contains("&lt;script&gt;"));
+        assert!(output.contains("&lt));script&gt;"));
     }
 
     #[test]
     fn test_update_layout() {
-        let data_store: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DataStore::with_default_config())))));
-        let alert_system: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AlertSystem::with_default_config())))));
+        let data_store: _ = Arc::new(Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(Mutex::new(AlertSystem::with_default_config()));
         let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
 
         let layout: _ = DashboardLayout {
@@ -822,8 +822,8 @@ use std::collections::{HashMap, BTreeMap};
 
     #[test]
     fn test_connection_stats() {
-        let data_store: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DataStore::with_default_config())))));
-        let alert_system: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AlertSystem::with_default_config())))));
+        let data_store: _ = Arc::new(Mutex::new(DataStore::with_default_config()));
+        let alert_system: _ = Arc::new(Mutex::new(AlertSystem::with_default_config()));
         let dashboard: _ = WebDashboard::with_default_config(data_store, alert_system);
 
         // 增加连接

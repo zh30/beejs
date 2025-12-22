@@ -15,7 +15,7 @@ use std::collections::{HashMap, BTreeMap};
 /// Heap snapshot
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeapSnapshot {
-    objects: HashMap<String, HeapObject, std::collections::HashMap<String, HeapObject, String, HeapObject>>>>>>>,
+    objects: HashMap<String, HeapObject>,
     total_size: usize,
 }
 
@@ -71,7 +71,7 @@ pub struct HeapStats {
 
 /// Object tracer
 pub struct ObjectTracer {
-    traces: HashMap<String, ObjectTrace, std::collections::HashMap<String, ObjectTrace, String, ObjectTrace>>>>>>>,
+    traces: HashMap<String, ObjectTrace>,
 }
 
 #[derive(Debug, Clone)]
@@ -123,7 +123,7 @@ impl ObjectTracer {
         Ok(())
     }
 
-    pub async fn get_access_history(&self, object_id: &str) -> Result<Vec<AccessRecord>> {
+    pub async fn get_access_history(&self, object_id: &str) -> Result<Vec<AccessRecord> {
         if let Some(trace) = self.traces.get(object_id) {
             Ok(trace.access_history.clone())
         } else {
@@ -185,7 +185,7 @@ impl MemoryAnalyzer {
         })
     }
 
-    pub async fn detect_memory_leaks(&self) -> Result<Vec<MemoryLeak>> {
+    pub async fn detect_memory_leaks(&self) -> Result<Vec<MemoryLeak> {
         let mut leaks = Vec::new();
 
         // Simple leak detection: objects that persist across multiple snapshots

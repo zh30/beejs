@@ -602,7 +602,7 @@ fn normalize_path(path: &str, is_windows: bool) -> String {
 
     // 处理根路径
     if path.starts_with(&separator.to_string()) {
-        result = format!("{}{}", separator, result);
+        result = format!("{}{}, separator", result));
     }
 
     result

@@ -345,7 +345,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_repl_basic_execution() {
-        let runtime: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false)))))).expect("Failed to create runtime"));
+        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false).expect("Failed to create runtime")));
         let mut repl = Repl::new(runtime);
 
         let result: _ = repl.execute_code("1 + 1").await.expect("Failed to execute");
@@ -355,7 +355,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_repl_error_handling() {
-        let runtime: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false)))))).expect("Failed to create runtime"));
+        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false).expect("Failed to create runtime")));
         let mut repl = Repl::new(runtime);
 
         let result: _ = repl.execute_code("invalid syntax {{").await.expect("Failed to execute");
@@ -364,7 +364,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_repl_multiline_detection() {
-        let runtime: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false)))))).expect("Failed to create runtime"));
+        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false).expect("Failed to create runtime")));
         let mut repl = Repl::new(runtime);
 
         assert!(repl.is_multiline_start("function foo() {"));
@@ -374,7 +374,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_repl_history() {
-        let runtime: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false)))))).expect("Failed to create runtime"));
+        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(false).expect("Failed to create runtime")));
         let mut repl = Repl::new(runtime);
 
         repl.execute_and_record("1 + 1").await.expect("Failed to execute");

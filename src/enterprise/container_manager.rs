@@ -12,7 +12,7 @@ pub struct ContainerConfig {
     pub version: String,
     pub replicas: usize,
     pub port: u16,
-    pub env: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub env: HashMap<String, String>,
     pub resource_config: ResourceConfig,
     pub network_config: NetworkConfig,
     pub health_check: Option<HealthCheckConfig>,
@@ -178,7 +178,7 @@ impl ContainerManager {
     }
 
     /// 启动容器集群
-    pub async fn start_containers(&self, config: &ContainerConfig) -> Result<Vec<ContainerHandle>> {
+    pub async fn start_containers(&self, config: &ContainerConfig) -> Result<Vec<ContainerHandle> {
         tracing::info!(
             "Starting {} containers for image {}",
             config.replicas,
@@ -255,7 +255,7 @@ impl ContainerManager {
     }
 
     /// 扩容容器
-    pub async fn scale_containers(&self, current_replicas: usize, target_replicas: usize) -> Result<Vec<ContainerHandle>> {
+    pub async fn scale_containers(&self, current_replicas: usize, target_replicas: usize) -> Result<Vec<ContainerHandle> {
         tracing::info!("Scaling containers from {} to {}", current_replicas, target_replicas);
 
         if target_replicas == current_replicas {

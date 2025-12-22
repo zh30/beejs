@@ -20,7 +20,7 @@ pub struct DeploymentConfig {
     pub next_version: String,
 
     /// Additional parameters
-    pub parameters: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub parameters: std::collections::HashMap<String, String>,
 }
 
 /// Deployment status
@@ -703,7 +703,7 @@ use std::collections::{HashMap, BTreeMap};
 
         let result: _ = selector.select_strategy(&config);
         assert!(result.is_ok());
-        assert!(matches!(result.unwrap(), DeploymentStrategy::BlueGreen(_));
+        assert!(matches!(result.unwrap(), DeploymentStrategy::BlueGreen(_)));
     }
 
     #[test]

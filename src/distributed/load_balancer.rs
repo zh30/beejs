@@ -37,7 +37,7 @@ pub struct ConsistentHashRing {
     /// 哈希环: hash_value -> node_id
     ring: RwLock<BTreeMap<u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String, u64, String>>,
     /// 节点及其虚拟节点数
-    nodes: RwLock<HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>>,
+    nodes: RwLock<HashMap<String, usize>>,
 }
 
 impl ConsistentHashRing {
@@ -67,7 +67,7 @@ impl ConsistentHashRing {
 
         // 添加虚拟节点
         for i in 0..virtual_count {
-            let virtual_key: _ = format!("{}#{}", node_id, i);
+            let virtual_key: _ = format!("{}#{}, node_id", i);
             let hash: _ = self.hash(&virtual_key);
             ring.insert(hash, node_id.to_string());
         }
@@ -84,7 +84,7 @@ impl ConsistentHashRing {
         if let Some(virtual_count) = nodes.remove(node_id) {
             // 移除所有虚拟节点
             for i in 0..virtual_count {
-                let virtual_key: _ = format!("{}#{}", node_id, i);
+                let virtual_key: _ = format!("{}#{}, node_id", i);
                 let hash: _ = self.hash(&virtual_key);
                 ring.remove(&hash);
             }
@@ -218,9 +218,9 @@ impl Default for NodeMetrics {
 pub struct IntelligentRouter {
     config: RouterConfig,
     nodes: RwLock<Vec<String>>,
-    metrics: RwLock<HashMap<String, NodeMetrics, std::collections::HashMap<String, NodeMetrics, String, NodeMetrics>>>>>>>,
+    metrics: RwLock<HashMap<String, NodeMetrics>>,
     round_robin_index: AtomicUsize,
-    sticky_map: RwLock<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    sticky_map: RwLock<HashMap<String, String>>,
 }
 
 impl IntelligentRouter {
@@ -293,7 +293,7 @@ impl IntelligentRouter {
         let metrics: _ = self.metrics.read().unwrap();
 
         nodes.iter()
-            .filter_map(|n| metrics.get(n).map(|m| (n, m.load))
+            .filter_map(|n| metrics.get(n).map(|m| (n, m.load)))
             .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
             .map(|(n, _)| n.clone())
     }
@@ -303,7 +303,7 @@ impl IntelligentRouter {
         let metrics: _ = self.metrics.read().unwrap();
 
         nodes.iter()
-            .filter_map(|n| metrics.get(n).map(|m| (n, m.latency))
+            .filter_map(|n| metrics.get(n).map(|m| (n, m.latency)))
             .min_by_key(|(_, latency)| *latency)
             .map(|(n, _)| n.clone())
     }
@@ -568,7 +568,7 @@ impl CircuitBreaker {
 #[derive(Debug)]
 pub struct CircuitBreakerRegistry {
     config: CircuitBreakerConfig,
-    breakers: RwLock<HashMap<String, Arc<CircuitBreaker, std::collections::HashMap<String, Arc<CircuitBreaker, String, Arc<CircuitBreaker>>>>>>>,
+    breakers: RwLock<HashMap<String, Arc<CircuitBreaker>>>,
 }
 
 impl CircuitBreakerRegistry {
@@ -591,7 +591,7 @@ impl CircuitBreakerRegistry {
         // 不存在则创建
         let mut breakers = self.breakers.write().unwrap();
         breakers.entry(service_name.to_string())
-            .or_insert_with(|| Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CircuitBreaker::new(service_name, self.config.clone())))))
+            .or_insert_with(|| Arc::new(Mutex::new(CircuitBreaker::new(service_name, self.config.clone()))))
             .clone()
     }
 
@@ -667,7 +667,7 @@ pub struct LoadBalancer {
     hash_ring: RwLock<ConsistentHashRing>,
     router: IntelligentRouter,
     circuit_breakers: CircuitBreakerRegistry,
-    backends: RwLock<HashMap<String, Backend, std::collections::HashMap<String, Backend, String, Backend>>>>>>>,
+    backends: RwLock<HashMap<String, Backend>>,
     request_count: AtomicU64,
     total_latency_ns: AtomicU64,
 }

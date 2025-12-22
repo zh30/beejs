@@ -29,8 +29,6 @@ pub use jit_compiler::{
     JitCompilerConfig, JitPerfStats,
 };
 pub use vectorization_optimizer::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
     VectorizationOptimizer, VectorizationConfig, VectorizationOpportunity,
     VectorizationResult, SimdInstructionType,
 };

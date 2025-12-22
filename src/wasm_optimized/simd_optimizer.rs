@@ -37,7 +37,7 @@ pub enum SimdOptimizationType {
 pub struct WasmSimdOptimizer {
     simd_enabled: bool,
     vector_width: u32,
-    optimizations_applied: Arc<std::sync::Mutex<Vec<String>>,
+    optimizations_applied: Arc<std::sync::Mutex<Vec<String>>>,
 }
 
 impl WasmSimdOptimizer {
@@ -51,7 +51,7 @@ impl WasmSimdOptimizer {
         let optimizer: _ = Self {
             simd_enabled,
             vector_width,
-            optimizations_applied: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(Vec::new()))))),
+            optimizations_applied: Arc::new(Mutex::new(std::sync::Mutex::new(Vec::new()))),
         };
 
         if simd_enabled {

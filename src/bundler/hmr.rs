@@ -4,7 +4,7 @@ use anyhow::Result;
 use std::collections::HashMap;
 
 pub struct HMRManager {
-    watchers: HashMap<String, Box<dyn Fn() + Send + Sync, std::collections::HashMap<String, Box<dyn Fn() + Send + Sync, String, Box<dyn Fn() + Send + Sync>>>>>>>,
+    watchers: HashMap<String, Box<dyn Fn() + Send + Sync>>,
 }
 
 impl HMRManager {
@@ -35,8 +35,8 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_hmr_manager() {
         let mut manager = HMRManager::new();
-        let called: _ = std::sync::Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(false))))));
-        let called_clone: _ = called.clone();
+        let called = std::sync::Arc::new(std::sync::Mutex::new(false));
+        let called_clone = called.clone();
 
         manager.add_watcher("test.js".to_string(), Box::new(move || {
             *called_clone.lock().unwrap() = true;

@@ -34,7 +34,7 @@ impl RegistryClient {
 
     /// 获取包信息
     pub async fn get_package_info(&self, package_name: &str) -> Result<NpmPackageInfo, Box<dyn std::error::Error>> {
-        let url: _ = format!("{}/{}", self.base_url, package_name);
+        let url: _ = format!("{}/{}, self.base_url", package_name));
         let response: _ = self.client.get(&url).send().await?;
 
         if response.status() == 404 {
@@ -88,7 +88,7 @@ impl RegistryClient {
 
     /// 搜索包
     pub async fn search_packages(&self, query: &str, limit: usize) -> Result<Vec<SearchResult>, Box<dyn std::error::Error>> {
-        let url: _ = format!("{}/-/v1/search?text={}&size={}", self.base_url, query, limit);
+        let url: _ = format!("{}/-/v1/search?text={}&size={}, self.base_url, query", limit));
         let response: _ = self.client.get(&url).send().await?;
 
         let search_response: SearchResponse = response.json().await?;
@@ -110,7 +110,7 @@ impl RegistryClient {
     }
 
     /// 获取包依赖
-    pub async fn get_dependencies(&self, package_name: &str, version: &str) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>, Box<dyn std::error::Error>> {
+    pub async fn get_dependencies(&self, package_name: &str, version: &str) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
         let info: _ = self.get_package_info(package_name).await?;
 
         // 简化实现 - 实际应该获取特定版本的依赖
@@ -200,7 +200,7 @@ impl BatchPackageQuery {
     }
 
     /// 批量获取包信息
-    pub async fn batch_get_packages(&self, package_names: &[String]) -> Result<HashMap<String, NpmPackageInfo, std::collections::HashMap<String, NpmPackageInfo, String, NpmPackageInfo>>>>>>>, Box<dyn std::error::Error>> {
+    pub async fn batch_get_packages(&self, package_names: &[String]) -> Result<HashMap<String, NpmPackageInfo>, Box<dyn std::error::Error>> {
         let mut results = HashMap::new();
 
         // 并发查询，但限制并发数
@@ -238,7 +238,7 @@ impl BatchPackageQuery {
     }
 
     /// 批量获取最新版本
-    pub async fn batch_get_latest_versions(&self, package_names: &[String]) -> Result<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>, Box<dyn std::error::Error>> {
+    pub async fn batch_get_latest_versions(&self, package_names: &[String]) -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
         let mut results = HashMap::new();
 
         let semaphore: _ = tokio::sync::Semaphore::new(10);

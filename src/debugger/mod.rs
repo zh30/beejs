@@ -30,10 +30,11 @@ pub use session::DebugSession;
 pub use config::DebugConfig;
 pub use watch::{WatchExpression, WatchManager};
 
-// Stage 93 Phase 3.2: Enhanced debugger exports
-pub use enhanced::{
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
+
+// Stage 93 Phase 3.2: Enhanced debugger exports
+pub use enhanced::{
     EnhancedDebugger,
     ConditionalBreakpoint,
     HitCountCondition,
@@ -137,7 +138,7 @@ impl<T> DebugResult<T> {
         if self.success {
             self.data.expect("DebugResult unwrap called on successful result but data is None")
         } else {
-            panic!("DebugResult unwrap failed: {}", self.error.unwrap_or_else(|| "Unknown error".to_string())
+            panic!("DebugResult unwrap failed: {}", self.error.unwrap_or_else(|| "Unknown error".to_string()))
         }
     }
 }

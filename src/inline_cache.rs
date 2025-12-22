@@ -149,7 +149,7 @@ impl CacheStats {
 
 /// Inline cache for optimizing property access and function calls
 pub struct InlineCache {
-    entries: Arc<Mutex<HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>>>>>>,
+    entries: Arc<Mutex<HashMap<CacheKey, CacheEntry>>>,
     config: CacheConfig,
     stats: Arc<Mutex<CacheStats>>,
 }
@@ -164,9 +164,9 @@ impl InlineCache {
     /// Creates a new inline cache with a custom configuration
     pub fn new_with_config(config: CacheConfig) -> Self {
         Self {
-            entries: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            entries: Arc::new(Mutex::new(HashMap::new())),
             config,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))))),
+            stats: Arc::new(Mutex::new(CacheStats::default())),
         }
     }
 
@@ -234,7 +234,7 @@ impl InlineCache {
     /// Evicts old or infrequently used entries
     fn evict_old_entries(
         &self,
-        entries: &mut HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>>>>>>,
+        entries: &mut HashMap<CacheKey, CacheEntry>,
         stats: &mut CacheStats,
     ) {
         let now: _ = Instant::now();
@@ -430,7 +430,7 @@ impl InlineCache {
 
             if let Some(entry) = entries.get(&key) {
                 stats.hits += 1;
-                results.push(Some(entry.cached_value.clone());
+                results.push(Some(entry.cached_value.clone()));
             } else {
                 stats.misses += 1;
                 results.push(None);
@@ -551,7 +551,7 @@ mod tests {
         );
 
         let result: _ = cache.get(&cache_type, receiver_hash);
-        assert_eq!(result, Some("cached_value".to_string());
+        assert_eq!(result, Some("cached_value".to_string()));
 
         let stats: _ = cache.get_stats();
         assert_eq!(stats.hits, 1);
@@ -668,8 +668,8 @@ mod tests {
 
         let results: _ = cache.batch_get(&requests);
         assert_eq!(results.len(), 2);
-        assert_eq!(results[0], Some("value_a".to_string());
-        assert_eq!(results[1], Some("value_b".to_string());
+        assert_eq!(results[0], Some("value_a".to_string()));
+        assert_eq!(results[1], Some("value_b".to_string()));
     }
 
     #[test]
@@ -738,11 +738,11 @@ mod tests {
 /// Stage 90 Phase 1.2: 增强内联缓存功能
 pub struct PolymorphicInlineCache {
     /// 缓存集合：支持多种对象类型
-    caches: Arc<RwLock<HashMap<String, Box<dyn CacheStrategy + Send + Sync, std::collections::HashMap<String, Box<dyn CacheStrategy + Send + Sync, String, Box<dyn CacheStrategy + Send + Sync>>>>>>>,
+    caches: Arc<RwLock<HashMap<String, Box<dyn CacheStrategy + Send + Sync>>>>,
     /// 最大缓存大小
     max_cache_size: usize,
     /// 缓存统计
-    stats: Arc<RwLock<HashMap<String, CacheStats, std::collections::HashMap<String, CacheStats, String, CacheStats>>>>>>>,
+    stats: Arc<RwLock<HashMap<String, CacheStats>>>,
     /// 热点代码跟踪
     hot_code_tracker: Arc<RwLock<HotCodeTracker>>,
     /// 优化策略
@@ -762,7 +762,7 @@ pub trait CacheStrategy {
 /// 单态缓存实现 - 针对单一对象类型优化
 #[derive(Debug)]
 pub struct MonomorphicCache {
-    entries: HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>>>>,
+    entries: HashMap<String, CacheEntry>,
     config: CacheConfig,
     stats: CacheStats,
 }
@@ -813,7 +813,7 @@ impl CacheStrategy for MonomorphicCache {
 /// 多态缓存实现 - 支持多种对象类型
 #[derive(Debug)]
 pub struct MegamorphicCache {
-    caches: HashMap<String, MonomorphicCache, std::collections::HashMap<String, MonomorphicCache, String, MonomorphicCache>>>>>>>,
+    caches: HashMap<String, MonomorphicCache>,
     config: CacheConfig,
     stats: CacheStats,
 }
@@ -891,7 +891,7 @@ pub struct HotCodeEntry {
 /// 热点代码跟踪器
 #[derive(Debug)]
 pub struct HotCodeTracker {
-    entries: HashMap<String, HotCodeEntry, std::collections::HashMap<String, HotCodeEntry, String, HotCodeEntry>>>>>>>,
+    entries: HashMap<String, HotCodeEntry>,
     max_entries: usize,
     hot_threshold: u64, // 热点阈值：执行次数
 }
@@ -979,10 +979,10 @@ impl PolymorphicInlineCache {
     /// 创建新的多态内联缓存
     pub fn new(max_cache_size: usize) -> Self {
         Self {
-            caches: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            caches: Arc::new(Mutex::new(HashMap::new())),
             max_cache_size,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
-            hot_code_tracker: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HotCodeTracker::new(1000)))))),
+            stats: Arc::new(Mutex::new(HashMap::new())),
+            hot_code_tracker: Arc::new(Mutex::new(HotCodeTracker::new(1000))),
             optimization_config: OptimizationConfig::default(),
         }
     }
@@ -990,10 +990,10 @@ impl PolymorphicInlineCache {
     /// 创建带配置的多态内联缓存
     pub fn new_with_config(max_cache_size: usize, config: OptimizationConfig) -> Self {
         Self {
-            caches: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            caches: Arc::new(Mutex::new(HashMap::new())),
             max_cache_size,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
-            hot_code_tracker: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HotCodeTracker::new(1000)))))),
+            stats: Arc::new(Mutex::new(HashMap::new())),
+            hot_code_tracker: Arc::new(Mutex::new(HotCodeTracker::new(1000))),
             optimization_config: config,
         }
     }
@@ -1022,11 +1022,11 @@ impl PolymorphicInlineCache {
         // 选择或创建合适的缓存策略
         let cache: _ = if self.optimization_config.enable_polymorphic_cache {
             caches.entry(type_name.to_string()).or_insert_with(|| {
-                Box::new(MegamorphicCache::new(CacheConfig::default()) as Box<dyn CacheStrategy + Send + Sync>
+                Box::new(MegamorphicCache::new(CacheConfig::default())) as Box<dyn CacheStrategy + Send + Sync>
             })
         } else {
             caches.entry(type_name.to_string()).or_insert_with(|| {
-                Box::new(MonomorphicCache::new(CacheConfig::default()) as Box<dyn CacheStrategy + Send + Sync>
+                Box::new(MonomorphicCache::new(CacheConfig::default())) as Box<dyn CacheStrategy + Send + Sync>
             })
         };
 
@@ -1124,7 +1124,7 @@ impl PolymorphicInlineCache {
     }
 
     /// 获取所有统计信息
-    pub fn get_all_stats(&self) -> HashMap<String, CacheStats, std::collections::HashMap<String, CacheStats, String, CacheStats>>>>>>> {
+    pub fn get_all_stats(&self) -> HashMap<String, CacheStats> {
         self.stats.read().unwrap().clone()
     }
 

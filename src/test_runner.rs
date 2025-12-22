@@ -129,7 +129,7 @@ impl TestRunner {
     }
 
     /// Run tests matching a pattern
-    pub fn run_pattern(&self, pattern: &str) -> Result<Vec<TestSuite>> {
+    pub fn run_pattern(&self, pattern: &str) -> Result<Vec<TestSuite> {
         let mut suites = Vec::new();
 
         // Find test files matching pattern
@@ -150,7 +150,7 @@ impl TestRunner {
     }
 
     /// Find test files matching a pattern
-    fn find_test_files(&self, _pattern: &str) -> Result<Vec<PathBuf>> {
+    fn find_test_files(&self, _pattern: &str) -> Result<Vec<PathBuf> {
         let mut files = Vec::new();
 
         // Simple pattern matching - look for *.test.js or *.spec.js
@@ -186,7 +186,7 @@ impl TestRunner {
     }
 
     /// Parse test execution results
-    fn parse_test_results(&self, _output: &str) -> Result<Vec<TestCase>> {
+    fn parse_test_results(&self, _output: &str) -> Result<Vec<TestCase> {
         // In a real implementation, we'd parse JSON output or structured logs
         // For now, return a simple test case
         Ok(vec![TestCase {

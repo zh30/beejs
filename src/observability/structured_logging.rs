@@ -27,9 +27,9 @@ pub struct StructuredLogger {
     /// Environment (e.g., development, production)
     environment: String,
     /// Log file path (optional)
-    log_file: Option<Arc<Mutex<File>>,
+    log_file: Option<Arc<Mutex<File>>>,
     /// Context data (correlation IDs, etc.)
-    context: Arc<RwLock<HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>>>>,
+    context: Arc<RwLock<HashMap<String, Value>>>,
 }
 
 impl StructuredLogger {
@@ -43,7 +43,7 @@ impl StructuredLogger {
             service_name,
             environment,
             log_file: None,
-            context: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            context: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -54,7 +54,7 @@ impl StructuredLogger {
             .map_err(|e| anyhow::anyhow!("Failed to create log file: {}", e))?;
 
         let mut logger = Self::new(level, service_name);
-        logger.log_file = Some(Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(file))))));
+        logger.log_file = Some(Arc::new(Mutex::new(file)));
 
         Ok(logger)
     }
@@ -72,37 +72,37 @@ impl StructuredLogger {
     }
 
     /// Get a clone of current context
-    pub async fn get_context(&self) -> HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>>>> {
+    pub async fn get_context(&self) -> HashMap<String, Value> {
         self.context.read().await.clone()
     }
 
     /// Log at INFO level
-    pub async fn info(&self, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>>>>) {
+    pub async fn info(&self, message: &str, context: HashMap<String, Value>) {
         self.log_with_level(Level::INFO, message, context).await;
     }
 
     /// Log at WARN level
-    pub async fn warn(&self, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>>>>) {
+    pub async fn warn(&self, message: &str, context: HashMap<String, Value>) {
         self.log_with_level(Level::WARN, message, context).await;
     }
 
     /// Log at ERROR level
-    pub async fn error(&self, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>>>>) {
+    pub async fn error(&self, message: &str, context: HashMap<String, Value>) {
         self.log_with_level(Level::ERROR, message, context).await;
     }
 
     /// Log at DEBUG level
-    pub async fn debug(&self, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>>>>) {
+    pub async fn debug(&self, message: &str, context: HashMap<String, Value>) {
         self.log_with_level(Level::DEBUG, message, context).await;
     }
 
     /// Log at TRACE level
-    pub async fn trace(&self, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>>>>) {
+    pub async fn trace(&self, message: &str, context: HashMap<String, Value>) {
         self.log_with_level(Level::TRACE, message, context).await;
     }
 
     /// Internal logging function
-    async fn log_with_level(&self, level: Level, message: &str, mut context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>>>>) {
+    async fn log_with_level(&self, level: Level, message: &str, mut context: HashMap<String, Value>) {
         // Merge with global context
         let global_context: _ = self.context.read().await;
         for (key, value) in global_context.iter() {
@@ -137,7 +137,7 @@ impl StructuredLogger {
     }
 
     /// Create a JSON log entry
-    fn create_log_entry(&self, level: Level, message: &str, context: HashMap<String, Value, std::collections::HashMap<String, Value, String, Value>>>>>>>) -> Value {
+    fn create_log_entry(&self, level: Level, message: &str, context: HashMap<String, Value>) -> Value {
         let timestamp: _ = chrono::Utc::now();
 
         let mut log_entry = json!({
@@ -206,7 +206,7 @@ where
 
         // Create JSON log entry
         let mut log_entry = serde_json::Map::new();
-        log_entry.insert("timestamp".to_string(), json!(timestamp.to_rfc3339());
+        log_entry.insert("timestamp".to_string(), json!(timestamp.to_rfc3339()));
         log_entry.insert("level".to_string(), json!(level_str));
         log_entry.insert("message".to_string(), json!(message));
         log_entry.insert("target".to_string(), json!(target_str));
@@ -231,7 +231,7 @@ pub fn init_structured_logging(
     service_name: &str,
 ) -> Result<Box<dyn Subscriber + Send + Sync>> {
     let env_filter: _ = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(level.as_str());
+        .unwrap_or_else(|_| EnvFilter::new(level.as_str()));
 
     let json_formatter: _ = JsonFormatter::new(service_name.to_string());
 

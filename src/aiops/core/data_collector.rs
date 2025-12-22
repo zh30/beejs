@@ -50,7 +50,7 @@ pub struct Metric {
     pub timestamp: Duration,
 
     /// Labels/tags for the metric
-    pub labels: std::collections::HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub labels: std::collections::HashMap<String, String>,
 }
 
 /// Performance snapshot
@@ -89,10 +89,10 @@ pub struct DataCollector {
     interval: Duration,
 
     /// Latest metrics cache
-    latest_metrics: std::sync::Arc<tokio::sync::Mutex<Vec<Metric>>,
+    latest_metrics: std::sync::Arc<tokio::sync::Mutex<Vec<Metric>>>,
 
     /// Metrics history (last N collections)
-    history: std::sync::Arc<tokio::sync::Mutex<Vec<PerformanceSnapshot>>,
+    history: std::sync::Arc<tokio::sync::Mutex<Vec<PerformanceSnapshot>>>,
 }
 
 impl DataCollector {
@@ -108,8 +108,8 @@ impl DataCollector {
     pub fn new(interval: Duration) -> Self {
         Self {
             interval,
-            latest_metrics: std::sync::Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(Vec::new()))))),
-            history: std::sync::Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(Vec::new()))))),
+            latest_metrics: std::sync::Arc::new(Mutex::new(tokio::sync::Mutex::new(Vec::new()))
+            history: std::sync::Arc::new(Mutex::new(tokio::sync::Mutex::new(Vec::new()))
         }
     }
 

@@ -11,9 +11,9 @@ use tokio::time::{Duration, Instant};
 /// Global Router for edge distribution
 #[derive(Debug)]
 pub struct GlobalRouter {
-    edge_nodes: Arc<RwLock<Vec<EdgeNode>>,
-    geo_mapping: Arc<RwLock<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>, // IP to region mapping
-    routing_rules: Arc<RwLock<Vec<RoutingRule>>,
+    edge_nodes: Arc<RwLock<Vec<EdgeNode>>>,
+    geo_mapping: Arc<RwLock<HashMap<String, String>, // IP to region mapping
+    routing_rules: Arc<RwLock<Vec<RoutingRule>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -117,9 +117,9 @@ impl GlobalRouter {
         ];
 
         GlobalRouter {
-            edge_nodes: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(default_nodes)))))),
-            geo_mapping: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
-            routing_rules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
+            edge_nodes: Arc::new(Mutex::new(default_nodes)))
+            geo_mapping: Arc::new(Mutex::new(HashMap::new()))
+            routing_rules: Arc::new(Mutex::new(Vec::new()))
         }
     }
 
@@ -131,7 +131,7 @@ impl GlobalRouter {
     }
 
     /// Get available routes
-    pub async fn get_available_routes(&self) -> Result<Vec<String>> {
+    pub async fn get_available_routes(&self) -> Result<Vec<String> {
         let nodes: _ = self.edge_nodes.read().await;
         let routes: Vec<String> = nodes.iter()
             .filter(|node| node.status == NodeStatus::Online)
@@ -157,7 +157,7 @@ impl GlobalRouter {
     }
 
     /// Resolve domain to best edge node using Anycast DNS
-    pub async fn resolve_anycast(&self, domain: &str) -> Result<Vec<String>> {
+    pub async fn resolve_anycast(&self, domain: &str) -> Result<Vec<String> {
         let nodes: _ = self.edge_nodes.read().await;
         let online_nodes: Vec<_> = nodes.iter()
             .filter(|node| node.status == NodeStatus::Online)
@@ -222,7 +222,7 @@ impl GlobalRouter {
     }
 
     /// Check health of all edge nodes
-    pub async fn check_node_health(&self) -> Result<HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>>>>>>> {
+    pub async fn check_node_health(&self) -> Result<HashMap<String, bool> {
         let mut nodes = self.edge_nodes.write().await;
         let mut health_status = HashMap::new();
 
@@ -407,7 +407,7 @@ impl GlobalRouter {
     pub async fn batch_route_requests(
         &self,
         clients: &[(f64, f64)],
-    ) -> Result<Vec<RouteResult>> {
+    ) -> Result<Vec<RouteResult> {
         let mut results = Vec::with_capacity(clients.len());
 
         for (lat, lon) in clients {
@@ -502,7 +502,7 @@ impl AnycastDns {
     }
 
     /// Resolve domain using Anycast DNS
-    pub async fn resolve(&self, domain: &str) -> Result<Vec<String>> {
+    pub async fn resolve(&self, domain: &str) -> Result<Vec<String> {
         self.router.resolve_anycast(domain).await
     }
 }

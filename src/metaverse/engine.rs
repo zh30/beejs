@@ -5,8 +5,6 @@ use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
 use super::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
     Camera, Light, Material, RenderMode, RenderStats, SceneObject, Transform, XRPlatform,
 };
 
@@ -51,7 +49,7 @@ pub struct MetaverseEngine {
     /// 配置
     config: MetaverseConfig,
     /// 场景物体
-    objects: HashMap<String, SceneObject, std::collections::HashMap<String, SceneObject, String, SceneObject>>>>>>>,
+    objects: HashMap<String, SceneObject>,
     /// 光源
     lights: Vec<Light>,
     /// 相机
@@ -63,7 +61,7 @@ pub struct MetaverseEngine {
     /// 上一帧时间
     last_frame_time: Option<Instant>,
     /// 全息引擎引用
-    holographic_engine: Option<Arc<RwLock<()>>,
+    holographic_engine: Option<Arc<RwLock<()>>>,
 }
 
 impl MetaverseEngine {

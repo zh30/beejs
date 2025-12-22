@@ -92,7 +92,7 @@ impl Default for ObservabilityConfig {
 /// Main observability system that manages all observability components
 pub struct ObservableSystem {
     config: ObservabilityConfig,
-    prometheus_exporter: Option<Arc<RwLock<PrometheusExporter>>,
+    prometheus_exporter: Option<Arc<RwLock<PrometheusExporter>>>,
     structured_logger: Option<StructuredLogger>,
     custom_metrics: Arc<RwLock<CustomMetrics>>,
     alerting_system: Option<AlertingSystem>,
@@ -107,7 +107,7 @@ impl ObservableSystem {
             config: config.clone(),
             prometheus_exporter: None,
             structured_logger: None,
-            custom_metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CustomMetrics::new()))))),
+            custom_metrics: Arc::new(Mutex::new(CustomMetrics::new())),
             alerting_system: None,
         };
 
@@ -123,7 +123,7 @@ impl ObservableSystem {
         // Initialize Prometheus exporter
         if config.enable_prometheus {
             let exporter: _ = PrometheusExporter::new()?;
-            system.prometheus_exporter = Some(Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(exporter))))));
+            system.prometheus_exporter = Some(Arc::new(Mutex::new(exporter)));
             info!("Prometheus exporter initialized");
         }
 
@@ -138,7 +138,7 @@ impl ObservableSystem {
     }
 
     /// Get Prometheus exporter reference
-    pub fn prometheus_exporter(&self) -> Option<Arc<RwLock<PrometheusExporter>> {
+    pub fn prometheus_exporter(&self) -> Option<Arc<RwLock<PrometheusExporter>>> {
         self.prometheus_exporter.clone()
     }
 
@@ -171,8 +171,8 @@ impl ObservableSystem {
         // Log event
         if let Some(logger) = &self.structured_logger {
             let context: _ = HashMap::from([
-                ("script_name".to_string(), Value::String(script_name.to_string()),
-                ("duration_ms".to_string(), Value::Number(serde_json::Number::from(duration.as_millis() as u64)),
+                ("script_name".to_string(), Value::String(script_name.to_string())),
+                ("duration_ms".to_string(), Value::Number(serde_json::Number::from(duration.as_millis() as u64))),
                 ("success".to_string(), Value::Bool(success)),
             ]);
 

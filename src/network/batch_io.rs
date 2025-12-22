@@ -63,7 +63,7 @@ pub struct BatchIoEngine {
     config: NetworkConfig,
     batch_config: BatchConfig,
     stats: Arc<RwLock<BatchStats>>,
-    pending_operations: Arc<RwLock<VecDeque<BatchOperation>>,
+    pending_operations: Arc<RwLock<VecDeque<BatchOperation>>>,
     operation_counter: Arc<RwLock<u64>>,
     processor_handle: Option<tokio::task::JoinHandle<()>>,
 }
@@ -75,15 +75,15 @@ impl BatchIoEngine {
         Self {
             processor_handle: None,
             batch_config,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(BatchStats {
+            stats: Arc::new(Mutex::new(BatchStats {
                 total_batches_processed: 0,
                 total_operations_batched: 0,
                 average_batch_size: 0.0,
                 batch_processing_time_ns: 0,
                 throughput_mbps: 0.0,
-            })))))),
-            pending_operations: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(VecDeque::new()))))),
-            operation_counter: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(0)))))),
+            })),
+            pending_operations: Arc::new(Mutex::new(VecDeque::new())),
+            operation_counter: Arc::new(Mutex::new(0)),
             config,
         }
     }
@@ -131,7 +131,7 @@ impl BatchIoEngine {
 
     /// 处理一批操作
     async fn process_batch(
-        pending_operations: &Arc<RwLock<VecDeque<BatchOperation>>,
+        pending_operations: &Arc<RwLock<VecDeque<BatchOperation>>>,
         stats: &Arc<RwLock<BatchStats>>,
     ) {
         let start: _ = Instant::now();

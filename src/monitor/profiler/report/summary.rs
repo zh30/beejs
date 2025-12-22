@@ -232,13 +232,13 @@ impl PerformanceSummary {
         report.push_str("=== 内存使用摘要 ===\n");
         report.push_str(&format!(
             "总内存使用: {:.2} MB\n",
-            self.memory_summary.total_memory as f64 / (1024.0 * 1024.0));
+            self.memory_summary.total_memory as f64 / (1024.0 * 1024.0)));
         report.push_str(&format!(
             "峰值内存使用: {:.2} MB\n",
-            self.memory_summary.peak_memory as f64 / (1024.0 * 1024.0));
+            self.memory_summary.peak_memory as f64 / (1024.0 * 1024.0)));
         report.push_str(&format!(
             "平均内存使用: {:.2} MB\n\n",
-            self.memory_summary.avg_memory / (1024.0 * 1024.0));
+            self.memory_summary.avg_memory / (1024.0 * 1024.0)));
 
         // 优化建议
         if !self.optimization_recommendations.is_empty() {

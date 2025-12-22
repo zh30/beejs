@@ -162,15 +162,15 @@ pub struct Impact {
 /// 事件收集器
 #[derive(Debug)]
 pub struct EventCollector {
-    incidents: Arc<RwLock<Vec<Incident>>,
-    changes: Arc<RwLock<Vec<Change>>,
+    incidents: Arc<RwLock<Vec<Incident>>>,
+    changes: Arc<RwLock<Vec<Change>>>,
 }
 
 impl EventCollector {
     pub fn new() -> Self {
         Self {
-            incidents: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
-            changes: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
+            incidents: Arc::new(Mutex::new(Vec::new()))
+            changes: Arc::new(Mutex::new(Vec::new()))
         }
     }
 
@@ -332,13 +332,13 @@ impl ChangeCorrelator {
 /// 因果推断引擎
 #[derive(Debug)]
 pub struct CausalInferenceEngine {
-    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality, std::collections::HashMap<String, Vec<Causality, String, Vec<Causality>>>>>>>>,
+    causal_graph: Arc<RwLock<HashMap<String, Vec<Causality>>>,
 }
 
 impl CausalInferenceEngine {
     pub fn new() -> Self {
         Self {
-            causal_graph: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            causal_graph: Arc::new(Mutex::new(HashMap::new()))
         }
     }
 
@@ -456,11 +456,11 @@ pub struct RootCauseAnalyzer {
 
 impl RootCauseAnalyzer {
     pub fn new() -> Self {
-        let event_collector: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EventCollector::new())))));
+        let event_collector: _ = Arc::new(Mutex::new(EventCollector::new()),;
         Self {
-            event_collector: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EventCollector::new()))))),
-            causal_inference_engine: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CausalInferenceEngine::new()))))),
-            change_correlator: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ChangeCorrelator::new(event_collector.clone()))))),
+            event_collector: Arc::new(Mutex::new(EventCollector::new()))
+            causal_inference_engine: Arc::new(Mutex::new(CausalInferenceEngine::new()))
+            change_correlator: Arc::new(Mutex::new(ChangeCorrelator::new(event_collector.clone()))
         }
     }
 
@@ -477,7 +477,7 @@ impl RootCauseAnalyzer {
         let all_events: _ = vec![incident.clone()]
             .into_iter()
             .chain(related_incidents.into_iter())
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>();
 
         self.causal_inference_engine.build_causal_graph(&all_events).await?;
 

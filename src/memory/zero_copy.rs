@@ -79,9 +79,9 @@ impl Default for MemoryPoolConfig {
 #[derive(Debug)]
 pub struct OptimizedMemoryPool {
     config: MemoryPoolConfig,
-    small_pool: Arc<Mutex<VecDeque<MemoryBlock>>,
-    medium_pool: Arc<Mutex<VecDeque<MemoryBlock>>,
-    large_pool: Arc<Mutex<VecDeque<MemoryBlock>>,
+    small_pool: Arc<Mutex<VecDeque<MemoryBlock>>>,
+    medium_pool: Arc<Mutex<VecDeque<MemoryBlock>>>,
+    large_pool: Arc<Mutex<VecDeque<MemoryBlock>>>,
     stats: Arc<MemoryPoolStats>,
 }
 
@@ -174,10 +174,10 @@ impl OptimizedMemoryPool {
     pub fn new(config: MemoryPoolConfig) -> Self {
         Self {
             config: config.clone(),
-            small_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
-            medium_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
-            large_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MemoryPoolStats::default()))))),
+            small_pool: Arc::new(Mutex::new(VecDeque::new())),
+            medium_pool: Arc::new(Mutex::new(VecDeque::new())),
+            large_pool: Arc::new(Mutex::new(VecDeque::new())),
+            stats: Arc::new(Mutex::new(MemoryPoolStats::default())),
         }
     }
 
@@ -339,7 +339,7 @@ impl OptimizedMemoryPool {
     }
 
     /// 清理单个池
-    fn cleanup_pool(&self, pool: &Arc<Mutex<VecDeque<MemoryBlock>>, now: &Instant) {
+    fn cleanup_pool(&self, pool: &Arc<Mutex<VecDeque<MemoryBlock>>>, now: &Instant) {
         let mut pool_guard = pool.lock().unwrap();
         let mut i = 0;
 

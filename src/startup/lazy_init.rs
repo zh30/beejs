@@ -12,9 +12,9 @@ use std::collections::{HashMap, BTreeMap};
 /// Web API 延迟加载器
 pub struct LazyWebAPI {
     /// 已初始化的 API 集合
-    initialized_apis: Arc<RwLock<HashSet<String>>,
+    initialized_apis: Arc<RwLock<HashSet<String>>>,
     /// 初始化队列
-    initialization_queue: Arc<Mutex<Vec<ApiInitTask>>,
+    initialization_queue: Arc<Mutex<Vec<ApiInitTask>>>,
     /// 初始化信号量（限制并发数）
     init_semaphore: Arc<Semaphore>,
     /// Web API 注册表
@@ -64,11 +64,11 @@ impl LazyWebAPI {
     /// 创建新的延迟 Web API 加载器
     pub fn new() -> Self {
         Self {
-            initialized_apis: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashSet::new()))))),
-            initialization_queue: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
-            init_semaphore: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Semaphore::new(10)))))), // 最多 10 个并发初始化
-            // web_api_registry: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(WebApiRegistry::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LazyInitStats::default()))))),
+            initialized_apis: Arc::new(Mutex::new(HashSet::new())),
+            initialization_queue: Arc::new(Mutex::new(Vec::new())),
+            init_semaphore: Arc::new(Mutex::new(Semaphore::new(10))), // 最多 10 个并发初始化
+            // web_api_registry: Arc::new(Mutex::new(WebApiRegistry::new()))
+            stats: Arc::new(Mutex::new(LazyInitStats::default())),
         }
     }
 
@@ -170,7 +170,7 @@ pub struct LazyInitializer<T> {
     /// 初始化函数
     init_fn: Arc<dyn Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync>,
     /// 缓存的值
-    value: Arc<Mutex<Option<T>>,
+    value: Arc<Mutex<Option<T>>>,
     /// 是否已初始化
     initialized: Arc<Mutex<bool>>,
     /// 统计信息
@@ -208,10 +208,10 @@ impl<T> LazyInitializer<T> {
         F: Fn() -> Result<T, Box<dyn std::error::Error + Send + Sync>> + Send + Sync + 'static,
     {
         Self {
-            init_fn: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(init_fn)))))),
-            value: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(None)))))),
-            initialized: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(false)))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(InitStats::new()))))),
+            init_fn: Arc::new(Mutex::new(init_fn)),
+            value: Arc::new(Mutex::new(None)),
+            initialized: Arc::new(Mutex::new(false)),
+            stats: Arc::new(Mutex::new(InitStats::new())),
         }
     }
 
@@ -287,7 +287,7 @@ impl<T> LazyInitializer<T> {
 /// 按需模块加载器
 pub struct OnDemandLoader {
     /// 已加载的模块
-    loaded_modules: Arc<RwLock<HashMap<String, LoadedModule, std::collections::HashMap<String, LoadedModule, String, LoadedModule>>>>>>>,
+    loaded_modules: Arc<RwLock<HashMap<String, LoadedModule>>>,
     /// 模块工厂
     module_factory: Arc<dyn ModuleFactory + Send + Sync>,
     /// 统计信息
@@ -313,7 +313,7 @@ pub struct SimpleModuleFactory;
 impl ModuleFactory for SimpleModuleFactory {
     fn create_module(&self, name: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
         // 模拟模块加载
-        let module_data: _ = format!("// Module: {}\nconsole.log('{} loaded');", name, name);
+        let module_data: _ = format!("// Module: {}\nconsole.log('{} loaded');", name);
         Ok(module_data.into_bytes())
     }
 }
@@ -338,14 +338,14 @@ impl OnDemandLoader {
     /// 使用指定工厂创建加载器
     pub fn with_factory(factory: Box<dyn ModuleFactory + Send + Sync>) -> Self {
         Self {
-            loaded_modules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            loaded_modules: Arc::new(Mutex::new(HashMap::new())),
             module_factory: Arc::from(factory),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LoaderStats::default()))))),
+            stats: Arc::new(Mutex::new(LoaderStats::default())),
         }
     }
 
     /// 按需加载模块
-    pub async fn load_module(&self, name: &str) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn load_module(&self, name: &str) -> Result<Option<Vec<u8>, Box<dyn std::error::Error + Send + Sync>>> {
         // 先检查缓存
         let module_data: _ = {
             let modules: _ = self.loaded_modules.read().await;
@@ -433,7 +433,7 @@ pub struct StartupOptimizer {
     /// 按需加载器
     on_demand_loader: Arc<OnDemandLoader>,
     /// 启动时间记录
-    startup_time: Arc<Mutex<Option<Instant>>,
+    startup_time: Arc<Mutex<Option<Instant>>>,
     /// 优化策略
     optimization_level: OptimizationLevel,
 }
@@ -455,9 +455,9 @@ impl StartupOptimizer {
     /// 创建新的启动优化器
     pub fn new(level: OptimizationLevel) -> Self {
         Self {
-            lazy_web_api: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LazyWebAPI::new()))))),
-            on_demand_loader: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(OnDemandLoader::new()))))),
-            startup_time: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(None)))))),
+            lazy_web_api: Arc::new(Mutex::new(LazyWebAPI::new())),
+            on_demand_loader: Arc::new(Mutex::new(OnDemandLoader::new())),
+            startup_time: Arc::new(Mutex::new(None)),
             optimization_level: level,
         }
     }

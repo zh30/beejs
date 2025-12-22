@@ -20,7 +20,7 @@ impl Tensor {
             return Err(anyhow::anyhow!(
                 "Data size mismatch: expected {}, got {}",
                 expected_size,
-                data.len());
+                data.len()));
         }
 
         Ok(Tensor { data, shape })
@@ -96,7 +96,7 @@ impl Tensor {
             return Err(anyhow::anyhow!(
                 "Cannot reshape: size mismatch ({} vs {})",
                 new_size,
-                self.size());
+                self.size()));
         }
 
         Ok(Tensor {

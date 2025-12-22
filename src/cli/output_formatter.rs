@@ -137,7 +137,9 @@ impl OutputFormatter {
             "{}",
             self.colorize(
                 &format!("  {} ", title),
-                &format!("{}{}", colors::BOLD, colors::BRIGHT_CYAN));
+                &format!("{}{}", colors::BOLD, colors::BRIGHT_CYAN)
+            )
+        );
         println!(
             "{}",
             self.colorize(&"─".repeat(title.len() + 4), colors::DIM)
@@ -367,7 +369,7 @@ mod atty {
             true
         }
 
-        #[cfg(not(any(unix, windows))]
+        #[cfg(not(any(unix, windows)))]
         {
             true
         }

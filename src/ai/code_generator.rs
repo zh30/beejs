@@ -228,7 +228,7 @@ impl AiModel for MockAiModel {
     fn explain(&self, code: &str) -> Result<String, Box<dyn std::error::Error>> {
         std::thread::sleep(std::time::Duration::from_millis(self.response_delay_ms / 3));
 
-        Ok(format!("这段代码实现了: {}", code.lines().take(3).collect::<Vec<_>>().join(" "))
+        Ok(format!("这段代码实现了: {}", code.lines().take(3).collect::<Vec<_>().join(" ")))
     }
 }
 
@@ -328,7 +328,7 @@ impl MockAiModel {
 /// 模式分析器 - 用于分析代码模式并提供智能补全
 #[derive(Debug, Clone)]
 pub struct PatternAnalyzer {
-    common_patterns: Arc<RwLock<Vec<CommonPattern>>,
+    common_patterns: Arc<RwLock<Vec<CommonPattern>>>,
     language_specific_hints: Arc<RwLock<LanguageHints>>,
 }
 
@@ -470,13 +470,13 @@ impl PatternAnalyzer {
         ];
 
         Self {
-            common_patterns: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(common_patterns)))))),
-            language_specific_hints: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(LanguageHints {
+            common_patterns: Arc::new(RwLock::new(common_patterns)),
+            language_specific_hints: Arc::new(RwLock::new(LanguageHints {
                 javascript,
                 typescript,
                 python,
                 rust,
-            })))))),
+            })),
         }
     }
 
@@ -582,13 +582,15 @@ impl PatternAnalyzer {
 /// 上下文缓存
 #[derive(Debug, Clone)]
 pub struct ContextCache {
-    pub cache: Arc<RwLock<lru::LruCache<String, CodeContext>>,
+    pub cache: Arc<RwLock<lru::LruCache<String, CodeContext>>>,
 }
 
 impl ContextCache {
     pub fn new(capacity: usize) -> Self {
         Self {
-            cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(lru::LruCache::new(std::num::NonZeroUsize::new(capacity)))))).unwrap_or(std::num::NonZeroUsize::new(100).unwrap()),
+            cache: Arc::new(RwLock::new(lru::LruCache::new(
+                std::num::NonZeroUsize::new(capacity).unwrap_or(std::num::NonZeroUsize::new(100).unwrap())
+            ))),
         }
     }
 
@@ -606,7 +608,7 @@ impl ContextCache {
 /// 代码数据库
 #[derive(Debug, Clone)]
 pub struct CodeDatabase {
-    templates: Arc<RwLock<Vec<CodeTemplate>>,
+    templates: Arc<RwLock<Vec<CodeTemplate>>>,
 }
 
 #[derive(Debug, Clone)]
@@ -619,7 +621,7 @@ pub struct CodeTemplate {
 
 impl CodeDatabase {
     pub fn new() -> Self {
-        let templates: _ = vec![
+        let templates = vec![
             CodeTemplate {
                 language: Language::JavaScript,
                 pattern: "function.*\\(.*\\)".to_string(),
@@ -635,7 +637,7 @@ impl CodeDatabase {
         ];
 
         Self {
-            templates: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(templates)))))),
+            templates: Arc::new(RwLock::new(templates)),
         }
     }
 
@@ -661,16 +663,16 @@ impl AICodeGenerator {
             model,
             context_cache,
             code_db,
-            performance_config: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(PerformanceAwareConfig::default()))))),
-            pattern_analyzer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PatternAnalyzer::new()))))),
+            performance_config: Arc::new(RwLock::new(PerformanceAwareConfig::default())),
+            pattern_analyzer: Arc::new(PatternAnalyzer::new()),
         }
     }
 
     /// 使用默认配置创建生成器
     pub fn new_with_defaults() -> Self {
-        let model: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MockAiModel::new(100, 0.95))))));
-        let context_cache: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(ContextCache::new(1000))))));
-        let code_db: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CodeDatabase::new())))));
+        let model: Arc<dyn AiModel> = Arc::new(MockAiModel::new(100, 0.95));
+        let context_cache = Arc::new(RwLock::new(ContextCache::new(1000)));
+        let code_db = Arc::new(CodeDatabase::new());
         Self::new(model, context_cache, code_db)
     }
 
@@ -685,8 +687,8 @@ impl AICodeGenerator {
             model,
             context_cache,
             code_db,
-            performance_config: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(performance_config)))))),
-            pattern_analyzer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PatternAnalyzer::new()))))),
+            performance_config: Arc::new(RwLock::new(performance_config)),
+            pattern_analyzer: Arc::new(PatternAnalyzer::new()),
         }
     }
 

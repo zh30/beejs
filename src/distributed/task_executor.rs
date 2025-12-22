@@ -214,7 +214,7 @@ impl ExecutorWorker {
     fn execute_internal(&self, task: &Task) -> Result<Vec<u8>, ExecutionError> {
         // 检查是否模拟失败
         if task.metadata.get("simulate_failure").map(|v| v == "true").unwrap_or(false) {
-            return Err(ExecutionError::RuntimeError("Simulated failure".to_string());
+            return Err(ExecutionError::RuntimeError("Simulated failure".to_string()));
         }
 
         // 模拟执行时间
@@ -225,7 +225,7 @@ impl ExecutorWorker {
             TaskType::DataProcessing => Duration::from_millis(20),
         };
 
-        std::thread::sleep(exec_time.min(Duration::from_millis(100));
+        std::thread::sleep(exec_time.min(Duration::from_millis(100)));
 
         Ok(vec![0u8; 10]) // 模拟输出
     }
@@ -320,7 +320,7 @@ impl TaskExecutor {
 
         // 创建 workers
         let workers: Vec<ExecutorWorker> = (0..config.worker_count)
-            .map(|id| ExecutorWorker::new(id, WorkerConfig::default())
+            .map(|id| ExecutorWorker::new(id, WorkerConfig::default()))
             .collect();
 
         let checkpoint_manager: _ = if config.enable_checkpointing {
@@ -531,8 +531,8 @@ pub enum FaultAction {
 #[derive(Debug)]
 pub struct FaultHandler {
     pub config: FaultConfig,
-    failure_counts: HashMap<String, u32, std::collections::HashMap<String, u32, String, u32>>>>>>>,
-    circuit_states: HashMap<String, bool, std::collections::HashMap<String, bool, String, bool>>>>>>>, // true = open (blocked)
+    failure_counts: HashMap<String, u32>,
+    circuit_states: HashMap<String, bool>, // true = open (blocked)
 }
 
 impl FaultHandler {
@@ -784,7 +784,7 @@ pub struct ResourceUsage {
 #[derive(Debug)]
 pub struct ResourceTracker {
     config: ResourceConfig,
-    allocations: HashMap<String, ResourceAllocation, std::collections::HashMap<String, ResourceAllocation, String, ResourceAllocation>>>>>>>,
+    allocations: HashMap<String, ResourceAllocation>,
 }
 
 impl ResourceTracker {
@@ -873,7 +873,7 @@ pub struct Checkpoint {
 #[derive(Debug)]
 pub struct CheckpointManager {
     interval: Duration,
-    checkpoints: HashMap<String, Checkpoint, std::collections::HashMap<String, Checkpoint, String, Checkpoint>>>>>>>,
+    checkpoints: HashMap<String, Checkpoint>,
 }
 
 impl CheckpointManager {
@@ -958,7 +958,7 @@ impl Default for RecoveryConfig {
 #[derive(Debug)]
 pub struct RecoveryManager {
     config: RecoveryConfig,
-    failure_history: HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>>>>>,
+    failure_history: HashMap<String, Vec<String>>,
 }
 
 impl RecoveryManager {

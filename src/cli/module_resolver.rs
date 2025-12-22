@@ -45,7 +45,7 @@ pub struct ModuleResolver {
     /// Current working directory for resolution
     current_dir: PathBuf,
     /// Module cache to avoid re-resolution
-    cache: HashMap<String, ResolutionResult, std::collections::HashMap<String, ResolutionResult, String, ResolutionResult>>>>>>>,
+    cache: HashMap<String, ResolutionResult>,
     /// Search paths for node_modules
     search_paths: Vec<PathBuf>,
 }
@@ -148,13 +148,13 @@ impl ModuleResolver {
             }
         }
 
-        Err(format!("Cannot find module '{}' from '{}'", request, parent.display())
+        Err(format!("Cannot find module '{}' from '{}'", request, parent.display()))
     }
 
     /// Resolve absolute paths
     fn resolve_absolute(&self, request: &str) -> Result<ResolutionResult, String> {
         let path: _ = Path::new(request);
-        
+
         // Try as file first
         if path.exists() {
             return Ok(ResolutionResult {
@@ -165,7 +165,7 @@ impl ModuleResolver {
         }
 
         // Try as directory with package.json
-        let package_path: _ = path.clone();join("package.json");
+        let package_path: _ = path.clone().join("package.json");
         if package_path.exists() {
             return self.resolve_package(path.to_path_buf());
         }
@@ -216,7 +216,7 @@ impl ModuleResolver {
         let package_json: _ = package_path.join("package.json");
         
         if !package_json.exists() {
-            return Err(format!("Package not found at {}", package_path.display());
+            return Err(format!("Package not found at {}", package_path.display()));
         }
 
         // Read package.json to find main entry point
@@ -260,12 +260,12 @@ impl ModuleResolver {
                                 is_package: true,
                             })
                         } else {
-                            Err(format!("Invalid package.json in {}", package_path.display())
+                            Err(format!("Invalid package.json in {}", package_path.display()))
                         }
                     }
                 }
             }
-            Err(_) => Err(format!("Cannot read package.json at {}", package_json.display()),
+            Err(_) => Err(format!("Cannot read package.json at {}", package_json.display())),
         }
     }
 
@@ -324,7 +324,7 @@ use std::collections::{HashMap, BTreeMap};
         let mut resolver = ModuleResolver::new(PathBuf::from("/test"));
         let result: _ = resolver.resolve("fs", Path::new("/test/script.js"));
         assert!(result.is_ok());
-        let result: _ = result.clone();unwrap();
+        let result: _ = result.unwrap();
         assert_eq!(result.module_type, ModuleType::BuiltIn);
         assert_eq!(result.path, PathBuf::from("fs"));
     }

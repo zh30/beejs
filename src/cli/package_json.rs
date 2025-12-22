@@ -17,11 +17,11 @@ pub struct PackageJson {
     /// Package description
     pub description: Option<String>,
     /// Scripts to run
-    pub scripts: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub scripts: Option<HashMap<String, String>>,
     /// Dependencies
-    pub dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub dependencies: Option<HashMap<String, String>>,
     /// Dev dependencies
-    pub dev_dependencies: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub dev_dependencies: Option<HashMap<String, String>>,
     /// Beejs specific configuration
     pub beejs: Option<BeejsConfig>,
 }
@@ -38,7 +38,7 @@ pub struct BeejsConfig {
     /// Watch mode settings
     pub watch: Option<WatchConfig>,
     /// Environment variables
-    pub env: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub env: Option<HashMap<String, String>>,
 }
 
 /// Watch mode configuration
@@ -87,7 +87,7 @@ impl PackageJson {
     }
 
     /// Get all scripts
-    pub fn get_scripts(&self) -> HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>> {
+    pub fn get_scripts(&self) -> HashMap<String, String> {
         self.scripts.as_ref().cloned().unwrap_or_default()
     }
 
@@ -147,7 +147,7 @@ impl PackageJson {
     }
 
     /// Get environment variables
-    pub fn get_env_vars(&self) -> HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>> {
+    pub fn get_env_vars(&self) -> HashMap<String, String> {
         if let Some(beejs_config) = &self.beejs {
             if let Some(env) = &beejs_config.env {
                 return env.clone();
@@ -302,7 +302,7 @@ impl ScriptExecutor {
             .as_ref()
             .map(|scripts| {
                 scripts.iter()
-                    .map(|(name, cmd)| (name.clone(), cmd.clone())
+                    .map(|(name, cmd)| (name.clone(), cmd.clone()))
                     .collect()
             })
             .unwrap_or_default()
@@ -334,12 +334,12 @@ use std::collections::{HashMap, BTreeMap};
 
         let pkg: _ = PackageJson::load_from_path(&package_json).expect("Failed to load package.json");
 
-        assert_eq!(pkg.name, Some("test-app".to_string());
-        assert_eq!(pkg.version, Some("1.0.0".to_string());
+        assert_eq!(pkg.name, Some("test-app".to_string()));
+        assert_eq!(pkg.version, Some("1.0.0".to_string()));
 
         let scripts: _ = pkg.get_scripts();
-        assert_eq!(scripts.get("start"), Some(&"beejs src/index.js".to_string());
-        assert_eq!(scripts.get("dev"), Some(&"beejs watch src/index.js".to_string());
+        assert_eq!(scripts.get("start"), Some(&"beejs src/index.js".to_string()));
+        assert_eq!(scripts.get("dev"), Some(&"beejs watch src/index.js".to_string()));
 
         temp_dir.close().expect("Failed to close temp dir");
     }
@@ -364,9 +364,9 @@ use std::collections::{HashMap, BTreeMap};
         let pkg: _ = PackageJson::load_from_path(&package_json).expect("Failed to load package.json");
 
         let config: _ = pkg.get_beejs_config().expect("No beejs config");
-        assert_eq!(config.entry, Some("src/index.ts".to_string());
-        assert_eq!(config.optimize, Some("aggressive".to_string());
-        assert_eq!(config.target, Some("es2020".to_string());
+        assert_eq!(config.entry, Some("src/index.ts".to_string()));
+        assert_eq!(config.optimize, Some("aggressive".to_string()));
+        assert_eq!(config.target, Some("es2020".to_string()));
 
         temp_dir.close().expect("Failed to close temp dir");
     }

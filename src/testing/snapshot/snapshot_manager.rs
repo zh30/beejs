@@ -11,7 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct SnapshotManager {
     config: SnapshotConfig,
     snapshots_dir: PathBuf,
-    snapshots_cache: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    snapshots_cache: HashMap<String, String>,
 }
 
 impl SnapshotManager {
@@ -35,7 +35,7 @@ impl SnapshotManager {
 
     /// Get snapshot file path
     fn snapshot_path(&self, name: &str) -> PathBuf {
-        let file_name: _ = format!("{}{}", name, self.config.file_extension);
+        let file_name: _ = format!("{}{}, name", self.config.file_extension));
         self.snapshots_dir.join(file_name)
     }
 
@@ -199,7 +199,7 @@ impl SnapshotManager {
     }
 
     /// Update all snapshots
-    pub fn update_all_snapshots(&mut self, values: HashMap<String, &dyn std::fmt::Display, std::collections::HashMap<String, &dyn std::fmt::Display, String, &dyn std::fmt::Display>>>>>>>) -> Result<(), SnapshotError> {
+    pub fn update_all_snapshots(&mut self, values: HashMap<String, &dyn std::fmt::Display>) -> Result<(), SnapshotError> {
         for (name, value) in values {
             let serialized: _ = self.config.serializer.serialize(value);
             self.save_snapshot(&name, &serialized)?;

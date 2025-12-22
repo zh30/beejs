@@ -44,7 +44,7 @@ impl TypeAnalyzer {
     }
 
     /// 分析类型
-    pub fn analyze_types(&self, source_file: &SourceFile) -> Result<HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>>>>>>, Box<dyn std::error::Error>> {
+    pub fn analyze_types(&self, source_file: &SourceFile) -> Result<HashMap<String, TypeDefinition>, Box<dyn std::error::Error>> {
         let mut types = HashMap::new();
 
         // 分析 AST
@@ -57,14 +57,14 @@ impl TypeAnalyzer {
     }
 
     /// 从 AST 提取类型
-    pub fn extract_types_from_ast(&self, ast: &AstNode, filename: &str) -> Result<HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>>>>>>, Box<dyn std::error::Error>> {
+    pub fn extract_types_from_ast(&self, ast: &AstNode, filename: &str) -> Result<HashMap<String, TypeDefinition>, Box<dyn std::error::Error>> {
         let mut types = HashMap::new();
         self.analyze_ast(ast, &mut types)?;
         Ok(types)
     }
 
     /// 分析 AST 节点
-    fn analyze_ast(&self, node: &AstNode, types: &mut HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>>>>>>) -> Result<(), Box<dyn std::error::Error>> {
+    fn analyze_ast(&self, node: &AstNode, types: &mut HashMap<String, TypeDefinition>) -> Result<(), Box<dyn std::error::Error>> {
         match node {
             AstNode::Program(statements) => {
                 for stmt in statements {
@@ -360,7 +360,7 @@ impl TypeAnalyzer {
     }
 
     /// 合并 JSDoc 类型
-    fn merge_jsdoc_types(&self, js_doc: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>, types: &mut HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>>>>>>) {
+    fn merge_jsdoc_types(&self, js_doc: &HashMap<String, String>, types: &mut HashMap<String, TypeDefinition>) {
         for (key, doc) in js_doc {
             if key.starts_with("param:") {
                 let param_name: _ = key.strip_prefix("param:").unwrap();
@@ -377,7 +377,7 @@ impl TypeAnalyzer {
     }
 
     /// 从 JSDoc 提取类型
-    pub fn extract_jsdoc_types(&self, source: &str) -> Result<HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>>>>>>, Box<dyn std::error::Error>> {
+    pub fn extract_jsdoc_types(&self, source: &str) -> Result<HashMap<String, TypeDefinition>, Box<dyn std::error::Error>> {
         let mut types = HashMap::new();
         let mut lines = source.lines().peekable();
 
@@ -407,7 +407,7 @@ impl TypeAnalyzer {
     }
 
     /// 从 JSDoc 提取类型
-    fn extract_type_from_jsdoc(&self, comment: &str, types: &mut HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>>>>>>) -> Result<(), Box<dyn std::error::Error>> {
+    fn extract_type_from_jsdoc(&self, comment: &str, types: &mut HashMap<String, TypeDefinition>) -> Result<(), Box<dyn std::error::Error>> {
         let lines: Vec<&str> = comment.lines().collect();
 
         for line in &lines {
@@ -553,7 +553,7 @@ pub struct SourceFile {
     pub filename: String,
     pub ast: AstNode,
     pub comments: Vec<Comment>,
-    pub js_doc: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub js_doc: HashMap<String, String>,
 }
 
 /// AST 节点

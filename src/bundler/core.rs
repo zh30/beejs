@@ -46,7 +46,7 @@ pub struct BundleOutput {
     pub chunks: Vec<Chunk>,
     pub total_size: usize,
     pub entry_points: Vec<String>,
-    pub assets: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>>>,
+    pub assets: HashMap<String, Vec<u8>>,
 }
 
 /// Build options
@@ -69,12 +69,12 @@ pub struct BuildStats {
     pub build_time_ms: u64,
     pub bundle_size: usize,
     pub throughput_mbps: f64,
-    pub phases: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>>>>>>,
+    pub phases: HashMap<String, u64>,
 }
 
 /// High-performance Bundler
 pub struct Bundler {
-    modules: Arc<Mutex<HashMap<String, Module, std::collections::HashMap<String, Module, String, Module>>>>>>>,
+    modules: Arc<Mutex<HashMap<String, Module>>>,
     options: BuildOptions,
     stats: Arc<Mutex<BuildStats>>,
 }
@@ -83,14 +83,14 @@ impl Bundler {
     /// Create new bundler
     pub fn new(options: BuildOptions) -> Self {
         Self {
-            modules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            modules: Arc::new(Mutex::new(HashMap::new())),
             options,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BuildStats {
+            stats: Arc::new(Mutex::new(BuildStats {
                 total_modules: 0,
                 build_time_ms: 0,
                 bundle_size: 0,
                 throughput_mbps: 0.0,
-                phases: HashMap::new()))))),
+                phases: HashMap::new(),
             })),
         }
     }
@@ -428,9 +428,9 @@ use std::collections::{HashMap, BTreeMap};
 
         let deps: _ = bundler.analyze_dependencies(code, &ModuleType::JavaScript);
         assert_eq!(deps.len(), 3);
-        assert!(deps.contains(&"fs".to_string());
-        assert!(deps.contains(&"path".to_string());
-        assert!(deps.contains(&"util".to_string());
+        assert!(deps.contains(&"fs".to_string()));
+        assert!(deps.contains(&"path".to_string()));
+        assert!(deps.contains(&"util".to_string()));
     }
 
     #[test]

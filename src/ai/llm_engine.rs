@@ -39,9 +39,9 @@ struct KvCache {
 pub struct AiLlmEngine {
     config: LlmConfig,
     runtime: Arc<tokio::runtime::Runtime>,
-    token_cache: Arc<RwLock<HashMap<String, TokenCacheEntry, std::collections::HashMap<String, TokenCacheEntry, String, TokenCacheEntry>>>>,
+    token_cache: Arc<RwLock<HashMap<String, TokenCacheEntry>>>,
     memory_pool: Arc<Mutex<Vec<Vec<f32>>>>,
-    active_sessions: Arc<RwLock<HashMap<String, SessionInfo, std::collections::HashMap<String, SessionInfo, String, SessionInfo>>>>,
+    active_sessions: Arc<RwLock<HashMap<String, SessionInfo>>>,
 }
 
 /// 会话信息
@@ -65,12 +65,12 @@ pub struct InferenceResult {
 impl AiLlmEngine {
     /// 创建新的 LLM 引擎实例
     pub fn new(runtime: &Arc<tokio::runtime::Runtime>, config: LlmConfig) -> Result<Self, String> {
-        let engine: _ = AiLlmEngine {
+        let engine = AiLlmEngine {
             config: config.clone(),
             runtime: runtime.clone(),
-            token_cache: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
-            memory_pool: Arc::new(std::sync::Mutex::new(Mutex::new(Vec::new()))),
-            active_sessions: Arc::new(std::sync::Mutex::new(RwLock::new(HashMap::new()))),
+            token_cache: Arc::new(RwLock::new(HashMap::new())),
+            memory_pool: Arc::new(Mutex::new(Vec::new())),
+            active_sessions: Arc::new(RwLock::new(HashMap::new())),
         };
 
         // 预热 KV Cache

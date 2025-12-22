@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-//! 眼动追踪系统
+// 眼动追踪系统
 
 /// 眼动追踪配置
 #[derive(Debug, Clone)]

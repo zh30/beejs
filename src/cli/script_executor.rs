@@ -98,7 +98,7 @@ pub struct ExecutionContext {
     /// process.argv array
     pub argv: Vec<String>,
     /// Environment variables
-    pub env: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub env: HashMap<String, String>,
     /// File type of the script
     pub file_type: FileType,
     /// Module system to use
@@ -134,7 +134,7 @@ impl ExecutionContext {
         ];
 
         // Collect environment variables
-        let env: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>> = std::env::vars().collect();
+        let env: HashMap<String, String> = std::env::vars().collect();
 
         Self {
             cwd,
@@ -176,7 +176,7 @@ impl ExecutionContext {
         let argv_json: Vec<String> = self
             .argv
             .iter()
-            .map(|a| format!("\"{}\"", a.replace('\\', "\\\\").replace('"', "\\\""))
+            .map(|a| format!("\"{}\"", a.replace('\\', "\\\\").replace('"', "\\\"")))
             .collect();
 
         format!(
@@ -246,7 +246,7 @@ impl ScriptExecutor {
     pub fn validate_script(&self, path: &PathBuf) -> Result<FileType, String> {
         // Check file exists
         if !path.exists() {
-            return Err(format!("Script not found: {}", path.display());
+            return Err(format!("Script not found: {}", path.display()));
         }
 
         // Detect file type
@@ -264,7 +264,7 @@ impl ScriptExecutor {
             FileType::Json => Ok(file_type), // JSON can be imported/required
             FileType::Unknown => Err(format!(
                 "Unknown file type: {}. Supported: .js, .mjs, .cjs, .ts, .tsx, .json",
-                path.display()),
+                path.display())),
         }
     }
 
@@ -431,7 +431,7 @@ use std::collections::{HashMap, BTreeMap};
     fn test_shebang_detection() {
         assert_eq!(
             shebang::detect("#!/usr/bin/env beejs\nconsole.log('hi')"),
-            Some("/usr/bin/env beejs".to_string());
+            Some("/usr/bin/env beejs".to_string()));
         assert!(shebang::detect("console.log('hi')").is_none());
     }
 

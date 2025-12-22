@@ -64,10 +64,10 @@ impl CacheEntry {
 }
 
 /// L1 内存缓存
-type L1Cache = HashMap<String, Arc<RwLock<CacheEntry, std::collections::HashMap<String, Arc<RwLock<CacheEntry, String, Arc<RwLock<CacheEntry>>>>>>>;
+type L1Cache = HashMap<String, Arc<RwLock<CacheEntry>>>;
 
 /// L2 文件缓存
-type L2Cache = HashMap<String, PathBuf, std::collections::HashMap<String, PathBuf, String, PathBuf>>>>>>>;
+type L2Cache = HashMap<String, PathBuf>;
 
 /// 缓存统计信息
 #[derive(Debug, Clone, Default)]
@@ -133,7 +133,7 @@ pub struct WasmModuleCache {
     /// 统计信息
     stats: Arc<Mutex<CacheStats>>,
     /// 缓存加载时间追踪
-    load_times: Arc<Mutex<Vec<Duration>>,
+    load_times: Arc<Mutex<Vec<Duration>>>,
 }
 
 impl WasmModuleCache {
@@ -165,11 +165,11 @@ impl WasmModuleCache {
         }
 
         Ok(WasmModuleCache {
-            l1_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
-            l2_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            l1_cache: Arc::new(Mutex::new(HashMap::new())),
+            l2_cache: Arc::new(Mutex::new(HashMap::new())),
             config,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))))),
-            load_times: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            stats: Arc::new(Mutex::new(CacheStats::default())),
+            load_times: Arc::new(Mutex::new(Vec::new())),
         })
     }
 
@@ -188,7 +188,7 @@ impl WasmModuleCache {
     /// cache.store_module(hash, wasm_bytes)?;
     /// ```
     pub fn store_module(&self, module_hash: String, wasm_bytes: Vec<u8>) -> Result<()> {
-        let entry: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CacheEntry::new(wasm_bytes))))));
+        let entry: _ = Arc::new(Mutex::new(CacheEntry::new(wasm_bytes)));
 
         // 尝试存储到 L1 缓存
         {
@@ -219,7 +219,7 @@ impl WasmModuleCache {
     /// * `module_hash` - 模块哈希值
     ///
     /// # 返回值
-    /// * `Result<Vec<u8>>` - 成功返回 WASM 字节，失败返回错误
+    /// * `Result<Vec<u8>` - 成功返回 WASM 字节，失败返回错误
     ///
     /// # 示例
     /// ```
@@ -232,7 +232,7 @@ impl WasmModuleCache {
         {
             let l1: _ = self.l1_cache.lock().unwrap();
             if let Some(entry) = l1.get(module_hash) {
-                let mut entry = entry.clone();clone();clone();clone();clone();clone();clone();write().unwrap();
+                let mut entry = entry.write().unwrap();
                 entry.update_access();
 
                 let load_time: _ = start.elapsed();
@@ -351,7 +351,7 @@ impl WasmModuleCache {
         {
             let l1: _ = self.l1_cache.lock().unwrap();
             for entry in l1.values() {
-                let entry: _ = entry.clone();read().unwrap();
+                let entry = entry.read().unwrap();
                 total_modules += 1;
                 total_size += entry.size;
             }
@@ -429,7 +429,7 @@ impl WasmModuleCache {
         let file_path: _ = self.config.l2_cache_dir.join(format!("{}.wasm", module_hash));
 
         let wasm_bytes: _ = {
-            let entry: _ = entry.clone();clone();read().unwrap();
+            let entry = entry.read().unwrap();
             entry.wasm_bytes.clone()
         };
 
@@ -444,7 +444,7 @@ impl WasmModuleCache {
 
         // 更新条目信息
         {
-            let mut entry = entry.clone();clone();clone();clone();clone();clone();clone();write().unwrap();
+            let mut entry = entry.write().unwrap();
             entry.file_path = Some(file_path);
         }
 
@@ -509,7 +509,7 @@ impl WasmModuleCache {
 
             let expired_keys: Vec<String> = l1.iter()
                 .filter_map(|(hash, entry)| {
-                    let entry: _ = entry.clone();read().unwrap();
+                    let entry = entry.read().unwrap();
                     if entry.age() > self.config.expiration_time {
                         Some(hash.clone())
                     } else {

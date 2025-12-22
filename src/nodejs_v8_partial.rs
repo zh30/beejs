@@ -323,7 +323,7 @@ fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>) -> Result<
         // - Package.json parsing
         // - Module caching
         // This partial version is used for basic API testing only.
-        let result: _ = format!("[Module: {}]", module_name_str);
+        let result: _ = format!("[Module: {}]", module_name_str));
         retval.set(v8::String::new(scope, &result).unwrap().into());
     });
     let require_func_instance: _ = require_func.get_function(scope).unwrap();

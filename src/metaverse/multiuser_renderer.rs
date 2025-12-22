@@ -99,7 +99,7 @@ pub struct MultiuserRenderer {
     /// 同步模式
     sync_mode: SyncMode,
     /// 用户 Avatar 映射
-    avatars: HashMap<String, UserAvatar, std::collections::HashMap<String, UserAvatar, String, UserAvatar>>>>>>>,
+    avatars: HashMap<String, UserAvatar>,
     /// 最大用户数
     max_users: u32,
 }
@@ -154,7 +154,7 @@ impl MultiuserRenderer {
     /// 广播状态更新
     pub fn broadcast_update(&self, user_id: &str) -> Result<(), MultiuserError> {
         if !self.avatars.contains_key(user_id) {
-            return Err(MultiuserError::UserNotFound(user_id.to_string());
+            return Err(MultiuserError::UserNotFound(user_id.to_string()));
         }
         Ok(())
     }

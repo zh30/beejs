@@ -516,7 +516,7 @@ use std::collections::{HashMap, BTreeMap};
         assert!(matches!(
             prediction.confidence,
             ConfidenceLevel::High | ConfidenceLevel::VeryHigh
-        ));
+        ))));
     }
 
     #[tokio::test]

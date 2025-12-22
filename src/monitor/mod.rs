@@ -2,6 +2,9 @@
 //!
 //! 提供完整的性能监控、数据存储、告警系统和 Web 仪表板功能
 
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
+
 /// 性能监控器
 pub mod performance_monitor;
 /// 数据存储
@@ -37,8 +40,6 @@ pub use dashboard::{
 };
 
 pub use profiler::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
     AdvancedProfiler, AdvancedProfilerConfig, PerformanceSummary,
     FunctionTracker, FunctionStats, CallStackAnalyzer, HotspotAnalyzer,
     RealtimeSnapshot, ReportConfig,

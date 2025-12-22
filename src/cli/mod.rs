@@ -3,6 +3,9 @@
 //! Stage 91 Phase 4.1 - 开发者体验提升
 //! Stage 91 Phase 4.3 - 快速启动模板系统
 
+use std::sync::{Arc, Mutex, RwLock};
+use std::collections::{HashMap, BTreeMap};
+
 pub mod file_watcher;
 pub mod repl;
 pub mod package_json;
@@ -46,8 +49,6 @@ pub use repl_enhanced::{EnhancedRepl, EnhancedReplConfig, EnhancedReplResult, En
 
 // Stage 91 Phase 4.3: 导出模板系统
 pub use template_system::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
     TemplateEngine, TemplateRegistry, TemplateInstantiator, TemplateInstantiationConfig,
     DirectoryGenerator, DirectoryStructure, FileEntry, DependencyInstaller, PackageManager,
     ProjectTemplate as TemplateDefinition,

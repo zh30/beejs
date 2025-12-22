@@ -19,7 +19,7 @@ pub enum AuthType {
     /// Auth token (npm 格式)
     NpmAuth(String),
     /// 自定义头部
-    Custom(HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>),
+    Custom(HashMap<String, String>),
 }
 
 /// 认证信息
@@ -35,7 +35,7 @@ pub struct AuthInfo {
 /// 认证管理器
 #[derive(Debug)]
 pub struct AuthManager {
-    auth_configs: HashMap<String, AuthInfo, std::collections::HashMap<String, AuthInfo, String, AuthInfo>>>>>>>,
+    auth_configs: HashMap<String, AuthInfo>,
     default_registry: String,
 }
 
@@ -86,7 +86,7 @@ impl AuthManager {
     /// 从 .npmrc 文件加载认证
     fn load_from_npmrc(&mut self) {
         if let Ok(home_dir) = std::env::var("HOME") {
-            let npmrc_path: _ = format!("{}/.npmrc", home_dir);
+            let npmrc_path: _ = format!("{}/.npmrc", home_dir));
             if let Ok(content) = std::fs::read_to_string(&npmrc_path) {
                 self.parse_npmrc(&content);
             }
@@ -269,7 +269,7 @@ impl AuthManager {
     /// 保存认证信息到 .npmrc
     async fn save_to_npmrc(&self) -> Result<(), Box<dyn std::error::Error>> {
         if let Ok(home_dir) = std::env::var("HOME") {
-            let npmrc_path: _ = format!("{}/.npmrc", home_dir);
+            let npmrc_path: _ = format!("{}/.npmrc", home_dir));
             let mut content = String::new();
 
             // 读取现有内容

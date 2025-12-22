@@ -24,7 +24,7 @@ pub struct CacheEntry {
 /// 用于缓存V8脚本编译结果，避免重复编译相同代码
 pub struct BytecodeCache {
     /// 缓存存储
-    entries: Arc<Mutex<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>>>>,
+    entries: Arc<Mutex<HashMap<String, CacheEntry>>>,
     /// 缓存配置
     config: CacheConfig,
     /// 统计信息
@@ -77,9 +77,9 @@ impl BytecodeCache {
     /// 创建新的字节码缓存
     pub fn new(config: CacheConfig) -> Self {
         Self {
-            entries: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            entries: Arc::new(Mutex::new(HashMap::new())),
             config,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))))),
+            stats: Arc::new(Mutex::new(CacheStats::default())),
         }
     }
 
@@ -160,7 +160,7 @@ impl BytecodeCache {
     }
 
     /// 清除过期条目
-    fn evict_old_entries(&self, entries: &mut HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>>>>, stats: &mut CacheStats) {
+    fn evict_old_entries(&self, entries: &mut HashMap<String, CacheEntry>, stats: &mut CacheStats) {
         let now: _ = Instant::now();
         let max_age: _ = self.config.max_age;
         let min_access: _ = self.config.min_access_count;

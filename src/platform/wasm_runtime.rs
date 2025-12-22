@@ -12,7 +12,7 @@ use wasmtime_wasi::WasiCtx;
 #[derive(Debug)]
 pub struct WASMRuntime {
     engine: Arc<Engine>,
-    modules: Arc<RwLock<HashMap<String, WASMModule, std::collections::HashMap<String, WASMModule, String, WASMModule>>>>>>>,
+    modules: Arc<RwLock<HashMap<String, WASMModule>>>,
     host_functions: Arc<HostFunctions>,
 }
 
@@ -67,9 +67,9 @@ use std::collections::HashMap;
 impl WASMRuntime {
     /// Create a new WASM runtime
     pub fn new(bee_api: Arc<dyn BeeWasmAPI>) -> Result<Self> {
-        let engine: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Engine::default())))));
-        let modules: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new())))));
-        let host_functions: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HostFunctions { bee_api }))))));
+        let engine: _ = Arc::new(Mutex::new(Engine::default()),;
+        let modules: _ = Arc::new(Mutex::new(HashMap::new()),;
+        let host_functions: _ = Arc::new(Mutex::new(HostFunctions { bee_api })),;
 
         Ok(WASMRuntime {
             engine,
@@ -160,7 +160,7 @@ impl WASMRuntime {
     }
 
     /// List loaded modules
-    pub async fn list_modules(&self) -> Result<Vec<String>> {
+    pub async fn list_modules(&self) -> Result<Vec<String> {
         let modules: _ = self.modules.read().await;
         Ok(modules.keys().cloned().collect())
     }
@@ -178,7 +178,7 @@ impl JS2WASMCompiler {
     /// Create a new JavaScript to WASM compiler
     pub fn new() -> Result<Self> {
         Ok(JS2WASMCompiler {
-            engine: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Engine::default()))))),
+            engine: Arc::new(Mutex::new(Engine::default()))
         })
     }
 
@@ -272,7 +272,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_wasm_runtime_creation() {
-        let bee_api: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MockBeeWasmAPI))))));
+        let bee_api: _ = Arc::new(Mutex::new(MockBeeWasmAPI)),;
         let runtime: _ = WASMRuntime::new(bee_api).unwrap();
 
         let modules: _ = runtime.list_modules().await;
@@ -282,7 +282,7 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_wasm_module_loading() {
-        let bee_api: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MockBeeWasmAPI))))));
+        let bee_api: _ = Arc::new(Mutex::new(MockBeeWasmAPI)),;
         let runtime: _ = WASMRuntime::new(bee_api).unwrap();
 
         let wasm_binary: _ = generate_minimal_wasm();
@@ -331,7 +331,7 @@ function hello() {
 
     #[tokio::test]
     async fn test_wasm_module_info() {
-        let bee_api: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MockBeeWasmAPI))))));
+        let bee_api: _ = Arc::new(Mutex::new(MockBeeWasmAPI)),;
         let runtime: _ = WASMRuntime::new(bee_api).unwrap();
 
         let wasm_binary: _ = generate_minimal_wasm();

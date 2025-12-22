@@ -10,7 +10,7 @@ use std::collections::{HashMap, BTreeMap};
 /// 模块注册表
 #[derive(Debug, Clone)]
 pub struct ModuleRegistry {
-    packages: HashMap<String, PackageInfo, std::collections::HashMap<String, PackageInfo, String, PackageInfo>>>>>>>,
+    packages: HashMap<String, PackageInfo>,
 }
 
 impl ModuleRegistry {
@@ -270,7 +270,7 @@ impl ModuleRegistry {
     }
 
     /// 查找共同依赖
-    fn find_common_deps(&self, deps1: &HashMap<String, VersionConstraint, std::collections::HashMap<String, VersionConstraint, String, VersionConstraint>>>>>>>, deps2: &HashMap<String, VersionConstraint, std::collections::HashMap<String, VersionConstraint, String, VersionConstraint>>>>>>>) -> Vec<String> {
+    fn find_common_deps(&self, deps1: &HashMap<String, VersionConstraint>, deps2: &HashMap<String, VersionConstraint>) -> Vec<String> {
         let mut common = Vec::new();
         for (name, _) in deps1 {
             if deps2.contains_key(name) {

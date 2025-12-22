@@ -127,8 +127,8 @@ impl IstioConfigManager {
                     }),
                     outlier_detection: Some(OutlierDetection {
                         consecutive_errors: Some(self.config.traffic_policy.outlier_detection.consecutive_errors as i32),
-                        interval: Some(format!("{}s", self.config.traffic_policy.outlier_detection.interval.as_secs()),
-                        base_ejection_time: Some(format!("{}s", self.config.traffic_policy.outlier_detection.base_ejection_time.as_secs()),
+                        interval: Some(format!("{}s", self.config.traffic_policy.outlier_detection.interval.as_secs())),
+                        base_ejection_time: Some(format!("{}s", self.config.traffic_policy.outlier_detection.base_ejection_time.as_secs())),
                         max_ejection_percent: Some(50),
                     }),
                 }),

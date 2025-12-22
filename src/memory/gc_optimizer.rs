@@ -152,7 +152,7 @@ impl IncrementalGC {
     pub fn new(config: GCConfig) -> Self {
         Self {
             config: config.clone(),
-            state: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(GCState::default()))))),
+            state: Arc::new(Mutex::new(GCState::default())),
             is_running: AtomicBool::new(false),
             total_allocated: AtomicUsize::new(0),
         }

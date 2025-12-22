@@ -29,7 +29,7 @@ impl PrometheusExporter {
         Ok(Self {
             registry,
             bind_addr: None,
-            running: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(false)))))),
+            running: Arc::new(Mutex::new(tokio::sync::Mutex::new(false))),
         })
     }
 
@@ -39,7 +39,7 @@ impl PrometheusExporter {
         Self {
             registry,
             bind_addr: None,
-            running: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(false)))))),
+            running: Arc::new(Mutex::new(tokio::sync::Mutex::new(false))),
         }
     }
 
@@ -237,7 +237,7 @@ use std::collections::{HashMap, BTreeMap};
         // Add a test counter
         let counter_opts: _ = Opts::new("test_counter".to_string(), "Test counter".to_string());
         let counter: _ = Counter::with_opts(counter_opts).unwrap();
-        exporter.registry().register(Box::new(counter.clone()).unwrap();
+        exporter.registry().register(Box::new(counter.clone())).unwrap();
         counter.inc();
 
         let metrics: _ = exporter.gather_metrics();

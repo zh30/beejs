@@ -73,7 +73,7 @@ pub struct LogEntry {
     /// Message
     pub message: String,
     /// Additional fields
-    pub fields: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>>>>>,
+    pub fields: HashMap<String, serde_json::Value>>,
     /// Source file
     pub file: Option<String>,
     /// Source line
@@ -195,9 +195,9 @@ pub struct LogAggregator {
     /// Configuration
     config: LogAggregatorConfig,
     /// Current log file
-    current_file: Arc<Mutex<Option<File>>,
+    current_file: Arc<Mutex<Option<File>>>,
     /// Log queue for async processing
-    log_queue: Arc<Mutex<Vec<LogEntry>>,
+    log_queue: Arc<Mutex<Vec<LogEntry>>>,
     /// Channel for log messages
     log_sender: mpsc::UnboundedSender<LogEntry>,
 }
@@ -215,7 +215,7 @@ impl LogAggregator {
 
         // Spawn async log processor
         let log_dir: _ = config.log_dir.clone();
-        let current_file: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(None))))));
+        let current_file: _ = Arc::new(Mutex::new(None)),;
         let current_file_clone: _ = current_file.clone();
 
         tokio::spawn(async move {
@@ -231,7 +231,7 @@ impl LogAggregator {
         Ok(Self {
             config,
             current_file,
-            log_queue: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            log_queue: Arc::new(Mutex::new(Vec::new()))
             log_sender,
         })
     }
@@ -299,7 +299,7 @@ impl LogAggregator {
     }
 
     /// Get log statistics
-    pub fn get_stats(&self) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>> {
+    pub fn get_stats(&self) -> HashMap<String, usize> {
         let queue: _ = self.log_queue.lock().unwrap();
         let mut stats = HashMap::new();
         stats.insert("buffered_logs".to_string(), queue.len());
@@ -318,7 +318,7 @@ impl LogAggregator {
 async fn process_log_entry(
     log_entry: &LogEntry,
     log_dir: &str,
-    current_file: &Arc<Mutex<Option<File>>,
+    current_file: &Arc<Mutex<Option<File>>>,
 ) -> Result<()> {
     // Check if we should log this entry based on level
     // This would be implemented based on the aggregator config
@@ -355,7 +355,7 @@ async fn process_log_entry(
 
 /// Initialize global logger
 pub fn init_logger(config: LogAggregatorConfig) -> Result<Arc<LogAggregator>> {
-    let aggregator: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(LogAggregator::new(config))))))?);
+    let aggregator: _ = Arc::new(Mutex::new(LogAggregator::new(config)),?);
 
     // Set up tracing subscriber
     tracing_subscriber::fmt()
@@ -364,7 +364,7 @@ pub fn init_logger(config: LogAggregatorConfig) -> Result<Arc<LogAggregator>> {
 
     info!("Global logger initialized");
 
-    Ok(aggregator)
+    Ok(aggregator))
 }
 
 #[cfg(test)]

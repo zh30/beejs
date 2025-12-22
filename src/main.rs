@@ -224,7 +224,7 @@ fn run_script(
         code.clone()
     };
 
-    let full_code: _ = format!("{}\n{}", setup_code, js_code);
+    let full_code: _ = format!("{}\n{}, setup_code", js_code));
 
     // Execute based on type
     match file_type {
@@ -301,9 +301,9 @@ fn run_repl(
     let mut repl = if cmd.typescript {
         // Note: TypeScript support will be enhanced in future stages
         println!("⚠️  TypeScript mode is experimental in this stage");
-        beejs::cli::Repl::new(std::sync::Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(runtime))))))
+        beejs::cli::Repl::new(std::sync::Arc::new(Mutex::new(runtime)),)
     } else {
-        beejs::cli::Repl::new(std::sync::Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(runtime))))))
+        beejs::cli::Repl::new(std::sync::Arc::new(Mutex::new(runtime)),)
     };
 
     // Handle --eval flag: execute expression and exit
@@ -355,7 +355,7 @@ fn run_repl(
 
         // Recreate runtime for REPL session (file loaded in isolated context)
         let runtime: _ = create_runtime(verbose)?;
-        repl = beejs::cli::Repl::new(std::sync::Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(runtime))))));
+        repl = beejs::cli::Repl::new(std::sync::Arc::new(Mutex::new(runtime)),;
     }
 
     // Start the REPL
@@ -458,7 +458,7 @@ fn run_bundle(
             .split('\n')
             .map(|line| line.trim())
             .filter(|line| !line.is_empty())
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>()
             .join(" ");
     }
 
@@ -626,7 +626,7 @@ fn run_profile(
         code.clone()
     };
 
-    let full_code: _ = format!("{}\n{}", setup_code, js_code);
+    let full_code: _ = format!("{}\n{}, setup_code", js_code));
 
     // Execute based on type
     let result: _ = match file_type {

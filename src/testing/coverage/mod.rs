@@ -148,7 +148,7 @@ impl CoverageWriter for HtmlCoverageWriter {
         fs::create_dir_all(output_dir)?;
 
         // Write index.html
-        let index_path: _ = format!("{}/index.html", output_dir);
+        let index_path: _ = format!("{}/index.html", output_dir));
         let mut file = fs::File::create(&index_path)?;
 
         writeln!(file, "<!DOCTYPE html>")?;
@@ -233,7 +233,7 @@ impl CoverageWriter for JsonCoverageWriter {
     fn write(&self, report: &CoverageReport) -> Result<(), CoverageError> {
         use std::fs;
 
-        let output_path: _ = format!("{}/coverage.json", self.config.output_directory);
+        let output_path: _ = format!("{}/coverage.json", self.config.output_directory));
         let content: _ = serde_json::to_string_pretty(report)?;
         fs::write(output_path, content)?;
         Ok(())
@@ -256,7 +256,7 @@ impl CoverageWriter for TextCoverageWriter {
         use std::fs;
         use std::io::Write;
 
-        let output_path: _ = format!("{}/coverage.txt", self.config.output_directory);
+        let output_path: _ = format!("{}/coverage.txt", self.config.output_directory));
         let mut file = fs::File::create(&output_path)?;
 
         writeln!(file, "Code Coverage Report")?;

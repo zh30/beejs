@@ -21,7 +21,7 @@ pub struct EdgeCache {
 #[derive(Debug)]
 struct L1Cache {
     capacity: usize,
-    data: HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>>>>,
+    data: HashMap<String, CacheEntry>,
     access_order: Vec<String>, // LRU tracking
 }
 
@@ -38,20 +38,20 @@ struct CacheEntry {
 struct L2Cache {
     region: String,
     capacity: usize,
-    data: HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>>>>,
+    data: HashMap<String, CacheEntry>,
 }
 
 #[derive(Debug)]
 struct L3Cache {
     endpoint: String,
     capacity: usize,
-    data: HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>>>>,
+    data: HashMap<String, CacheEntry>,
 }
 
 #[derive(Debug)]
 struct CachePredictor {
-    access_patterns: HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>>>>>,
-    predictions: HashMap<String, Vec<String, std::collections::HashMap<String, Vec<String, String, Vec<String>>>>>>>,
+    access_patterns: HashMap<String, Vec<String>>,
+    predictions: HashMap<String, Vec<String>>,
 }
 
 #[derive(Debug, Clone)]
@@ -71,11 +71,11 @@ impl EdgeCache {
     pub fn new(name: &str, l1_capacity: usize) -> Result<Self> {
         Ok(EdgeCache {
             name: name.to_string(),
-            l1_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(L1Cache::new(l1_capacity)))))),
-            l2_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(L2Cache::new("regional", l1_capacity * 10))))))?)),
-            l3_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(L3Cache::new("central", l1_capacity * 100))))))?)),
-            predictor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CachePredictor::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CacheStats {
+            l1_cache: Arc::new(Mutex::new(L1Cache::new(l1_capacity)))
+            l2_cache: Arc::new(Mutex::new(L2Cache::new("regional", l1_capacity * 10)),?)),
+            l3_cache: Arc::new(Mutex::new(L3Cache::new("central", l1_capacity * 100)),?)),
+            predictor: Arc::new(Mutex::new(CachePredictor::new()))
+            stats: Arc::new(Mutex::new(CacheStats {)),
                 l1_hits: 0,
                 l1_misses: 0,
                 l2_hits: 0,
@@ -84,7 +84,7 @@ impl EdgeCache {
                 l3_misses: 0,
                 total_operations: 0,
                 hit_ratio: 0.0,
-            })))))),
+            }))
         })
     }
 
@@ -124,7 +124,7 @@ impl EdgeCache {
     }
 
     /// Get a value from the cache (multi-layer)
-    pub async fn get(&self, key: &str) -> Result<Option<Vec<u8>> {
+    pub async fn get(&self, key: &str) -> Result<Option<Vec<u8> {
         let _start: _ = Instant::now();
 
         // Try L1 cache first
@@ -415,7 +415,7 @@ impl CachePredictor {
         }
     }
 
-    fn predict(&mut self, recent_accesses: &[String]) -> Result<Vec<String>> {
+    fn predict(&mut self, recent_accesses: &[String]) -> Result<Vec<String> {
         let mut predictions = Vec::new();
 
         // Simple prediction: if keys are accessed together, predict they will be accessed together
@@ -538,14 +538,14 @@ use std::collections::{HashMap, BTreeMap};
 
     #[tokio::test]
     async fn test_concurrent_cache_access() {
-        let cache: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EdgeCache::new("test-cache", 1000)))))).unwrap());
+        let cache: _ = Arc::new(Mutex::new(EdgeCache::new("test-cache", 1000)),.unwrap());
         let mut handles = vec![];
 
         for i in 0..10 {
             let cache_clone: _ = Arc::clone(cache);
             let handle: _ = tokio::spawn(async move {
                 for j in 0..100 {
-                    let key: _ = format!("concurrent_key_{}_{}", i, j);
+                    let key: _ = format!("concurrent_key_{}_{}, i", j));
                     cache_clone.set(&key, b"value").await.unwrap();
                     cache_clone.get(&key).await.unwrap();
                 }

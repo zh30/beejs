@@ -313,8 +313,8 @@ impl Stage93OptimizedAllocator {
             config,
             arena,
             size_classes,
-            defragmenter: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Defragmenter::new(config.defrag_threshold)))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Stage93AllocatorStats::default()))))),
+            defragmenter: Arc::new(Mutex::new(Defragmenter::new(config.defrag_threshold)))
+            stats: Arc::new(Mutex::new(Stage93AllocatorStats::default()))
         }
     }
 
@@ -370,13 +370,13 @@ impl Stage93OptimizedAllocator {
         let allocated_blocks: _ = self.size_classes
             .iter()
             .map(|sc| sc.allocated_count.load(Ordering::Relaxed) * sc.size)
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>();
 
         let free_blocks: _ = self.size_classes
             .iter()
             .map(|sc| (sc.total_count - sc.allocated_count.load(Ordering::Relaxed)) * sc.size)
             .filter(|&size| size > 0)
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>();
 
         let fragment_info: _ = defragmenter.analyze_fragmentation(&allocated_blocks, &free_blocks);
 

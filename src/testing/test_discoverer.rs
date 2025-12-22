@@ -118,7 +118,7 @@ impl TestDiscoverer {
 
         for pattern in &self.config.test_patterns {
             // Simple pattern matching - could be enhanced with glob patterns
-            let pattern: _ = pattern.clone();trim_start_matches('*');
+            let pattern = pattern.clone().trim_start_matches('*');
             if file_name.ends_with(pattern) {
                 return true;
             }
@@ -129,20 +129,16 @@ impl TestDiscoverer {
 
     /// Load a test file and extract test suites
     pub fn load_test_file(&self, path: &Path) -> std::io::Result<Vec<TestSuite>> {
-        // Read the test file content
-        let _code: _ = std::fs::read_to_string(path)
-            .map_err(|e| std::io::Error::new(e.kind(), format!("Failed to read test file: {}", e))?;
+        let result = std::fs::read_to_string(path);
+        let _code = result.map_err(|e| {
+            std::io::Error::new(e.kind(), format!("Failed to read test file: {}", e))
+        })?;
 
-        // For now, create a basic test suite from the file
-        // TODO: Use V8 to parse and extract actual test suites
-        let file_name: _ = path.file_name()
+        let file_name = path.file_name()
             .and_then(|s| s.to_str())
             .unwrap_or("unknown");
 
-        let mut suites = Vec::new();
-
-        // Create a basic test suite with the file name
-        let suite: _ = TestSuite {
+        let suite = TestSuite {
             name: format!("Test Suite - {}", file_name),
             parent: None,
             child_suites: Vec::new(),
@@ -152,9 +148,8 @@ impl TestDiscoverer {
             before_all: None,
             after_all: None,
         };
-        suites.push(suite);
 
-        Ok(suites)
+        Ok(vec![suite])
     }
 
     /// Load all discovered test files

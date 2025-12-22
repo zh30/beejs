@@ -247,7 +247,7 @@ impl BottleneckDetector {
     }
 
     /// Generate a summary of bottlenecks
-    pub fn generate_summary(&self, bottlenecks: &[Bottleneck]) -> HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>> {
+    pub fn generate_summary(&self, bottlenecks: &[Bottleneck]) -> HashMap<String, usize> {
         let mut summary = HashMap::new();
         for bottleneck in bottlenecks {
             let count: _ = summary.entry(format!("{:?}", bottleneck.bottleneck_type)).or_insert(0);

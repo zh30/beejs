@@ -70,7 +70,7 @@ pub struct PerformanceBaseline {
     pub memory_stats: Option<crate::benchmarks::MemoryStats>,
     pub timestamp: u64,
     pub sample_count: usize,
-    pub metadata: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub metadata: HashMap<String, String>,
 }
 
 /// 性能回归检测结果
@@ -113,7 +113,7 @@ impl RegressionSeverity {
 /// 性能回归检测器
 pub struct PerformanceRegressionDetector {
     thresholds: PerformanceThresholds,
-    baselines: HashMap<String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline>>>>>>>,
+    baselines: HashMap<String, PerformanceBaseline>,
     baseline_dir: PathBuf,
 }
 
@@ -160,17 +160,17 @@ impl PerformanceRegressionDetector {
         }
 
         for entry in fs::read_dir(&self.baseline_dir)
-            .map_err(|e| RegressionError::BaselineLoadError(e.to_string())?
+            .map_err(|e| RegressionError::BaselineLoadError(e.to_string()))?
         {
-            let entry: _ = entry.clone();map_err(|e| RegressionError::BaselineLoadError(e.to_string())?;
+            let entry: _ = entry;
             let path: _ = entry.path();
 
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
                 let content: _ = fs::read_to_string(&path)
-                    .map_err(|e| RegressionError::BaselineLoadError(e.to_string())?;
+                    .map_err(|e| RegressionError::BaselineLoadError(e.to_string()))?;
 
                 let baseline: PerformanceBaseline = serde_json::from_str(&content)
-                    .map_err(|e| RegressionError::BaselineLoadError(e.to_string())?;
+                    .map_err(|e| RegressionError::BaselineLoadError(e.to_string()))?;
 
                 self.baselines.insert(baseline.test_name.clone(), baseline);
             }
@@ -188,10 +188,10 @@ impl PerformanceRegressionDetector {
         let path: _ = self.baseline_dir.join(filename);
 
         let content: _ = serde_json::to_string_pretty(baseline)
-            .map_err(|e| RegressionError::BaselineSaveError(e.to_string())?;
+            .map_err(|e| RegressionError::BaselineSaveError(e.to_string()))?;
 
         fs::write(&path, content)
-            .map_err(|e| RegressionError::BaselineSaveError(e.to_string())?;
+            .map_err(|e| RegressionError::BaselineSaveError(e.to_string()))?;
 
         Ok(())
     }
@@ -396,7 +396,7 @@ impl PerformanceRegressionDetector {
     }
 
     /// 获取所有基线数据
-    pub fn get_all_baselines(&self) -> &HashMap<String, PerformanceBaseline, std::collections::HashMap<String, PerformanceBaseline, String, PerformanceBaseline>>>>>>> {
+    pub fn get_all_baselines(&self) -> &HashMap<String, PerformanceBaseline> {
         &self.baselines
     }
 
@@ -411,9 +411,9 @@ impl PerformanceRegressionDetector {
         let mut removed_count = 0;
 
         for entry in fs::read_dir(&self.baseline_dir)
-            .map_err(|e| RegressionError::BaselineLoadError(e.to_string())?
+            .map_err(|e| RegressionError::BaselineLoadError(e.to_string()))?
         {
-            let entry: _ = entry.clone();map_err(|e| RegressionError::BaselineLoadError(e.to_string())?;
+            let entry: _ = entry;
             let path: _ = entry.path();
 
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
@@ -424,8 +424,7 @@ impl PerformanceRegressionDetector {
                     let timestamp_str: _ = last_part.strip_suffix(".json").unwrap_or("");
                     if let Ok(timestamp) = timestamp_str.parse::<u64>() {
                         if timestamp < cutoff_time {
-                            fs::remove_file(&path)
-                                .map_err(|e| RegressionError::BaselineSaveError(e.to_string())?;
+                            fs::remove_file(&path).map_err(|e| RegressionError::BaselineSaveError(e.to_string()))?;
                             removed_count += 1;
                         }
                     }

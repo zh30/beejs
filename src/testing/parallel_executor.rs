@@ -46,7 +46,7 @@ impl ParallelExecutor {
         }
 
         // Create a shared result vector with thread-safe access
-        let results: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::with_capacity(tests.len())))));
+        let results = Arc::new(Mutex::new(Vec::with_capacity(tests.len())));
         let results_clone: _ = Arc::clone(results);
 
         // Execute tests in parallel using Rayon

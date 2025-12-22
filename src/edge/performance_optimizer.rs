@@ -27,7 +27,7 @@ pub struct ResourceProfiler {
 /// Auto tuner
 #[derive(Debug)]
 pub struct AutoTuner {
-    tuning_history: Arc<RwLock<Vec<TuningRecord>>,
+    tuning_history: Arc<RwLock<Vec<TuningRecord>>>,
     current_config: Arc<RwLock<OptimizationConfig>>,
 }
 
@@ -126,7 +126,7 @@ pub struct BatteryMonitor {
 /// Power scheduler
 #[derive(Debug)]
 pub struct PowerScheduler {
-    schedules: Arc<RwLock<Vec<PowerSchedule>>,
+    schedules: Arc<RwLock<Vec<PowerSchedule>>>,
 }
 
 /// Power schedule
@@ -168,8 +168,8 @@ impl ResourceOptimizer {
     /// Create a new resource optimizer
     pub async fn new() -> Result<Self> {
         let optimizer: _ = ResourceOptimizer {
-            profiler: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ResourceProfiler::new()))))).await?),
-            tuner: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AutoTuner::new()))))).await?),
+            profiler: Arc::new(Mutex::new(ResourceProfiler::new()),.await?),
+            tuner: Arc::new(Mutex::new(AutoTuner::new()),.await?),
         };
 
         println!("Resource optimizer initialized");
@@ -213,7 +213,7 @@ impl ResourceOptimizer {
     }
 
     /// Apply optimization configuration
-    async fn apply_optimization(&self, config: &OptimizationConfig) -> Result<Vec<ConfigChange>> {
+    async fn apply_optimization(&self, config: &OptimizationConfig) -> Result<Vec<ConfigChange> {
         let mut changes = Vec::new();
 
         // Simulate applying configuration changes
@@ -241,8 +241,8 @@ impl ResourceProfiler {
     /// Create a new resource profiler
     pub async fn new() -> Result<Self> {
         let profiler: _ = ResourceProfiler {
-            metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(ResourceMetrics {
-                timestamp: std::time::SystemTime::now()))))),
+            metrics: Arc::new(Mutex::new(ResourceMetrics {)),
+                timestamp: std::time::SystemTime::now())
                 cpu_usage: 50.0,
                 memory_usage: 1024,
                 disk_usage: 2048,
@@ -293,15 +293,15 @@ impl AutoTuner {
     /// Create a new auto tuner
     pub async fn new() -> Result<Self> {
         let tuner: _ = AutoTuner {
-            tuning_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
-            current_config: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(OptimizationConfig {
+            tuning_history: Arc::new(Mutex::new(Vec::new()))
+            current_config: Arc::new(Mutex::new(OptimizationConfig {)),
                 cpu_limit: 80.0,
                 memory_limit: 1024.0,
                 max_instances: 100,
                 batch_size: 32,
                 cache_size_mb: 256,
                 optimization_level: OptimizationLevel::Moderate,
-            })))))),
+            }))
         };
 
         println!("Auto tuner initialized");
@@ -374,8 +374,8 @@ impl BatteryOptimizer {
     /// Create a new battery optimizer
     pub async fn new() -> Result<Self> {
         let optimizer: _ = BatteryOptimizer {
-            monitor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BatteryMonitor::new()))))).await?),
-            scheduler: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PowerScheduler::new()))))).await?),
+            monitor: Arc::new(Mutex::new(BatteryMonitor::new()),.await?),
+            scheduler: Arc::new(Mutex::new(PowerScheduler::new()),.await?),
         };
 
         println!("Battery optimizer initialized");
@@ -412,7 +412,7 @@ impl BatteryOptimizer {
     }
 
     /// Schedule tasks based on battery
-    pub async fn schedule_tasks(&self, tasks: &[Task]) -> Result<Vec<PowerSchedule>> {
+    pub async fn schedule_tasks(&self, tasks: &[Task]) -> Result<Vec<PowerSchedule> {
         let schedules: _ = self.scheduler.create_schedules(tasks).await?;
         Ok(schedules)
     }
@@ -429,9 +429,9 @@ impl BatteryMonitor {
     /// Create a new battery monitor
     pub async fn new() -> Result<Self> {
         let monitor: _ = BatteryMonitor {
-            current_level: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(85.0)))))),
-            is_charging: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(false)))))),
-            health_percent: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(95.0)))))),
+            current_level: Arc::new(Mutex::new(85.0)))
+            is_charging: Arc::new(Mutex::new(false)))
+            health_percent: Arc::new(Mutex::new(95.0)))
         };
 
         println!("Battery monitor initialized");
@@ -472,7 +472,7 @@ impl PowerScheduler {
     /// Create a new power scheduler
     pub async fn new() -> Result<Self> {
         let scheduler: _ = PowerScheduler {
-            schedules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
+            schedules: Arc::new(Mutex::new(Vec::new()))
         };
 
         println!("Power scheduler initialized");
@@ -480,7 +480,7 @@ impl PowerScheduler {
     }
 
     /// Create schedules for tasks
-    pub async fn create_schedules(&self, tasks: &[Task]) -> Result<Vec<PowerSchedule>> {
+    pub async fn create_schedules(&self, tasks: &[Task]) -> Result<Vec<PowerSchedule> {
         let mut schedules = Vec::new();
 
         for task in tasks {
@@ -504,7 +504,7 @@ impl PowerScheduler {
     }
 
     /// Optimize schedule based on battery status
-    pub async fn optimize_schedule(&self, battery_status: BatteryStatus) -> Result<Vec<ScheduleChange>> {
+    pub async fn optimize_schedule(&self, battery_status: BatteryStatus) -> Result<Vec<ScheduleChange> {
         let mut changes = Vec::new();
 
         if battery_status.level_percent < 20.0 && !battery_status.is_charging {

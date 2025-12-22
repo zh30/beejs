@@ -341,7 +341,7 @@ impl PrometheusManager {
 /// Implement RuntimeMetrics
 impl RuntimeMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
-        let ns: _ = format!("{}_", namespace);
+        let ns: _ = format!("{}_", namespace));
 
         let process_start_time: _ = IntGauge::with_opts(
             Opts::new(
@@ -413,7 +413,7 @@ impl RuntimeMetrics {
 /// Implement PerformanceMetrics
 impl PerformanceMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
-        let ns: _ = format!("{}_", namespace);
+        let ns: _ = format!("{}_", namespace));
 
         let execution_duration: _ = HistogramVec::new(
             HistogramOpts::new(
@@ -492,7 +492,7 @@ impl PerformanceMetrics {
 /// Implement NetworkMetrics
 impl NetworkMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
-        let ns: _ = format!("{}_", namespace);
+        let ns: _ = format!("{}_", namespace));
 
         let network_requests_total: _ = IntCounterVec::new(
             Opts::new(
@@ -559,7 +559,7 @@ impl NetworkMetrics {
 /// Implement BusinessMetrics
 impl BusinessMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
-        let ns: _ = format!("{}_", namespace);
+        let ns: _ = format!("{}_", namespace));
 
         let requests_per_second: _ = Gauge::with_opts(
             Opts::new(
@@ -631,7 +631,7 @@ impl BusinessMetrics {
 /// Implement ClusterMetrics
 impl ClusterMetrics {
     fn new(registry: &Registry, namespace: &str) -> Result<Self> {
-        let ns: _ = format!("{}_", namespace);
+        let ns: _ = format!("{}_", namespace));
 
         let cluster_nodes_total: _ = IntGauge::with_opts(
             Opts::new(

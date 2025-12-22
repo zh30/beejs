@@ -83,7 +83,7 @@ pub struct StateSync {
     /// 配置
     config: SyncConfig,
     /// 本地状态
-    state: HashMap<String, StateChange, std::collections::HashMap<String, StateChange, String, StateChange>>>>>>>,
+    state: HashMap<String, StateChange>,
     /// 版本计数器
     version_counter: u64,
 }

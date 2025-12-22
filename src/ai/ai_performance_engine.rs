@@ -122,7 +122,7 @@ pub struct AiPerformanceEngine {
     /// 张量优化器
     pub tensor_optimizer: Arc<Mutex<TensorOptimizer>>,
     /// 预测缓存
-    pub prediction_cache: Arc<Mutex<HashMap<String, PerformancePrediction, std::collections::HashMap<String, PerformancePrediction, String, PerformancePrediction>>>>,
+    pub prediction_cache: Arc<Mutex<HashMap<String, PerformancePrediction>>>,
     /// 是否正在训练
     is_training: Arc<Mutex<bool>>,
     /// 训练进度
@@ -134,12 +134,12 @@ impl AiPerformanceEngine {
     pub fn new(config: AiPerformanceEngineConfig) -> Self {
         Self {
             config: config.clone(),
-            metrics_history: Arc::new(Mutex::new(Mutex::new(RwLock::new(VecDeque::with_capacity(config.prediction_window)))))),
-            predictor: Arc::new(Mutex::new(Mutex::new(PerformancePredictor::new(config.clone()))))),
-            tensor_optimizer: Arc::new(Mutex::new(Mutex::new(TensorOptimizer::new())))),
-            prediction_cache: Arc::new(Mutex::new(Mutex::new(HashMap::new())))),
-            is_training: Arc::new(Mutex::new(Mutex::new(false)))),
-            training_progress: Arc::new(Mutex::new(Mutex::new(0.0)))),
+            metrics_history: Arc::new(RwLock::new(VecDeque::with_capacity(config.prediction_window))),
+            predictor: Arc::new(Mutex::new(PerformancePredictor::new(config.clone()))),
+            tensor_optimizer: Arc::new(Mutex::new(TensorOptimizer::new())),
+            prediction_cache: Arc::new(Mutex::new(HashMap::new())),
+            is_training: Arc::new(Mutex::new(false)),
+            training_progress: Arc::new(Mutex::new(0.0)),
         }
     }
 
@@ -259,7 +259,7 @@ impl AiPerformanceEngine {
         // let tensor_optimizer: _ = Arc::clone(&self.tensor_optimizer);
         // let progress: _ = Arc::clone(&self.training_progress);
         // let is_training: _ = Arc::clone(&self.is_training);
-        // let history_data: _ = history.iter().cloned().collect::<Vec<_>>();
+        // let history_data: _ = history.iter().cloned().collect::<Vec<_>();
 
         // tokio::spawn(async move {
         //     // 训练预测器

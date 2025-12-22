@@ -317,7 +317,7 @@ pub enum BindingType {
 pub struct Route {
     pub path: String,
     pub component: String,
-    pub params: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub params: HashMap<String, String>,
 }
 
 /// Ivy 渲染器
@@ -339,7 +339,7 @@ impl IvyRenderer {
         container: &str,
     ) -> Result<RenderedDom, Box<dyn std::error::Error>> {
         // 使用 Ivy 渲染器渲染组件
-        let html: _ = format!("<div id=\"{}\">Angular App Rendered</div>", container);
+        let html: _ = format!("<div id=\{}\">Angular App Rendered</div>", container"));
 
         Ok(RenderedDom {
             html,

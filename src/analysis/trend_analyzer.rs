@@ -466,7 +466,7 @@ use std::collections::{HashMap, BTreeMap};
             total_code_executed: 1000,
         };
 
-        analyzer.add_data_point(report.clone(), Some("test".to_string());
+        analyzer.add_data_point(report.clone(), Some("test".to_string()));
         assert_eq!(analyzer.historical_data.len(), 1);
     }
 
@@ -617,7 +617,7 @@ use std::collections::{HashMap, BTreeMap};
 
         let suggestions: _ = analyzer.get_improvement_suggestions();
         assert!(!suggestions.is_empty());
-        assert!(suggestions.iter().any(|s| s.contains("degrading"));
+        assert!(suggestions.iter().any(|s| s.contains("degrading")));
     }
 
     #[test]

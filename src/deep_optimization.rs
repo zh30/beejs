@@ -514,7 +514,7 @@ impl DeepOptimizer {
                         if let Some(brace_pos) = result.find('{') {
                             let before_brace: _ = &result[..brace_pos + 1];
                             let after_brace: _ = &result[brace_pos + 1..];
-                            result = format!("{}{}\n{}", before_brace, unrolled_code, after_brace);
+                            result = format!("{}{}\n{}, before_brace, unrolled_code", after_brace));
                         }
                     }
                 }

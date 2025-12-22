@@ -18,7 +18,7 @@ pub struct RuntimeConfigManager {
     /// 动态调优器
     auto_tuner: Option<Arc<AutoTuner>>,
     /// 配置变更回调
-    change_callbacks: Arc<RwLock<Vec<ConfigChangeCallback>>,
+    change_callbacks: Arc<RwLock<Vec<ConfigChangeCallback>>>,
 }
 
 /// 运行时配置
@@ -201,11 +201,11 @@ pub struct AutoTuner {
 /// 性能指标收集器
 pub struct PerformanceMetricsCollector {
     /// 执行时间记录
-    execution_times: Arc<RwLock<Vec<u64>>,
+    execution_times: Arc<RwLock<Vec<u64>>>,
     /// 内存使用记录
-    memory_usage: Arc<RwLock<Vec<usize>>,
+    memory_usage: Arc<RwLock<Vec<usize>>>,
     /// CPU 使用率记录
-    cpu_usage: Arc<RwLock<Vec<f64>>,
+    cpu_usage: Arc<RwLock<Vec<f64>>>,
 }
 
 impl AutoTuner {
@@ -215,7 +215,7 @@ impl AutoTuner {
             config_manager,
             is_tuning: false,
             tuning_interval_s,
-            metrics_collector: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PerformanceMetricsCollector::new()))))),
+            metrics_collector: Arc::new(Mutex::new(PerformanceMetricsCollector::new())),
         }
     }
 
@@ -343,9 +343,9 @@ impl PerformanceMetricsCollector {
     /// 创建新的指标收集器
     pub fn new() -> Self {
         Self {
-            execution_times: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
-            memory_usage: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
-            cpu_usage: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
+            execution_times: Arc::new(Mutex::new(Vec::new())),
+            memory_usage: Arc::new(Mutex::new(Vec::new())),
+            cpu_usage: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -424,10 +424,10 @@ impl RuntimeConfigManager {
     pub fn new() -> Self {
         let config: _ = RuntimeConfig::default();
         Self {
-            config: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(config)))))),
+            config: Arc::new(Mutex::new(config)),
             config_path: None,
             auto_tuner: None,
-            change_callbacks: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
+            change_callbacks: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -591,12 +591,10 @@ impl RuntimeConfigManager {
     /// 启用自动调优
     pub fn enable_auto_tuning(&mut self) {
         info!("启用配置自动调优");
-        self.auto_tuner = Some(Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AutoTuner {
-            config_manager: Arc::new(self.clone()))))),
-            is_tuning: false,
-            tuning_interval_s: 60,
-            metrics_collector: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PerformanceMetricsCollector::new()))))),
-        }));
+        self.auto_tuner = Some(Arc::new(Mutex::new(AutoTuner::new(
+            Arc::new(self.clone()),
+            60,
+        ))));
     }
 
     /// 启用配置热更新（监听文件变化）
@@ -1076,7 +1074,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_auto_tuner() {
-        let manager: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RuntimeConfigManager::new())))));
+        let manager: _ = Arc::new(Mutex::new(RuntimeConfigManager::new()));
         let tuner: _ = AutoTuner::new(manager.clone(), 60);
 
         // 测试手动调优
@@ -1168,7 +1166,7 @@ mod tests {
     #[tokio::test]
     async fn test_callback_registration() {
         let manager: _ = RuntimeConfigManager::new();
-        let callback_called: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicBool::new(false))))));
+        let callback_called: _ = Arc::new(Mutex::new(AtomicBool::new(false)));
         let callback_called_clone: _ = Arc::clone(callback_called);
 
         let callback: ConfigChangeCallback = Box::new(move |_path, _value| {

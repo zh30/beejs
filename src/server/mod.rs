@@ -43,7 +43,7 @@ impl Server {
     pub fn new(runtime: Runtime) -> Self {
         Self {
             config: ServerConfig::default(),
-            runtime: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(runtime)))))),
+            runtime: Arc::new(Mutex::new(runtime)))
         }
     }
 
@@ -73,7 +73,7 @@ impl Server {
 
     /// Start the server (synchronous - runs on main thread)
     pub async fn run(self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let server_url: _ = format!("{}:{}", self.config.host, self.config.port);
+        let server_url: _ = format!("{}:{}, self.config.host", self.config.port));
         let server: _ = HttpServer::http(&server_url).map_err(|e| format!("Failed to bind to {}: {}", server_url, e))?;
 
         info!("🚀 Beejs Server started on http://{}", server_url);

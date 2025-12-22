@@ -92,7 +92,7 @@ impl HybridComputing {
     }
 
     /// 计算能量期望值
-    fn compute_energy(&self, prob_dist: &std::collections::HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8>>>>>>>, f64>) -> f64 {
+    fn compute_energy(&self, prob_dist: &std::collections::HashMap<Vec<u8, std::collections::HashMap<Vec<u8, Vec<u8>, f64>>>>) -> f64 {
         // 简化的 Z-Z 哈密顿量
         let mut energy = 0.0;
 

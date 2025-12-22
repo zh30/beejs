@@ -96,9 +96,9 @@ pub struct EnhancedZeroCopy {
     /// 预取配置
     prefetch_config: PrefetchConfig,
     /// DMA 缓冲区池
-    dma_buffers: Arc<RwLock<Vec<DmaBuffer>>,
+    dma_buffers: Arc<RwLock<Vec<DmaBuffer>>>,
     /// 内存映射缓存
-    mmap_cache: Arc<RwLock<lru::LruCache<String, Arc<Mmap>>,
+    mmap_cache: Arc<RwLock<lru::LruCache<String, Arc<Mmap>>>>,
     /// 预取统计
     prefetch_stats: Arc<PrefetchStats>,
     /// 性能统计
@@ -166,11 +166,12 @@ impl EnhancedZeroCopy {
             dma_config,
             mmap_config,
             prefetch_config,
-            dma_buffers: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
-            mmap_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(lru::LruCache::new(
-                std::num::NonZeroUsize::new(1024)))))).unwrap()),
-            prefetch_stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PrefetchStats::default()))))),
-            performance_stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PerformanceStats::default()))))),
+            dma_buffers: Arc::new(Mutex::new(Vec::new())),
+            mmap_cache: Arc::new(Mutex::new(lru::LruCache::new(
+                std::num::NonZeroUsize::new(1024).unwrap(),
+            ))),
+            prefetch_stats: Arc::new(Mutex::new(PrefetchStats::default())),
+            performance_stats: Arc::new(Mutex::new(PerformanceStats::default())),
         }
     }
 
@@ -207,7 +208,7 @@ impl EnhancedZeroCopy {
             ptr,
             size,
             allocated_at: Instant::now(),
-            ref_count: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(1)))))),
+            ref_count: Arc::new(Mutex::new(AtomicUsize::new(1)))
         };
 
         self.performance_stats.dma_operations.fetch_add(1, Ordering::Relaxed);
@@ -391,7 +392,7 @@ impl EnhancedZeroCopy {
                 .map(&file)?
         };
 
-        Ok(Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(mmap))))))
+        Ok(Arc::new(Mutex::new(mmap)),)
     }
 }
 

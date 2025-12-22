@@ -45,7 +45,7 @@ impl CloudNativeRuntime {
     }
 
     /// Execute with auto-scaling
-    pub async fn execute_with_autoscale(&self, script: &str, replicas: usize) -> Result<Vec<String>> {
+    pub async fn execute_with_autoscale(&self, script: &str, replicas: usize) -> Result<Vec<String> {
         if let Some(k8s) = &self.k8s {
             k8s.execute_with_autoscale(script, replicas).await
         } else {

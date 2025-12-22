@@ -18,7 +18,7 @@ impl Symbol {
 /// 字符串Interner - 管理字符串池
 pub struct StringInterner {
     /// 字符串到符号的映射
-    string_to_symbol: HashMap<Arc<str, std::collections::HashMap<Arc<str, Arc<str, std::collections::HashMap<Arc<str, std::collections::HashMap<Arc<str, Arc<str, Arc<str, std::collections::HashMap<Arc<str, Arc<str>>>>>>>, Symbol>,
+    string_to_symbol: HashMap<Arc<str, std::collections::HashMap<Arc<str, Arc<str>>, Symbol>>>,
     /// 符号到字符串的映射
     symbol_to_string: Vec<Arc<str>>,
     /// 统计信息
@@ -302,7 +302,7 @@ use std::collections::{HashMap, BTreeMap};
         let s2: _ = GLOBAL_INTERNER.intern("global_test");
 
         assert_eq!(s1, s2);
-        assert_eq!(GLOBAL_INTERNER.resolve(s1), Some("global_test".to_string());
+        assert_eq!(GLOBAL_INTERNER.resolve(s1), Some("global_test".to_string()));
     }
 
     #[test]
@@ -339,7 +339,7 @@ use std::collections::{HashMap, BTreeMap};
         let sym: _ = intern("convenience_test");
         let resolved: _ = resolve(sym);
 
-        assert_eq!(resolved, Some("convenience_test".to_string());
+        assert_eq!(resolved, Some("convenience_test".to_string()));
 
         let stats: _ = interner_stats();
         assert!(stats.total_intern_calls > 0);

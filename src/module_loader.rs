@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 #[derive(Debug, Clone)]
 pub struct ModuleLoader {
     /// Cache of loaded modules
-    module_cache: Arc<Mutex<HashMap<String, Arc<Module, std::collections::HashMap<String, Arc<Module, String, Arc<Module>>>>>>>,
+    module_cache: Arc<Mutex<HashMap<String, Arc<Module>>>>,
     /// Base directory for resolving relative paths
     #[allow(dead_code)]
     base_dir: PathBuf,
@@ -19,7 +19,7 @@ pub struct ModuleLoader {
 pub struct Module {
     /// Module exports
     #[allow(dead_code)]
-    pub exports: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>>>>,
+    pub exports: HashMap<String, serde_json::Value>,
     /// Module path
     #[allow(dead_code)]
     pub path: PathBuf,
@@ -29,7 +29,7 @@ impl ModuleLoader {
     /// Create a new module loader with base directory
     pub fn new(base_dir: PathBuf) -> Self {
         Self {
-            module_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
+            module_cache: Arc::new(Mutex::new(HashMap::new())),
             base_dir,
         }
     }
@@ -123,7 +123,7 @@ impl ModuleLoader {
     fn resolve_builtin_module(&self, module_name: &str) -> Result<PathBuf> {
         // For now, return a special path for built-in modules
         // In a real implementation, this would load the built-in module
-        Ok(PathBuf::from(format!("__builtin__/{}", module_name))
+        Ok(PathBuf::from(format!("__builtin__/{}", module_name)))
     }
 
     /// Resolve node_modules
@@ -224,7 +224,7 @@ impl ModuleLoader {
         // Cache the module
         {
             let mut cache = self.module_cache.lock().unwrap();
-            cache.insert(module_name.to_string(), Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(module))))));
+            cache.insert(module_name.to_string(), Arc::new(Mutex::new(module)));
         }
 
         // Return the cached module
@@ -257,9 +257,9 @@ impl ModuleLoader {
             serde_json::Value::String("function".to_string()),
         );
 
-        Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Module {
+        Arc::new(Mutex::new(Module {
             exports,
-            path: PathBuf::from("__builtin__/path")))))),
+            path: PathBuf::from("__builtin__/path"),
         }))
     }
 

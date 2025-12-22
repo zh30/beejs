@@ -67,7 +67,7 @@ pub struct HotPathStats {
 pub struct HotPathTracker {
     config: HotPathConfig,
     /// 代码路径跟踪信息
-    paths: Arc<std::sync::Mutex<HashMap<String, HotPathInfo, std::collections::HashMap<String, HotPathInfo, String, HotPathInfo>>>>>>>,
+    paths: Arc<std::sync::Mutex<HashMap<String, HotPathInfo>>>,
     /// 全局统计
     stats: Arc<std::sync::Mutex<HotPathStats>>,
 }
@@ -77,8 +77,8 @@ impl HotPathTracker {
     pub fn new(config: HotPathConfig) -> Self {
         Self {
             config,
-            paths: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HotPathStats::default()))))),
+            paths: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))
+            stats: Arc::new(Mutex::new(std::sync::Mutex::new(HotPathStats::default()))
         }
     }
 
@@ -116,9 +116,9 @@ impl HotPathTracker {
 
                 HotPathInfo {
                     code_id: code_id.clone(),
-                    execution_count: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)))))),
-                    total_time_ns: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicU64::new(0)))))),
-                    avg_time_ns: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicU64::new(0)))))),
+                    execution_count: Arc::new(Mutex::new(AtomicUsize::new(0)))
+                    total_time_ns: Arc::new(Mutex::new(AtomicU64::new(0)))
+                    avg_time_ns: Arc::new(Mutex::new(AtomicU64::new(0)))
                     first_execution: Instant::now(),
                     last_execution: Instant::now(),
                     complexity,
@@ -338,7 +338,7 @@ use std::collections::{HashMap, BTreeMap};
         assert!(
             !hot_paths.is_empty(),
             "Should identify hot path after threshold"
-        );
+        )));
     }
 
     #[test]
@@ -380,7 +380,7 @@ use std::collections::{HashMap, BTreeMap};
         assert!(
             !hot_paths.is_empty(),
             "Complex code should become hot path quickly"
-        );
+        )));
     }
 
     #[test]

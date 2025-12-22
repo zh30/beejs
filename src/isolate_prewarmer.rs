@@ -20,13 +20,13 @@ pub struct IsolatePrewarmer {
     snapshot_manager: Arc<SnapshotManager>,
 
     /// Pre-warmed isolates with prepared contexts
-    prewarmed_isolates: Arc<Mutex<Vec<v8::OwnedIsolate>>,
+    prewarmed_isolates: Arc<Mutex<Vec<v8::OwnedIsolate>>>,
 
     /// Statistics tracking
     stats: Arc<PrewarmStats>,
 
     /// Common JavaScript snippets to pre-compile
-    common_snippets: Arc<Mutex<Vec<CompiledSnippet>>,
+    common_snippets: Arc<Mutex<Vec<CompiledSnippet>>>,
 
     /// Maximum number of isolates to pre-warm
     max_prewarm: usize,
@@ -124,13 +124,13 @@ impl IsolatePrewarmer {
     /// Create new Isolate Prewarmer
     pub fn new(max_prewarm: usize, config: PrewarmConfig) -> Result<Self> {
         let snapshot_config: _ = crate::v8_snapshot::SnapshotConfig::default();
-        let snapshot_manager: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(crate::v8_snapshot::SnapshotManager::new(snapshot_config))))));
+        let snapshot_manager: _ = Arc::new(Mutex::new(crate::v8_snapshot::SnapshotManager::new(snapshot_config)));
 
         Ok(Self {
             snapshot_manager,
-            prewarmed_isolates: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PrewarmStats::new()))))),
-            common_snippets: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            prewarmed_isolates: Arc::new(Mutex::new(Vec::new())),
+            stats: Arc::new(Mutex::new(PrewarmStats::new())),
+            common_snippets: Arc::new(Mutex::new(Vec::new())),
             max_prewarm,
             config,
         })

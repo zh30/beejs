@@ -143,7 +143,7 @@ impl TestRunner {
         &self,
         suites: Vec<TestSuite>,
     ) -> (Vec<TestResult>, TestRunnerStats) {
-        let stats: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(TestRunnerStats::new())))));
+        let stats = Arc::new(Mutex::new(TestRunnerStats::new()));
         let mut all_results = Vec::new();
 
         for suite in suites {

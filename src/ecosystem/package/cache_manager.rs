@@ -18,9 +18,9 @@ impl CacheManager {
     /// 创建新的缓存管理器
     pub fn new() -> Self {
         Self {
-            l1: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(L1MemoryCache::new()))))),
-            l2: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(L2DiskCache::new()))))),
-            l3: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(L3DistributedCache::new()))))),
+            l1: Arc::new(Mutex::new(L1MemoryCache::new()))
+            l2: Arc::new(Mutex::new(L2DiskCache::new()))
+            l3: Arc::new(Mutex::new(L3DistributedCache::new()))
         }
     }
 
@@ -82,7 +82,7 @@ impl CacheManager {
     pub async fn get_from_l1(
         &self,
         id: &PackageId,
-    ) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<Vec<u8>, Box<dyn std::error::Error>> {
         let cache: _ = self.l1.lock().unwrap();
         Ok(cache.get(id))
     }
@@ -102,7 +102,7 @@ impl CacheManager {
     pub async fn get_from_l2(
         &self,
         id: &PackageId,
-    ) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<Vec<u8>, Box<dyn std::error::Error>> {
         let cache: _ = self.l2.read().await;
         Ok(cache.get(id))
     }
@@ -122,7 +122,7 @@ impl CacheManager {
     pub async fn get_from_l3(
         &self,
         id: &PackageId,
-    ) -> Result<Option<Vec<u8>>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<Vec<u8>, Box<dyn std::error::Error>> {
         let cache: _ = self.l3.read().await;
         Ok(cache.get(id))
     }
@@ -263,7 +263,7 @@ impl CacheManager {
 /// L1 内存缓存
 #[derive(Debug, Clone)]
 struct L1MemoryCache {
-    cache: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>>>,
+    cache: HashMap<String, Vec<u8>>,
 }
 
 impl L1MemoryCache {
@@ -274,17 +274,17 @@ impl L1MemoryCache {
     }
 
     fn store(&mut self, id: &PackageId, data: Vec<u8>) {
-        let key: _ = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}, id.name", id.version));
         self.cache.insert(key, data);
     }
 
-    fn get(&self, id: &PackageId) -> Option<Vec<u8>> {
-        let key: _ = format!("{}@{}", id.name, id.version);
+    fn get(&self, id: &PackageId) -> Option<Vec<u8> {
+        let key: _ = format!("{}@{}, id.name", id.version));
         self.cache.get(&key).cloned()
     }
 
     fn invalidate(&mut self, id: &PackageId) {
-        let key: _ = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}, id.name", id.version));
         self.cache.remove(&key);
     }
 }
@@ -292,7 +292,7 @@ impl L1MemoryCache {
 /// L2 磁盘缓存
 #[derive(Debug, Clone)]
 struct L2DiskCache {
-    cache: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>>>,
+    cache: HashMap<String, Vec<u8>>,
 }
 
 impl L2DiskCache {
@@ -303,17 +303,17 @@ impl L2DiskCache {
     }
 
     fn store(&mut self, id: &PackageId, data: Vec<u8>) {
-        let key: _ = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}, id.name", id.version));
         self.cache.insert(key, data);
     }
 
-    fn get(&self, id: &PackageId) -> Option<Vec<u8>> {
-        let key: _ = format!("{}@{}", id.name, id.version);
+    fn get(&self, id: &PackageId) -> Option<Vec<u8> {
+        let key: _ = format!("{}@{}, id.name", id.version));
         self.cache.get(&key).cloned()
     }
 
     fn invalidate(&mut self, id: &PackageId) {
-        let key: _ = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}, id.name", id.version));
         self.cache.remove(&key);
     }
 }
@@ -321,7 +321,7 @@ impl L2DiskCache {
 /// L3 分布式缓存
 #[derive(Debug, Clone)]
 struct L3DistributedCache {
-    cache: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>>>,
+    cache: HashMap<String, Vec<u8>>,
 }
 
 impl L3DistributedCache {
@@ -332,17 +332,17 @@ impl L3DistributedCache {
     }
 
     fn store(&mut self, id: &PackageId, data: Vec<u8>) {
-        let key: _ = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}, id.name", id.version));
         self.cache.insert(key, data);
     }
 
-    fn get(&self, id: &PackageId) -> Option<Vec<u8>> {
-        let key: _ = format!("{}@{}", id.name, id.version);
+    fn get(&self, id: &PackageId) -> Option<Vec<u8> {
+        let key: _ = format!("{}@{}, id.name", id.version));
         self.cache.get(&key).cloned()
     }
 
     fn invalidate(&mut self, id: &PackageId) {
-        let key: _ = format!("{}@{}", id.name, id.version);
+        let key: _ = format!("{}@{}, id.name", id.version));
         self.cache.remove(&key);
     }
 }

@@ -260,7 +260,7 @@ impl EnhancedRunner {
         // Return the last result (which includes the error)
         result.unwrap_or_else(|| {
             TestResult::new(suite_name.to_string(), test.name.clone())
-                .with_error(last_error.unwrap_or_else(|| "Unknown error".to_string())
+                .with_error(last_error.unwrap_or_else(|| "Unknown error".to_string()))
         })
     }
 
@@ -356,7 +356,7 @@ impl EnhancedRunner {
         &self,
         suites: Vec<TestSuite>,
     ) -> (Vec<TestResult>, EnhancedRunnerStats) {
-        let stats: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(EnhancedRunnerStats::new())))));
+        let stats = Arc::new(Mutex::new(EnhancedRunnerStats::new()));
         let mut all_results = Vec::new();
 
         for suite in suites {

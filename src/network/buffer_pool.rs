@@ -22,10 +22,10 @@ use std::time::{Duration, Instant};
 #[derive(Debug)]
 pub struct NetworkBufferPool {
     /// 缓冲区池：大小 -> 缓冲区列表
-    pools: Arc<Mutex<HashMap<usize, Vec<BufferEntry, std::collections::HashMap<usize, Vec<BufferEntry, usize, Vec<BufferEntry>>>>>>>>,
+    pools: Arc<Mutex<HashMap<usize, Vec<BufferEntry>>>>,
 
     /// LRU 追踪：最近访问的缓冲区 ID
-    lru_tracker: Arc<Mutex<Vec<u64>>,
+    lru_tracker: Arc<Mutex<Vec<u64>>>,
 
     /// 缓冲区大小配置
     config: BufferPoolConfig,
@@ -112,10 +112,10 @@ impl NetworkBufferPool {
     /// 返回新的 NetworkBufferPool 实例
     pub fn new(config: BufferPoolConfig) -> Self {
         let pool: _ = Self {
-            pools: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
-            lru_tracker: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            pools: Arc::new(Mutex::new(HashMap::new())),
+            lru_tracker: Arc::new(Mutex::new(Vec::new())),
             config: config.clone(),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BufferPoolStats::default()))))),
+            stats: Arc::new(Mutex::new(BufferPoolStats::default())),
         };
 
         // 预分配缓冲区

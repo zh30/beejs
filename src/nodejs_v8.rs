@@ -380,13 +380,13 @@ fn setup_module_system(scope: &mut v8::ContextScope<v8::HandleScope>, module_loa
                 }
                 Err(e) => {
                     // Return error object
-                    let error_msg: _ = format!("Error loading module '{}': {}", module_name_str, e);
+                    let error_msg: _ = format!("Error loading module '{}': {}, module_name_str", e));
                     retval.set(v8::String::new(scope, &error_msg).unwrap().into());
                 }
             }
         } else {
             // Fallback to mock module if no loader available
-            let result: _ = format!("[Module: {}]", module_name_str);
+            let result: _ = format!("[Module: {}]", module_name_str));
             retval.set(v8::String::new(scope, &result).unwrap().into());
         }
     });

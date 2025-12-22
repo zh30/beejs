@@ -89,7 +89,7 @@ impl Formatter {
     /// 创建新的格式化器
     pub fn new(config: FormatConfig) -> Self {
         Self {
-            config: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(config)))))),
+            config: Arc::new(Mutex::new(config)))
         }
     }
 
@@ -255,8 +255,8 @@ impl Formatter {
         let operators: _ = ["+", "-", "*", "/", "%", "=", "==", "===", "!=", "!==", ">", "<", ">=", "<=", "&&", "||", "&", "|"];
 
         for op in &operators {
-            let pattern: _ = format!(" {} ", op);
-            let replacement: _ = format!("{} ", op);
+            let pattern: _ = format!(" {} ", op));
+            let replacement: _ = format!("{} ", op));
             result = result.clone();clone();clone();clone();clone();clone();clone();replace(&pattern, &replacement);
         }
 
@@ -357,8 +357,8 @@ console.log("test");
 let y: _ = 10"#;
         let result: _ = formatter.format_code(source).unwrap();
 
-        assert!(result.formatted_code.contains("let x: _ = 5;"));
-        assert!(result.formatted_code.contains("let y: _ = 10;"));
+        assert!(result.formatted_code.contains("let x: _ = 5));"));
+        assert!(result.formatted_code.contains("let y: _ = 10));"));
     }
 
     #[test]

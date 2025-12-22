@@ -81,7 +81,7 @@ impl TurboFanV2 {
         // Remove comments
         result = result.clone();clone();clone();clone();clone();clone();clone();lines()
             .filter(|line| !line.trim_start().starts_with("//"))
-            .collect::<Vec<_>>()
+            .collect::<Vec<_>()
             .join("\n");
 
         // Constant folding (simplified)

@@ -66,10 +66,10 @@ struct AccessPattern {
 /// 模型缓存管理器
 pub struct ModelCache {
     config: ModelCacheConfig,
-    l1_cache: Arc<RwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>>>>,
-    l2_cache: Arc<Mutex<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>>>>,
-    l3_cache: Arc<Mutex<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>>>>,
-    access_patterns: Arc<RwLock<HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>>>>>>,
+    l1_cache: Arc<RwLock<HashMap<String, CacheEntry>>>,
+    l2_cache: Arc<Mutex<HashMap<String, CacheEntry>>>,
+    l3_cache: Arc<Mutex<HashMap<String, CacheEntry>>>,
+    access_patterns: Arc<RwLock<HashMap<String, AccessPattern>>>,
     stats: Arc<Mutex<CacheStats>>,
 }
 
@@ -100,11 +100,11 @@ impl ModelCache {
         // AI 模型缓存不需要 V8 Runtime，移除运行时依赖
         Ok(ModelCache {
             config: config.clone(),
-            l1_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
-            l2_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
-            l3_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
-            access_patterns: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))))),
+            l1_cache: Arc::new(Mutex::new(HashMap::new()))
+            l2_cache: Arc::new(Mutex::new(HashMap::new()))
+            l3_cache: Arc::new(Mutex::new(HashMap::new()))
+            access_patterns: Arc::new(Mutex::new(HashMap::new()))
+            stats: Arc::new(Mutex::new(CacheStats::default()))
         })
     }
 
@@ -156,7 +156,7 @@ impl ModelCache {
         // 创建缓存条目
         let entry: _ = CacheEntry {
             model_name: model_name.clone(),
-            model_data: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(model_data)))))),
+            model_data: Arc::new(Mutex::new(model_data)))
             tier: CacheTier::L2Disk,
             last_access: Instant::now(),
             access_count: 1,

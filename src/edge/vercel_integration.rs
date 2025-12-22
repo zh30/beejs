@@ -42,7 +42,7 @@ impl VercelIntegration {
     }
 
     /// Get Vercel edge regions
-    async fn get_edge_regions(&self) -> Result<Vec<String>> {
+    async fn get_edge_regions(&self) -> Result<Vec<String> {
         // Vercel has 100+ edge locations
         Ok(vec![
             "iad1".to_string(),    // Washington DC
@@ -59,7 +59,7 @@ impl VercelIntegration {
 impl CdnProvider for VercelIntegration {
     /// Deploy to Vercel Edge Runtime
     async fn deploy(&self, code: &[u8], region: &str) -> Result<DeploymentResult> {
-        let deployment_name: _ = format!("beejs-edge-{}", region);
+        let deployment_name: _ = format!("beejs-edge-{}", region));
         let deployment_id: _ = self.create_deployment(&deployment_name, code).await?;
 
         Ok(DeploymentResult {
@@ -120,7 +120,7 @@ impl CdnProvider for VercelIntegration {
     }
 
     /// Update Vercel configuration
-    async fn update_config(&self, config: &HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>) -> Result<()> {
+    async fn update_config(&self, config: &HashMap<String, String>) -> Result<()> {
         if let Some(framework) = config.get("framework") {
             println!("Updated Vercel framework to: {}", framework);
         }

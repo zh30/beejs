@@ -32,7 +32,7 @@ pub struct Http2ServerStats {
 pub struct Http2Server {
     config: NetworkConfig,
     enabled: bool,
-    routes: HashMap<String, Http2Handler, std::collections::HashMap<String, Http2Handler, String, Http2Handler>>>>>>>,
+    routes: HashMap<String, Http2Handler>,
     stats: std::sync::Arc<std::sync::Mutex<Http2ServerStats>>,
 }
 
@@ -43,11 +43,11 @@ impl Http2Server {
             enabled: config.enable_http2,
             config,
             routes: HashMap::new(),
-            stats: std::sync::Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(Http2ServerStats {
+            stats: std::sync::Arc::new(Mutex::new(Http2ServerStats {
                 total_requests: 0,
                 active_streams: 0,
                 total_connections: 0,
-            })))))),
+            })),
         })
     }
 
@@ -65,11 +65,11 @@ impl Http2Server {
     /// 启动服务器
     pub fn start(&mut self, addr: &str) -> Result<TcpListener, NetworkError> {
         if !self.enabled {
-            return Err(NetworkError::Connection("HTTP/2 is not enabled".to_string());
+            return Err(NetworkError::Connection("HTTP/2 is not enabled".to_string()));
         }
 
         let listener: _ = TcpListener::bind(addr)
-            .map_err(|e| NetworkError::Connection(e.to_string())?;
+            .map_err(|e| NetworkError::Connection(e.to_string()))?;
 
         {
             let mut stats = self.stats.lock().unwrap();

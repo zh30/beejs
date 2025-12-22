@@ -23,7 +23,7 @@ pub enum JsValue {
     /// 数组
     Array(Vec<JsValue>),
     /// 对象
-    Object(HashMap<String, JsValue, std::collections::HashMap<String, JsValue, String, JsValue>>>>>>>),
+    Object(HashMap<String, JsValue>),
     /// 空值
     Null,
     /// 未定义
@@ -60,13 +60,13 @@ impl From<bool> for JsValue {
     }
 }
 
-impl From<Vec<i64>> for JsValue {
+impl From<Vec<i64> for JsValue {
     fn from(val: Vec<i64>) -> Self {
         JsValue::Array(val.into_iter().map(JsValue::Number).collect())
     }
 }
 
-impl From<Vec<JsValue>> for JsValue {
+impl From<Vec<JsValue> for JsValue {
     fn from(val: Vec<JsValue>) -> Self {
         JsValue::Array(val)
     }
@@ -133,7 +133,7 @@ pub struct JsWasmInterop {
 #[derive(Debug, Clone)]
 struct FunctionCache {
     /// 函数缓存映射
-    cache: HashMap<String, CachedFunction, std::collections::HashMap<String, CachedFunction, String, CachedFunction>>>>>>>,
+    cache: HashMap<String, CachedFunction>,
     /// 缓存大小限制
     max_cache_size: usize,
     /// 缓存访问次数
@@ -201,12 +201,12 @@ impl Default for FunctionCache {
 impl Default for CallStats {
     fn default() -> Self {
         Self {
-            total_calls: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)))))),
-            successful_calls: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)))))),
-            failed_calls: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)))))),
-            total_duration: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::atomic::AtomicU64::new(0)))))),
-            zero_copy_calls: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)))))),
-            batch_calls: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)))))),
+            total_calls: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)))
+            successful_calls: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)))
+            failed_calls: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)))
+            total_duration: Arc::new(Mutex::new(std::sync::atomic::AtomicU64::new(0)))
+            zero_copy_calls: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)))
+            batch_calls: Arc::new(Mutex::new(std::sync::atomic::AtomicUsize::new(0)))
         }
     }
 }
@@ -223,8 +223,8 @@ impl JsWasmInterop {
     /// ```
     pub fn new() -> Self {
         JsWasmInterop {
-            function_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(FunctionCache::default()))))),
-            call_stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CallStats::default()))))),
+            function_cache: Arc::new(Mutex::new(FunctionCache::default()))
+            call_stats: Arc::new(Mutex::new(CallStats::default()))
             batch_config: BatchConfig::default(),
         }
     }
@@ -398,7 +398,7 @@ impl JsWasmInterop {
         function_name: &str,
         args: Vec<JsValue>,
     ) -> Result<tokio::task::JoinHandle<Result<WasmCallResult>> {
-        let interop: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(self.clone())))));
+        let interop: _ = Arc::new(Mutex::new(self.clone()),;
         let module: _ = module.clone();clone();
         let function_name: _ = function_name.clone();to_string();
         let args: _ = args.clone();clone();
@@ -501,7 +501,7 @@ impl JsWasmInterop {
     }
 
     /// 转换 JS 参数到 WASM 参数
-    fn convert_js_args_to_wasm(&self, args: &[JsValue]) -> Result<Vec<Val>> {
+    fn convert_js_args_to_wasm(&self, args: &[JsValue]) -> Result<Vec<Val> {
         let mut wasm_args = Vec::with_capacity(args.len());
 
         for arg in args {

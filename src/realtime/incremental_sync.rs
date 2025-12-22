@@ -73,8 +73,8 @@ impl IncrementalSync {
     pub fn new(compression: CompressionConfig) -> Result<Self> {
         info!("🔄 初始化增量同步引擎 (算法: {:?})", compression.algorithm);
 
-        let sync_state: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RocksDB::new())))))?);
-        let change_cache: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RocksDB::new())))))?);
+        let sync_state: _ = Arc::new(Mutex::new(RocksDB::new()))?;
+        let change_cache: _ = Arc::new(Mutex::new(RocksDB::new()))?;
 
         Ok(Self {
             sync_state,
@@ -169,7 +169,7 @@ use std::collections::{HashMap, BTreeMap};
         document.content.hash(&mut hasher);
         document.version.hash(&mut hasher);
 
-        Ok(format!("{:x}", hasher.finish())
+        Ok(format!("{:x}", hasher.finish()))
     }
 
     /// 更新同步状态
@@ -206,7 +206,7 @@ use std::collections::{HashMap, BTreeMap};
     }
 
     /// 获取缓存的变更
-    pub async fn get_cached_changes(&self, document_id: &str) -> Result<Option<Vec<Change>> {
+    pub async fn get_cached_changes(&self, document_id: &str) -> Result<Option<Vec<Change>>> {
         let cache_key: _ = format!("changes:{}", document_id);
         self.change_cache.get(&cache_key)
     }

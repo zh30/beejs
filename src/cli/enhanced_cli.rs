@@ -105,8 +105,8 @@ impl EnhancedArgs {
     /// Execute based on arguments
     pub async fn execute(&self) -> Result<()> {
         // Create runtime
-        let runtime: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(self.verbose))))))
-            .context("Failed to create runtime")?);
+        let runtime: _ = Arc::new(Mutex::new(RuntimeLite::new(self.verbose)),)
+            .context("Failed to create runtime")?;
 
         // Execute based on arguments
         if let Some(ref script_path) = self.script {

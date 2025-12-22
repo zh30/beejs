@@ -117,7 +117,7 @@ impl ConcurrentBenchmark {
             MetricType::Throughput,
             || {
                 // 模拟锁竞争
-                let counter: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(0))))));
+                let counter: _ = Arc::new(Mutex::new(0));
                 let mut handles = Vec::new();
 
                 for _ in 0..10 {
@@ -156,7 +156,7 @@ impl ConcurrentBenchmark {
             MetricType::Throughput,
             || {
                 // 模拟无锁计数器
-                let counter: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0))))));
+                let counter: _ = Arc::new(Mutex::new(AtomicUsize::new(0)));
                 let mut handles = Vec::new();
 
                 for _ in 0..10 {
@@ -278,7 +278,7 @@ impl ConcurrentBenchmark {
             MetricType::Throughput,
             || {
                 // 模拟数据竞争检测
-                let shared: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(0))))));
+                let shared: _ = Arc::new(Mutex::new(0));
                 let mut handles = Vec::new();
 
                 for _ in 0..10 {
@@ -417,7 +417,7 @@ impl ConcurrentOptimizationSuggestions {
                     .iter()
                     .enumerate()
                     .map(|(i, s)| format!("{}. {}", i + 1, s))
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<_>()
                     .join("\n")
             )
         }

@@ -138,7 +138,7 @@ impl DebugConsole {
                     Ok(DebugCliCommand::Break(line))
                 } else {
                     // Function name
-                    Ok(DebugCliCommand::BreakFunction(parts[1].to_string())
+                    Ok(DebugCliCommand::BreakFunction(parts[1].to_string()))
                 }
             }
             "delete" | "d" => {
@@ -160,20 +160,20 @@ impl DebugConsole {
                 if parts.len() < 2 {
                     return Err(anyhow::anyhow!("Usage: print <variable>"));
                 }
-                Ok(DebugCliCommand::Print(parts[1..].join(" "))
+                Ok(DebugCliCommand::Print(parts[1..].join(" ")))
             }
             "inspect" | "i" => {
                 if parts.len() < 2 {
                     return Err(anyhow::anyhow!("Usage: inspect <variable>"));
                 }
-                Ok(DebugCliCommand::Inspect(parts[1..].join(" "))
+                Ok(DebugCliCommand::Inspect(parts[1..].join(" ")))
             }
             "backtrace" | "bt" | "where" => Ok(DebugCliCommand::Backtrace),
             "eval" | "e" => {
                 if parts.len() < 2 {
                     return Err(anyhow::anyhow!("Usage: eval <expression>"));
                 }
-                Ok(DebugCliCommand::Eval(parts[1..].join(" "))
+                Ok(DebugCliCommand::Eval(parts[1..].join(" ")))
             }
             "pause" => Ok(DebugCliCommand::Pause),
             "help" | "h" | "?" => Ok(DebugCliCommand::Help),
@@ -207,7 +207,7 @@ impl DebugConsole {
                 self.set_breakpoint(*line, None)?;
             }
             DebugCliCommand::BreakAt(file, line) => {
-                self.set_breakpoint(*line, Some(file.clone())?;
+                self.set_breakpoint(*line, Some(file.clone()))?;
             }
             DebugCliCommand::BreakFunction(func) => {
                 self.set_function_breakpoint(func)?;
@@ -319,8 +319,8 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_parse_continue_command() {
         let console: _ = DebugConsole::new(
-            Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(Default::default()))))),
-            Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false)))))).unwrap()),
+            Arc::new(Mutex::new(DebuggerEngine::new(Default::default()))),
+            Arc::new(Mutex::new(RuntimeLite::new(false).unwrap())),
         );
         assert!(matches!(console.parse_command("continue").unwrap(), DebugCliCommand::Continue));
         assert!(matches!(console.parse_command("c").unwrap(), DebugCliCommand::Continue));
@@ -329,18 +329,18 @@ use std::collections::{HashMap, BTreeMap};
     #[test]
     fn test_parse_break_command() {
         let console: _ = DebugConsole::new(
-            Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(Default::default()))))),
-            Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false)))))).unwrap()),
+            Arc::new(Mutex::new(DebuggerEngine::new(Default::default()))),
+            Arc::new(Mutex::new(RuntimeLite::new(false).unwrap())),
         );
-        assert!(matches!(console.parse_command("break 10").unwrap(), DebugCliCommand::Break(10));
-        assert!(matches!(console.parse_command("b 20").unwrap(), DebugCliCommand::Break(20));
+        assert!(matches!(console.parse_command("break 10").unwrap(), DebugCliCommand::Break(10)));
+        assert!(matches!(console.parse_command("b 20").unwrap(), DebugCliCommand::Break(20)));
     }
 
     #[test]
     fn test_parse_print_command() {
         let console: _ = DebugConsole::new(
-            Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(DebuggerEngine::new(Default::default()))))),
-            Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(false)))))).unwrap()),
+            Arc::new(Mutex::new(DebuggerEngine::new(Default::default()))),
+            Arc::new(Mutex::new(RuntimeLite::new(false).unwrap())),
         );
         if let DebugCliCommand::Print(expr) = console.parse_command("print myVar").unwrap() {
             assert_eq!(expr, "myVar");

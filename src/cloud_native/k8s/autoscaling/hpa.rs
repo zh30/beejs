@@ -260,15 +260,15 @@ impl MetricsCollector {
         // 3. Calculating percentages
 
         // For now, return mock metrics
-        let metrics: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Metrics {
+        let metrics: _ = Arc::new(Mutex::new(Metrics {
             current_replicas: 5,
             cpu_usage_percent: 75.0,
             memory_usage_percent: 60.0,
             total_cpu_cores: 10.0,
             total_memory_gb: 20.0,
-            custom_metrics: HashMap::new()))))),
+            custom_metrics: HashMap::new(),
             timestamp: Instant::now(),
-        });
+        }));
 
         self.latest_metrics = Some(metrics.clone());
 
@@ -295,7 +295,7 @@ pub struct Metrics {
     pub total_memory_gb: f64,
 
     /// Custom metrics
-    pub custom_metrics: HashMap<String, f64, std::collections::HashMap<String, f64, String, f64>>>>>>>,
+    pub custom_metrics: HashMap<String, f64>,
 
     /// Timestamp when metrics were collected
     pub timestamp: Instant,

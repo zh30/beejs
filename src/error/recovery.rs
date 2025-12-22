@@ -141,7 +141,7 @@ impl RecoveryStats {
 pub struct AutoRecovery {
     config: AutoRecoveryConfig,
     stats: Arc<RwLock<RecoveryStats>>,
-    retry_history: Arc<RwLock<Vec<(BeejsError, Instant, Duration)>>,
+    retry_history: Arc<RwLock<Vec<(BeejsError, Instant, Duration)>>>,
 }
 
 impl AutoRecovery {
@@ -149,8 +149,8 @@ impl AutoRecovery {
     pub fn new() -> Self {
         Self {
             config: AutoRecoveryConfig::default(),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(RecoveryStats::default()))))),
-            retry_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
+            stats: Arc::new(Mutex::new(RecoveryStats::default()))
+            retry_history: Arc::new(Mutex::new(Vec::new()))
         }
     }
 
@@ -158,8 +158,8 @@ impl AutoRecovery {
     pub fn with_config(config: AutoRecoveryConfig) -> Self {
         Self {
             config,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(RecoveryStats::default()))))),
-            retry_history: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
+            stats: Arc::new(Mutex::new(RecoveryStats::default()))
+            retry_history: Arc::new(Mutex::new(Vec::new()))
         }
     }
 

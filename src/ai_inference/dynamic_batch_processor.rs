@@ -51,9 +51,9 @@ pub struct DynamicBatchProcessor {
     /// 配置
     config: DynamicBatchConfig,
     /// 待处理的输入队列
-    input_queue: Arc<Mutex<VecDeque<Tensor>>,
+    input_queue: Arc<Mutex<VecDeque<Tensor>>>,
     /// 结果队列
-    result_queue: Arc<Mutex<VecDeque<InferenceResult>>,
+    result_queue: Arc<Mutex<VecDeque<InferenceResult>>>,
     /// 当前批次大小
     current_batch_size: usize,
     /// 性能统计
@@ -73,11 +73,11 @@ impl DynamicBatchProcessor {
         Ok(Self {
             inference_engine,
             config,
-            input_queue: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
-            result_queue: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
+            input_queue: Arc::new(Mutex::new(VecDeque::new())),
+            result_queue: Arc::new(Mutex::new(VecDeque::new())),
             current_batch_size: initial_batch_size,
-            performance_stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BatchPerformanceStats::default()))))),
-            running: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(false)))))),
+            performance_stats: Arc::new(Mutex::new(BatchPerformanceStats::default())),
+            running: Arc::new(Mutex::new(false)),
         })
     }
 
@@ -235,7 +235,7 @@ use std::collections::{HashMap, BTreeMap};
     async fn test_dynamic_batch_processor_creation() {
         let config: _ = DynamicBatchConfig::default();
         let engine: _ = AIInferenceEngine::new().await.unwrap();
-        let processor: _ = DynamicBatchProcessor::new(Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(engine)))))), config).await;
+        let processor: _ = DynamicBatchProcessor::new(Arc::new(Mutex::new(engine)), config).await;
         assert!(processor.is_ok());
     }
 
@@ -243,7 +243,7 @@ use std::collections::{HashMap, BTreeMap};
     async fn test_dynamic_batch_submission() {
         let config: _ = DynamicBatchConfig::default();
         let engine: _ = AIInferenceEngine::new().await.unwrap();
-        let processor: _ = DynamicBatchProcessor::new(Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(engine)))))), config).await.unwrap();
+        let processor: _ = DynamicBatchProcessor::new(Arc::new(Mutex::new(engine)), config).await.unwrap();
 
         // 创建测试张量
         let input: _ = Tensor::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2]).unwrap();
@@ -262,7 +262,7 @@ use std::collections::{HashMap, BTreeMap};
         };
 
         let engine: _ = AIInferenceEngine::new().await.unwrap();
-        let processor: _ = DynamicBatchProcessor::new(Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(engine)))))), config).await.unwrap();
+        let processor: _ = DynamicBatchProcessor::new(Arc::new(Mutex::new(engine)), config).await.unwrap();
 
         // 启动处理
         processor.start_processing().await.unwrap();

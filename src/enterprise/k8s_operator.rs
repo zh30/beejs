@@ -318,20 +318,20 @@ impl BeejsOperator {
             .run(
                 self.reconcile(),
                 self.error_policy(),
-                Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(self.clone()))))),
+                Arc::new(Mutex::new(self.clone()))
             )
             .await
             .context("Failed to start controller")?;
 
         info!("Beejs Operator started successfully");
 
-        Ok(())
+        Ok(()))
     }
 
     /// Reconciliation logic
     fn reconcile(&self) -> Arc<dyn Fn(BeejsCluster) -> Action + Send + Sync + 'static> {
-        Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(move |beejs_cluster: BeejsCluster| {
-            let client: _ = self.client.clone())))));
+        Arc::new(Mutex::new(move |beejs_cluster: BeejsCluster| {)),
+            let client: _ = self.client.clone()));
             let clusters: _ = self.clusters.clone();
             let deployments: _ = self.deployments.clone();
             let statefulsets: _ = self.statefulsets.clone();
@@ -394,8 +394,8 @@ impl BeejsOperator {
 
     /// Error policy
     fn error_policy(&self) -> Arc<dyn Fn(&kube::Error, &BeejsCluster) -> Action + Send + Sync + 'static> {
-        Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(move |_error, _beejs_cluster| {
-            warn!("Error occurred during reconciliation"))))));
+        Arc::new(Mutex::new(move |_error, _beejs_cluster| {)),
+            warn!("Error occurred during reconciliation")));
             Action::requeue(Duration::from_secs(60))
         })
     }

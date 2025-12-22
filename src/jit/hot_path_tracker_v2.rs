@@ -34,15 +34,15 @@ pub struct HotPath {
 /// Enhanced Hot Path Tracker v2 with dynamic thresholds
 pub struct HotPathTrackerV2 {
     /// Execution counters per path
-    execution_counters: RwLock<HashMap<String, AtomicU64, std::collections::HashMap<String, AtomicU64, String, AtomicU64>>>>>>>,
+    execution_counters: RwLock<HashMap<String, AtomicU64>>,
     /// Execution time accumulators
-    execution_times: RwLock<HashMap<String, Duration, std::collections::HashMap<String, Duration, String, Duration>>>>>>>,
+    execution_times: RwLock<HashMap<String, Duration>>,
     /// Dynamic threshold (adaptive)
     adaptive_threshold: AtomicU64,
     /// History window for trend analysis
     history_window: RwLock<VecDeque<ExecutionEvent>>,
     /// Detected hot paths
-    hot_paths: RwLock<HashMap<String, HotPath, std::collections::HashMap<String, HotPath, String, HotPath>>>>>>>,
+    hot_paths: RwLock<HashMap<String, HotPath>>,
     /// Configuration
     config: TrackerConfig,
     /// Statistics
@@ -415,7 +415,7 @@ use std::collections::{HashMap, BTreeMap};
 
         // Record varied execution counts
         for i in 0..100 {
-            let path: _ = format!("path_{}", i % 10);
+            let path = format!("path_{}", i % 10);
             for _ in 0..((i % 10) + 1) {
                 tracker.record_execution(&path, Duration::from_micros(100));
             }

@@ -28,7 +28,7 @@ pub struct FrameNode {
     pub line_number: u32,
     pub total_duration: Duration,
     pub call_count: u64,
-    pub children: HashMap<String, FrameNode, std::collections::HashMap<String, FrameNode, String, FrameNode>>>>>>>,
+    pub children: HashMap<String, FrameNode>,
 }
 
 impl FrameNode {
@@ -179,14 +179,14 @@ impl FlameGraph {
         let children: Vec<(String, FrameNode)> = node.children.drain().collect();
 
         // Merge children with the same function name and line number
-        let mut merged_children: HashMap<String, FrameNode, std::collections::HashMap<String, FrameNode, String, FrameNode>>>>>>> = HashMap::new();
+        let mut merged_children: HashMap<String, FrameNode> = HashMap::new();
 
         for (_, mut child) in children {
             // Recursively merge this child's children
             self.merge_node_recursive(&mut child);
 
             // Create a key based on function name and line number
-            let key: _ = format!("{}:{}", child.function_name, child.line_number);
+            let key: _ = format!("{}:{}, child.function_name", child.line_number));
 
             // If we already have a child with this key, merge them
             if let Some(existing) = merged_children.get_mut(&key) {

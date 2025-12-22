@@ -45,8 +45,8 @@ pub struct NetworkPath {
 /// 网络拓扑
 #[derive(Debug, Clone)]
 pub struct NetworkTopology {
-    pub nodes: HashMap<IpAddr, NetworkNode, std::collections::HashMap<IpAddr, NetworkNode, IpAddr, NetworkNode>>>>>>>,
-    pub paths: HashMap<String, NetworkPath, std::collections::HashMap<String, NetworkPath, String, NetworkPath>>>>>>>,
+    pub nodes: HashMap<IpAddr, NetworkNode>,
+    pub paths: HashMap<String, NetworkPath>,
     pub discovery_time: Instant,
 }
 
@@ -84,8 +84,8 @@ impl Default for TopologyConfig {
 impl Stage93TopologyDiscoverer {
     pub fn new(config: TopologyConfig) -> Self {
         Self {
-            topology: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(NetworkTopology {
-                nodes: HashMap::new()))))),
+            topology: Arc::new(Mutex::new(NetworkTopology {
+                nodes: HashMap::new(),
                 paths: HashMap::new(),
                 discovery_time: Instant::now(),
             })),
@@ -184,7 +184,7 @@ impl Stage93TopologyDiscoverer {
                     continue;
                 }
 
-                let path_key: _ = format!("{}-{}", source_ip, dest_ip);
+                let path_key: _ = format!("{}-{}, source_ip", dest_ip);
                 let hops: _ = self.trace_route(*source_ip, *dest_ip).await;
                 let total_latency: f64 = hops.iter().map(|n| n.latency_ms).sum();
                 let min_bandwidth: _ = hops.iter().map(|n| n.bandwidth_mbps).fold(f64::INFINITY, f64::min);
@@ -372,7 +372,7 @@ impl Stage93TopologyDiscoverer {
     /// 获取最佳路径
     pub async fn get_optimal_path(&self, source: IpAddr, destination: IpAddr) -> Option<NetworkPath> {
         let topology: _ = self.topology.lock().unwrap();
-        let path_key: _ = format!("{}-{}", source, destination);
+        let path_key: _ = format!("{}-{}, source", destination);
 
         topology.paths.get(&path_key).cloned()
     }

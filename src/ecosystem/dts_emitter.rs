@@ -25,7 +25,7 @@ impl DtsEmitter {
     }
 
     /// 发射类型定义
-    pub fn emit_types(&self, types: &HashMap<String, TypeDefinition, std::collections::HashMap<String, TypeDefinition, String, TypeDefinition>>>>>>>, filename: &str) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn emit_types(&self, types: &HashMap<String, TypeDefinition>, filename: &str) -> Result<String, Box<dyn std::error::Error>> {
         let mut output = String::new();
 
         // 添加文件头

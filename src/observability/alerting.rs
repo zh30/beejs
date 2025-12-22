@@ -67,7 +67,7 @@ pub struct AlertRule {
     /// Alert severity
     pub severity: AlertSeverity,
     /// Additional labels
-    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub labels: HashMap<String, String>,
     /// Description of the alert
     pub description: String,
 }
@@ -88,7 +88,7 @@ pub struct Alert {
     /// When the alert was triggered
     pub triggered_at: SystemTime,
     /// Labels
-    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub labels: HashMap<String, String>,
     /// Description
     pub description: String,
 }
@@ -104,7 +104,7 @@ pub trait AlertNotifier: Send + Sync {
 /// HTTP webhook notifier
 pub struct HttpWebhookNotifier {
     url: String,
-    headers: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    headers: HashMap<String, String>,
 }
 
 impl HttpWebhookNotifier {
@@ -141,7 +141,7 @@ impl AlertNotifier for HttpWebhookNotifier {
             .context("Failed to send webhook")?;
 
         if !response.status().is_success() {
-            return Err(anyhow::anyhow!("Webhook returned status: {}", response.status());
+            return Err(anyhow::anyhow!("Webhook returned status: {}", response.status()));
         }
 
         info!("Alert sent via HTTP webhook to {}", self.url);
@@ -175,11 +175,11 @@ impl AlertNotifier for ConsoleNotifier {
 /// Alerting system
 pub struct AlertingSystem {
     /// Alert rules
-    rules: Arc<RwLock<Vec<AlertRule>>,
+    rules: Arc<RwLock<Vec<AlertRule>>>,
     /// Active alerts
-    active_alerts: Arc<RwLock<HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert>>>>>>>,
+    active_alerts: Arc<RwLock<HashMap<String, Alert>>>,
     /// Alert notifiers
-    notifiers: Arc<RwLock<Vec<Box<dyn AlertNotifier>>,
+    notifiers: Arc<RwLock<Vec<Box<dyn AlertNotifier>>>>,
     /// Check interval
     check_interval: Duration,
     /// Last check time
@@ -193,11 +193,11 @@ impl AlertingSystem {
         notifiers.push(Box::new(ConsoleNotifier) as Box<dyn AlertNotifier>);
 
         Self {
-            rules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
-            active_alerts: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
-            notifiers: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(notifiers)))))),
+            rules: Arc::new(Mutex::new(Vec::new())),
+            active_alerts: Arc::new(Mutex::new(HashMap::new())),
+            notifiers: Arc::new(Mutex::new(notifiers)),
             check_interval: Duration::from_secs(30),
-            last_check: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Instant::now()))))),
+            last_check: Arc::new(Mutex::new(Instant::now())),
         }
     }
 
@@ -336,7 +336,7 @@ impl AlertingSystem {
     }
 
     /// Get active alerts
-    pub async fn get_active_alerts(&self) -> HashMap<String, Alert, std::collections::HashMap<String, Alert, String, Alert>>>>>>> {
+    pub async fn get_active_alerts(&self) -> HashMap<String, Alert> {
         self.active_alerts.read().await.clone()
     }
 

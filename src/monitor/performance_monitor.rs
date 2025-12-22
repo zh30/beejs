@@ -41,7 +41,7 @@ pub struct MetricValue {
     /// 时间戳
     pub timestamp: u64,
     /// 标签
-    pub tags: HashMap<String, _, std::collections::HashMap<String, _, String, _>>>>>>,
+    pub tags: HashMap<String, _>,
 }
 
 /// 性能指标聚合结果
@@ -98,9 +98,9 @@ pub struct PerformanceMonitor {
     /// 配置
     config: MonitorConfig,
     /// 原始指标队列
-    raw_metrics: Arc<Mutex<VecDeque<MetricValue>>,
+    raw_metrics: Arc<Mutex<VecDeque<MetricValue>>>,
     /// 聚合指标缓存
-    aggregated_metrics: Arc<Mutex<HashMap<String, _, std::collections::HashMap<String, _, String, _>>>>>>>,
+    aggregated_metrics: Arc<Mutex<HashMap<String, _>>>,
     /// 指标收集统计
     stats: Arc<Mutex<CollectionStats>>,
 }
@@ -123,14 +123,14 @@ impl PerformanceMonitor {
     pub fn new(config: MonitorConfig) -> Self {
         Self {
             config,
-            raw_metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
-            aggregated_metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CollectionStats {
+            raw_metrics: Arc::new(Mutex::new(VecDeque::new())),
+            aggregated_metrics: Arc::new(Mutex::new(HashMap::new())),
+            stats: Arc::new(Mutex::new(CollectionStats {
                 total_collections: 0,
                 total_metrics: 0,
                 last_collection_time: None,
                 error_count: 0,
-            })))))),
+            })),
         }
     }
 
@@ -203,7 +203,7 @@ impl PerformanceMonitor {
     }
 
     /// 获取聚合指标
-    pub fn get_aggregated_metrics(&self) -> Result<HashMap<String, _, std::collections::HashMap<String, _, String, _>>>>>>, String> {
+    pub fn get_aggregated_metrics(&self) -> Result<HashMap<String, _>, String> {
         let aggregated_metrics: _ = self.aggregated_metrics.lock().map_err(|e| e.to_string())?;
         Ok(aggregated_metrics.clone())
     }
@@ -214,7 +214,7 @@ impl PerformanceMonitor {
         let mut aggregated_metrics = self.aggregated_metrics.lock().map_err(|e| e.to_string())?;
 
         // 按指标类型分组
-        let mut grouped_metrics: HashMap<String, _, std::collections::HashMap<String, _, String, _>>>>>> = HashMap::new();
+        let mut grouped_metrics: HashMap<String, _> = HashMap::new();
 
         for metric in raw_metrics.iter() {
             grouped_metrics
@@ -496,6 +496,6 @@ use std::collections::{HashMap, BTreeMap};
         let custom_type: _ = MetricType::Custom("custom_metric".to_string());
         assert_eq!(
             custom_type,
-            MetricType::Custom("custom_metric".to_string());
+            MetricType::Custom("custom_metric".to_string()));
     }
 }

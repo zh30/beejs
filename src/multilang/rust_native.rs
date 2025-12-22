@@ -19,14 +19,14 @@ pub struct SharedMemoryRegion {
 /// Zero-copy memory bridge
 #[derive(Debug)]
 pub struct ZeroCopyBridge {
-    shared_memory: Arc<RwLock<HashMap<String, SharedMemoryRegion, std::collections::HashMap<String, SharedMemoryRegion, String, SharedMemoryRegion>>>>>>>,
+    shared_memory: Arc<RwLock<HashMap<String, SharedMemoryRegion>>>,
     memory_pool: Arc<MemoryPool>,
 }
 
 /// Memory pool for efficient allocation
 #[derive(Debug)]
 pub struct MemoryPool {
-    pool: Arc<RwLock<Vec<u8>>,
+    pool: Arc<RwLock<Vec<u8>>>,
     block_size: usize,
     max_blocks: usize,
 }
@@ -42,14 +42,14 @@ pub struct OptimizedCode {
 /// JIT compiler for hot path optimization
 #[derive(Debug)]
 pub struct JITCompiler {
-    cache: Arc<RwLock<HashMap<String, OptimizedCode, std::collections::HashMap<String, OptimizedCode, String, OptimizedCode>>>>>>>,
-    hot_paths: Arc<RwLock<Vec<String>>,
+    cache: Arc<RwLock<HashMap<String, OptimizedCode>>>,
+    hot_paths: Arc<RwLock<Vec<String>>>,
 }
 
 /// Inline cache for fast lookups
 #[derive(Debug)]
 pub struct InlineCache {
-    cache: Arc<RwLock<HashMap<String, CacheEntry, std::collections::HashMap<String, CacheEntry, String, CacheEntry>>>>>>>,
+    cache: Arc<RwLock<HashMap<String, CacheEntry>>>,
 }
 
 /// Cache entry for inline cache
@@ -75,7 +75,7 @@ impl SharedMemoryRegion {
             id,
             address: 0, // In real implementation, would allocate actual memory
             size,
-            ref_count: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(1)))))),
+            ref_count: Arc::new(Mutex::new(1)))
         }
     }
 
@@ -106,14 +106,14 @@ impl MemoryPool {
     /// Create a new memory pool
     pub fn new(block_size: usize, max_blocks: usize) -> Self {
         MemoryPool {
-            pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::with_capacity(block_size * max_blocks)))))),
+            pool: Arc::new(Mutex::new(Vec::with_capacity(block_size * max_blocks)))
             block_size,
             max_blocks,
         }
     }
 
     /// Allocate a block from the pool
-    pub async fn allocate(&self, size: usize) -> Result<Vec<u8>> {
+    pub async fn allocate(&self, size: usize) -> Result<Vec<u8> {
         if size > self.block_size {
             return Err(anyhow!("Size exceeds block size"));
         }
@@ -136,7 +136,7 @@ impl ZeroCopyBridge {
     /// Create a new zero-copy bridge
     pub fn new(memory_pool: Arc<MemoryPool>) -> Self {
         ZeroCopyBridge {
-            shared_memory: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            shared_memory: Arc::new(Mutex::new(HashMap::new()))
             memory_pool,
         }
     }
@@ -168,7 +168,7 @@ impl ZeroCopyBridge {
     }
 
     /// Fast path call with zero-copy arguments
-    pub async fn fast_path_call(&self, target: &str, args: &[u8]) -> Result<Vec<u8>> {
+    pub async fn fast_path_call(&self, target: &str, args: &[u8]) -> Result<Vec<u8> {
         // In real implementation, would use shared memory for zero-copy
         // For now, simulate fast path
         tokio::time::sleep(tokio::time::Duration::from_nanos(1)).await;
@@ -181,8 +181,8 @@ impl JITCompiler {
     /// Create a new JIT compiler
     pub fn new() -> Self {
         JITCompiler {
-            cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
-            hot_paths: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
+            cache: Arc::new(Mutex::new(HashMap::new()))
+            hot_paths: Arc::new(Mutex::new(Vec::new()))
         }
     }
 
@@ -232,7 +232,7 @@ impl InlineCache {
     /// Create a new inline cache
     pub fn new() -> Self {
         InlineCache {
-            cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            cache: Arc::new(Mutex::new(HashMap::new()))
         }
     }
 
@@ -270,9 +270,9 @@ impl RustOptimizer {
     /// Create a new Rust optimizer
     pub fn new() -> Self {
         RustOptimizer {
-            jit_compiler: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(JITCompiler::new()))))),
-            inline_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(InlineCache::new()))))),
-            zero_copy: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ZeroCopyBridge::new(Arc::new(MemoryPool::new(4096, 100)))))),
+            jit_compiler: Arc::new(Mutex::new(JITCompiler::new()))
+            inline_cache: Arc::new(Mutex::new(InlineCache::new()))
+            zero_copy: Arc::new(Mutex::new(ZeroCopyBridge::new(Arc::new(MemoryPool::new(4096, 100)))
         }
     }
 
@@ -297,7 +297,7 @@ impl RustOptimizer {
     }
 
     /// Execute with zero-copy optimization
-    pub async fn execute_zero_copy(&self, target: &str, data: &[u8]) -> Result<Vec<u8>> {
+    pub async fn execute_zero_copy(&self, target: &str, data: &[u8]) -> Result<Vec<u8> {
         self.zero_copy.fast_path_call(target, data).await
     }
 
@@ -347,7 +347,7 @@ fn optimize_script(script: &str) -> String {
     let mut optimized = script.to_string();
 
     // Simple optimization: remove extra whitespace
-    optimized = optimized.clone();clone();clone();clone();clone();clone();clone();split_whitespace().collect::<Vec<_>>().join(" ");
+    optimized = optimized.clone();clone();clone();clone();clone();clone();clone();split_whitespace().collect::<Vec<_>().join(" ");
 
     optimized
 }

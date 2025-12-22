@@ -40,7 +40,7 @@ pub struct ReplCompleter {
     /// Built-in keywords
     keywords: Vec<&'static str>,
     /// Built-in objects and functions
-    builtins: HashMap<&'static str, Vec<&'static str, std::collections::HashMap<&'static str, Vec<&'static str, &'static str, Vec<&'static str>>>>>>>,
+    builtins: HashMap<&'static str, Vec<&'static str>>,
     /// REPL commands
     commands: Vec<&'static str>,
     /// V8 isolate for runtime inspection

@@ -36,7 +36,7 @@ pub struct RuntimeLite {
 
     /// Cache for pre-compiled scripts to avoid repeated compilation
     /// Stage 65: Enhanced with LRU eviction and expiration
-    script_cache: Arc<std::sync::Mutex<HashMap<String, ScriptCacheEntry, std::collections::HashMap<String, ScriptCacheEntry, String, ScriptCacheEntry>>>>>>>,
+    script_cache: Arc<std::sync::Mutex<HashMap<String, ScriptCacheEntry>>>,
     /// Maximum cache size (Stage 65: Dynamic based on memory)
     max_cache_size: usize,
     /// Cache expiration time (Stage 65: TTL-based eviction)
@@ -60,7 +60,7 @@ pub struct RuntimeLite {
 
     /// Stage 63: Inline cache for fast property access and function calls
     /// ⚡ Lazy initialized: only created when actually needed (Stage 67 optimization)
-    inline_cache: Arc<OnceCell<std::sync::Mutex<HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>>>>>>,
+    inline_cache: Arc<OnceCell<std::sync::Mutex<HashMap<CacheKey, CacheEntry>>>>,
     cache_stats: Arc<OnceCell<CacheStatistics>>,
 
     /// Stage 64: V8 Context Pool for reusing initialized contexts
@@ -153,7 +153,7 @@ impl RuntimeLite {
 
         // Stage 64: Initialize V8 Context Pool for performance optimization
         // Keep up to 4 contexts, each valid for 10 minutes
-        let context_pool: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(V8ContextPool::new(4, Duration::from_secs(600))))));
+        let context_pool: _ = Arc::new(Mutex::new(V8ContextPool::new(4, Duration::from_secs(600))));
 
         // Stage 69 Phase 2: Initialize high-performance V8 configuration
         // Use high_performance configuration for maximum speed
@@ -186,13 +186,13 @@ impl RuntimeLite {
 
         Ok(Self {
             execution_count: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)))))),
-            script_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))))),
+            script_cache: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))),
             cache_hits: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)))))),
             cache_misses: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)))))),
             max_cache_size: 200, // Stage 65: Increased from 100 to 200
             cache_ttl: Duration::from_secs(300), // Stage 65: 5 minute TTL
             v8_snapshot,
-            memory_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(SmartMemoryPool::new(PoolConfig::default()))))),
+            memory_pool: Arc::new(Mutex::new(SmartMemoryPool::new(PoolConfig::default()))),
             jit_optimizer,
             hot_path_optimizer,
             optimization_pipeline,
@@ -237,7 +237,7 @@ impl RuntimeLite {
         let cache_stats: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(OnceCell::new())))));
 
         // Stage 64: Initialize V8 Context Pool for performance optimization
-        let context_pool: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(V8ContextPool::new(4, Duration::from_secs(600))))));
+        let context_pool: _ = Arc::new(Mutex::new(V8ContextPool::new(4, Duration::from_secs(600))));
 
         // Stage 69 Phase 2: Use provided V8 configuration
         let v8_config: _ = config;
@@ -267,13 +267,13 @@ impl RuntimeLite {
 
         Ok(Self {
             execution_count: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)))))),
-            script_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))))),
+            script_cache: Arc::new(Mutex::new(std::sync::Mutex::new(HashMap::new()))),
             cache_hits: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)))))),
             cache_misses: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)))))),
             max_cache_size: 200,
             cache_ttl: Duration::from_secs(300),
             v8_snapshot,
-            memory_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(SmartMemoryPool::new(PoolConfig::default()))))),
+            memory_pool: Arc::new(Mutex::new(SmartMemoryPool::new(PoolConfig::default()))),
             jit_optimizer,
             hot_path_optimizer,
             optimization_pipeline,
@@ -341,7 +341,7 @@ impl RuntimeLite {
     }
 
     /// Get or initialize inline cache (lazy initialization)
-    fn get_inline_cache(&self) -> &std::sync::Mutex<HashMap<CacheKey, CacheEntry, std::collections::HashMap<CacheKey, CacheEntry, CacheKey, CacheEntry>>>>>>> {
+    fn get_inline_cache(&self) -> &std::sync::Mutex<HashMap<CacheKey, CacheEntry>> {
         self.inline_cache.get_or_init(|| {
             eprintln!("[LAZY] Initializing inline cache on first use...");
             std::sync::Mutex::new(HashMap::new())
@@ -1905,7 +1905,7 @@ static GLOBAL_LITE_RUNTIME: std::sync::OnceLock<std::sync::Arc<RuntimeLite>> = s
 /// Get or create the global lightweight runtime (maximum reuse)
 pub fn get_global_lite_runtime(verbose: bool) -> Result<std::sync::Arc<RuntimeLite>> {
     GLOBAL_LITE_RUNTIME.get_or_init(|| {
-        std::sync::Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RuntimeLite::new(verbose)))))).expect("Failed to create lite runtime"))
+        std::sync::Arc::new(Mutex::new(RuntimeLite::new(verbose)))
     });
 
     Ok(GLOBAL_LITE_RUNTIME.get().unwrap().clone())
@@ -1967,8 +1967,8 @@ impl RuntimeLite {
         let script_stem: _ = script_path.file_stem()
             .ok_or_else(|| anyhow::anyhow!("Invalid script path"))?;
 
-        let wasm_path: _ = script_path.with_file_name(format!("{}.wasm", script_stem.to_string_lossy());
-        let wasm_js_path: _ = script_path.with_file_name(format!("{}.wasm.js", script_stem.to_string_lossy());
+        let wasm_path: _ = script_path.with_file_name(format!("{}.wasm", script_stem.to_string_lossy()));
+        let wasm_js_path: _ = script_path.with_file_name(format!("{}.wasm.js", script_stem.to_string_lossy()));
 
         // 检查是否存在 WASM 文件
         let wasm_file_path: _ = if wasm_path.exists() {

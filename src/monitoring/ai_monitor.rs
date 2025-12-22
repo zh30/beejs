@@ -51,9 +51,9 @@ pub enum AlertSeverity {
 
 /// 实时性能监控器
 pub struct RealtimePerformanceMonitor {
-    metrics: Arc<RwLock<HashMap<String, Vec<PerformanceMetrics, std::collections::HashMap<String, Vec<PerformanceMetrics, String, Vec<PerformanceMetrics>>>>>>>>,
-    alerts: Arc<RwLock<Vec<Alert>>,
-    thresholds: Arc<RwLock<HashMap<MetricType, f64, std::collections::HashMap<MetricType, f64, MetricType, f64>>>>>>>,
+    metrics: Arc<RwLock<HashMap<String, Vec<PerformanceMetrics>>>,
+    alerts: Arc<RwLock<Vec<Alert>>>,
+    thresholds: Arc<RwLock<HashMap<MetricType, f64>>>,
 }
 
 impl RealtimePerformanceMonitor {
@@ -66,15 +66,15 @@ impl RealtimePerformanceMonitor {
         thresholds.insert(MetricType::ErrorRate, 5.0); // %
 
         Self {
-            metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
-            alerts: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
-            thresholds: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(thresholds)))))),
+            metrics: Arc::new(Mutex::new(HashMap::new()))
+            alerts: Arc::new(Mutex::new(Vec::new()))
+            thresholds: Arc::new(Mutex::new(thresholds)))
         }
     }
 
     pub async fn record_metric(&self, metric: PerformanceMetrics) {
         let mut metrics = self.metrics.write().await;
-        let key: _ = format!("{}:{}", metric.metric_type, metric.source);
+        let key: _ = format!("{}:{}, metric.metric_type", metric.source));
 
         metrics.entry(key).or_insert_with(Vec::new).push(metric);
 

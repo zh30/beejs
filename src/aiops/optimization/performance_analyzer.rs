@@ -43,7 +43,7 @@ pub struct PerformanceMetric {
     /// 时间戳
     pub timestamp: SystemTime,
     /// 标签
-    pub labels: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub labels: HashMap<String, String>,
 }
 
 /// 性能指标集合

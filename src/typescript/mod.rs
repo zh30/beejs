@@ -5,8 +5,6 @@
 pub mod compiler;
 
 pub use compiler::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
     TypeScriptCompiler, TypeScriptCompilerConfig, TypeScriptTarget, TypeScriptModule,
     CompilationOutput, TypeScriptError, ErrorSeverity,
 };

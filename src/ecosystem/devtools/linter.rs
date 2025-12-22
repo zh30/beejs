@@ -89,7 +89,7 @@ impl Linter {
     /// 使用自定义规则创建检查器
     pub fn with_rules(rules: Vec<LintRule>) -> Self {
         Self {
-            rules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(rules)))))),
+            rules: Arc::new(Mutex::new(rules)))
         }
     }
 
@@ -686,7 +686,7 @@ impl Linter {
 #[derive(Debug, Clone)]
 pub struct RuleStats {
     pub total_rules: usize,
-    pub category_counts: HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>>,
+    pub category_counts: HashMap<String, usize>,
     pub auto_fixable_count: usize,
 }
 
@@ -746,7 +746,7 @@ use std::collections::{HashMap, BTreeMap};
         let result: _ = linter.auto_fix(source).await.unwrap();
 
         assert!(result.fixes_applied > 0);
-        assert!(!result.fixed_code.contains(";;"));
+        assert!(!result.fixed_code.contains("));;"));
         assert!(!result.fixed_code.contains("var "));
     }
 

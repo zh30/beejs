@@ -6,8 +6,6 @@ pub mod sampling;
 
 pub use ring_buffer::RingBuffer;
 pub use sampling::{
-use std::sync::{Arc, Mutex, RwLock};
-use std::collections::{HashMap, BTreeMap};
     SamplingConfig, SamplingDecision, SamplingStats, SamplingStrategy, PerformanceEvent,
     PerformanceEventType,
 };

@@ -107,7 +107,7 @@ impl InitCommand {
         // 3. 根据模板生成文件
         self.formatter.progress_start(&format!(
             "Creating {} template files...",
-            self.template_name());
+            self.template_name()));
         self.generate_template_files(project_path)?;
         self.formatter.progress_done();
 
@@ -604,7 +604,7 @@ coverage/
         self.formatter.info(&format!(
             "Template: {} ({})",
             self.template_name(),
-            self.config.template.description());
+            self.config.template.description()));
         self.formatter.info("Documentation: https://beejs.dev/docs");
         println!();
     }

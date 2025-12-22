@@ -60,7 +60,7 @@ impl SnapshotPrettyPrinter {
                 comparison.name
             )
         } else {
-            let mut result = format!("✗ Snapshot mismatch for '{}'\n", comparison.name);
+            let mut result = format!("✗ Snapshot mismatch for '{}'\n", comparison.name));
             result.push_str("\nExpected:\n");
             if let Some(expected) = &comparison.expected {
                 result.push_str(&self.render(&expected));

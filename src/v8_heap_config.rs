@@ -320,7 +320,7 @@ use std::collections::{HashMap, BTreeMap};
             preset == V8HeapPreset::Small
                 || preset == V8HeapPreset::Default
                 || preset == V8HeapPreset::Minimal
-        );
+        )));
 
         // 复杂代码
         let complex: _ = r#"
@@ -340,7 +340,7 @@ use std::collections::{HashMap, BTreeMap};
             preset == V8HeapPreset::Small
                 || preset == V8HeapPreset::Default
                 || preset == V8HeapPreset::Large
-        );
+        )));
     }
 
     #[test]
@@ -401,6 +401,6 @@ use std::collections::{HashMap, BTreeMap};
             manager.current_preset() == V8HeapPreset::Default
                 || manager.current_preset() == V8HeapPreset::Large
                 || manager.current_preset() == V8HeapPreset::Small
-        );
+        )));
     }
 }

@@ -77,7 +77,7 @@ pub struct AdaptiveGCController {
     current_strategy: Arc<RwLock<GCStrategy>>,
     tuning: Arc<RwLock<GCTuning>>,
     statistics: Arc<RwLock<GCStatistics>>,
-    recent_events: Arc<RwLock<Vec<GCEvent>>,
+    recent_events: Arc<RwLock<Vec<GCEvent>>>,
     heap_metrics: Arc<RwLock<HeapMetrics>>,
     last_gc: Arc<RwLock<Instant>>,
 }
@@ -122,12 +122,12 @@ impl AdaptiveGCController {
     /// 创建新的自适应 GC 控制器
     pub fn new() -> Self {
         Self {
-            current_strategy: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(GCStrategy::Adaptive)))))),
-            tuning: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(GCTuning::default()))))),
-            statistics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(GCStatistics::default()))))),
-            recent_events: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Vec::new()))))),
-            heap_metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HeapMetrics::default()))))),
-            last_gc: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(Instant::now()))))),
+            current_strategy: Arc::new(Mutex::new(GCStrategy::Adaptive)))
+            tuning: Arc::new(Mutex::new(GCTuning::default()))
+            statistics: Arc::new(Mutex::new(GCStatistics::default()))
+            recent_events: Arc::new(Mutex::new(Vec::new()))
+            heap_metrics: Arc::new(Mutex::new(HeapMetrics::default()))
+            last_gc: Arc::new(Mutex::new(Instant::now()))
         }
     }
 

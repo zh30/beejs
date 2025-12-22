@@ -147,13 +147,13 @@ impl Default for AIWorkloadOptimizerConfig {
 #[derive(Debug)]
 struct MatrixOptimizer {
     cache: Arc<Mutex<HashMatrixCache>>,
-    memory_pool: Arc<Mutex<Vec<Vec<f32>>,
+    memory_pool: Arc<Mutex<Vec<Vec<f32>>>>,
 }
 
 /// 矩阵缓存
 #[derive(Debug, Default)]
 struct HashMatrixCache {
-    cache: HashMap<String, CachedMatrix, std::collections::HashMap<String, CachedMatrix, String, CachedMatrix>>>>>>>,
+    cache: HashMap<String, CachedMatrix>,
     max_size_mb: usize,
     current_size_mb: usize,
 }
@@ -169,7 +169,7 @@ struct CachedMatrix {
 /// 张量运算优化器
 #[derive(Debug)]
 struct TensorOptimizer {
-    cache: Arc<Mutex<HashMap<String, CachedTensor, std::collections::HashMap<String, CachedTensor, String, CachedTensor>>>>>>>,
+    cache: Arc<Mutex<HashMap<String, CachedTensor>>>,
     batch_processor: Arc<Mutex<BatchProcessor>>,
 }
 
@@ -222,20 +222,20 @@ impl AIWorkloadOptimizer {
     pub fn new(config: AIWorkloadOptimizerConfig) -> Self {
         Self {
             config: config.clone(),
-            matrix_optimizer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(MatrixOptimizer {
-                cache: Arc::new(Mutex::new(HashMatrixCache::default()))))),
-                memory_pool: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            matrix_optimizer: Arc::new(Mutex::new(MatrixOptimizer {)),
+                cache: Arc::new(Mutex::new(HashMatrixCache::default()))
+                memory_pool: Arc::new(Mutex::new(Vec::new()))
             }),
-            tensor_optimizer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(TensorOptimizer {
-                cache: Arc::new(Mutex::new(HashMap::new()))))),
-                batch_processor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BatchProcessor {
-                    pending_tasks: Vec::new()))))),
+            tensor_optimizer: Arc::new(Mutex::new(TensorOptimizer {)),
+                cache: Arc::new(Mutex::new(HashMap::new()))
+                batch_processor: Arc::new(Mutex::new(BatchProcessor {)),
+                    pending_tasks: Vec::new())
                     max_batch_size: config.max_batch_size,
                     batch_timeout_ms: 10, // 10ms 批处理超时
                 })),
             }),
-            cache_stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CacheStats::default()))))),
-            execution_stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ExecutionStats::default()))))),
+            cache_stats: Arc::new(Mutex::new(CacheStats::default()))
+            execution_stats: Arc::new(Mutex::new(ExecutionStats::default()))
         }
     }
 
@@ -311,7 +311,7 @@ impl AIWorkloadOptimizer {
     }
 
     /// SIMD 优化的矩阵乘法
-    fn optimized_matrix_multiply(&self, rows: usize, cols: usize, data: &[f32]) -> Result<Vec<f32>> {
+    fn optimized_matrix_multiply(&self, rows: usize, cols: usize, data: &[f32]) -> Result<Vec<f32> {
         // 简化的矩阵乘法实现
         // 实际实现应使用 SIMD 指令或 GPU
 
@@ -420,7 +420,7 @@ impl AIWorkloadOptimizer {
     }
 
     /// 应用图像滤镜
-    fn apply_image_filter(&self, data: &[u8]) -> Result<Vec<u8>> {
+    fn apply_image_filter(&self, data: &[u8]) -> Result<Vec<u8> {
         // 简化的滤镜实现
         Ok(data.to_vec())
     }
@@ -447,7 +447,7 @@ impl AIWorkloadOptimizer {
     }
 
     /// 数据归一化
-    fn normalize_data(&self, data: &[f32]) -> Result<Vec<f32>> {
+    fn normalize_data(&self, data: &[f32]) -> Result<Vec<f32> {
         let min: _ = data.iter().fold(f32::INFINITY, |a, &b| a.min(b));
         let max: _ = data.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
 

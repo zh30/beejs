@@ -276,10 +276,10 @@ impl Stage93ZeroCopyOptimizer {
         Self {
             base,
             config,
-            pattern_analyzer: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AccessPatternAnalyzer::new(window_size)))))),
-            ai_predictor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(AiAccessPredictor::new()))))),
-            dynamic_pool_manager: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(DynamicPoolManager::new(1024)))))),
-            performance_metrics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Stage93PerformanceMetrics::default()))))),
+            pattern_analyzer: Arc::new(Mutex::new(AccessPatternAnalyzer::new(window_size)))
+            ai_predictor: Arc::new(Mutex::new(AiAccessPredictor::new()))
+            dynamic_pool_manager: Arc::new(Mutex::new(DynamicPoolManager::new(1024)))
+            performance_metrics: Arc::new(Mutex::new(Stage93PerformanceMetrics::default()))
         }
     }
 
@@ -298,7 +298,7 @@ impl Stage93ZeroCopyOptimizer {
                 .rev()
                 .take(10)
                 .map(|(addr, _)| *addr)
-                .collect::<Vec<_>>();
+                .collect::<Vec<_>();
 
             if let Some(predicted_addr) = self.ai_predictor.write().await.predict_next_address(&recent_addresses) {
                 // 预取预测的地址

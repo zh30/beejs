@@ -33,7 +33,7 @@ pub struct Breakpoint {
 /// Breakpoint manager
 pub struct BreakpointManager {
     next_id: u32,
-    breakpoints: HashMap<u32, Breakpoint, std::collections::HashMap<u32, Breakpoint, u32, Breakpoint>>>>>>>,
+    breakpoints: HashMap<u32, Breakpoint>,
 }
 
 impl BreakpointManager {
@@ -61,7 +61,7 @@ impl BreakpointManager {
         self.breakpoints.get(&id)
     }
 
-    pub async fn should_break(&self, id: u32, _variables: &HashMap<String, JsValue, std::collections::HashMap<String, JsValue, String, JsValue>>>>>>>) -> Result<bool> {
+    pub async fn should_break(&self, id: u32, _variables: &HashMap<String, JsValue>) -> Result<bool> {
         if let Some(bp) = self.breakpoints.get(&id) {
             // TODO: Evaluate condition
             Ok(true)
@@ -85,7 +85,7 @@ impl VariableInspector {
         Self {}
     }
 
-    pub async fn inspect_variables(&self, variables: &HashMap<String, JsValue, std::collections::HashMap<String, JsValue, String, JsValue>>>>>>>) -> Result<HashMap<String, JsValue, std::collections::HashMap<String, JsValue, String, JsValue>>>>>>> {
+    pub async fn inspect_variables(&self, variables: &HashMap<String, JsValue>) -> Result<HashMap<String, JsValue> {
         // Return a copy or transformed version
         Ok(variables.clone())
     }

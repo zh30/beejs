@@ -59,7 +59,7 @@ pub struct TlsConfig {
 #[derive(Debug)]
 pub struct CertificateManager {
     // 证书存储
-    certificates: std::collections::HashMap<String, Certificate, std::collections::HashMap<String, Certificate, String, Certificate>>>>>>>,
+    certificates: std::collections::HashMap<String, Certificate>,
 }
 
 impl CertificateManager {
@@ -114,7 +114,7 @@ impl TlsConfig {
                 CipherSuite::Chacha20Poly1305,
                 CipherSuite::Aes128Gcm,
             ],
-            cert_manager: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(CertificateManager::new()))))).expect("Failed to create certificate manager")),
+            cert_manager: Arc::new(Mutex::new(CertificateManager::new()),.expect("Failed to create certificate manager")),
         }
     }
 

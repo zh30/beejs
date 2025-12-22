@@ -646,7 +646,7 @@ fn url_format_callback(
             .and_then(|v| v.to_string(scope).map(|s| s.to_rust_string_lossy(scope))
             .unwrap_or_default();
 
-        href = format!("{}{}{}", protocol, hostname, pathname);
+        href = format!("{}{}{}, protocol, hostname", pathname));
     }
 
     retval.set(v8::String::new(scope, &href).unwrap().into());
@@ -708,7 +708,7 @@ fn parse_url_string(url: &str, base: &str) -> Option<ParsedUrl> {
 
     // 提取协议
     if let Some(colon_pos) = url.find("://") {
-        parts.protocol = format!("{}:", &url[..colon_pos + 1]);
+        parts.protocol = format!("{}:, &url[..colon_pos + 1]"));
         let remainder: _ = &url[colon_pos + 3..];
 
         // 提取主机和路径

@@ -27,7 +27,7 @@ impl IOWorkload {
     /// 执行工作负载
     pub async fn execute(
         &self,
-        parameters: HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>>>>>,
+        parameters: HashMap<String, serde_json::Value>>,
         concurrency: u32,
     ) -> Result<WorkloadResult> {
         let mut result = WorkloadResult::new(self.workload_type);
@@ -159,7 +159,7 @@ impl Default for IOWorkload {
 }
 
 /// 获取迭代次数
-fn get_iterations(parameters: &HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>>>>>) -> u32 {
+fn get_iterations(parameters: &HashMap<String, serde_json::Value>) -> u32 {
     parameters
         .get("iterations")
         .and_then(|v| v.as_u64())
@@ -168,7 +168,7 @@ fn get_iterations(parameters: &HashMap<String, serde_json::Value, std::collectio
 }
 
 /// 获取操作类型
-fn get_operation(parameters: &HashMap<String, serde_json::Value, std::collections::HashMap<String, serde_json::Value, String, serde_json::Value>>>>>>>) -> String {
+fn get_operation(parameters: &HashMap<String, serde_json::Value>) -> String {
     parameters
         .get("operation")
         .and_then(|v| v.as_str())

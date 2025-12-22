@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex, RwLock};
 use std::collections::{HashMap, BTreeMap};
-//! 全息图像生成器
+// 全息图像生成器
 
 /// 全息图类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

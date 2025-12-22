@@ -36,7 +36,7 @@ struct CacheMetadata {
 #[derive(Debug)]
 pub struct LocalCodeCache {
     cache_dir: PathBuf,
-    index: Arc<RwLock<HashMap<String, CacheMetadata, std::collections::HashMap<String, CacheMetadata, String, CacheMetadata>>>>>>>,
+    index: Arc<RwLock<HashMap<String, CacheMetadata>>>,
     compressor: Arc<Compressor>,
 }
 
@@ -51,7 +51,7 @@ impl Compressor {
         Compressor { enabled }
     }
 
-    pub async fn compress(&self, data: &[u8]) -> Result<Vec<u8>> {
+    pub async fn compress(&self, data: &[u8]) -> Result<Vec<u8> {
         if self.enabled {
             // Simple compression (in real implementation, use gzip or zstd)
             Ok(data.to_vec())
@@ -60,7 +60,7 @@ impl Compressor {
         }
     }
 
-    pub async fn decompress(&self, data: &[u8]) -> Result<Vec<u8>> {
+    pub async fn decompress(&self, data: &[u8]) -> Result<Vec<u8> {
         if self.enabled {
             // Simple decompression
             Ok(data.to_vec())
@@ -78,8 +78,8 @@ impl LocalCodeCache {
 
         let cache: _ = LocalCodeCache {
             cache_dir: cache_dir.clone(),
-            index: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
-            compressor: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Compressor::new(true)))))),
+            index: Arc::new(Mutex::new(HashMap::new()))
+            compressor: Arc::new(Mutex::new(Compressor::new(true)))
         };
 
         // Load existing index
@@ -231,7 +231,7 @@ impl LocalCodeCache {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
 
-        let loaded_index: HashMap<String, CacheMetadata, std::collections::HashMap<String, CacheMetadata, String, CacheMetadata>>>>>>> = serde_json::from_str(&contents)?;
+        let loaded_index: HashMap<String, CacheMetadata> = serde_json::from_str(&contents)?;
         let mut index = self.index.write().await;
         index.extend(loaded_index);
 
@@ -264,7 +264,7 @@ pub struct CacheStats {
 #[derive(Debug)]
 pub struct OfflineDataStore {
     db_path: PathBuf,
-    data: Arc<RwLock<HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>>>>,
+    data: Arc<RwLock<HashMap<String, Vec<u8>>>,
 }
 
 /// Sync result
@@ -307,7 +307,7 @@ impl OfflineDataStore {
     pub async fn new(db_path: PathBuf) -> Result<Self> {
         let store: _ = OfflineDataStore {
             db_path: db_path.clone(),
-            data: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            data: Arc::new(Mutex::new(HashMap::new()))
         };
 
         // Load existing data
@@ -330,7 +330,7 @@ impl OfflineDataStore {
     }
 
     /// Load data
-    pub async fn load_data(&self, key: &str) -> Result<Option<Vec<u8>> {
+    pub async fn load_data(&self, key: &str) -> Result<Option<Vec<u8> {
         let data_map: _ = self.data.read().await;
         let result: _ = data_map.get(key).cloned();
 
@@ -367,7 +367,7 @@ impl OfflineDataStore {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
 
-        let loaded_data: HashMap<String, Vec<u8, std::collections::HashMap<String, Vec<u8, String, Vec<u8>>>>>>> = serde_json::from_str(&contents)?;
+        let loaded_data: HashMap<String, Vec<u8> = serde_json::from_str(&contents)?;
         let mut data_map = self.data.write().await;
         data_map.extend(loaded_data);
 
@@ -405,7 +405,7 @@ impl ConflictResolver {
         ConflictResolver { strategy }
     }
 
-    pub async fn resolve(&self, conflicts: &[Conflict]) -> Result<Vec<Resolution>> {
+    pub async fn resolve(&self, conflicts: &[Conflict]) -> Result<Vec<Resolution> {
         let mut resolutions = Vec::new();
 
         for conflict in conflicts {
@@ -447,7 +447,7 @@ impl SyncManager {
     /// Create a new sync manager
     pub async fn new() -> Result<Self> {
         let sync_manager: _ = SyncManager {
-            conflict_resolver: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(ConflictResolver::new(MergeStrategy::LatestWins)))))),
+            conflict_resolver: Arc::new(Mutex::new(ConflictResolver::new(MergeStrategy::LatestWins)))
             merge_strategy: MergeStrategy::LatestWins,
         };
 
@@ -473,7 +473,7 @@ impl SyncManager {
     }
 
     /// Resolve conflicts
-    pub async fn resolve_conflicts(&self, conflicts: &[Conflict]) -> Result<Vec<Resolution>> {
+    pub async fn resolve_conflicts(&self, conflicts: &[Conflict]) -> Result<Vec<Resolution> {
         self.conflict_resolver.resolve(conflicts).await
     }
 

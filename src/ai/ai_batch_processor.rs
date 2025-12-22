@@ -90,12 +90,12 @@ impl Default for BatchConfig {
 /// AI批量处理器
 pub struct AiBatchProcessor {
     config: BatchConfig,
-    pending_tasks: Arc<Mutex<VecDeque<(usize, AiTaskType)>>,
+    pending_tasks: Arc<Mutex<VecDeque<(usize, AiTaskType)>>>,
     active_batches: Arc<Mutex<usize>>,
     batch_semaphore: Arc<Semaphore>,
     next_task_id: Arc<Mutex<usize>>,
     stats: Arc<Mutex<BatchStats>>,
-    results: Arc<Mutex<Vec<(usize, AiTaskResult)>>,
+    results: Arc<Mutex<Vec<(usize, AiTaskResult)>>>,
 }
 
 /// 批处理统计信息
@@ -142,15 +142,15 @@ impl BatchStats {
 impl AiBatchProcessor {
     /// 创建新的AI批量处理器
     pub fn new(config: BatchConfig) -> Self {
-        let max_concurrent_batches: _ = config.max_concurrent_batches;
+        let max_concurrent_batches = config.max_concurrent_batches;
         Self {
             config,
-            pending_tasks: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(VecDeque::new()))))),
-            active_batches: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(0)))))),
-            batch_semaphore: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Semaphore::new(max_concurrent_batches)))))),
-            next_task_id: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(0)))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BatchStats::default()))))),
-            results: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Vec::new()))))),
+            pending_tasks: Arc::new(Mutex::new(VecDeque::new())),
+            active_batches: Arc::new(Mutex::new(0)),
+            batch_semaphore: Arc::new(Semaphore::new(max_concurrent_batches)),
+            next_task_id: Arc::new(Mutex::new(0)),
+            stats: Arc::new(Mutex::new(BatchStats::default())),
+            results: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -227,7 +227,7 @@ impl AiBatchProcessor {
 
     /// 运行单个批次
     async fn run_batch(
-        pending_tasks: Arc<Mutex<VecDeque<(usize, AiTaskType)>>,
+        pending_tasks: Arc<Mutex<VecDeque<(usize, AiTaskType)>>>,
         stats: Arc<Mutex<BatchStats>>,
         config: BatchConfig,
     ) -> Vec<(usize, AiTaskResult)> {

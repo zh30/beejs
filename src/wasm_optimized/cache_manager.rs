@@ -61,8 +61,8 @@ pub struct CacheConfig {
 
 /// WASM 缓存管理器
 pub struct WasmCacheManager {
-    cache: Arc<RwLock<LruCache<String, CacheEntry>>,
-    access_patterns: Arc<RwLock<HashMap<String, AccessPattern, std::collections::HashMap<String, AccessPattern, String, AccessPattern>>>>>>>,
+    cache: Arc<RwLock<LruCache<String, CacheEntry>>>,
+    access_patterns: Arc<RwLock<HashMap<String, AccessPattern>>>,
     config: CacheConfig,
     statistics: Arc<RwLock<CacheStatistics>>,
 }
@@ -81,13 +81,13 @@ impl WasmCacheManager {
         info!("🚀 初始化 WASM 缓存管理器 (策略: {:?}, 最大大小: {}, 最大内存: {}MB)",
               config.strategy, config.max_size, config.max_memory_mb);
 
-        let cache: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(LruCache::new(NonZero::new(config.max_size)))))).unwrap_or(NonZero::new(100).unwrap());
+        let cache: _ = Arc::new(Mutex::new(LruCache::new(NonZero::new(config.max_size).unwrap_or_else(|| NonZero::new(100).unwrap()))));
 
         let manager: _ = Self {
             cache,
-            access_patterns: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(HashMap::new()))))),
+            access_patterns: Arc::new(Mutex::new(HashMap::new())),
             config,
-            statistics: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(CacheStatistics {
+            statistics: Arc::new(Mutex::new(CacheStatistics {
                 total_entries: 0,
                 hits: 0,
                 misses: 0,
@@ -95,7 +95,7 @@ impl WasmCacheManager {
                 hit_rate: 0.0,
                 avg_access_time_ms: 0.0,
                 total_size_bytes: 0,
-            })))))),
+            }))
         };
 
         info!("✅ 缓存管理器初始化完成");
@@ -103,7 +103,7 @@ impl WasmCacheManager {
     }
 
     /// 获取缓存的模块
-    pub async fn get(&self, name: &str) -> Result<Option<Arc<Module>> {
+    pub async fn get(&self, name: &str) -> Result<Option<Arc<Module>>> {
         let start_time: _ = std::time::Instant::now();
 
         let mut cache = self.cache.write().await;
@@ -130,7 +130,7 @@ impl WasmCacheManager {
             debug!("✅ 缓存命中: {} (访问时间: {:.2}ms)", name,
                    start_time.elapsed().as_secs_f64() * 1000.0);
 
-            return Ok(Some(Arc::clone(&entry.module));
+            return Ok(Some(Arc::clone(&entry.module)));
         }
 
         // 缓存未命中
@@ -200,7 +200,7 @@ impl WasmCacheManager {
     }
 
     /// 智能预热 - 基于访问模式
-    pub async fn smart_prewarm(&self, usage_history: &HashMap<String, usize, std::collections::HashMap<String, usize, String, usize>>>>>>>) -> Result<()> {
+    pub async fn smart_prewarm(&self, usage_history: &HashMap<String, usize>) -> Result<()> {
         info!("🧠 开始智能预热 (基于 {} 个模块的使用历史)", usage_history.len());
 
         let start_time: _ = std::time::Instant::now();
@@ -274,7 +274,7 @@ impl WasmCacheManager {
     /// 获取缓存内容
     pub async fn get_cache_contents(&self) -> Vec<(String, CacheEntry)> {
         let cache: _ = self.cache.read().await;
-        cache.iter().map(|(name, entry)| (name.clone(), entry.clone()).collect()
+        cache.iter().map(|(name, entry)| (name.clone(), entry.clone())).collect()
     }
 
     /// 记录缓存命中

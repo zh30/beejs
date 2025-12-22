@@ -78,8 +78,8 @@ impl TorchEngine {
         let device: _ = Self::detect_device(&options.engine_type)?;
 
         // 初始化统计信息
-        let stats: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(EngineStats {
-            engine_name: "PyTorch-TorchScript".to_string()))))),
+        let stats: _ = Arc::new(Mutex::new(EngineStats {
+            engine_name: "PyTorch-TorchScript".to_string(),
             total_inferences: 0,
             successful_inferences: 0,
             failed_inferences: 0,
@@ -262,7 +262,7 @@ impl InferenceEngine for TorchEngine {
         &self,
         model: &ModelHandle,
         input: Tensor,
-    ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>> {
+    ) -> Result<tokio::sync::mpsc::Receiver<Result<Tensor>>> {
         let (tx, rx) = tokio::sync::mpsc::channel(16);
 
         // 模拟流式推理
@@ -365,8 +365,8 @@ impl InferenceEngine for TorchEngine {
     fn clone_engine(&self) -> Box<dyn InferenceEngine> {
         Box::new(TorchEngine {
             engine_type: self.engine_type.clone(),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(RwLock::new(EngineStats {
-                engine_name: "PyTorch-TorchScript".to_string()))))),
+            stats: Arc::new(Mutex::new(EngineStats {
+                engine_name: "PyTorch-TorchScript".to_string(),
                 total_inferences: 0,
                 successful_inferences: 0,
                 failed_inferences: 0,

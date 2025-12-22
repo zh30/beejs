@@ -49,7 +49,7 @@ pub struct HolographicStorage {
     /// 配置
     config: StorageConfig,
     /// 存储的数据
-    data: HashMap<String, StoredHologram, std::collections::HashMap<String, StoredHologram, String, StoredHologram>>>>>>>,
+    data: HashMap<String, StoredHologram>,
     /// 总存储大小
     total_size: usize,
     /// 压缩后大小
@@ -89,9 +89,9 @@ impl HolographicStorage {
         Ok(())
     }
 
-    /// 读取全息数据
     pub fn retrieve(&self, name: &str) -> Result<Vec<u8>, StorageError> {
-        let stored: _ = self.data.get(name).ok_or(StorageError::NotFound(name.to_string())?;
+    /// 读取全息数据
+        let stored: _ = self.data.get(name).ok_or(StorageError::NotFound(name.to_string()))?;
         self.decompress(&stored.data)
     }
 
@@ -102,7 +102,7 @@ impl HolographicStorage {
             self.compressed_size -= stored.compressed_size;
             Ok(())
         } else {
-            Err(StorageError::NotFound(name.to_string())
+            Err(StorageError::NotFound(name.to_string()))
         }
     }
 

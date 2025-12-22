@@ -37,7 +37,7 @@ pub struct BeejsClusterSpec {
     pub distributed: DistributedConfig,
 
     /// Node selector for scheduling
-    pub node_selector: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub node_selector: Option<HashMap<String, String>>,
 
     /// Tolerations for node taints
     pub tolerations: Option<Vec<Toleration>>,
@@ -212,7 +212,7 @@ pub struct WeightedPodAffinityTerm {
 #[cfg_attr(test, derive(Default))]
 pub struct LabelSelector {
     /// Match labels
-    pub match_labels: Option<HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    pub match_labels: Option<HashMap<String, String>>,
 
     /// Match expressions
     pub match_expressions: Option<Vec<LabelSelectorRequirement>>,
@@ -376,7 +376,7 @@ use std::collections::{HashMap, BTreeMap};
         assert_eq!(resources.cpu, "4");
         assert_eq!(resources.memory, "8Gi");
         assert_eq!(resources.disk, "100Gi");
-        assert_eq!(resources.gpu, Some("nvidia-tesla-v100".to_string());
+        assert_eq!(resources.gpu, Some("nvidia-tesla-v100".to_string()));
     }
 
     #[test]

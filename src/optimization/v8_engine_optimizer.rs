@@ -246,13 +246,13 @@ impl InlineCacheOptimizer {
 /// Hot path detector for optimization opportunities
 pub struct HotPathDetector {
     /// Function call counts
-    function_calls: std::collections::HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
+    function_calls: std::collections::HashMap<String, u64>,
 
     /// Loop execution counts
-    loop_executions: std::collections::HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
+    loop_executions: std::collections::HashMap<String, u64>,
 
     /// Conditional branch counts
-    branch_counts: std::collections::HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>,
+    branch_counts: std::collections::HashMap<String, u64>,
 
     /// Hot threshold
     hot_threshold: AtomicU64,

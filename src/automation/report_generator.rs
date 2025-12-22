@@ -132,15 +132,15 @@ pub struct ReportData {
 /// 报告生成器
 pub struct ReportGenerator {
     output_dir: PathBuf,
-    template_cache: HashMap<String, String, std::collections::HashMap<String, String, String, String>>>>>>>,
+    template_cache: HashMap<String, String>,
 }
 
 /// 报告统计信息
 #[derive(Debug, Clone)]
 pub struct ReportStats {
     pub total_reports_generated: usize,
-    pub reports_by_format: HashMap<ReportFormat, usize, std::collections::HashMap<ReportFormat, usize, ReportFormat, usize>>>>>>>,
-    pub reports_by_type: HashMap<ReportType, usize, std::collections::HashMap<ReportType, usize, ReportType, usize>>>>>>>,
+    pub reports_by_format: HashMap<ReportFormat, usize>,
+    pub reports_by_type: HashMap<ReportType, usize>,
     pub total_size_bytes: u64,
     pub average_generation_time_ms: u64,
 }
@@ -334,12 +334,12 @@ impl ReportGenerator {
             ReportFormat::Csv => self.generate_csv_report(data, config)?,
             ReportFormat::Pdf => {
                 return Err(ReportError::InvalidFormat(
-                    "PDF generation not yet implemented".to_string())
+                    "PDF generation not yet implemented".to_string()))
             }
         };
 
         fs::write(&output_path, content)
-            .map_err(|e| ReportError::SaveError(e.to_string())?;
+            .map_err(|e| ReportError::SaveError(e.to_string()))?;
 
         println!("📄 Report generated: {}", output_path.display());
 
@@ -353,7 +353,7 @@ impl ReportGenerator {
         _config: &ReportOutput,
     ) -> Result<String, ReportError> {
         serde_json::to_string_pretty(data)
-            .map_err(|e| ReportError::GenerationError(e.to_string())
+            .map_err(|e| ReportError::GenerationError(e.to_string()))
     }
 
     /// 生成 HTML 格式报告
@@ -378,7 +378,7 @@ impl ReportGenerator {
         html.push_str("<div class='metadata'>\n");
         let generated_time: _ = UNIX_EPOCH + std::time::Duration::from_secs(data.metadata.generated_at);
         html.push_str(&format!("<p><strong>Generated:</strong> {}</p>\n",
-            generated_time.duration_since(UNIX_EPOCH).unwrap().as_secs());
+            generated_time.duration_since(UNIX_EPOCH).unwrap().as_secs()));
         html.push_str(&format!("<p><strong>Environment:</strong> {}</p>\n", data.metadata.environment));
         html.push_str(&format!("<p><strong>Version:</strong> {}</p>\n", data.metadata.version));
         html.push_str("</div>\n");
@@ -464,7 +464,7 @@ impl ReportGenerator {
         md.push_str("## Metadata\n\n");
         let generated_time: _ = UNIX_EPOCH + std::time::Duration::from_secs(data.metadata.generated_at);
         md.push_str(&format!("- **Generated:** {}\n",
-            generated_time.duration_since(UNIX_EPOCH).unwrap().as_secs());
+            generated_time.duration_since(UNIX_EPOCH).unwrap().as_secs()));
         md.push_str(&format!("- **Environment:** {}\n", data.metadata.environment));
         md.push_str(&format!("- **Version:** {}\n\n", data.metadata.version));
 

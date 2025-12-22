@@ -12,7 +12,7 @@ use std::collections::{HashMap, BTreeMap};
 #[derive(Debug, Clone)]
 pub struct VersionManager {
     registry: Arc<ModuleRegistry>,
-    versions: HashMap<String, Vec<ModuleVersion, std::collections::HashMap<String, Vec<ModuleVersion, String, Vec<ModuleVersion>>>>>>>,
+    versions: HashMap<String, Vec<ModuleVersion>>,
 }
 
 impl VersionManager {
@@ -71,7 +71,7 @@ impl VersionManager {
 
     /// 发布新版本
     pub async fn publish_version(&self, version: &ModuleVersion) -> Result<(), Box<dyn std::error::Error>> {
-        let module_name: _ = &format!("module-{}", version.version);
+        let module_name: _ = &format!("module-{}", version.version));
 
         // 在实际实现中，这里会：
         // 1. 验证版本号格式
@@ -119,7 +119,7 @@ impl VersionManager {
     }
 
     /// 获取模块的所有版本
-    pub fn get_versions(&self, module_name: &str) -> Option<&Vec<ModuleVersion>> {
+    pub fn get_versions(&self, module_name: &str) -> Option<&Vec<ModuleVersion> {
         self.versions.get(module_name)
     }
 

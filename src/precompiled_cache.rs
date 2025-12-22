@@ -36,7 +36,7 @@ pub struct PrecompiledModuleCache {
     /// 缓存目录
     cache_dir: PathBuf,
     /// 内存缓存的模块
-    modules: Arc<Mutex<HashMap<String, PrecompiledModuleEntry, std::collections::HashMap<String, PrecompiledModuleEntry, String, PrecompiledModuleEntry>>>>>>>,
+    modules: Arc<Mutex<HashMap<String, PrecompiledModuleEntry>>>,
     /// 统计信息
     stats: Arc<Mutex<PrecompiledCacheStats>>,
     /// V8 字节码缓存
@@ -62,9 +62,9 @@ impl PrecompiledModuleCache {
 
         Ok(Self {
             cache_dir,
-            modules: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(HashMap::new()))))),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(PrecompiledCacheStats::default()))))),
-            bytecode_cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(BytecodeCache::new(cache_config)))))),
+            modules: Arc::new(Mutex::new(HashMap::new()))
+            stats: Arc::new(Mutex::new(PrecompiledCacheStats::default()))
+            bytecode_cache: Arc::new(Mutex::new(BytecodeCache::new(cache_config)))
         })
     }
 
@@ -167,7 +167,7 @@ impl PrecompiledModuleCache {
     }
 
     /// 获取预编译字节码
-    pub fn get_precompiled_bytecode(&self, module_name: &str) -> Option<Vec<u8>> {
+    pub fn get_precompiled_bytecode(&self, module_name: &str) -> Option<Vec<u8> {
         let modules: _ = self.modules.lock().unwrap();
 
         if let Some(entry) = modules.get(module_name) {
@@ -235,7 +235,7 @@ impl PrecompiledModuleCache {
     }
 
     /// 编译源码为字节码
-    fn compile_to_bytecode(&self, source: &str) -> Result<Vec<u8>> {
+    fn compile_to_bytecode(&self, source: &str) -> Result<Vec<u8> {
         // 这里我们需要集成 V8 编译逻辑
         // 暂时返回模拟字节码
         let bytecode: _ = source.as_bytes().to_vec();

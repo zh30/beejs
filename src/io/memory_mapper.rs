@@ -78,7 +78,7 @@ impl MappingCache {
         use std::num::NonZeroUsize;
         Self {
             cache: lru::LruCache::new(NonZeroUsize::new(capacity.max(1)).unwrap()),
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)))))),
+            stats: Arc::new(Mutex::new(AtomicUsize::new(0))),
             max_entries: capacity,
         }
     }
@@ -125,11 +125,10 @@ impl MemoryMapper {
     /// Create a new memory mapper
     pub fn new(cache_size: usize) -> Result<Self> {
         let page_size: _ = unsafe { libc::sysconf(libc::_SC_PAGESIZE) } as usize;
-
         Ok(Self {
-            cache: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(tokio::sync::Mutex::new(MappingCache::new(cache_size)))))),
+            cache: Arc::new(Mutex::new(tokio::sync::Mutex::new(MappingCache::new(cache_size)))),
             page_size,
-            stats: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(AtomicUsize::new(0)))))),
+            stats: Arc::new(Mutex::new(AtomicUsize::new(0))),
         })
     }
 
@@ -174,7 +173,7 @@ impl MemoryMapper {
         let mmap: _ = unsafe { mmap_options.map(&file)? };
 
         // Wrap in Arc for sharing
-        let mmap_arc: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(mmap))))));
+        let mmap_arc: _ = Arc::new(Mutex::new(mmap));
 
         // Update cache
         {
@@ -211,7 +210,7 @@ impl MemoryMapper {
         let mmap: _ = unsafe { MmapOptions::new().map(&file)? };
 
         Ok(MappedFile {
-            mmap: Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(mmap)))))),
+            mmap: Arc::new(Mutex::new(mmap)),
             path: base.path.clone(),
             size: base.size,
         })

@@ -68,8 +68,8 @@ pub enum OptimizationFlag {
 /// Hot path optimizer for critical code paths
 #[derive(Debug)]
 pub struct HotPathOptimizer {
-    hot_paths: HashMap<String, HotPathInfo, std::collections::HashMap<String, HotPathInfo, String, HotPathInfo>>>>>>>,
-    execution_counters: HashMap<String, u64, std::collections::HashMap<String, u64, String, u64>>>>>>>,
+    hot_paths: HashMap<String, HotPathInfo>,
+    execution_counters: HashMap<String, u64>,
     optimization_threshold: u64,
 }
 
@@ -153,7 +153,7 @@ pub struct HotPathStats {
 #[derive(Debug)]
 pub struct FunctionInliner {
     max_inline_depth: usize,
-    inline_candidates: HashMap<String, InlineCandidate, std::collections::HashMap<String, InlineCandidate, String, InlineCandidate>>>>>>>,
+    inline_candidates: HashMap<String, InlineCandidate>,
     inlined_functions: HashSet<String>,
 }
 
@@ -251,7 +251,7 @@ impl FunctionInliner {
 /// Escape analysis for stack allocation opportunities
 #[derive(Debug)]
 pub struct EscapeAnalyzer {
-    escape_graph: HashMap<String, EscapeInfo, std::collections::HashMap<String, EscapeInfo, String, EscapeInfo>>>>>>>,
+    escape_graph: HashMap<String, EscapeInfo>,
 }
 
 #[derive(Debug, Clone)]
@@ -306,7 +306,7 @@ impl EscapeAnalyzer {
 
     /// Extract variable name from declaration
     fn extract_variable_name(&self, line: &str) -> Option<String> {
-        if let Some(start) = line.find("let ").or_else(|| line.find("const ").or_else(|| line.find("var ")) {
+        if let Some(start) = line.find("let ").or_else(|| line.find("const ")).or_else(|| line.find("var ")) {
             let after_keyword: _ = &line[start + 4..];
             if let Some(end) = after_keyword.find('=') {
                 let name: _ = after_keyword[..end].trim();

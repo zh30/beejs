@@ -89,8 +89,8 @@ impl WasmModuleLoader {
     /// * `Result<WasmModuleLoader>` - 成功返回加载器，失败返回错误
     pub fn new() -> Result<Self> {
         let config: _ = Config::default();
-        let engine: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Engine::new(&config))))))
-            .context("Failed to create Wasmtime engine for module loader")?);
+        let engine: _ = Arc::new(Mutex::new(Engine::new(&config)))
+            .context("Failed to create Wasmtime engine for module loader")?;
 
         Ok(WasmModuleLoader {
             engine,
@@ -113,8 +113,8 @@ impl WasmModuleLoader {
         enable_parallel: bool,
     ) -> Result<Self> {
         let config: _ = Config::default();
-        let engine: _ = Arc::new(Mutex::new(Mutex::new(std::sync::Mutex::new(Mutex::new(Engine::new(&config))))))
-            .context("Failed to create Wasmtime engine")?);
+        let engine: _ = Arc::new(Mutex::new(Engine::new(&config)))
+            .context("Failed to create Wasmtime engine")?;
 
         Ok(WasmModuleLoader {
             engine,
@@ -207,7 +207,7 @@ impl WasmModuleLoader {
     /// * `wasm_bytes_list` - WASM 模块字节码列表
     ///
     /// # 返回值
-    /// * `Result<Vec<WasmModule>>` - 预热的模块列表
+    /// * `Result<Vec<WasmModule>` - 预热的模块列表
     pub fn prewarm_modules(&self, wasm_bytes_list: Vec<Vec<u8>>) -> Result<Vec<WasmModule>> {
         let mut modules = Vec::with_capacity(wasm_bytes_list.len());
 
