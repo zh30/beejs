@@ -175,6 +175,10 @@ path = "test_stage95_phase2_prediction.rs"
 name = "test_stage95_phase3_optimization"
 path = "test_stage95_phase3_optimization.rs"
 
+[[bin]]
+name = "test_stage95_phase5_integration"
+path = "test_stage95_phase5_integration.rs"
+
 [profile.release]
 opt-level = 3
 lto = true
