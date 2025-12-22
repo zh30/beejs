@@ -3,7 +3,6 @@
 //! This module provides an interactive shell that maintains V8 context
 //! across commands, enabling maximum performance for repeated executions.
 
-use std::time::Instant;
 
 use anyhow::Result;
 use rusty_v8 as v8;
@@ -381,6 +380,7 @@ impl Repl {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::time::Instant;
     #[test]
     fn test_repl_config_default() {
         let config: _ = ReplConfig::default();

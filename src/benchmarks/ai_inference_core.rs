@@ -10,7 +10,7 @@
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use std::collections::{BTreeMap, HashMap};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// AI 推理性能基准测试套件
 pub struct AIInferenceBenchmark;

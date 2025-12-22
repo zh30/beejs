@@ -10,10 +10,10 @@
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
 
-use std::time::Duration;
 use tokio::task::{JoinHandle, self};
+use std::time::Duration;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// 并发性能基准测试套件
 pub struct ConcurrentBenchmark;

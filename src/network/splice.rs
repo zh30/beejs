@@ -10,7 +10,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// splice 零拷贝数据传输器
 ///

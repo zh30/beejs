@@ -2,7 +2,6 @@
 //! This module provides a minimal runtime that only initializes essential components
 //! for simple scripts, dramatically reducing startup time.
 
-use std::sync::atomic::Ordering;
 
 use crate::memory_pool::{PoolConfig, SmartMemoryPool};
 use crate::jit::optimization::{JITOptimizer, HotPathOptimizer, OptimizationPipeline};
@@ -1111,8 +1110,9 @@ impl RuntimeLite {
 use std::collections::HashSet;
 use std::collections::{BTreeMap, HashMap};
 
-use std::time::Duration;
 use std::fs::File;
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicUsize, Ordering};
         let code: _ = fs::read_to_string(file_path)
             .map_err(|e| anyhow::anyhow!("Failed to read file: {}", e))?;
         self.execute_code(&code)

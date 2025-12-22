@@ -14,8 +14,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Write, self};
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
 use std::fs::File;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Zero-copy file reader using memory mapping
 pub struct ZeroCopyFileReader {

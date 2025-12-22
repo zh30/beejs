@@ -3,7 +3,6 @@
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::SystemTime;
 
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
@@ -485,6 +484,7 @@ impl ComputeIsolator {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::time::SystemTime;
     #[tokio::test]
     async fn test_create_tenant() {
         let manager: _ = TenantManager::new();

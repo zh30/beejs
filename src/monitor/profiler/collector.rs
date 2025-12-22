@@ -2,7 +2,7 @@
 //! 负责收集函数调用、内存分配等性能数据
 
 use std::collections::{BTreeMap, HashMap};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 pub use super::storage::{
     PerformanceEvent, PerformanceEventType, RingBuffer, SamplingStrategy, SamplingConfig,

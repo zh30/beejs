@@ -5,7 +5,6 @@
 
 use serde::{Deserialize, Serialize};
 use crate::ai::ai_performance_engine::{PerformanceMetrics, AiPerformanceEngine, AiPerformanceEngineConfig};
-use std::time::Duration;
 use std::collections::{VecDeque};
 use std::sync::{Arc, Mutex};
 /// 任务
@@ -481,6 +480,7 @@ impl IntelligentScheduler {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
     #[tokio::test]
     async fn test_submit_and_schedule_task() {
         let config = IntelligentSchedulerConfig::default();

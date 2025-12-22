@@ -4,9 +4,9 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
-use std::time::Duration;
 use anyhow::{Result, Error};
 use rusty_v8 as v8;
+use std::time::Duration;
 
 /// Fetch API configuration
 #[derive(Debug, Clone)]

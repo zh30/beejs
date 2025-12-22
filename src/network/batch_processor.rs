@@ -4,7 +4,7 @@
 use crate::network::{NetworkConfig, NetworkError};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Instant};
+use std::time::Instant;
 
 /// 批处理请求
 #[derive(Debug, Clone)]

@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 /// A historical performance data point
 #[derive(Debug, Clone, Serialize, Deserialize)]

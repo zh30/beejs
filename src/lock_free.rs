@@ -1,9 +1,6 @@
 //! 锁竞争减少优化模块
 //! 使用无锁数据结构和原子操作减少并发场景下的锁竞争
 
-use std::sync::atomic::{AtomicBool};
-use std::sync::atomic::Ordering;
-use std::time::{Duration, Instant};
 
 /// 无锁计数器 - 使用原子操作实现高性能计数
 #[derive(Debug, Default)]
@@ -689,3 +686,5 @@ pub struct ConcurrencyStatsSnapshot {
     pub uptime: std::time::Duration,
 }
 use tokio::sync::{TokioMutex, TokioRwLock};
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};

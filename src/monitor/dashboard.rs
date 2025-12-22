@@ -6,7 +6,7 @@ use crate::monitor::data_store::{DataStore, ExportFormat, QueryCondition};
 use crate::monitor::performance_monitor::{MetricType, MetricValue};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 /// Web 仪表板配置
 #[derive(Debug, Clone)]

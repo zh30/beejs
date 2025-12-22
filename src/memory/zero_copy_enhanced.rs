@@ -8,10 +8,9 @@ use libc::{MADV_DONTNEED, MADV_SEQUENTIAL, MADV_WILLNEED, c_void, madvise, mmap,
 use memmap2::{Mmap, MmapOptions};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
-use std::sync::atomic::{AtomicBool};
-use std::sync::atomic::Ordering;
-use std::time::Duration;
 use std::ptr::NonNull;
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 /// DMA 直接内存访问配置
 #[derive(Debug, Clone)]

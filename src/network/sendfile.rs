@@ -8,8 +8,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::io::{Write, self};
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use std::fs::File;
+use std::time::{Duration, Instant};
 
 /// sendfile 零拷贝文件传输器
 ///

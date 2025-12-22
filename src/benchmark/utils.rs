@@ -6,15 +6,12 @@
 //! - 系统信息收集
 //! - 数据处理
 
-use std::sync::atomic::Ordering;
-use std::time::{Duration, SystemTime};
 
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::collections::{BTreeMap, HashMap};
 /// 格式化持续时间
 pub fn format_duration(duration: &Duration) -> String {
@@ -391,6 +388,8 @@ pub fn check_dir_writable(path: &PathBuf) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::Duration;
+use std::sync::atomic::Ordering;
     #[test]
     fn test_format_duration() {
         assert_eq!(format_duration(&Duration::from_millis(500)), "500ms");

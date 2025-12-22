@@ -4,7 +4,6 @@
 //! 实现 `beejs info` 命令，显示运行时和系统信息
 use std::env;
 use std::path::Path;
-use std::time::Duration;
 use super::output_formatter::OutputFormatter;
 /// 系统信息结构
 #[derive(Debug, Default)]
@@ -355,6 +354,7 @@ mod tests {
 use std::collections::{HashMap, BTreeMap};
 use std::fs::File;
 use anyhow::{Result, Error};
+use std::time::Duration;
     #[test]
     fn test_system_info_collect() {
         let info: _ = SystemInfo::collect();

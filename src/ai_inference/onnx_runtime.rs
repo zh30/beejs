@@ -502,5 +502,5 @@ mod tests {
     }
 }
 use std::collections::{BTreeMap, HashMap};use std::time::Duration;
-use std::time::{Instant};
 use std::sync::{Arc, Mutex};
+use std::time::Instant;

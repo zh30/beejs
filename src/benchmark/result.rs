@@ -9,8 +9,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-use std::time::Duration;
 use super::{MetricType, Runtime};
+use std::time::{Duration, Instant};
 
 /// 基准测试结果
 #[derive(Debug, Clone, Serialize, Deserialize)]

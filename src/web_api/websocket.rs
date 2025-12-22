@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, atomic::Ordering};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use anyhow::{Result, Error};
 use rusty_v8 as v8;
+use std::sync::atomic::Ordering;
 
 /// WebSocket ready state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

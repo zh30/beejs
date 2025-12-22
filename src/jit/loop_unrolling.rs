@@ -2,9 +2,7 @@
 //!
 //! 实现自动循环展开，提升执行效率的优化技术
 
-use std::time::Instant;
 
-use std::time::{Duration, Instant};
 use std::collections::{BTreeMap};
 use std::collections::{HashMap, VecDeque};
 /// 循环展开决策
@@ -397,6 +395,7 @@ impl Default for LoopUnrollingOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
     #[test]
     fn test_simple_for_loop_analysis() {
         let optimizer: _ = LoopUnrollingOptimizer::new();

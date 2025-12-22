@@ -11,8 +11,8 @@
 use crate::performance_regression::RegressionTestSuite;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use thiserror::Error;
+use std::time::Duration;
 
 /// 报告生成错误
 #[derive(Error, Debug)]

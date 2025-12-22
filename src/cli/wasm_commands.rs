@@ -6,6 +6,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use std::time::Duration;
 
 /// WebAssembly CLI 子命令
 #[derive(Subcommand, Debug)]

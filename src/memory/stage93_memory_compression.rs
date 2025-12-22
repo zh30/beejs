@@ -5,9 +5,6 @@
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
-use std::sync::atomic::{AtomicBool};
-use std::sync::atomic::Ordering;
-use std::time::Duration;
 use std::collections::{DefaultHasher};
 use std::ptr::NonNull;
 
@@ -405,3 +402,5 @@ mod tests {
     }
 }
 use tokio::sync::{TokioMutex, TokioRwLock};
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};

@@ -2,7 +2,6 @@
 //! Handles the actual reconciliation logic for cluster and workload resources
 
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 
 use kube::{Client, Api, ResourceExt};
 use k8s_openapi::api::apps::v1::{StatefulSet, Deployment};
@@ -305,6 +304,7 @@ pub struct ReconcileResult {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::time::{Duration, Instant};
     #[test]
     fn test_cluster_diff_empty() {
         let diff: _ = ClusterDiff {

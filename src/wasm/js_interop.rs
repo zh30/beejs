@@ -6,9 +6,9 @@
 use anyhow::{Context, Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
-use std::time::{Duration, Instant};
 use wasmtime::{Func, Instance, Store, Val};
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// JavaScript 值枚举
 #[derive(Debug, Clone)]

@@ -6,9 +6,9 @@
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Instant};
 use tracing::{debug, info};
 use wasmtime::{Config, Module};
+use std::time::Instant;
 
 /// SIMD 优化结果
 #[derive(Debug, Clone)]

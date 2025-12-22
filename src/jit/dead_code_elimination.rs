@@ -2,9 +2,7 @@
 //!
 //! 实现编译时静态分析和消除无用代码的优化技术
 
-use std::time::Instant;
 
-use std::time::{Duration, Instant};
 use std::collections::{BTreeMap};
 use std::collections::{HashMap, HashSet};
 /// 死代码消除决策
@@ -388,6 +386,7 @@ impl Default for DeadCodeEliminationOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
     #[test]
     fn test_unused_variable_detection() {
         let optimizer: _ = DeadCodeEliminationOptimizer::new();

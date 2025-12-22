@@ -6,7 +6,7 @@ use crate::aiops::anomaly_detection::::{Anomaly, AnomalyDetector, BaselineCalcul
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
 /// 系统指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

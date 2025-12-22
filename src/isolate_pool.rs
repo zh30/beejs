@@ -2,9 +2,9 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
-use std::time::{Duration, Instant, SystemTime};
 use rusty_v8 as v8;
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// V8 Isolate Pool - 高性能Isolate复用池（优化版）
 /// 通过复用预创建的V8 Isolates来减少启动时间

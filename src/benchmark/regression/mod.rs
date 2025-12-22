@@ -2,11 +2,9 @@
 //!
 //! 提供性能回归自动检测功能
 
-use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime};
 use super::{BenchmarkResultSet, BenchmarkResult, Runtime, MetricType};
 /// 性能历史记录
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -341,8 +339,8 @@ impl RegressionSummary {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
 use std::collections::{BTreeMap, HashMap};
+use std::time::{Duration, SystemTime};
     #[test]
     fn test_regression_analysis() {
         let current: _ = super::super::result::BenchmarkResult::new("test", Runtime::Beejs);

@@ -7,7 +7,7 @@ use analyzer::hotspot::{MemoryStats, TimeStats};
 use collector::{FunctionStats, FunctionTraceHandle, FunctionTracker, TrackerStats};
 use report::{Difficulty, OptimizationRecommendation, PerformanceSummary, Priority, RecommendationType};
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Instant, SystemTime};
+use std::time::{Duration, Instant};
 // use storage::::{PerformanceEvent, PerformanceEventType, RingBuffer, SamplingConfig, SamplingStrategy};
 
 pub mod collector;

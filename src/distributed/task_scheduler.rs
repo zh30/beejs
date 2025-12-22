@@ -2,7 +2,6 @@
 //! 提供任务分发、优先级队列、结果聚合等功能
 
 use std::collections::{HashMap, BinaryHeap};
-use std::sync::atomic::Ordering;
 use std::cmp::Reverse;
 /// 任务类型枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -309,8 +308,9 @@ impl TaskDistributor {
             "random" => {
                 use rand::Rng;
 use std::collections::{BTreeMap};
+use std::time::{Duration, Instant};
+use std::sync::atomic::Ordering;
 
-use std::time::Duration;
                 let mut rng = rand::thread_rng();
                 if compatible_nodes.is_empty() {
                     None

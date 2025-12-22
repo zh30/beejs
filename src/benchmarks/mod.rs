@@ -21,7 +21,7 @@ pub mod memory_resource;
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 /// 性能指标类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

@@ -2,9 +2,7 @@
 //! 基于机器学习的智能性能优化系统
 //! 提供性能预测、自动调优和自适应调度功能
 
-use std::time::Duration;
 
-use std::time::{Duration, Instant};
 use tokio::sync::RwLock as AsyncRwLock;
 use serde::{Deserialize, Serialize};
 use crate::ai::tensor_optimizer::TensorOptimizer;
@@ -333,6 +331,7 @@ mod tests {
 use std::collections::{BTreeMap};
 use std::sync::{Arc, Mutex};
 use tracing::{debug, info, warn, error};
+use std::time::{Duration, Instant};
     #[tokio::test]
     async fn test_record_and_predict() {
         let config: _ = AiPerformanceEngineConfig::default();

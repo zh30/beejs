@@ -9,7 +9,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex, atomic::Ordering};
-use std::time::{Instant};
+use std::time::Instant;
+use std::sync::atomic::Ordering;
 
 /// 插件市场主引擎
 #[derive(Debug, Clone)]

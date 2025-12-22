@@ -31,10 +31,10 @@ pub mod visualization;
 use metrics::{BusinessMetrics, CustomMetrics, PerformanceMetrics, RuntimeMetrics};
 use std::collections::{BTreeMap, HashMap};
 
-use std::time::Duration;
 use std::sync::{Arc, Mutex};
 // use std::sync::::{Arc, Mutex, RwLock};
 use tracing::info;
+use std::time::Duration;
 
 pub use dashboard::{
     DashboardManager, DashboardConfig, Dashboard, PanelConfig,

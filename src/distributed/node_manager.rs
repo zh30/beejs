@@ -3,9 +3,9 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant, SystemTime};
 use super::service_discovery::{NodeInfo, ServiceDiscovery};
 use tracing::{info, warn};
+use std::time::{Duration, Instant};
 
 /// 节点状态枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -25,8 +25,8 @@ use breakpoint::{Breakpoint, BreakpointCondition, BreakpointManager};
 use engine::{DebugState, DebuggerEngine, SimpleEventListener};
 use stack_trace::{StackFrame, StackFrameInfo, StackTrace};
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant};
 use variable_scope::{ScopeType, VariableInspector, VariableScope};
+use std::time::{Duration, Instant};
 // use watch::::{WatchExpression, WatchManager};
 
 // Stage 93 Phase 3.2: Enhanced debugger exports

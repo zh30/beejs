@@ -8,7 +8,6 @@ use crate::ai::code_generator::::{CodeContext, Language};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 /// 代码优化请求
 #[derive(Debug, Clone, Serialize, Deserialize)]

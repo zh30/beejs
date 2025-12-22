@@ -3,11 +3,11 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
 use std::fs::File;
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use std::time::Instant;
 /// Enhanced CLI arguments
 #[derive(Parser, Debug)]
 #[command(name = "beejs")]

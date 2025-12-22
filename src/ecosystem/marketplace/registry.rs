@@ -1,11 +1,11 @@
 //! 模块注册表
 //! 负责模块存储、索引和分发
 
-use std::sync::atomic::Ordering;
 
 use std::collections::HashMap;
 use crate::ecosystem::types::*;
 use std::collections::{BTreeMap};
+use std::sync::atomic::Ordering;
 /// 模块注册表
 #[derive(Debug, Clone)]
 pub struct ModuleRegistry {

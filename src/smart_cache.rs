@@ -11,7 +11,7 @@
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// 缓存条目
 #[derive(Debug, Clone)]

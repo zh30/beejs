@@ -5,7 +5,6 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime};
 use tracing::{debug, error, info, warn};
 
 /// Repository URL

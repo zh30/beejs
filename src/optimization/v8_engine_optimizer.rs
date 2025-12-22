@@ -11,7 +11,6 @@
 //! - Garbage collection tuning for minimal pause times
 
 use std::sync::{Arc, Mutex, atomic::Ordering};
-use std::time::SystemTime;
 use std::collections::{BTreeMap, HashMap};
 
 use rusty_v8::{Isolate, HandleScope, Local, Value, Object, Function};
@@ -435,6 +434,8 @@ pub fn initialize_v8_engine() {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::SystemTime;
+use std::sync::atomic::Ordering;
     #[test]
     fn test_memory_layout_optimization() {
         let optimizer: _ = MemoryLayoutOptimizer::new();

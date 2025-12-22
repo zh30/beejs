@@ -5,9 +5,9 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant, SystemTime};
 
 use tracing::{info, warn};
+use std::time::{Duration, Instant};
 /// 告警级别
 #[derive(Debug, Clone, PartialEq)]
 pub enum AlertLevel {

@@ -6,7 +6,6 @@
 //! - Custom panel configuration
 //! - Template variable support
 
-use std::time::{Duration, SystemTime};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
@@ -14,6 +13,7 @@ use anyhow::{Result, Context, anyhow};
 use tracing::{info, warn, error, debug};
 use reqwest::Client as HttpClient;
 use serde_json::{json, Value};
+use std::time::Duration;
 /// Dashboard Manager - Main entry point for Grafana integration
 pub struct DashboardManager {
     /// Configuration

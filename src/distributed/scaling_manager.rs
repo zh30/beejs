@@ -3,8 +3,8 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime};
 use tracing::{debug, info, warn};
+use std::time::{Duration, Instant};
 
 pub use super::{
     autoscaler::{Autoscaler, AutoscalerConfig, ClusterMetrics, ScalingAction},

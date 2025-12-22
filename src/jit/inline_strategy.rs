@@ -12,9 +12,7 @@
 //!   * 热路径优先 - 对热点代码采用更激进的内联策略
 //!   * 性能预测 - 预测内联对性能的影响
 
-use std::time::SystemTime;
 
-use std::time::Instant;
 use std::collections::{BTreeMap, HashMap};
 /// Function information for inlining decisions
 #[derive(Debug, Clone)]
@@ -471,6 +469,7 @@ pub enum SystemProfile {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Instant, SystemTime};
     fn make_function(name: &str, size: usize, calls: u64) -> FunctionInfo {
         FunctionInfo {
             id: name.to_string(),

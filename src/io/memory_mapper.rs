@@ -8,8 +8,8 @@ use memmap2::{Mmap, MmapOptions};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
 use std::fs::File;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Memory mapping options
 #[derive(Debug, Clone, Copy)]

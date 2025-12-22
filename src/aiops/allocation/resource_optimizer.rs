@@ -3,7 +3,6 @@
 //! 这个模块提供了基于 AI 的智能资源分配和优化功能，能够分析工作负载、
 //! 预测资源需求并优化资源分配策略。
 
-use std::time::Instant;
 use std::collections::{BTreeMap, HashMap};
 
 use serde::{Deserialize, Serialize};
@@ -455,6 +454,7 @@ pub struct OptimizationStats {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
     #[tokio::test]
     async fn test_allocate_resources_basic() {
         let optimizer: _ = ResourceOptimizer::new_with_defaults();

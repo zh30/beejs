@@ -2,7 +2,6 @@
 //! Implements the reconciliation loop for BeejsCluster and BeejsWorkload
 
 use std::sync::Arc;
-use std::time::Duration;
 
 use kube::api::{ListParams, Patch, PatchParams, DeleteParams};
 use kube::core::object::HasStatus;
@@ -603,6 +602,7 @@ pub enum Error {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::time::Duration;
     #[test]
     fn test_error_type() {
         // Test error conversion - just verify the error type exists

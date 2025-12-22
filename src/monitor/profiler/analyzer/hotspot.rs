@@ -1,10 +1,7 @@
 //! 热点分析模块
 //! 识别性能热点函数和性能瓶颈
 
-use std::sync::atomic::Ordering;
-use std::time::Instant;
 
-use std::time::Duration;
 use std::collections::{BTreeMap, HashMap};
 /// 热点函数
 #[derive(Debug, Clone)]
@@ -461,6 +458,8 @@ impl HotspotAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
+use std::sync::atomic::Ordering;
     #[test]
     fn test_hotspot_analyzer_creation() {
         let analyzer: _ = HotspotAnalyzer::with_default_config();

@@ -4,11 +4,10 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex, RwLock};
-use std::sync::atomic::{AtomicBool};
-use std::sync::atomic::Ordering;
 
-use std::time::Duration;
 use tracing::{debug, info, warn};
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 // ============================================================================
 // 一致性哈希 (Consistent Hashing)

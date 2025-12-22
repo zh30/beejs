@@ -2,9 +2,7 @@
 //!
 //! 实现函数内联阈值提升至50层的激进优化策略
 
-use std::time::Instant;
 
-use std::time::{Duration, Instant};
 use std::collections::{BTreeMap};
 use std::collections::{HashMap, HashSet};
 /// 内联决策结果
@@ -309,6 +307,7 @@ impl Default for AdvancedInliningOptimizer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
     #[test]
     fn test_aggressive_inlining_basic() {
         let optimizer: _ = AdvancedInliningOptimizer::new();

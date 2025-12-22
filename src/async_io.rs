@@ -3,11 +3,11 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
-use std::time::{Duration, TokioInstant};
 use std::fs::File;
 use tokio::io::{AsyncWriteExt, BufWriter};
 use tokio::time::{TokioDuration, TokioInstant};
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// 异步I/O管理器
 #[derive(Debug)]

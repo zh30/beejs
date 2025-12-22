@@ -5,7 +5,7 @@ use crate::jit::optimization::{OptimizationFlag, V8OptimizationConfig};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Instant};
+use std::time::{Duration, Instant};
 
 /// 编译层级
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

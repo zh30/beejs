@@ -1,12 +1,12 @@
 //! Blob API implementation per Web standard
 //! Provides binary data container with File API support
 
-use std::time::SystemTime;
 
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};
 use std::fs::File;
+use std::time::SystemTime;
 /// Setup Blob and File APIs in V8 context
 pub fn setup_blob_api(
     scope: &mut v8::ContextScope<v8::HandleScope>,

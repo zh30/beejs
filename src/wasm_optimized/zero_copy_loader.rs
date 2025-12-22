@@ -5,13 +5,13 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::Instant;
 use std::fs::File;
 
 use tracing::{debug, info, warn};
 use wasmtime::{Config, Engine, Module};
 use anyhow::{Context, Result};
 use memmap2::{Mmap, MmapOptions};
+use std::time::Instant;
 /// 零拷贝加载结果
 #[derive(Debug, Clone)]
 pub struct ZeroCopyLoadResult {

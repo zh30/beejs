@@ -2,10 +2,8 @@
 //! Stage 80 Phase 3 - 开发者工具链
 //! 支持火焰图生成、内存分析、性能瓶颈检测
 
-use std::time::{Duration, Instant, SystemTime};
 
 
-use std::time::{Duration, Instant};
 use std::collections::{BTreeMap};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
@@ -477,6 +475,7 @@ impl CallGraphSampler {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
     #[tokio::test]
     async fn test_flamegraph_generation() {
         let profiler: _ = Profiler::new();

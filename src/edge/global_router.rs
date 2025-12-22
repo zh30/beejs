@@ -4,9 +4,10 @@
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, atomic::Ordering, RwLock};
-use std::time::{Duration, TokioInstant};
 use super::cdn_provider::::{CdnEndpoint, CdnProviderType, EndpointStatus};
 use tokio::time::{TokioDuration, TokioInstant};
+use std::time::{Duration, Instant};
+use std::sync::atomic::Ordering;
 
 /// Global Router for edge distribution
 #[derive(Debug)]

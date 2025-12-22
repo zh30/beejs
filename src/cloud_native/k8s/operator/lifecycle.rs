@@ -2,7 +2,6 @@
 //! Handles state transitions and lifecycle events
 
 use std::collections::{BTreeMap, HashMap};
-use std::time::{SystemTime};
 use super::super::crd::{ClusterPhase, Condition, ConditionStatus, ConditionType, WorkloadPhase};
 use tracing::{debug, error, info, warn};
 

@@ -1,7 +1,6 @@
 //! Enterprise Kubernetes Operator
 //! Implements a production-ready Kubernetes operator for Beejs
 
-use std::time::Duration;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 use serde::{Serialize, Deserialize};
@@ -249,6 +248,7 @@ impl Operator {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::Duration;
     #[tokio::test]
     async fn test_operator_creation() {
         let config: _ = OperatorConfig {

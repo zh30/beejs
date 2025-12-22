@@ -3,9 +3,9 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant};
 
 use super::{NetworkConfig, NetworkStats};
+use std::time::{Duration, Instant};
 /// io_uring 配置
 #[derive(Debug, Clone)]
 pub struct UringConfig {

@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
-use std::time::{Instant};
 use tracing::{debug, error, info, warn};
+use std::time::Instant;
 
 /// Sandbox configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

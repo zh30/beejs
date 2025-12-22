@@ -3,10 +3,10 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant, SystemTime};
 use super::node_manager::{NodeMetadata, NodeStatus};
 use tokio::time::interval;
 use tracing::{debug, info, warn};
+use std::time::{Duration, Instant};
 
 /// 服务发现配置
 #[derive(Debug, Clone)]

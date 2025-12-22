@@ -5,9 +5,9 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant, SystemTime};
 
 use tracing::{debug, info, instrument, warn};
+use std::time::{Duration, Instant};
 /// 追踪ID
 pub type TraceId = String;
 /// 跨度ID

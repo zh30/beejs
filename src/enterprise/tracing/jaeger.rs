@@ -5,8 +5,8 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime};
 use tracing::{debug, error, info, warn};
+use std::time::{Duration, Instant};
 
 /// Jaeger collector configuration
 #[derive(Debug, Clone)]

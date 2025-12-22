@@ -8,9 +8,7 @@
 //! - Escape analysis optimization
 //! - Dead code elimination
 
-use std::sync::atomic::Ordering;
 
-use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 /// V8 optimization configuration for maximum performance
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -497,6 +495,8 @@ pub struct JITOptimizationStats {
 mod tests {
     use super::*;
 use std::collections::{BTreeMap};
+use std::time::{Duration, Instant};
+use std::sync::atomic::Ordering;
     #[test]
     fn test_v8_config_aggressive() {
         let config: _ = V8OptimizationConfig::aggressive();

@@ -4,8 +4,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant, SystemTime};
 use tokio::time::{TokioDuration, TokioInstant};
+use std::time::{Duration, Instant};
 
 /// Performance optimizer
 #[derive(Debug)]

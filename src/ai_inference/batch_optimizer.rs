@@ -1,7 +1,6 @@
 //! ONNX 批处理优化器
 //! 智能批处理算法，动态调整批处理大小，优化推理性能
 
-use std::time::{Instant, Duration};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
@@ -397,6 +396,7 @@ impl PerformanceMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
     #[tokio::test]
     async fn test_batch_processor_fixed() -> Result<()> {
         let processor: _ = BatchProcessor::new(BatchStrategy::Fixed(4));

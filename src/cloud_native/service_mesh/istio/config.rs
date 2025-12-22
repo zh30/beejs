@@ -1,7 +1,6 @@
 //! Istio Service Mesh integration
 //! Provides configuration and management for Istio
 
-use std::time::Duration;
 use std::collections::{BTreeMap, HashMap};
 
 use tracing::info;
@@ -323,6 +322,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::Duration;
     #[test]
     fn test_istio_config_creation() {
         let config: _ = IstioConfig {

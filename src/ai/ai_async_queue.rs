@@ -1,14 +1,11 @@
 //! AI异步任务队列
 //! 高性能异步任务调度和队列管理系统
 
-use std::sync::atomic::{Arc, Mutex};
-use std::sync::atomic::Ordering;
 
 use std::cmp::{Ordering, Reverse};
 use std::collections::{BTreeMap};
 use std::collections::{BinaryHeap, HashMap};
 
-use std::time::Duration;
     atomic::{AtomicUsize, Ordering as AtomicOrdering},
     Arc, Mutex,
 };
@@ -471,6 +468,8 @@ pub fn create_low_latency_queue() -> AiAsyncQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
+use std::sync::atomic::{Arc, AtomicUsize, Mutex, Ordering};
     #[tokio::test]
     async fn test_queue_creation() {
         let queue: _ = AiAsyncQueue::new(QueueConfig::default());

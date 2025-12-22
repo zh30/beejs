@@ -7,9 +7,9 @@ use anyhow::{Context, Result, anyhow};
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
-use std::time::{Instant};
 use wasmtime::{Memory, Store};
+use std::time::Instant;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// 内存块结构体
 #[derive(Debug, Clone)]

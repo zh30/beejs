@@ -300,7 +300,6 @@ impl SimdEngine {
     #[cfg(target_arch = "x86_64")]
     fn vector_add_f32_avx2(&self, a: &[f32], b: &[f32], result: &mut Vec<f32>) {
 
-use std::sync::atomic::Ordering;
 
         let len: _ = a.len().min(b.len());
         result.reserve(len);
@@ -813,6 +812,7 @@ impl Default for SimdEngine {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::sync::atomic::Ordering;
     #[test]
     fn test_feature_detection() {
         let features: _ = detect_cpu_features();

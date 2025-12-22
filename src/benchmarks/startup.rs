@@ -8,10 +8,10 @@
 //! - Runtime 初始化时间测试
 
 use std::collections::{HashMap, BTreeMap};
-use std::time::{Duration, Instant};
 
 use crate::benchmarks::{BenchmarkFramework, BenchmarkResult, MetricType, BenchmarkConfig};
 use rusty_v8::Isolate;
+use std::time::{Duration, Instant};
 /// 启动时间基准测试套件
 pub struct StartupBenchmark;
 impl StartupBenchmark {

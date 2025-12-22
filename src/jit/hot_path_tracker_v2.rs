@@ -9,7 +9,8 @@
 
 use std::collections::BTreeMap;
 use std::sync::{atomic::Ordering, RwLock};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
+use std::sync::atomic::Ordering;
 
 /// Execution event for history tracking
 #[derive(Debug, Clone)]

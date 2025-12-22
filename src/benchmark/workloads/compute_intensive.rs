@@ -7,8 +7,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant};
 use super::{BenchmarkError, BenchmarkResult as Result, ResourceUsage, WorkloadResult};
+use std::time::{Duration, Instant};
 
 /// 计算密集型工作负载
 #[derive(Debug)]

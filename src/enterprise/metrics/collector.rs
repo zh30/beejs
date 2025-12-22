@@ -532,8 +532,9 @@ fn action_to_string(action: &AlertAction) -> &'static str {
 #[cfg(test)]
 mod enterprise_tests {
 use std::collections::{HashMap, BTreeMap};
-
 use std::time::Duration;
+use std::sync::atomic::Ordering;
+
     #[tokio::test]
     async fn test_enterprise_metrics_collector() {
         let mut collector = EnterpriseMetricsCollector::new();

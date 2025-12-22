@@ -7,7 +7,8 @@ use anyhow::{Context, Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, atomic::Ordering, RwLock};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
+use std::sync::atomic::Ordering;
 
 /// 缓存条目结构体
 #[derive(Debug, Clone)]

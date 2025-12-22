@@ -14,6 +14,7 @@ use comparison_report::{ReportConfig, ReportFormat, ReportGenerator};
 use result_collector::{BenchmarkComparison, ComparisonResult, ResultCollector};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::time::Duration;
 
 // use crate::benchmarks;  // Unused import
 /// 性能对比结果

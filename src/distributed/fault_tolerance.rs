@@ -6,10 +6,10 @@
 use crate::distributed::service_discovery::{DiscoveryConfig, ServiceDiscovery};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant, SystemTime};
 use super::task_scheduler::{Task, TaskScheduler};
 use tokio::time::{interval, sleep};
 use tracing::{debug, info, warn};
+use std::time::{Duration, Instant};
 
 /// 故障检测配置
 #[derive(Debug, Clone)]

@@ -6,8 +6,8 @@ use anyhow::{Context, Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
-use std::time::Duration;
 use wasmtime::{Config, Engine, Instance, Linker, Module, Store};
+use std::time::{Duration, Instant};
 
 /// WebAssembly 模块结构体
 ///

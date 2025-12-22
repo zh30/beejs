@@ -1,7 +1,6 @@
 //! Performance Benchmark
 //! Provides high-level benchmarking interface
 
-use std::time::Duration;
 
 /// Benchmark result
 #[derive(Debug, Clone)]
@@ -153,6 +152,7 @@ impl BenchmarkRunner {
         use std::io::Write;
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
+use std::time::Duration;
         let mut file = std::fs::File::create(file_path)?;
         writeln!(file, "Benchmark Results")?;
         writeln!(file, "=================")?;

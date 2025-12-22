@@ -2,7 +2,6 @@
 //! 提供功能降级策略和自动恢复机制
 pub mod manager;
 
-use std::time::Duration;
 
 pub use manager::{
     FallbackManager,
@@ -149,6 +148,7 @@ macro_rules! with_fallback {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::time::Duration;
     #[tokio::test]
     async fn test_fallback_manager_creation() {
         let manager: _ = create_fallback_manager();

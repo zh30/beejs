@@ -238,7 +238,6 @@ impl MatrixAccelerator {
         #[cfg(target_arch = "x86_64")]
         if is_x86_feature_detected!("avx512f") {
 
-use std::sync::atomic::Ordering;
 
             let mut sum = _mm512_setzero_ps();
             let len: _ = a.len() / 16;
@@ -278,6 +277,7 @@ use std::sync::atomic::Ordering;
         #[cfg(target_arch = "x86_64")]
         if is_x86_feature_detected!("sse4.2") {
 use std::collections::{HashMap, BTreeMap};
+use std::sync::atomic::Ordering;
             let mut sum = _mm_setzero_ps();
             let len: _ = a.len() / 4;
             for i in 0..len {

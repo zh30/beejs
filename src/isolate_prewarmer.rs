@@ -5,9 +5,9 @@
 use anyhow::{Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
-use std::time::{Duration, Instant, SystemTime};
 use rusty_v8 as v8;
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Enhanced Isolate Pre-warming System
 /// Stage 21.3: Integrates V8 snapshots and context preparation for optimal performance

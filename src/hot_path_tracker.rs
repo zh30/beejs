@@ -4,8 +4,8 @@ use crate::code_analyzer::{CodeAnalyzer, CodeComplexity};
 use std::collections::{BTreeMap, HashMap};
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// 热路径代码信息
 #[derive(Debug, Clone)]

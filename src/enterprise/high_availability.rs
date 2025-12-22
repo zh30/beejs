@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
-use std::time::Duration;
 use tokio::time::{Instant, sleep};
 use tracing::{debug, error, info, warn};
+use std::time::{Duration, Instant};
 
 /// HA configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -2,11 +2,8 @@
 //! 提供 20+ 个高频操作的 Rust 实现，提升执行性能
 //! Stage 27.1: V8 引擎深度优化
 
-use std::sync::atomic::{Arc, Mutex};
-use std::sync::atomic::Ordering;
 use std::collections::BTreeSet;
 use std::collections::{BTreeMap, HashMap};
-use std::time::Duration;
 
 use crate::string_interner::StringInterner;
 use anyhow::{anyhow, Result};
@@ -392,6 +389,8 @@ fn builtin_buffer_length(args: &[String]) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
+use std::sync::atomic::{Arc, AtomicUsize, Mutex, Ordering};
     #[test]
     fn test_builtin_registration() {
         let manager: _ = EmbeddedBuiltinsManager::new();

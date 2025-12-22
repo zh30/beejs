@@ -4,9 +4,8 @@
 
 use anyhow::{Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic::{Arc, Mutex};
-use std::sync::atomic::Ordering;
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
+use std::sync::atomic::{Arc, AtomicUsize, Mutex, Ordering};
 
 /// V8 快照优化管理器
 /// Stage 27.1: 实现 < 1ms 快照加载

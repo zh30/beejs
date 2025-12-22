@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
-use std::time::Duration;
 use tracing::{debug, error, info, warn};
+use std::time::Duration;
 
 /// Cluster identifier
 pub type ClusterId = String;

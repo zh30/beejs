@@ -589,7 +589,7 @@ impl OptimizationResult {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
-use std::time::{Instant};
+use std::time::{Duration, Instant};
     #[test]
     fn test_deep_optimizer_creation() {
         let optimizer: _ = DeepOptimizer::new_default();

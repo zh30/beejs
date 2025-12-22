@@ -8,8 +8,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs::{File, OpenOptions};
 use std::sync::{Arc, Mutex};
 
-use std::time::Duration;
 use tracing::{debug, error, info, warn};
+use std::time::Duration;
 
 /// Log level
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

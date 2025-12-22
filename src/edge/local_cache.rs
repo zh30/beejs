@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, SystemTime};
 use std::fs::File;
+use std::time::Duration;
 
 /// Cached script information
 #[derive(Debug, Clone, Serialize, Deserialize)]

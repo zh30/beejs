@@ -7,9 +7,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs::{File, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, RwLock, Weak};
-use std::sync::atomic::{AtomicBool};
-use std::sync::atomic::Ordering;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 /// 访问模式
 #[derive(Debug, Clone, Copy, PartialEq)]

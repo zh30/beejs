@@ -3,9 +3,8 @@
 use anyhow::{Context, Result, anyhow};
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{Arc, Mutex};
-use std::sync::atomic::Ordering;
 use rusty_v8 as v8;
+use std::sync::atomic::{Arc, AtomicUsize, Mutex, Ordering};
 
 mod typescript;
 mod nodejs_v8;

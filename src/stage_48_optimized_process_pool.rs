@@ -7,8 +7,6 @@
 //! 4. 内存池复用 - 减少内存分配开销
 //! 5. JIT 缓存 - 复用编译后的代码
 
-use std::sync::atomic::{Arc, Mutex, RwLock};
-use std::sync::atomic::Ordering;
 
 use anyhow::{Context, Result};
 
@@ -378,7 +376,6 @@ use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{BTreeMap, HashMap};
 
-use std::time::Duration;
         let mut hasher = DefaultHasher::new();
         code.hash(&mut hasher);
         format!("{:x}", hasher.finish())
@@ -398,6 +395,8 @@ async fn execute_task(worker: &Arc<SmartWorker>, task: &Task) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
+use std::sync::atomic::{Arc, AtomicUsize, Mutex, Ordering, RwLock};
     #[tokio::test]
     async fn test_optimized_process_pool_creation() {
         let config: _ = OptimizedProcessPoolConfig::default();

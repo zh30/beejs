@@ -5,9 +5,9 @@
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant, SystemTime};
 
 use tracing::{debug, info, warn};
+use std::time::{Duration, Instant};
 /// 指标类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum MetricType {

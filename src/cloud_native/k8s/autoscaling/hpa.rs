@@ -3,9 +3,9 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 // use tokio::time::{TokioDuration, TokioInstant}; // Removed - using std::time
 use tracing::{debug, error, info, warn};
+use std::time::{Duration, Instant};
 
 /// HPA Controller for managing automatic scaling
 pub struct HPAController {

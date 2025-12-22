@@ -3,7 +3,6 @@
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime};
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -358,6 +357,7 @@ mod tests {
     fn test_load_nonexistent_snapshot() {
 use std::collections::{HashMap, BTreeMap};
 use std::fs::File;
+use std::time::Duration;
         let dir: _ = tempdir().unwrap();
         let base_dir: _ = dir.path();
         let manager: _ = SnapshotManager::new(SnapshotConfig::default());

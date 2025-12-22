@@ -6,8 +6,8 @@
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 use tracing::{debug, info};
+use std::time::{Duration, Instant};
 
 /// 多线程执行结果
 #[derive(Debug, Clone)]

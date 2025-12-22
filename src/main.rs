@@ -5,10 +5,13 @@ use anyhow::{Context, Result};
 use beejs::cli::::{ExecutionContext, ExecutorConfig, FileType, ScriptExecutor, shebang};
 use beejs::cli::commands::::{CliApp, SubCommand};
 use beejs::cli::init_command::::{InitCommand as InitExecutor, InitConfig, ProjectTemplate};
+use beejs::cli::info_command::InfoCommand;
+use beejs::cli::doctor_command::DoctorCommand;
+use beejs::runtime_lite::RuntimeLite;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use std::fs::File;
+use std::path::PathBuf;
 
 // use beejs::debugger::DebugSession;  // Temporarily disabled - V8 API compatibility issues
 /// Temporary debug command structure

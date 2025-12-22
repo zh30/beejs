@@ -5,8 +5,8 @@ use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant, SystemTime};
 use tokio::time::{TokioDuration, TokioInstant};
+use std::time::{Duration, Instant};
 
 /// Edge Runtime instance
 #[derive(Debug)]

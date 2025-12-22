@@ -1,7 +1,6 @@
 //! 性能预测器
 //! 基于机器学习的性能预测模型
 
-use std::time::Instant;
 
 use serde::{Deserialize, Serialize};
 use crate::ai::ai_performance_engine::{PerformanceMetrics, PerformancePrediction, OptimizationSuggestion, OptimizationType, AiPerformanceEngineConfig};
@@ -286,6 +285,7 @@ mod tests {
     use super::*;
     use crate::ai::ai_performance_engine::AiPerformanceEngineConfig;
 use std::collections::{HashMap, BTreeMap};
+use std::time::Instant;
     #[test]
     fn test_model_prediction() {
         let config: _ = AiPerformanceEngineConfig::default();

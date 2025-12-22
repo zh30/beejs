@@ -1,6 +1,5 @@
 //! 资源使用预测器 - Stage 90 Phase 5.3
 
-use std::time::Duration;
 
 use std::collections::VecDeque;
 use chrono::{DateTime, Utc};
@@ -106,6 +105,7 @@ impl ResourcePredictor {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::time::Duration;
     #[test]
     fn test_resource_predictor() {
         let mut predictor = ResourcePredictor::new(100);

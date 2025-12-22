@@ -7,9 +7,6 @@
 //! - 增量 GC 和并行 GC
 
 use anyhow::{Result, anyhow};
-use std::sync::atomic::{AtomicBool};
-use std::sync::atomic::Ordering;
-use std::time::Duration;
 
 /// GC 配置
 #[derive(Debug, Clone)]
@@ -537,3 +534,5 @@ mod tests {
     }
 }
 use tokio::sync::{Mutex, RwLock};
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};

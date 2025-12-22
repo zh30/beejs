@@ -5,8 +5,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant};
 use super::{BenchmarkResult, MetricType, Runtime};
+use std::time::{Duration, Instant};
 
 /// 实时监控器
 #[derive(Debug)]

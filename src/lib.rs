@@ -1,6 +1,5 @@
 use std::collections::{HashMap};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::{Ordering};
 // Beejs: 高性能 JavaScript/TypeScript 运行时
 //
 // Stage 92: 企业级性能突破与 AI 原生优化
@@ -621,7 +620,8 @@ impl MinimalRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
+use std::time::Duration;
+use std::sync::atomic::{AtomicBool, Ordering};
 
     #[test]
     fn test_minimal_runtime_creation() {

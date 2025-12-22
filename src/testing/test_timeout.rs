@@ -4,7 +4,7 @@
 use crossbeam::channel::{Receiver, Sender, unbounded};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// Timeout configuration for tests
 #[derive(Debug, Clone)]

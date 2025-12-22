@@ -2,12 +2,12 @@
 //!
 //! 提供风险评分和评估功能
 
-use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
 use std::collections::{BTreeMap};
+use std::time::SystemTime;
 /// 风险评估错误
 #[derive(Error, Debug)]
 pub enum RiskAssessmentError {

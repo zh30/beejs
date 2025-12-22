@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// 智能内存池 - 管理V8对象的生命周期以减少内存分配开销
 /// 通过预分配和复用对象来减少GC压力和内存碎片

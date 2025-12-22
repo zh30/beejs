@@ -6,13 +6,13 @@
 //! - Template engine for dynamic content
 //! - WebSocket-based live updates
 
-use std::time::{Instant, SystemTime};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
 
 use anyhow::{Result, Context, anyhow};
 use tracing::{info, debug, warn, error};
 use serde_json::{json, Value};
+use std::time::Instant;
 /// Chart Renderer - Handles real-time chart rendering
 pub struct ChartRenderer {
     /// Render configuration

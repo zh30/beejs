@@ -3,8 +3,6 @@
 //! This module analyzes access patterns and predicts which scripts to prefetch
 //! based on frequency, timing, and dependency relationships.
 
-use std::sync::atomic::Ordering;
-use std::time::Duration;
 use std::collections::{HashMap};
 
 /// Access pattern for a script
@@ -252,6 +250,8 @@ impl Default for PatternAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
+use std::sync::atomic::Ordering;
 
     #[test]
     fn test_pattern_recording() {

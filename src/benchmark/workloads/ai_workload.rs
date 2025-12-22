@@ -4,8 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant};
 use super::{BenchmarkError, BenchmarkResult as Result, ResourceUsage, WorkloadResult};
+use std::time::{Duration, Instant};
 
 /// AI 工作负载
 #[derive(Debug)]

@@ -1,7 +1,6 @@
 //! Kubernetes 集群管理器
 //! 实现 Beejs 集群的 Kubernetes 部署、管理和运维功能
 
-use std::time::SystemTime;
 
 use anyhow::{Result, Context};
 use serde::{Deserialize, Serialize};
@@ -217,6 +216,7 @@ mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
 use tracing::{debug, info, warn, error};
+use std::time::SystemTime;
     #[tokio::test]
     async fn test_create_k8s_manager() {
         let manager: _ = K8sManager::new("test-namespace".to_string());

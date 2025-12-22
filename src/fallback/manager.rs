@@ -3,7 +3,7 @@
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// 功能标识枚举
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

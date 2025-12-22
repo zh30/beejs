@@ -4,8 +4,8 @@
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
 
-use std::time::Duration;
 use super::types::::{BeejsError, ErrorContext};
+use std::time::{Duration, Instant};
 
 /// 重试策略
 #[derive(Debug, Clone)]

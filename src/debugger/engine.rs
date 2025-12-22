@@ -8,8 +8,9 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use crate::debugger::{
 use rusty_v8 as v8;
+
+use crate::debugger::{
     breakpoint::{BreakpointManager, Breakpoint},
     stack_trace::{StackTrace, StackFrame},
     variable_scope::VariableInspector,

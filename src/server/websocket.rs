@@ -7,10 +7,10 @@ use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 use tokio::net::{TcpListener, TcpStream};
 use tokio_tungstenite::::{accept_async, tungstenite::Message};
 use tracing::{error, info, warn};
+use std::time::{Duration, Instant};
 
 /// WebSocket server configuration
 #[derive(Debug, Clone)]

@@ -12,8 +12,8 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::sync::atomic::Ordering;
 use std::time::Duration;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// High-performance memory pool for reducing allocation overhead
 pub struct HighPerformanceMemoryPool {

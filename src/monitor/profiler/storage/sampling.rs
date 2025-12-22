@@ -2,7 +2,7 @@
 //! 动态调整采样率以平衡准确性和性能
 
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 /// 性能事件类型
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

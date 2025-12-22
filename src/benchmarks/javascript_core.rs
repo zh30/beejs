@@ -11,8 +11,8 @@
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use rusty_v8 as v8;
+use std::time::{Duration, Instant};
 
 /// JavaScript 核心基准测试套件
 pub struct JavaScriptCoreBenchmark;

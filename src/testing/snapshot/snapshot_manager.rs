@@ -1,11 +1,9 @@
 //! Snapshot Manager
 //! Handles snapshot storage, retrieval, and comparison
 
-use std::time::SystemTime;
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 /// Snapshot manager for handling snapshot operations
 pub struct SnapshotManager {
     config: SnapshotConfig,
@@ -229,6 +227,7 @@ mod tests {
     use std::io::Write;
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
+use std::time::SystemTime;
     #[test]
     fn test_snapshot_manager_new() {
         let temp_dir: _ = tempfile::tempdir().unwrap();

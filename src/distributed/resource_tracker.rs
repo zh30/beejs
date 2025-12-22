@@ -2,7 +2,7 @@
 //! 负责跟踪和管理集群节点的资源分配情况
 
 use std::collections::{BTreeMap, HashMap};
-use std::time::{Duration, Instant, SystemTime};
+use std::time::{Duration, Instant};
 
 /// 资源配置
 #[derive(Debug, Clone)]

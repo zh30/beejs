@@ -5,9 +5,9 @@ use crate::edge::{NodeId, RouteOptimizer};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant, SystemTime};
 use tokio::time::{TokioDuration, TokioInstant};
 use anyhow::{Result, Error};
+use std::time::{Duration, Instant};
 
 /// Network optimizer
 #[derive(Debug)]

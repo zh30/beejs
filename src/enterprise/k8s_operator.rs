@@ -3,7 +3,6 @@
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use anyhow::{Result, Context};
 use kube::{
@@ -830,6 +829,7 @@ impl BeejsOperator {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::time::Duration;
     #[tokio::test]
     async fn test_create_operator() {
         let client: _ = Client::try_default().await.unwrap();

@@ -5,7 +5,7 @@ use crate::network::{NetworkConfig, NetworkError};
 use std::collections::BTreeMap;
 use std::net::{SocketAddr, TcpStream};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// 连接信息
 struct ConnectionInfo {

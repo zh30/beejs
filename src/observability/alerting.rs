@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
 
-use std::time::Duration;
 use tracing::{error, info};
+use std::time::{Duration, Instant};
 
 /// Alert severity levels
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

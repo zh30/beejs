@@ -3,8 +3,6 @@
 //! 这个模块提供了基于 AI 的任务调度功能，能够根据任务优先级、资源需求
 //! 和系统状态智能决定任务调度顺序和分配策略。
 
-use std::sync::atomic::Ordering;
-use std::time::{Duration, TokioInstant};
 
 use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
@@ -566,6 +564,8 @@ pub struct SchedulerStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
+use std::time::{Duration, Instant};
+use std::sync::atomic::Ordering;
     #[tokio::test]
     async fn test_add_task() {
         let mut scheduler = Scheduler::new_with_defaults();

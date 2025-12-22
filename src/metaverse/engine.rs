@@ -1,8 +1,8 @@
 //! 元宇宙渲染引擎核心实现
 
 use std::sync::{Arc, RwLock};
-use std::time::{Instant};
 use std::collections::{HashMap};
+use std::time::Instant;
 
 pub use super::{
     Camera, Light, Material, RenderMode, RenderStats, SceneObject, Transform, XRPlatform,

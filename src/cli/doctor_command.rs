@@ -6,7 +6,6 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::Instant;
 use super::output_formatter::OutputFormatter;
 /// 诊断检查结果
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -417,6 +416,7 @@ mod tests {
 use std::collections::{HashMap, BTreeMap};
 use std::fs::File;
 use anyhow::{Result, Error};
+use std::time::Instant;
     #[test]
     fn test_check_status_icon() {
         assert_eq!(CheckStatus::Pass.icon(), "✓");

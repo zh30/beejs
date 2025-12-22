@@ -6,11 +6,8 @@
 //! - WorkStealingScheduler: 工作窃取调度器（负载均衡）
 //! - BatchExecutor: 批量执行处理器（高层API）
 
-use std::sync::atomic::{AtomicBool};
-use std::sync::atomic::Ordering;
 
 use std::cell::RefCell;
-use std::time::{Duration, Instant};
 use std::collections::VecDeque;
 use std::collections::{BTreeMap, HashMap};
 use tokio::time::timeout;
@@ -167,6 +164,8 @@ thread_local! {
 // ============================================================================
 // Removed unused imports: LockFreeQueue, AtomicStats
 use crate::zero_copy::ZeroCopyChannel;
+use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 /// 任务类型
 #[derive(Debug, Clone)]
 pub struct Task {

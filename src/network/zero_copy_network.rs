@@ -3,8 +3,8 @@
 
 use memmap2::{Mmap, MmapOptions};
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Instant};
 use super::{NetworkConfig, NetworkStats};
+use std::time::Instant;
 
 /// 零拷贝网络配置
 #[derive(Debug, Clone)]

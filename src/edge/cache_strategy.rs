@@ -3,9 +3,9 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};
-use std::time::{Duration, Instant, SystemTime};
 use tokio::time::{TokioDuration, TokioInstant};
 use anyhow::{Result, Error};
+use std::time::{Duration, Instant};
 
 /// Multi-layer edge cache
 #[derive(Debug)]

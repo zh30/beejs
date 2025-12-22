@@ -3,8 +3,8 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Instant};
 use super::{NetworkConfig, NetworkStats};
+use std::time::Instant;
 
 /// 缓冲区类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

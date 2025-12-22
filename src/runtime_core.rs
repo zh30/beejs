@@ -2,10 +2,10 @@
 //! 包含 MinimalRuntime 的完整实现和扩展功能
 
 use std::sync::{Arc, Mutex};
-use std::time::{Instant};
 use std::collections::{HashMap};
 use thiserror::Error;
 use rusty_v8 as v8;
+use std::time::Instant;
 
 /// 运行时错误类型
 #[derive(Error, Debug)]

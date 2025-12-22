@@ -13,10 +13,10 @@ use crate::cli::repl_highlighter::{HighlightTheme, ReplHighlighter};
 use rustyline::Editor;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};
-use std::time::{Instant};
 use std::fs::File;
 use anyhow::{Result, Error};
 use rusty_v8 as v8;
+use std::time::{Duration, Instant};
 
 /// Enhanced REPL configuration
 #[derive(Debug, Clone)]

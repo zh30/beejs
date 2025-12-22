@@ -1,7 +1,6 @@
 //! Prometheus Metrics Integration for Beejs
 //! 实现 Prometheus 指标收集和导出功能
 
-use std::time::Instant;
 
 use anyhow::{Result, Context};
 use prometheus::{
@@ -625,6 +624,7 @@ impl ClusterMetrics {
 mod tests {
     use super::*;
 use std::collections::{HashMap, BTreeMap};
+use std::time::{Duration, Instant};
     #[test]
     fn test_prometheus_manager_creation() {
         let config: _ = PrometheusConfig {
