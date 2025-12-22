@@ -281,15 +281,20 @@ impl Visualizable for LineChart {
 
     fn update_data(&mut self, data: Vec<f64>) -> Result<()> {
         // Convert flat data to DataSeries
-        let series = DataSeries {
-            name: "Series 1".to_string(),
-            data: data.into_iter().enumerate().map(|(i, y)| DataPoint {
+        let data_points: Vec<DataPoint> = data.into_iter()
+            .enumerate()
+            .map(|(i, y)| DataPoint {
                 x: i as f64,
                 y,
                 label: None,
                 color: None,
                 metadata: HashMap::new(),
-            })).collect(),
+            })
+            .collect();
+
+        let series = DataSeries {
+            name: "Series 1".to_string(),
+            data: data_points,
             color: Some(self.color_palette.primary.clone()),
             visible: true,
             line_style: self.line_style.clone(),
@@ -513,13 +518,19 @@ impl Visualizable for BarChart {
     fn update_data(&mut self, data: Vec<f64>) -> Result<()> {
         let series = DataSeries {
             name: "Series 1".to_string(),
-            data: data.into_iter().enumerate().map(|(i, y)| DataPoint {
-                x: i as f64,
-                y,
-                label: None,
-                color: None,
-                metadata: HashMap::new(),
-            })).collect(),
+            data: {
+                let data_points: Vec<DataPoint> = data.into_iter()
+                    .enumerate()
+                    .map(|(i, y)| DataPoint {
+                        x: i as f64,
+                        y,
+                        label: None,
+                        color: None,
+                        metadata: HashMap::new(),
+                    })
+                    .collect();
+                data_points
+            },
             color: Some(self.color_palette.primary.clone()),
             visible: true,
             line_style: LineStyle::default(),
@@ -804,13 +815,19 @@ impl LineChartBuilder {
     pub fn data(&mut self, data: Vec<f64>) -> &mut Self {
         let series = DataSeries {
             name: "Series 1".to_string(),
-            data: data.into_iter().enumerate().map(|(i, y)| DataPoint {
-                x: i as f64,
-                y,
-                label: None,
-                color: None,
-                metadata: HashMap::new(),
-            })).collect(),
+            data: {
+                let data_points: Vec<DataPoint> = data.into_iter()
+                    .enumerate()
+                    .map(|(i, y)| DataPoint {
+                        x: i as f64,
+                        y,
+                        label: None,
+                        color: None,
+                        metadata: HashMap::new(),
+                    })
+                    .collect();
+                data_points
+            },
             color: Some(self.color_palette.primary.clone()),
             visible: true,
             line_style: self.line_style.clone(),
@@ -889,13 +906,19 @@ impl BarChartBuilder {
     pub fn data(&mut self, data: Vec<f64>) -> &mut Self {
         let series = DataSeries {
             name: "Series 1".to_string(),
-            data: data.into_iter().enumerate().map(|(i, y)| DataPoint {
-                x: i as f64,
-                y,
-                label: None,
-                color: None,
-                metadata: HashMap::new(),
-            })).collect(),
+            data: {
+                let data_points: Vec<DataPoint> = data.into_iter()
+                    .enumerate()
+                    .map(|(i, y)| DataPoint {
+                        x: i as f64,
+                        y,
+                        label: None,
+                        color: None,
+                        metadata: HashMap::new(),
+                    })
+                    .collect();
+                data_points
+            },
             color: Some(self.color_palette.primary.clone()),
             visible: true,
             line_style: LineStyle::default(),

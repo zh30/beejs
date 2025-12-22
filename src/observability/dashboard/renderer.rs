@@ -858,16 +858,19 @@ impl GraphRenderer {
 
         // Render nodes
         for node in &graph.nodes {
+            let text_element = format!(
+                "<text x=\"{}\" y=\"{}\" text-anchor=\"middle\" dy=\".3em\" font-size=\"12\" fill=\"#333\">{}</text>",
+                node.position.x, node.position.y, node.label
+            );
             svg.push_str(&format!(
-                r#"  <circle cx="{}" cy="{}" r="{}" fill="{}" stroke="#333" stroke-width="2"/>
-  <text x="{}" y="{}" text-anchor="middle" dy=".3em" font-size="12" fill="#333">{}</text>
-"#,
+                "  <circle cx=\"{}\" cy=\"{}\" r=\"{}\" fill=\"{}\" stroke=\"#333\" stroke-width=\"2\"/>\n",
                 node.position.x, node.position.y,
                 node.size.width / 2.0,
-                node.color,
-                node.position.x, node.position.y,
-                node.label
+                node.color
             ));
+            svg.push_str("  ");
+            svg.push_str(&text_element);
+            svg.push('\n');
         }
 
         svg.push_str("</svg>");

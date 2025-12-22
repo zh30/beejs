@@ -76,6 +76,7 @@ pub struct MetricsCollector {
 }
 
 /// Metrics Collector Trait
+#[async_trait::async_trait]
 pub trait MetricsCollectorTrait {
     async fn collect(&self) -> Result<HashMap<String, Value>>;
     fn name(&self) -> &str;

@@ -26,6 +26,8 @@ pub mod structured_logging;
 pub mod metrics;
 pub mod alerting;
 pub mod jaeger_tracer;
+pub mod dashboard;
+pub mod visualization;
 
 pub use jaeger_tracer::*;
 
@@ -33,6 +35,21 @@ pub use prometheus_exporter::PrometheusExporter;
 pub use structured_logging::StructuredLogger;
 pub use metrics::{CustomMetrics, RuntimeMetrics, PerformanceMetrics, BusinessMetrics};
 pub use alerting::AlertingSystem;
+pub use dashboard::{
+    DashboardManager, DashboardConfig, Dashboard, PanelConfig,
+    GrafanaClient, MetricsCollector, ChartType, GraphType,
+    GridPos, QueryTarget, FieldConfig, ThresholdsConfig, PanelOptions,
+    LegendConfig, TooltipConfig, TimeRangeConfig, TemplateVariable
+};
+
+pub use visualization::{
+    LineChart, BarChart, PieChart, TopologyGraph,
+    LineChartBuilder, BarChartBuilder, PieChartBuilder, TopologyGraphBuilder,
+    VisualizationConfig, DataPoint, DataSeries, ColorPalette, AxisConfig,
+    LegendConfig, TooltipConfig, GridConfig, MarkerConfig, LineStyle,
+    Position, Size, GraphNode, GraphEdge, EdgeStyle, LayoutConfig,
+    LayoutAlgorithm, ForceLayoutParams, InteractionConfig, FilterConfig
+};
 
 use anyhow::Result;
 use serde_json::Value;
