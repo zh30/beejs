@@ -1,0 +1,711 @@
+//! Kubernetes Operator Controller
+//! Implements the reconciliation loop for BeejsCluster and BeejsWorkload
+
+use kube::api::{ListParams, Patch, PatchParams};
+use kube::core::{object::HasStatus, Condition};
+use kube::runtime::controller::{Action, Controller};
+use kube::runtime::events::{Event, EventType, Recorder};
+use kube::runtime::reexport::{Client, Context, Finalizer};
+use kube::{Api, Resource, ResourceExt};
+use std::sync::Arc;
+use tokio::time::Duration;
+use tracing::{info, warn, error, debug};
+
+use super::super::crd::{
+    BeejsCluster, BeejsClusterSpec, BeejsWorkload, BeejsWorkloadSpec, ClusterPhase,
+    Condition as BeejsCondition, ConditionStatus, ConditionType,
+};
+use super::super::k8s::crd::WorkloadPhase;
+
+/// Cluster controller for managing BeejsCluster resources
+pub struct ClusterController {
+    /// Kubernetes client
+    pub client: Client,
+
+    /// API for BeejsCluster resources
+    pub clusters: Api<BeejsCluster>,
+
+    /// API for StatefulSet resources
+    pub statefulsets: Api<k8s::apps::v1::StatefulSet>,
+
+    /// API for Service resources
+    pub services: Api<k8s::api::core::v1::Service>,
+
+    /// API for ConfigMap resources
+    pub configmaps: Api<k8s::api::core::v1::ConfigMap>,
+
+    /// API for Secret resources
+    pub secrets: Api<k8s::api::core::v1::Secret>,
+
+    /// Event recorder
+    pub recorder: Recorder,
+}
+
+/// Finalizer name for cluster resources
+const CLUSTER_FINALIZER: &str = "beejsclusters.cloudnative.beejs.io/finalizer";
+
+impl ClusterController {
+    /// Create a new cluster controller
+    pub fn new(client: Client, namespace: &str) -> Self {
+        let clusters = Api::<BeejsCluster>::all(client.clone(), namespace);
+        let statefulsets = Api::<k8s::apps::v1::StatefulSet>::all(client.clone(), namespace);
+        let services = Api::<k8s::api::core::v1::Service>::all(client.clone(), namespace);
+        let configmaps = Api::<k8s::api::core::v1::ConfigMap>::all(client.clone(), namespace);
+        let secrets = Api::<k8s::api::core::v1::Secret>::all(client.clone(), namespace);
+
+        let recorder = Recorder::new(
+            client.clone(),
+            "beejs-cluster-controller",
+            &clusters,
+        );
+
+        Self {
+            client: client.clone(),
+            clusters,
+            statefulsets,
+            services,
+            configmaps,
+            secrets,
+            recorder,
+        }
+    }
+
+    /// Reconcile function for BeejsCluster
+    pub async fn reconcile(
+        &self,
+        cluster: Arc<BeejsCluster>,
+        _context: Context<Client>,
+    ) -> Result<Action, Error> {
+        info!("Reconciling BeejsCluster: {}", cluster.name_any());
+
+        // Handle finalizer
+        let finalizer = Finalizer::<BeejsCluster>::new(self.client.clone(), CLUSTER_FINALIZER);
+        let has_finalizer = cluster.annotations().contains_key(CLUSTER_FINALIZER);
+
+        // Get current phase
+        let phase = self.get_current_phase(&cluster).await?;
+        debug!("Current phase: {:?}", phase);
+
+        match phase {
+            ClusterPhase::Pending | ClusterPhase::Creating => {
+                self.reconcile_create(cluster.clone()).await?;
+                self.update_phase(cluster.as_ref(), ClusterPhase::Creating).await?;
+            }
+            ClusterPhase::Running => {
+                self.reconcile_running(cluster.clone()).await?;
+            }
+            ClusterPhase::Updating => {
+                self.reconcile_update(cluster.clone()).await?;
+                self.update_phase(cluster.as_ref(), ClusterPhase::Running).await?;
+            }
+            ClusterPhase::Failed => {
+                if !has_finalizer {
+                    // Add finalizer before attempting recovery
+                    finalizer
+                        .patch(&cluster.name_any(), &Patch::Merge(&serde_json::json!({
+                            "metadata": {
+                                "annotations": {
+                                    CLUSTER_FINALIZER: "true"
+                                }
+                            }
+                        })))
+                        .await?;
+                }
+
+                self.reconcile_recovery(cluster.clone()).await?;
+                self.update_phase(cluster.as_ref(), ClusterPhase::Running).await?;
+            }
+        }
+
+        // Add finalizer if it doesn't exist
+        if !has_finalizer {
+            finalizer
+                .patch(&cluster.name_any(), &Patch::Merge(&serde_json::json!({
+                    "metadata": {
+                        "annotations": {
+                            CLUSTER_FINALIZER: "true"
+                        }
+                    }
+                })))
+                .await?;
+        }
+
+        Ok(Action::requeue(Duration::from_secs(30)))
+    }
+
+    /// Handle cleanup when resource is deleted
+    pub async fn cleanup(
+        &self,
+        cluster: Arc<BeejsCluster>,
+        _context: Context<Client>,
+    ) -> Result<Action, Error> {
+        info!("Cleaning up BeejsCluster: {}", cluster.name_any());
+
+        let name = cluster.name_any();
+
+        // Delete StatefulSet
+        if let Err(e) = self.statefulsets.delete(&name).await {
+            if !matches!(e, kube::Error::Api(kube::api::Error { code: 404, .. })) {
+                warn!("Failed to delete StatefulSet: {}", e);
+            }
+        }
+
+        // Delete Service
+        if let Err(e) = self.services.delete(&name).await {
+            if !matches!(e, kube::Error::Api(kube::api::Error { code: 404, .. })) {
+                warn!("Failed to delete Service: {}", e);
+            }
+        }
+
+        // Delete ConfigMap
+        if let Err(e) = self.configmaps.delete(&name).await {
+            if !matches!(e, kube::Error::Api(kube::api::Error { code: 404, .. })) {
+                warn!("Failed to delete ConfigMap: {}", e);
+            }
+        }
+
+        // Delete Secret
+        if let Err(e) = self.secrets.delete(&name).await {
+            if !matches!(e, kube::Error::Api(kube::api::Error { code: 404, .. })) {
+                warn!("Failed to delete Secret: {}", e);
+            }
+        }
+
+        info!("Successfully cleaned up BeejsCluster: {}", name);
+        Ok(Action::await_change())
+    }
+
+    /// Get current phase of the cluster
+    async fn get_current_phase(&self, cluster: &BeejsCluster) -> Result<ClusterPhase, Error> {
+        // Try to get phase from status
+        if let Some(status) = &cluster.status {
+            if let Some(phase) = &status.phase {
+                return Ok(phase.clone());
+            }
+        }
+
+        // Default to Pending
+        Ok(ClusterPhase::Pending)
+    }
+
+    /// Update the phase of the cluster
+    async fn update_phase(&self, cluster: &BeejsCluster, phase: ClusterPhase) -> Result<(), Error> {
+        let patch = serde_json::json!({
+            "status": {
+                "phase": phase,
+                "conditions": vec![
+                    {
+                        "type": "Ready",
+                        "status": match phase {
+                            ClusterPhase::Running => "True",
+                            _ => "False",
+                        }
+                    }
+                ]
+            }
+        });
+
+        let params = PatchParams::default();
+        self.clusters
+            .patch_status(&cluster.name_any(), &params, &Patch::Merge(&patch))
+            .await?;
+
+        // Emit event
+        let event_type = match phase {
+            ClusterPhase::Running => EventType::Normal,
+            ClusterPhase::Failed => EventType::Warning,
+            _ => EventType::Normal,
+        };
+
+        self.recorder
+            .publish(Event {
+                type_: event_type,
+                reason: "PhaseChanged".to_string(),
+                note: Some(format!("Cluster phase changed to {:?}", phase)),
+                action: None,
+                secondary: None,
+            })
+            .await;
+
+        Ok(())
+    }
+
+    /// Reconcile cluster creation
+    async fn reconcile_create(&self, cluster: Arc<BeejsCluster>) -> Result<(), Error> {
+        info!("Creating cluster resources for: {}", cluster.name_any());
+
+        // 1. Create ConfigMap
+        self.create_configmap(&cluster).await?;
+
+        // 2. Create Secret
+        self.create_secret(&cluster).await?;
+
+        // 3. Create StatefulSet
+        self.create_statefulset(&cluster).await?;
+
+        // 4. Create Service
+        self.create_service(&cluster).await?;
+
+        // 5. Wait for pods to be ready
+        self.wait_for_ready(&cluster).await?;
+
+        info!("Successfully created cluster resources for: {}", cluster.name_any());
+        Ok(())
+    }
+
+    /// Reconcile running cluster
+    async fn reconcile_running(&self, cluster: Arc<BeejsCluster>) -> Result<(), Error> {
+        debug!("Checking cluster status for: {}", cluster.name_any());
+
+        // Check if resources need updating
+        if self.needs_update(&cluster).await? {
+            info!("Cluster needs update: {}", cluster.name_any());
+            self.reconcile_update(cluster.clone()).await?;
+        }
+
+        // Check health
+        self.check_health(&cluster).await?;
+
+        Ok(())
+    }
+
+    /// Reconcile cluster update
+    async fn reconcile_update(&self, cluster: Arc<BeejsCluster>) -> Result<(), Error> {
+        info!("Updating cluster: {}", cluster.name_any());
+
+        // Update StatefulSet if needed
+        if let Err(e) = self.update_statefulset(&cluster).await {
+            error!("Failed to update StatefulSet: {}", e);
+            return Err(e);
+        }
+
+        // Wait for update to complete
+        self.wait_for_update(&cluster).await?;
+
+        info!("Successfully updated cluster: {}", cluster.name_any());
+        Ok(())
+    }
+
+    /// Reconcile cluster recovery from failed state
+    async fn reconcile_recovery(&self, cluster: Arc<BeejsCluster>) -> Result<(), Error> {
+        warn!("Recovering cluster from failed state: {}", cluster.name_any());
+
+        // Check if resources exist
+        if !self.resources_exist(&cluster).await? {
+            // Resources don't exist, recreate them
+            self.reconcile_create(cluster.clone()).await?;
+        } else {
+            // Resources exist, try to recover
+            self.recover_resources(&cluster).await?;
+        }
+
+        Ok(())
+    }
+
+    /// Create ConfigMap for cluster configuration
+    async fn create_configmap(&self, cluster: &BeejsCluster) -> Result<(), Error> {
+        let name = cluster.name_any();
+        let cm = k8s::api::core::v1::ConfigMap {
+            metadata: k8s::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+                name: Some(name.clone()),
+                namespace: cluster.namespace(),
+                labels: Some(self.get_labels(cluster)),
+                annotations: Some(self.get_annotations(cluster)),
+                ..Default::default()
+            },
+            data: Some(HashMap::from([
+                ("version".to_string(), cluster.spec.version.clone()),
+                ("clusterName".to_string(), cluster.spec.distributed.cluster_name.clone()),
+                ("nodes".to_string(), cluster.spec.nodes.to_string()),
+            ])),
+            binary_data: None,
+            immutable: None,
+        };
+
+        self.configmaps.create(&k8s::api::PostParams::default(), &cm).await?;
+        info!("Created ConfigMap: {}", name);
+        Ok(())
+    }
+
+    /// Create Secret for cluster credentials
+    async fn create_secret(&self, cluster: &BeejsCluster) -> Result<(), Error> {
+        let name = cluster.name_any();
+        let secret = k8s::api::core::v1::Secret {
+            metadata: k8s::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+                name: Some(name.clone()),
+                namespace: cluster.namespace(),
+                labels: Some(self.get_labels(cluster)),
+                annotations: Some(self.get_annotations(cluster)),
+                ..Default::default()
+            },
+            data: Some(HashMap::from([
+                ("token".to_string(), base64::encode("dummy-token")),
+            ])),
+            string_data: None,
+            type_: Some("Opaque".to_string()),
+            immutable: None,
+        };
+
+        self.secrets.create(&k8s::api::PostParams::default(), &secret).await?;
+        info!("Created Secret: {}", name);
+        Ok(())
+    }
+
+    /// Create StatefulSet for cluster nodes
+    async fn create_statefulset(&self, cluster: &BeejsCluster) -> Result<(), Error> {
+        let name = cluster.name_any();
+        let replicas = cluster.spec.nodes as i32;
+
+        let statefulset = k8s::apps::v1::StatefulSet {
+            metadata: k8s::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+                name: Some(name.clone()),
+                namespace: cluster.namespace(),
+                labels: Some(self.get_labels(cluster)),
+                annotations: Some(self.get_annotations(cluster)),
+                ..Default::default()
+            },
+            spec: Some(k8s::apps::v1::StatefulSetSpec {
+                replicas: Some(replicas),
+                service_name: format!("{}-headless", name),
+                selector: k8s::apimachinery::pkg::apis::meta::v1::LabelSelector {
+                    match_labels: Some(self.get_labels(cluster)),
+                    match_expressions: None,
+                },
+                template: k8s::api::core::v1::PodTemplateSpec {
+                    metadata: Some(k8s::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+                        labels: Some(self.get_labels(cluster)),
+                        annotations: Some(HashMap::from([
+                            ("beejs.io/cluster".to_string(), name.clone()),
+                        ])),
+                        ..Default::default()
+                    }),
+                    spec: Some(self.create_pod_spec(cluster)?),
+                },
+                volume_claim_templates: Some(self.create_pvc_templates(cluster)?),
+                min_ready_seconds: Some(10),
+                ordinal_ordinals: None,
+                persistent_volume_claim_retention_policy: None,
+                pod_management_policy: None,
+                revision_history_limit: Some(10),
+                update_strategy: Some(k8s::apps::v1::StatefulSetUpdateStrategy {
+                    type_: Some("RollingUpdate".to_string()),
+                    rolling_update: Some(k8s::apps::v1::RollingUpdateStatefulSetStrategy {
+                        max_unavailable: Some(k8s::apimachinery::pkg::util::intstr::IntOrString::Int(1)),
+                        partition: None,
+                    }),
+                }),
+            }),
+            status: None,
+        };
+
+        self.statefulsets.create(&k8s::api::PostParams::default(), &statefulset).await?;
+        info!("Created StatefulSet: {} with {} replicas", name, replicas);
+        Ok(())
+    }
+
+    /// Create Service for cluster access
+    async fn create_service(&self, cluster: &BeejsCluster) -> Result<(), Error> {
+        let name = cluster.name_any();
+
+        // Headless service for StatefulSet
+        let headless_service = k8s::api::core::v1::Service {
+            metadata: k8s::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+                name: Some(format!("{}-headless", name)),
+                namespace: cluster.namespace(),
+                labels: Some(self.get_labels(cluster)),
+                annotations: Some(self.get_annotations(cluster)),
+                ..Default::default()
+            },
+            spec: Some(k8s::api::core::v1::ServiceSpec {
+                cluster_ip: Some("None".to_string()),
+                cluster_ips: None,
+                ip_families: None,
+                ip_family_policy: None,
+                ports: None,
+                publish_not_ready_addresses: Some(true),
+                selector: Some(self.get_labels(cluster)),
+                session_affinity: Some("ClientIP".to_string()),
+                session_affinity_config: None,
+                type_: Some("ClusterIP".to_string()),
+                external_ip_policy: None,
+                external_ips: None,
+                external_name: None,
+                health_check_node_port: None,
+                load_balancer_class: None,
+                load_balancer_ip: None,
+                load_balancer_source_ranges: None,
+                topology_keys: None,
+            }),
+            status: None,
+        };
+
+        self.services.create(&k8s::api::PostParams::default(), &headless_service).await?;
+
+        // ClusterIP service for API access
+        let api_service = k8s::api::core::v1::Service {
+            metadata: k8s::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+                name: Some(name.clone()),
+                namespace: cluster.namespace(),
+                labels: Some(self.get_labels(cluster)),
+                annotations: Some(self.get_annotations(cluster)),
+                ..Default::default()
+            },
+            spec: Some(k8s::api::core::v1::ServiceSpec {
+                cluster_ip: Some("10.0.0.1".to_string()),
+                cluster_ips: None,
+                ip_families: None,
+                ip_family_policy: None,
+                ports: Some(vec![k8s::api::core::v1::ServicePort {
+                    name: Some("api".to_string()),
+                    port: 8080,
+                    protocol: Some("TCP".to_string()),
+                    target_port: Some(k8s::apimachinery::pkg::util::intstr::IntOrString::Int(8080)),
+                    app_protocol: None,
+                    node_port: None,
+                }]),
+                selector: Some(self.get_labels(cluster)),
+                session_affinity: Some("None".to_string()),
+                session_affinity_config: None,
+                type_: Some("ClusterIP".to_string()),
+                external_ip_policy: None,
+                external_ips: None,
+                external_name: None,
+                health_check_node_port: None,
+                load_balancer_class: None,
+                load_balancer_ip: None,
+                load_balancer_source_ranges: None,
+                topology_keys: None,
+            }),
+            status: None,
+        };
+
+        self.services.create(&k8s::api::PostParams::default(), &api_service).await?;
+        info!("Created Services: {}-headless and {}", name, name);
+        Ok(())
+    }
+
+    /// Check if cluster needs update
+    async fn needs_update(&self, cluster: &BeejsCluster) -> Result<bool, Error> {
+        // TODO: Implement update detection logic
+        Ok(false)
+    }
+
+    /// Update StatefulSet if needed
+    async fn update_statefulset(&self, cluster: &BeejsCluster) -> Result<(), Error> {
+        // TODO: Implement StatefulSet update logic
+        Ok(())
+    }
+
+    /// Check cluster health
+    async fn check_health(&self, cluster: &BeejsCluster) -> Result<(), Error> {
+        // TODO: Implement health check logic
+        Ok(())
+    }
+
+    /// Check if cluster resources exist
+    async fn resources_exist(&self, cluster: &BeejsCluster) -> Result<bool, Error> {
+        let name = cluster.name_any();
+
+        // Check StatefulSet
+        if let Err(e) = self.statefulsets.get(&name).await {
+            if matches!(e, kube::Error::Api(kube::api::Error { code: 404, .. })) {
+                return Ok(false);
+            }
+            return Err(Error::Kube(e));
+        }
+
+        Ok(true)
+    }
+
+    /// Recover cluster resources
+    async fn recover_resources(&self, cluster: &BeejsCluster) -> Result<(), Error> {
+        // TODO: Implement resource recovery logic
+        Ok(())
+    }
+
+    /// Wait for pods to be ready
+    async fn wait_for_ready(&self, cluster: &BeejsCluster) -> Result<(), Error> {
+        // TODO: Implement readiness check
+        Ok(())
+    }
+
+    /// Wait for update to complete
+    async fn wait_for_update(&self, cluster: &BeejsCluster) -> Result<(), Error> {
+        // TODO: Implement update wait logic
+        Ok(())
+    }
+
+    /// Create pod specification
+    fn create_pod_spec(&self, cluster: &BeejsCluster) -> Result<k8s::api::core::v1::PodSpec, Error> {
+        Ok(k8s::api::core::v1::PodSpec {
+            containers: vec![k8s::api::core::v1::Container {
+                name: "beejs".to_string(),
+                image: Some(cluster.spec.image.clone()),
+                image_pull_policy: Some("IfNotPresent".to_string()),
+                ports: Some(vec![k8s::api::core::v1::ContainerPort {
+                    container_port: 8080,
+                    protocol: Some("TCP".to_string()),
+                    name: Some("api".to_string()),
+                    host_ip: None,
+                    host_port: None,
+                }]),
+                env: Some(vec![
+                    k8s::api::core::v1::EnvVar {
+                        name: "BEEJS_CLUSTER_NAME".to_string(),
+                        value: Some(cluster.spec.distributed.cluster_name.clone()),
+                        value_from: None,
+                    },
+                    k8s::api::core::v1::EnvVar {
+                        name: "BEEJS_NODE_ID".to_string(),
+                        value: None,
+                        value_from: Some(k8s::api::core::v1::EnvVarSource {
+                            field_ref: Some(k8s::api::core::v1::ObjectFieldSelector {
+                                field_path: "metadata.name".to_string(),
+                                api_version: None,
+                            }),
+                            resource_field_ref: None,
+                            config_map_key_ref: None,
+                            secret_key_ref: None,
+                        }),
+                    },
+                ]),
+                env_from: None,
+                resources: Some(k8s::api::core::v1::ResourceRequirements {
+                    requests: Some(HashMap::from([
+                        ("cpu".to_string(), cluster.spec.resources.cpu.clone()),
+                        ("memory".to_string(), cluster.spec.resources.memory.clone()),
+                    ])),
+                    limits: Some(HashMap::from([
+                        ("cpu".to_string(), cluster.spec.resources.cpu.clone()),
+                        ("memory".to_string(), cluster.spec.resources.memory.clone()),
+                    ])),
+                    claims: None,
+                }),
+                volume_mounts: Some(vec![
+                    k8s::api::core::v1::VolumeMount {
+                        name: "config".to_string(),
+                        mount_path: "/etc/beejs".to_string(),
+                        read_only: true,
+                        sub_path: None,
+                        sub_path_expr: None,
+                        mount_propagation: None,
+                    },
+                ]),
+                ..Default::default()
+            }],
+            volumes: Some(vec![
+                k8s::api::core::v1::Volume {
+                    name: "config".to_string(),
+                    config_map: Some(k8s::api::core::v1::ConfigMapVolumeSource {
+                        default_mode: Some(0o644),
+                        items: None,
+                        name: Some(cluster.name_any()),
+                        optional: Some(false),
+                    }),
+                    ..Default::default()
+                },
+            ]),
+            ..Default::default()
+        })
+    }
+
+    /// Create PVC templates
+    fn create_pvc_templates(&self, cluster: &BeejsCluster) -> Result<Vec<k8s::api::core::v1::PersistentVolumeClaim>, Error> {
+        let mut pvcs = Vec::new();
+
+        // Add storage PVC if disk size is specified
+        if !cluster.spec.resources.disk.is_empty() {
+            let pvc = k8s::api::core::v1::PersistentVolumeClaim {
+                metadata: k8s::apimachinery::pkg::apis::meta::v1::ObjectMeta {
+                    name: Some(format!("{}-data", cluster.name_any())),
+                    ..Default::default()
+                },
+                spec: Some(k8s::api::core::v1::PersistentVolumeClaimSpec {
+                    access_modes: Some(vec!["ReadWriteOnce".to_string()]),
+                    resources: Some(k8s::api::core::v1::ResourceRequirements {
+                        requests: Some(HashMap::from([
+                            ("storage".to_string(), cluster.spec.resources.disk.clone()),
+                        ])),
+                        limits: None,
+                        claims: None,
+                    }),
+                    storage_class_name: Some("standard".to_string()),
+                    volume_mode: None,
+                    data_source: None,
+                    data_source_ref: None,
+                }),
+                status: None,
+            };
+            pvcs.push(pvc);
+        }
+
+        Ok(pvcs)
+    }
+
+    /// Get labels for resources
+    fn get_labels(&self, cluster: &BeejsCluster) -> HashMap<String, String> {
+        HashMap::from([
+            ("beejs.io/cluster".to_string(), cluster.name_any()),
+            ("beejs.io/version".to_string(), cluster.spec.version.clone()),
+            ("beejs.io/cluster-name".to_string(), cluster.spec.distributed.cluster_name.clone()),
+        ])
+    }
+
+    /// Get annotations for resources
+    fn get_annotations(&self, cluster: &BeejsCluster) -> HashMap<String, String> {
+        HashMap::from([
+            ("beejs.io/created-by".to_string(), "beejs-operator".to_string()),
+            ("beejs.io/description".to_string(), "Beejs Cluster".to_string()),
+        ])
+    }
+}
+
+/// Error type for operator controller
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error("Kubernetes error: {0}")]
+    Kube(#[from] kube::Error),
+
+    #[error("Serde JSON error: {0}")]
+    Json(#[from] serde_json::Error),
+
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Other error: {0}")]
+    Other(String),
+}
+
+// Implement From for kube::Error
+impl From<kube::Error> for Error {
+    fn from(e: kube::Error) -> Self {
+        Error::Kube(e)
+    }
+}
+
+// Implement From for serde_json::Error
+impl From<serde_json::Error> for Error {
+    fn from(e: serde_json::Error) -> Self {
+        Error::Json(e)
+    }
+}
+
+// Implement From for std::io::Error
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Self {
+        Error::Io(e)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_type() {
+        // Test error conversion
+        let kube_err = kube::Error::Api(kube::api::Error { code: 404, status: "".to_string(), message: "Not Found".to_string(), reason: "".to_string(), details: None });
+        let error: Error = kube_err.into();
+        assert!(matches!(error, Error::Kube(_)));
+    }
+}
