@@ -13,8 +13,18 @@ pub use k8s::{
     WorkloadPhase,
 };
 
-// TODO: Add container module
-// pub mod container;
+/// Container module for Docker builds and security
+pub mod container;
+
+/// Re-export container types
+pub use container::{
+    MultiStageBuilder, BuilderStage, RuntimeStage, Optimization,
+    SecurityScanner, ContainerImage, ImageLayer, Vulnerability, VulnerabilitySeverity,
+    ComplianceIssue, ComplianceSeverity, Secret, ScanReport, ScanConfig,
+    Optimizer, OptimizationStrategy, OptimizationSuggestion, ImpactLevel,
+    LayerMinimizationStrategy, BaseImageOptimizationStrategy, CacheOptimizationStrategy,
+    SecurityHardeningStrategy, SizeOptimizationStrategy, DockerfileError, SecurityError,
+};
 
 // TODO: Add service_mesh module
 // pub mod service_mesh;
