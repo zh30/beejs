@@ -1,5 +1,5 @@
-//! 调用栈分析模块
-//! 分析函数调用栈，识别热点路径和性能瓶颈
+// 调用栈分析模块
+// 分析函数调用栈，识别热点路径和性能瓶颈
 
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};

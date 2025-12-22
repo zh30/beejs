@@ -1,5 +1,5 @@
-//! 分布式任务执行引擎模块
-//! 提供任务执行、监控、容错和恢复功能
+// 分布式任务执行引擎模块
+// 提供任务执行、监控、容错和恢复功能
 
 use std::collections::{HashMap, BinaryHeap, BTreeMap};
 use std::cmp::Reverse;

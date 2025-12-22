@@ -1,9 +1,9 @@
-//! 异步零拷贝 I/O 实现
-//!
-//! Stage 39.0: 网络零拷贝优化
-//!
-//! 该模块提供异步零拷贝 I/O 操作，基于 io_uring 和 Tokio 实现高性能的
-//! 异步数据传输，最小化系统调用和上下文切换开销。
+// 异步零拷贝 I/O 实现
+//
+// Stage 39.0: 网络零拷贝优化
+//
+// 该模块提供异步零拷贝 I/O 操作，基于 io_uring 和 Tokio 实现高性能的
+// 异步数据传输，最小化系统调用和上下文切换开销。
 
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Seek, SeekFrom, self};

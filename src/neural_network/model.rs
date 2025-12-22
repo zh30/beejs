@@ -1,4 +1,4 @@
-//! 神经网络模型实现
+// 神经网络模型实现
 
 use std::collections::{BTreeMap, HashMap};
 use super::layers::{ActivationLayer, ActivationType, DenseLayer, Layer};

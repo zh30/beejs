@@ -1,5 +1,5 @@
-//! Package management system
-//! npm/yarn/pnpm compatible package manager
+// Package management system
+/// npm/yarn/pnpm compatible package manager
 use anyhow::Result;
 /// Package info
 #[derive(Debug, Clone)]

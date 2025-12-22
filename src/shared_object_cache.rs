@@ -1,5 +1,5 @@
-//! 共享对象缓存模块
-//! 实现跨V8 Isolate的常用对象共享，减少重复分配
+// 共享对象缓存模块
+// 实现跨V8 Isolate的常用对象共享，减少重复分配
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

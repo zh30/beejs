@@ -1,7 +1,7 @@
-//! WebAssembly CLI Commands Module
-//! Stage 77 Phase 3 - WebAssembly CLI 集成
-//!
-//! 提供完整的 WebAssembly 模块管理、性能分析和执行功能
+// WebAssembly CLI Commands Module
+// Stage 77 Phase 3 - WebAssembly CLI 集成
+//
+// 提供完整的 WebAssembly 模块管理、性能分析和执行功能
 
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};

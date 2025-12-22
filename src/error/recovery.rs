@@ -1,5 +1,5 @@
-//! Stage 89 Phase 2: 自动恢复机制
-//! 提供智能错误恢复、重试策略和自动修复能力
+// Stage 89 Phase 2: 自动恢复机制
+// 提供智能错误恢复、重试策略和自动修复能力
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};

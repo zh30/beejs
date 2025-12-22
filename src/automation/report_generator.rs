@@ -1,12 +1,12 @@
-//! 自动化性能报告生成器
-//! Stage 31.3.2: 自动化性能测试套件
-//!
-//! 该模块提供完整的性能报告生成能力，包括：
-//! - 多格式报告输出 (JSON, HTML, Markdown, CSV)
-//! - 可视化图表生成
-//! - 历史趋势分析
-//! - 性能对比报告
-//! - 自动化报告分发
+// 自动化性能报告生成器
+// Stage 31.3.2: 自动化性能测试套件
+//
+// 该模块提供完整的性能报告生成能力，包括：
+// - 多格式报告输出 (JSON, HTML, Markdown, CSV)
+// - 可视化图表生成
+// - 历史趋势分析
+// - 性能对比报告
+// - 自动化报告分发
 
 use crate::performance_regression::RegressionTestSuite;
 use serde::{Deserialize, Serialize};

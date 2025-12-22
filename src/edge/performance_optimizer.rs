@@ -1,5 +1,5 @@
-//! Performance Optimizer
-//! Optimizes resource usage and performance for edge computing
+// Performance Optimizer
+// Optimizes resource usage and performance for edge computing
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

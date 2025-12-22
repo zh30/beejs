@@ -1,7 +1,7 @@
-//! Cloudflare 云平台适配器
-//! Stage 39.0: 多云平台适配层
-//!
-//! 该模块提供 Cloudflare 云平台支持，包括 Workers 和 Pages 服务
+// Cloudflare 云平台适配器
+// Stage 39.0: 多云平台适配层
+//
+// 该模块提供 Cloudflare 云平台支持，包括 Workers 和 Pages 服务
 
 use super::{CloudAdapter, DeploymentResult, FunctionConfig, Metrics};
 /// Cloudflare 适配器

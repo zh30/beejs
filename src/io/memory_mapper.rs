@@ -1,7 +1,7 @@
-//! Memory Mapping Optimization
-//!
-//! This module provides optimized memory mapping for large files and
-//! efficient memory access patterns for zero-copy I/O operations.
+// Memory Mapping Optimization
+//
+// This module provides optimized memory mapping for large files and
+// efficient memory access patterns for zero-copy I/O operations.
 
 use anyhow::{Result, anyhow};
 use memmap2::{Mmap, MmapOptions};

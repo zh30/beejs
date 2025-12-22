@@ -1,4 +1,4 @@
-//! 实时性能监控器 - Stage 90 Phase 5.4
+// 实时性能监控器 - Stage 90 Phase 5.4
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

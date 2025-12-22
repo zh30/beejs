@@ -1,12 +1,12 @@
-//! Module Resolution System
-//! Stage 56.3 - Node.js Compatible Module Resolution
-//!
-//! Provides comprehensive module resolution including:
-//! - Node.js module algorithm (.js → .json → .node)
-//! - node_modules search paths
-//! - Built-in module detection
-//! - Package.json "main" field support
-//! - Relative and absolute path resolution
+// Module Resolution System
+// Stage 56.3 - Node.js Compatible Module Resolution
+//
+// Provides comprehensive module resolution including:
+// - Node.js module algorithm (.js → .json → .node)
+// - node_modules search paths
+// - Built-in module detection
+// - Package.json "main" field support
+/// - Relative and absolute path resolution
 use std::fs;
 use std::path::{Path, PathBuf};
 use crate::cli::script_executor::ModuleSystem;

@@ -1,6 +1,6 @@
-//! Stage 21.2: Lazy Loading Module
-//! Provides lazy initialization for expensive components to reduce startup time
-//! Only initializes modules when they're actually used
+// Stage 21.2: Lazy Loading Module
+// Provides lazy initialization for expensive components to reduce startup time
+// Only initializes modules when they're actually used
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

@@ -1,5 +1,5 @@
-//! Web API modules - Stage 43.0 / Stage 74.0
-//! Web标准API实现
+// Web API modules - Stage 43.0 / Stage 74.0
+/// Web标准API实现
 use std::task::Context;
 pub mod fetch;
 pub mod websocket;

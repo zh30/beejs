@@ -1,5 +1,5 @@
-//! 分布式任务调度模块
-//! 提供任务分发、优先级队列、结果聚合等功能
+// 分布式任务调度模块
+// 提供任务分发、优先级队列、结果聚合等功能
 
 use std::collections::{HashMap, BinaryHeap};
 use std::cmp::Reverse;

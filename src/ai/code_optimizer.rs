@@ -1,6 +1,6 @@
-//! AI 代码优化器
-//! 提供 AI 驱动的代码优化建议、性能分析和自动优化功能
-//! Stage 93 Phase 2.1.2: 自动代码优化建议系统
+// AI 代码优化器
+// 提供 AI 驱动的代码优化建议、性能分析和自动优化功能
+// Stage 93 Phase 2.1.2: 自动代码优化建议系统
 
 use crate::ai::ai_performance_engine::::{AiPerformanceEngine, PerformanceMetrics};
 use crate::ai::auto_optimizer::::{AutoOptimizer, Bottleneck, Optimization};

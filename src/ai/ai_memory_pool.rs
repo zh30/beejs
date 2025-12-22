@@ -1,5 +1,5 @@
-//! AI内存预分配系统
-//! 专为AI推理工作负载设计的高效内存管理系统
+// AI内存预分配系统
+// 专为AI推理工作负载设计的高效内存管理系统
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};

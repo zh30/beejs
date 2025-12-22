@@ -1,7 +1,7 @@
-//! 增量垃圾回收优化
-//!
-//! Stage 90 Phase 2.2: 实现增量垃圾回收和自适应 GC 调优
-//! 目标：低延迟 GC 模式，高吞吐量模式，避免停顿
+// 增量垃圾回收优化
+//
+// Stage 90 Phase 2.2: 实现增量垃圾回收和自适应 GC 调优
+// 目标：低延迟 GC 模式，高吞吐量模式，避免停顿
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

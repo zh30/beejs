@@ -1,6 +1,6 @@
-//! AI Ops Engine
-//!
-//! Main engine that coordinates all AI Ops functionality.
+// AI Ops Engine
+//
+// Main engine that coordinates all AI Ops functionality.
 
 use crate::core::data_collector::::{DataCollector, Metric, PerformanceSnapshot};
 use crate::core::error::::{AIOpsError, Result};

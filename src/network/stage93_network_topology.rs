@@ -1,5 +1,5 @@
-//! Stage 93 网络拓扑感知系统
-//! 自动检测网络拓扑，优化路由策略和连接管理
+// Stage 93 网络拓扑感知系统
+// 自动检测网络拓扑，优化路由策略和连接管理
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};

@@ -1,5 +1,5 @@
-//! Plugin modules - Stage 43.0
-//! 插件系统与扩展
+// Plugin modules - Stage 43.0
+// 插件系统与扩展
 
 use std::collections::{BTreeMap, HashMap};
 

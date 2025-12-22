@@ -1,6 +1,6 @@
-//! AI 工作负载
-//!
-//! 实现 AI 推理相关任务的性能测试
+// AI 工作负载
+//
+// 实现 AI 推理相关任务的性能测试
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

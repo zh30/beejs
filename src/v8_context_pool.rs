@@ -1,8 +1,8 @@
-//! V8 Context Pool for reusing initialized contexts
-//! This module provides a pool of pre-initialized V8 contexts to avoid
-//! the overhead of creating new contexts for each execution.
-//!
-//! Stage 64: Performance optimization - Reduce V8 context creation overhead
+// V8 Context Pool for reusing initialized contexts
+// This module provides a pool of pre-initialized V8 contexts to avoid
+// the overhead of creating new contexts for each execution.
+//
+// Stage 64: Performance optimization - Reduce V8 context creation overhead
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

@@ -1,6 +1,6 @@
-//! 运行时对比模块
-//!
-//! 提供与 Bun、Node.js 等运行时的性能对比功能
+// 运行时对比模块
+//
+// 提供与 Bun、Node.js 等运行时的性能对比功能
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

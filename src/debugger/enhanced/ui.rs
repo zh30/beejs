@@ -1,10 +1,10 @@
-//! Enhanced Debugging UI Module
-//!
-//! Provides visual debugging interface components including:
-//! - Breakpoint management
-//! - Variable inspection
-//! - Call stack viewing
-//! - Interactive REPL
+// Enhanced Debugging UI Module
+//
+// Provides visual debugging interface components including:
+// - Breakpoint management
+// - Variable inspection
+// - Call stack viewing
+/// - Interactive REPL
 use anyhow::Result;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};

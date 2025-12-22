@@ -1,7 +1,7 @@
-//! Doctor Command Module
-//! Stage 91 Phase 4.1 - 环境诊断命令
-//!
-//! 实现 `beejs doctor` 命令，诊断开发环境问题
+// Doctor Command Module
+// Stage 91 Phase 4.1 - 环境诊断命令
+//
+/// 实现 `beejs doctor` 命令，诊断开发环境问题
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};

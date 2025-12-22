@@ -1,10 +1,10 @@
-//! 真正的并发执行模块
-//! 实现支持 10000+ 并发脚本的并行执行引擎
-//!
-//! 核心架构:
-//! - ConcurrentRuntimePool: 线程本地Runtime池（绕过V8线程限制）
-//! - WorkStealingScheduler: 工作窃取调度器（负载均衡）
-//! - BatchExecutor: 批量执行处理器（高层API）
+// 真正的并发执行模块
+// 实现支持 10000+ 并发脚本的并行执行引擎
+//
+// 核心架构:
+// - ConcurrentRuntimePool: 线程本地Runtime池（绕过V8线程限制）
+// - WorkStealingScheduler: 工作窃取调度器（负载均衡）
+// - BatchExecutor: 批量执行处理器（高层API）
 
 
 use std::cell::RefCell;

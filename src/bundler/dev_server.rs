@@ -1,4 +1,4 @@
-//! Development server module
+/// Development server module
 use anyhow::Result;
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};

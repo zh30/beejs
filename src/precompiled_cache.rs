@@ -1,5 +1,5 @@
-//! 预编译模块缓存系统
-//! 预编译常用 Node.js 模块并缓存字节码，提升执行速度
+// 预编译模块缓存系统
+// 预编译常用 Node.js 模块并缓存字节码，提升执行速度
 
 use anyhow::{Context, Result, anyhow};
 use crate::code_cache::{BytecodeCache, CacheConfig};

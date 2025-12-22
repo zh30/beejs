@@ -1,6 +1,6 @@
-//! 量子模拟器 (Quantum Simulator) 实现
-//!
-//! 基于状态向量的量子计算模拟
+// 量子模拟器 (Quantum Simulator) 实现
+//
+/// 基于状态向量的量子计算模拟
 use num_complex::Complex64;
 /// 量子模拟器
 pub struct QuantumSimulator {

@@ -1,5 +1,5 @@
-//! 模型缓存系统
-//! 提供高效的 AI 模型缓存和管理
+// 模型缓存系统
+// 提供高效的 AI 模型缓存和管理
 
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};

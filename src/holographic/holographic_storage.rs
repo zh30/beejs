@@ -1,4 +1,4 @@
-//! 全息存储系统
+/// 全息存储系统
 use std::collections::HashMap;
 use std::collections::{BTreeMap};
 /// 压缩模式

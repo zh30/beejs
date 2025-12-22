@@ -1,5 +1,5 @@
-//! Service Mesh Observability module
-//! Provides distributed tracing and metrics collection
+// Service Mesh Observability module
+// Provides distributed tracing and metrics collection
 pub mod tracing;
 // Re-export observability types
 pub use tracing::{

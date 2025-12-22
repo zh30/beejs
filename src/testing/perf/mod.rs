@@ -1,11 +1,11 @@
-//! Performance Testing Module
-//! Stage 93 Phase 3.3 - Performance Benchmarking Support
-//!
-//! Provides Jest-compatible performance testing with:
-//! - Benchmark decorators
-//! - Multiple runs with statistics
-//! - Regression detection
-//! - Performance threshold checks
+// Performance Testing Module
+// Stage 93 Phase 3.3 - Performance Benchmarking Support
+//
+// Provides Jest-compatible performance testing with:
+// - Benchmark decorators
+// - Multiple runs with statistics
+// - Regression detection
+// - Performance threshold checks
 pub mod benchmark;
 pub mod regression_detector;
 pub mod perf_analyzer;

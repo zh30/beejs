@@ -1,5 +1,5 @@
-//! 代码格式化器
-//! 提供极速代码格式化功能
+// 代码格式化器
+// 提供极速代码格式化功能
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

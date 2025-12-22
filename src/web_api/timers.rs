@@ -1,5 +1,5 @@
-//! Timer API implementation for Web standard
-//! Provides setTimeout, setInterval, clearTimeout, clearInterval
+// Timer API implementation for Web standard
+// Provides setTimeout, setInterval, clearTimeout, clearInterval
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

@@ -1,7 +1,7 @@
-//! Prometheus metrics exporter for Beejs runtime
-//!
-//! This module provides HTTP server functionality to expose Prometheus metrics.
-//! The exporter runs an HTTP server that serves metrics in Prometheus format.
+// Prometheus metrics exporter for Beejs runtime
+//
+// This module provides HTTP server functionality to expose Prometheus metrics.
+// The exporter runs an HTTP server that serves metrics in Prometheus format.
 
 use anyhow::{Context, Result};
 use prometheus::{Counter, Opts, Registry, TextEncoder};

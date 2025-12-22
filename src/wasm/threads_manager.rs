@@ -1,6 +1,6 @@
-//! WebAssembly Threads 多线程管理器
-//!
-//! 提供 WebAssembly 线程池管理、共享内存和同步原语支持
+// WebAssembly Threads 多线程管理器
+//
+// 提供 WebAssembly 线程池管理、共享内存和同步原语支持
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock, MutexGuard};

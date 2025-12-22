@@ -1,7 +1,7 @@
-//! 认证管理器
-//! Stage 91 Phase 3.1 - 包管理器认证
-//!
-//! 处理 npm 注册表认证、私有仓库访问等
+// 认证管理器
+// Stage 91 Phase 3.1 - 包管理器认证
+//
+/// 处理 npm 注册表认证、私有仓库访问等
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

@@ -1,5 +1,5 @@
-//! Node.js Events模块实现
-//! 事件驱动编程的核心模块
+// Node.js Events模块实现
+// 事件驱动编程的核心模块
 
 use std::sync::Mutex;
 

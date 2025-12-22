@@ -1,6 +1,6 @@
-//! Stage 93 Phase 1.2: 优化内存分配器
-//! 在 Stage 92 智能分配器基础上，进一步优化分配性能
-//! 目标: 分配性能提升 40%+, 内存利用率提升 20%+
+// Stage 93 Phase 1.2: 优化内存分配器
+// 在 Stage 92 智能分配器基础上，进一步优化分配性能
+// 目标: 分配性能提升 40%+, 内存利用率提升 20%+
 
 use crate::memory_optimizer::smart_allocator::::{PoolConfig, SmartMemoryAllocator};
 use serde::{Deserialize, Serialize};

@@ -1,5 +1,5 @@
-//! Performance Benchmark
-//! Provides high-level benchmarking interface
+// Performance Benchmark
+// Provides high-level benchmarking interface
 
 
 /// Benchmark result

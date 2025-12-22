@@ -1,5 +1,5 @@
-//! Go Runtime Integration
-//! Provides seamless integration between Beejs and Go
+// Go Runtime Integration
+// Provides seamless integration between Beejs and Go
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};

@@ -1,7 +1,7 @@
-//! Performance analysis module
-//!
-//! This module provides comprehensive performance analysis tools including
-//! bottleneck detection, optimization suggestions, visualization, and trend analysis.
+// Performance analysis module
+//
+// This module provides comprehensive performance analysis tools including
+// bottleneck detection, optimization suggestions, visualization, and trend analysis.
 
 use std::collections::BTreeMap;
 

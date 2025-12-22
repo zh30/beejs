@@ -1,11 +1,11 @@
-//! Code Coverage Module
-//! Stage 93 Phase 3.3 - Code Coverage Analysis
-//!
-//! Provides code coverage tracking and reporting with:
-//! - Line coverage
-//! - Branch coverage
-//! - Function coverage
-//! - HTML/JSON/LCOV report generation
+// Code Coverage Module
+// Stage 93 Phase 3.3 - Code Coverage Analysis
+//
+// Provides code coverage tracking and reporting with:
+// - Line coverage
+// - Branch coverage
+// - Function coverage
+/// - HTML/JSON/LCOV report generation
 use std::io::Write;
 pub mod tracker;
 pub mod report_generator;

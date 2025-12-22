@@ -1,5 +1,5 @@
-//! Stage 89 Phase 2: 优雅降级管理器
-//! 提供功能降级策略和自动恢复机制
+// Stage 89 Phase 2: 优雅降级管理器
+// 提供功能降级策略和自动恢复机制
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};

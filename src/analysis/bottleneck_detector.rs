@@ -1,8 +1,8 @@
-//! Performance bottleneck detection module
-//!
-//! This module provides algorithms to detect performance bottlenecks
-//! in JavaScript/TypeScript execution, identifying slow operations,
-//! memory leaks, and other performance issues.
+// Performance bottleneck detection module
+//
+// This module provides algorithms to detect performance bottlenecks
+// in JavaScript/TypeScript execution, identifying slow operations,
+// memory leaks, and other performance issues.
 
 use crate::performance_analyzer::{ExecutionMetrics, PerformanceReport};
 use serde::{Deserialize, Serialize};

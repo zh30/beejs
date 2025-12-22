@@ -1,5 +1,5 @@
-//! Local Istio CRD type definitions
-//! These are simplified versions of Istio CRDs for use with kube-rs
+// Local Istio CRD type definitions
+/// These are simplified versions of Istio CRDs for use with kube-rs
 use kube::CustomResource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};

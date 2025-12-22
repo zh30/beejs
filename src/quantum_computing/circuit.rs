@@ -1,6 +1,6 @@
-//! 量子电路 (Quantum Circuit) 实现
-//!
-//! 支持构建和执行量子电路
+// 量子电路 (Quantum Circuit) 实现
+//
+/// 支持构建和执行量子电路
 use num_complex::Complex64;
 use std::collections::HashMap;
 use super::gates::GateType;

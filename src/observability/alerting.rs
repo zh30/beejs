@@ -1,7 +1,7 @@
-//! Alerting system for Beejs runtime
-//!
-//! This module provides an alerting system that can monitor metrics,
-//! detect anomalies, and send notifications via various channels.
+// Alerting system for Beejs runtime
+//
+// This module provides an alerting system that can monitor metrics,
+// detect anomalies, and send notifications via various channels.
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};

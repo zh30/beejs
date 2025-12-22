@@ -1,4 +1,4 @@
-//! fs (file system) polyfill
+/// fs (file system) polyfill
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};
 use std::path::Path;

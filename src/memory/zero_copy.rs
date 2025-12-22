@@ -1,7 +1,7 @@
-//! 零拷贝内存池系统
-//!
-//! Stage 90 Phase 2.1: 实现高效的零拷贝内存管理
-//! 支持小、中、大对象的分层内存池管理
+// 零拷贝内存池系统
+//
+// Stage 90 Phase 2.1: 实现高效的零拷贝内存管理
+// 支持小、中、大对象的分层内存池管理
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::{BTreeMap, HashMap};

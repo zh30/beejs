@@ -1,7 +1,7 @@
-//! pnpm 兼容性层
-//! Stage 91 Phase 3.1.3 - pnpm 兼容性实现
-//!
-//! 支持 pnpm 的硬链接/符号链接存储机制
+// pnpm 兼容性层
+// Stage 91 Phase 3.1.3 - pnpm 兼容性实现
+//
+// 支持 pnpm 的硬链接/符号链接存储机制
 
 
 use super::*;

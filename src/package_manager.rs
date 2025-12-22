@@ -1,12 +1,12 @@
-//! Beejs Package Manager
-//! 高性能包管理器，支持 npm/yarn 兼容
-//!
-//! 主要功能：
-//! - package.json 解析和验证
-//! - npm registry 集成
-//! - 依赖解析和版本管理
-//! - 包下载和缓存
-//! - node_modules 结构管理
+// Beejs Package Manager
+// 高性能包管理器，支持 npm/yarn 兼容
+//
+// 主要功能：
+// - package.json 解析和验证
+// - npm registry 集成
+// - 依赖解析和版本管理
+// - 包下载和缓存
+// - node_modules 结构管理
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};

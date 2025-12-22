@@ -1,5 +1,5 @@
-//! Performance API implementation for Web standard
-//! Provides performance.now(), performance.mark(), performance.measure()
+// Performance API implementation for Web standard
+// Provides performance.now(), performance.mark(), performance.measure()
 
 
 use anyhow::Result;

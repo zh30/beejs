@@ -1,5 +1,5 @@
-//! Offline Execution Engine
-//! Executes JavaScript/TypeScript scripts in offline mode with local caching
+// Offline Execution Engine
+// Executes JavaScript/TypeScript scripts in offline mode with local caching
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

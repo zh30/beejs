@@ -1,7 +1,7 @@
-//! Stage 92 Phase 2: 智能内存预取系统
-//!
-//! 实现基于 AI 的预测性内存预取，根据访问模式自动预测并预取数据
-//! 支持顺序访问、随机访问、循环访问等多种模式
+// Stage 92 Phase 2: 智能内存预取系统
+//
+// 实现基于 AI 的预测性内存预取，根据访问模式自动预测并预取数据
+// 支持顺序访问、随机访问、循环访问等多种模式
 
 use anyhow::{Result, anyhow};
 use crate::memory::zero_copy_enhanced::{AccessPattern, EnhancedZeroCopy};

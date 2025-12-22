@@ -1,7 +1,7 @@
-//! WebSocket Server Module
-//!
-//! Separate WebSocket server that runs alongside the HTTP server
-//! to handle real-time code execution and streaming output.
+// WebSocket Server Module
+//
+// Separate WebSocket server that runs alongside the HTTP server
+// to handle real-time code execution and streaming output.
 
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};

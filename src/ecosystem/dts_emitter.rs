@@ -1,7 +1,7 @@
-//! .d.ts 文件发射器
-//! Stage 91 Phase 3.2.1 - 类型定义文件输出
-//!
-//! 将类型分析结果转换为 TypeScript 声明文件
+// .d.ts 文件发射器
+// Stage 91 Phase 3.2.1 - 类型定义文件输出
+//
+/// 将类型分析结果转换为 TypeScript 声明文件
 use super::*;
 use std::collections::HashMap;
 use std::collections::{BTreeMap};

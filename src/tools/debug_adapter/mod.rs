@@ -1,4 +1,4 @@
-//! Debug Adapter Module
+// Debug Adapter Module
 
 use std::collections::{BTreeMap, HashMap};
 

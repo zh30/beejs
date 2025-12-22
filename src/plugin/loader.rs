@@ -1,4 +1,4 @@
-//! Plugin loader module
+/// Plugin loader module
 use anyhow::Result;
 use std::path::Path;
 pub struct PluginLoader {

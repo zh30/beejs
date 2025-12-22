@@ -1,10 +1,10 @@
-//! 零拷贝 UDP 套接字实现
-//!
-//! 该模块提供高性能的 UDP 套接字实现，支持：
-//! - MSG_ZEROCOPY 标志支持
-//! - 预分配数据包缓冲区
-//! - 数据包池管理
-//! - 批量发送优化
+// 零拷贝 UDP 套接字实现
+//
+// 该模块提供高性能的 UDP 套接字实现，支持：
+// - MSG_ZEROCOPY 标志支持
+// - 预分配数据包缓冲区
+// - 数据包池管理
+// - 批量发送优化
 
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Write};

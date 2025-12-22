@@ -1,4 +1,4 @@
-//! 元宇宙渲染引擎核心实现
+// 元宇宙渲染引擎核心实现
 
 use std::sync::{Arc, RwLock};
 use std::collections::{HashMap};

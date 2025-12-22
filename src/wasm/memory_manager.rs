@@ -1,7 +1,7 @@
-//! WASM 内存管理优化模块
-//!
-//! 提供高性能的 WebAssembly 内存管理，包括零拷贝内存共享、内存池预分配、
-//! V8 与 WASM 内存映射等功能
+// WASM 内存管理优化模块
+//
+// 提供高性能的 WebAssembly 内存管理，包括零拷贝内存共享、内存池预分配、
+// V8 与 WASM 内存映射等功能
 
 use anyhow::{Context, Result, anyhow};
 use std::alloc::{GlobalAlloc, Layout, System};

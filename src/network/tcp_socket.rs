@@ -1,10 +1,10 @@
-//! 零拷贝 TCP 套接字实现
-//!
-//! 该模块提供高性能的 TCP 套接字实现，支持：
-//! - SO_ZEROCOPY 标志支持
-//! - TCP_CORK/TCP_NODELAY 优化
-//! - 零拷贝发送缓冲区
-//! - 写时复制 (copy-on-write)
+// 零拷贝 TCP 套接字实现
+//
+// 该模块提供高性能的 TCP 套接字实现，支持：
+// - SO_ZEROCOPY 标志支持
+// - TCP_CORK/TCP_NODELAY 优化
+// - 零拷贝发送缓冲区
+// - 写时复制 (copy-on-write)
 
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Write};

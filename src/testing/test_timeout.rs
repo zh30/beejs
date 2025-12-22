@@ -1,5 +1,5 @@
-//! Test Timeout Management
-//! Handles test execution timeouts and cancellation
+// Test Timeout Management
+// Handles test execution timeouts and cancellation
 
 use crossbeam::channel::{Receiver, Sender, unbounded};
 use std::collections::{BTreeMap, HashMap};

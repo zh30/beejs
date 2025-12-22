@@ -1,5 +1,5 @@
-//! Kubernetes 集群管理器
-//! 实现 Beejs 集群的 Kubernetes 部署、管理和运维功能
+// Kubernetes 集群管理器
+// 实现 Beejs 集群的 Kubernetes 部署、管理和运维功能
 
 
 use anyhow::{Result, Context};

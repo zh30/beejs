@@ -1,5 +1,5 @@
-//! Stage 89 Phase 2: 错误处理模块
-//! 提供统一的错误处理、自动恢复和错误上下文管理
+// Stage 89 Phase 2: 错误处理模块
+// 提供统一的错误处理、自动恢复和错误上下文管理
 pub mod types;
 pub mod recovery;
 pub use types::{

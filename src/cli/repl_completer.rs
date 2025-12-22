@@ -1,5 +1,5 @@
-//! REPL Tab Auto-completion Module
-//! Stage 91 Phase 4.2 - Enhanced REPL
+// REPL Tab Auto-completion Module
+// Stage 91 Phase 4.2 - Enhanced REPL
 
 
 use rustyline::Result;

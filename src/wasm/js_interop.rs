@@ -1,7 +1,7 @@
-//! JS-WASM 互操作优化模块
-//!
-//! 提供高性能的 JavaScript 与 WebAssembly 之间的互操作功能，
-//! 包括零拷贝参数传递、批量调用优化、智能缓存等功能
+// JS-WASM 互操作优化模块
+//
+// 提供高性能的 JavaScript 与 WebAssembly 之间的互操作功能，
+// 包括零拷贝参数传递、批量调用优化、智能缓存等功能
 
 use anyhow::{Context, Result, anyhow};
 use std::collections::{BTreeMap, HashMap};

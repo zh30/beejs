@@ -1,5 +1,5 @@
-//! Custom Resource Definitions for Kubernetes
-//! Defines BeejsCluster and BeejsWorkload CRDs
+// Custom Resource Definitions for Kubernetes
+// Defines BeejsCluster and BeejsWorkload CRDs
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

@@ -1,4 +1,4 @@
-//! 多用户协作渲染器
+/// 多用户协作渲染器
 use std::collections::HashMap;
 use std::collections::{BTreeMap};
 /// 同步模式

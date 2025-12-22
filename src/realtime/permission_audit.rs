@@ -1,4 +1,4 @@
-//! 权限控制和审计日志
+/// 权限控制和审计日志
 use anyhow::Result;
 use tracing::info;
 use serde::{Serialize, Deserialize};

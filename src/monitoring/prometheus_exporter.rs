@@ -1,5 +1,5 @@
-//! Prometheus 指标导出器 - Stage 91 Phase 2.2
-//! 提供 Prometheus 兼容的指标导出功能
+// Prometheus 指标导出器 - Stage 91 Phase 2.2
+// 提供 Prometheus 兼容的指标导出功能
 
 use chrono::{DateTime, Utc};
 use crate::monitoring::ai_monitor::::{MetricType, PerformanceMetrics, RealtimePerformanceMonitor};

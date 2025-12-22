@@ -1,8 +1,8 @@
-//! CLI Commands Module
-//! Stage 56.1 - CLI Core Architecture
-//! Stage 91 Phase 4.1 - 开发者体验提升
-//!
-//! Implements a proper subcommand-based CLI structure similar to Bun
+// CLI Commands Module
+// Stage 56.1 - CLI Core Architecture
+// Stage 91 Phase 4.1 - 开发者体验提升
+//
+// Implements a proper subcommand-based CLI structure similar to Bun
 
 use clap::{Parser, Subcommand};
 use std::collections::{BTreeMap, HashMap};

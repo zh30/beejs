@@ -1,6 +1,6 @@
-//! Beejs 高级调试器
-//! Stage 80 Phase 3 - 开发者工具链
-//! 支持多线程调试、实时变量监控、断点管理
+// Beejs 高级调试器
+// Stage 80 Phase 3 - 开发者工具链
+// 支持多线程调试、实时变量监控、断点管理
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};

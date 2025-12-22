@@ -1,5 +1,5 @@
-//! BeejsWorkload Custom Resource Definition
-//! Defines workload-level configuration for running JavaScript/TypeScript scripts
+// BeejsWorkload Custom Resource Definition
+/// Defines workload-level configuration for running JavaScript/TypeScript scripts
 use kube::CustomResource;
 use schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
 use serde::{Deserialize, Serialize};

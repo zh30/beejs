@@ -1,6 +1,6 @@
-//! Remote Debug Server Module
-//!
-//! Provides WebSocket-based remote debugging capabilities
+// Remote Debug Server Module
+//
+// Provides WebSocket-based remote debugging capabilities
 
 
 use anyhow::Result;

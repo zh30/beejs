@@ -1,5 +1,5 @@
-//! Jaeger Tracing Integration for Beejs
-//! 实现与 Jaeger 分布式追踪系统的集成
+// Jaeger Tracing Integration for Beejs
+// 实现与 Jaeger 分布式追踪系统的集成
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};

@@ -1,5 +1,5 @@
-//! Global Distribution Router
-//! Intelligent routing across global edge locations
+// Global Distribution Router
+// Intelligent routing across global edge locations
 
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, HashMap};

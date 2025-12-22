@@ -1,5 +1,5 @@
-//! Network Optimizer
-//! Optimizes network performance for edge computing
+// Network Optimizer
+// Optimizes network performance for edge computing
 
 use crate::edge::{NodeId, RouteOptimizer};
 use serde::{Deserialize, Serialize};

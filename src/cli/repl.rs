@@ -1,5 +1,5 @@
-//! REPL (Read-Eval-Print Loop) Module
-//! Stage 36.0 - 实现交互式 REPL 功能
+// REPL (Read-Eval-Print Loop) Module
+// Stage 36.0 - 实现交互式 REPL 功能
 
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Write, self};

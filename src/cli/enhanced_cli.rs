@@ -1,5 +1,5 @@
-//! Enhanced CLI Module
-//! Stage 36.0 - 集成所有 CLI 增强功能
+// Enhanced CLI Module
+// Stage 36.0 - 集成所有 CLI 增强功能
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

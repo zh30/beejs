@@ -1,6 +1,6 @@
-//! 智能故障预测引擎
-//!
-//! 该模块基于历史数据和实时指标，利用机器学习算法预测潜在的系统故障。
+// 智能故障预测引擎
+//
+// 该模块基于历史数据和实时指标，利用机器学习算法预测潜在的系统故障。
 
 use crate::aiops::anomaly_detection::::{Anomaly, AnomalyDetector, BaselineCalculator};
 use serde::{Deserialize, Serialize};

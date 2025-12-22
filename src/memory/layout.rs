@@ -1,5 +1,5 @@
-//! Memory layout optimization
-//! Structure packing and cache-friendly layouts
+// Memory layout optimization
+/// Structure packing and cache-friendly layouts
 use anyhow::Result;
 /// Memory alignment
 #[derive(Debug, Clone, Copy, PartialEq)]

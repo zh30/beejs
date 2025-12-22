@@ -1,5 +1,5 @@
-//! Enterprise Security Manager
-//! Provides security policy enforcement, RBAC, and audit logging
+// Enterprise Security Manager
+// Provides security policy enforcement, RBAC, and audit logging
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};

@@ -1,15 +1,15 @@
-//! Debugger Module
-//! Stage 58 - 实现完整的调试器系统
-//! Stage 93 Phase 3.2 - 调试器增强
-//!
-//! This module provides comprehensive debugging capabilities including:
-//! - Breakpoint management (basic + conditional + logpoints)
-//! - Single-step execution
-//! - Variable inspection
-//! - Call stack traversal (sync + async)
-//! - Remote debugging support (Chrome DevTools + DAP)
-//! - Source map integration
-//! - Performance profiling integration
+// Debugger Module
+// Stage 58 - 实现完整的调试器系统
+// Stage 93 Phase 3.2 - 调试器增强
+//
+// This module provides comprehensive debugging capabilities including:
+// - Breakpoint management (basic + conditional + logpoints)
+// - Single-step execution
+// - Variable inspection
+// - Call stack traversal (sync + async)
+// - Remote debugging support (Chrome DevTools + DAP)
+// - Source map integration
+// - Performance profiling integration
 pub mod engine;
 pub mod breakpoint;
 pub mod stack_trace;

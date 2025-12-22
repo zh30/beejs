@@ -1,5 +1,5 @@
-//! 性能对比报告生成器
-//! 负责收集Beejs性能数据，与Bun进行对比，生成详细的性能报告
+// 性能对比报告生成器
+// 负责收集Beejs性能数据，与Bun进行对比，生成详细的性能报告
 
 use crate::Runtime;
 use std::collections::HashMap;

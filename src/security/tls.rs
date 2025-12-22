@@ -1,6 +1,6 @@
-//! 传输加密 (TLS)
-//!
-//! 提供 TLS 1.3 配置和证书管理功能
+// 传输加密 (TLS)
+//
+// 提供 TLS 1.3 配置和证书管理功能
 
 use std::sync::{Arc, Mutex, atomic::Ordering};
 

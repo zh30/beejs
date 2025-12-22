@@ -1,5 +1,5 @@
-//! 版本选择器
-//! 智能选择最佳版本组合
+// 版本选择器
+/// 智能选择最佳版本组合
 use std::collections::HashMap;
 use crate::ecosystem::types::*;
 use std::collections::{BTreeMap};

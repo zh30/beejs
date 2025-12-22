@@ -1,5 +1,5 @@
-//! Cloudflare Workers Integration
-//! High-performance edge deployment via Cloudflare's global network
+// Cloudflare Workers Integration
+// High-performance edge deployment via Cloudflare's global network
 
 use std::collections::{BTreeMap, HashMap};
 use super::cdn_provider::::{CdnEndpoint, CdnProvider, CdnProviderType, DeploymentResult, DeploymentStatus, EndpointStatus, ProviderHealth};

@@ -1,6 +1,6 @@
-//! Model Manager
-//!
-//! Manages AI/ML models for predictions and optimizations.
+// Model Manager
+//
+// Manages AI/ML models for predictions and optimizations.
 
 use crate::core::error::::{AIOpsError, Result};
 use serde::{Deserialize, Serialize};

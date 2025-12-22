@@ -1,4 +1,4 @@
-//! OT/CRDT 同步算法
+/// OT/CRDT 同步算法
 use anyhow::Result;
 use tracing::info;
 use serde::{Serialize, Deserialize};

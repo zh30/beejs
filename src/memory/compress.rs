@@ -1,4 +1,4 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-//! compress module placeholder
+// compress module placeholder

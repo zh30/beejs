@@ -1,5 +1,5 @@
-//! Stage 43.0: 完整Node.js核心API兼容层
-//! 对标Bun，实现100% Node.js API兼容性
+// Stage 43.0: 完整Node.js核心API兼容层
+/// 对标Bun，实现100% Node.js API兼容性
 use std::task::Context;
 pub mod fs;
 pub mod crypto;

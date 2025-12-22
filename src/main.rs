@@ -1,5 +1,5 @@
-//! Beejs CLI - Stage 56.2
-//! High-performance JavaScript/TypeScript runtime with Bun-compatible CLI
+// Beejs CLI - Stage 56.2
+// High-performance JavaScript/TypeScript runtime with Bun-compatible CLI
 
 use anyhow::{Context, Result};
 use beejs::cli::::{ExecutionContext, ExecutorConfig, FileType, ScriptExecutor, shebang};

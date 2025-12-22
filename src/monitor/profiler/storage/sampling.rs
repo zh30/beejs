@@ -1,5 +1,5 @@
-//! 智能采样策略模块
-//! 动态调整采样率以平衡准确性和性能
+// 智能采样策略模块
+// 动态调整采样率以平衡准确性和性能
 
 use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};

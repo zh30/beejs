@@ -1,13 +1,13 @@
-//! Process Pool Implementation for Beejs
-//!
-//! This module implements a process pool system to reuse pre-spawned worker processes
-//! for script execution, significantly reducing the overhead of process creation.
-//!
-//! Key features:
-//! - Pre-spawned worker processes with initialized V8 runtimes
-//! - Intelligent process selection based on workload
-//! - Automatic process lifecycle management
-//! - Support for both simple and complex script execution
+// Process Pool Implementation for Beejs
+//
+// This module implements a process pool system to reuse pre-spawned worker processes
+// for script execution, significantly reducing the overhead of process creation.
+//
+// Key features:
+// - Pre-spawned worker processes with initialized V8 runtimes
+// - Intelligent process selection based on workload
+// - Automatic process lifecycle management
+// - Support for both simple and complex script execution
 
 use anyhow::{Context, Result};
 use crate::{OptimizeMode, Runtime};

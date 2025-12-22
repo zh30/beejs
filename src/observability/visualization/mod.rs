@@ -1,27 +1,27 @@
-//! Visualization Module - Advanced Chart and Graph Components
-//!
-//! This module provides high-performance visualization components for real-time data:
-//! - Line charts for time series data
-//! - Bar charts for categorical data
-//! - Pie charts for proportional data
-//! - Heatmaps for density visualization
-//! - Topology graphs for system architecture
-//! - Dependency graphs for module relationships
-//! - Trace graphs for request flows
-//!
-//! # Examples
-//!
-//! ```rust
-//! use beejs::observability::visualization::{
-//!     LineChartBuilder, BarChartBuilder, PieChartBuilder,
-//!     TopologyGraphBuilder, DependencyGraphBuilder
-//! };
-//!
-//! let chart: _ = LineChartBuilder::new()
-//!     .title("CPU Usage")
-//!     .data(vec![10.0, 20.0, 30.0])
-//!     .build()?;
-//! ```
+// Visualization Module - Advanced Chart and Graph Components
+//
+// This module provides high-performance visualization components for real-time data:
+// - Line charts for time series data
+// - Bar charts for categorical data
+// - Pie charts for proportional data
+// - Heatmaps for density visualization
+// - Topology graphs for system architecture
+// - Dependency graphs for module relationships
+// - Trace graphs for request flows
+//
+// # Examples
+//
+// ```rust
+// use beejs::observability::visualization::{
+//     LineChartBuilder, BarChartBuilder, PieChartBuilder,
+//     TopologyGraphBuilder, DependencyGraphBuilder
+// };
+//
+// let chart: _ = LineChartBuilder::new()
+//     .title("CPU Usage")
+//     .data(vec![10.0, 20.0, 30.0])
+//     .build()?;
+// ```
 pub mod charts;
 pub mod graphs;
 pub use charts::*;

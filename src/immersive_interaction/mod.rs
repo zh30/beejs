@@ -1,6 +1,6 @@
-//! 沉浸式交互系统模块
-//!
-//! 提供手部追踪、眼动追踪、触觉反馈、语音识别和动作捕捉功能。
+// 沉浸式交互系统模块
+//
+// 提供手部追踪、眼动追踪、触觉反馈、语音识别和动作捕捉功能。
 pub mod hand_tracking;
 pub mod eye_tracking;
 pub mod haptic_feedback;

@@ -1,9 +1,9 @@
-//! 混合计算 (Hybrid Computing) 实现
-//!
-//! 经典-量子混合计算支持：
-//! - 变分量子电路 (VQE)
-//! - 量子近似优化算法 (QAOA)
-//! - 数据编码和解码
+// 混合计算 (Hybrid Computing) 实现
+//
+// 经典-量子混合计算支持：
+// - 变分量子电路 (VQE)
+// - 量子近似优化算法 (QAOA)
+// - 数据编码和解码
 
 use std::collections::{HashMap, BTreeMap};
 use num_complex::Complex64;

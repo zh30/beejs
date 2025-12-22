@@ -1,5 +1,5 @@
-//! Kubernetes Operator for Beejs Cluster Management
-//! 实现 Beejs 集群的 Kubernetes Operator，提供自动化集群管理能力
+// Kubernetes Operator for Beejs Cluster Management
+// 实现 Beejs 集群的 Kubernetes Operator，提供自动化集群管理能力
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};

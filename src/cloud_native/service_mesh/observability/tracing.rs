@@ -1,5 +1,5 @@
-//! Distributed tracing for Service Mesh
-//! Provides simplified tracing implementation for distributed tracing
+// Distributed tracing for Service Mesh
+// Provides simplified tracing implementation for distributed tracing
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::AtomicU64;

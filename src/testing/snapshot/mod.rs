@@ -1,11 +1,11 @@
-//! Snapshot Testing Module
-//! Stage 93 Phase 3.3 - Snapshot Testing Support
-//!
-//! Provides Jest-compatible snapshot testing with:
-//! - Snapshot storage and comparison
-//! - Inline snapshots
-//! - Update mode support
-//! - Pretty-print formatting
+// Snapshot Testing Module
+// Stage 93 Phase 3.3 - Snapshot Testing Support
+//
+// Provides Jest-compatible snapshot testing with:
+// - Snapshot storage and comparison
+// - Inline snapshots
+// - Update mode support
+// - Pretty-print formatting
 pub mod snapshot_manager;
 pub mod snapshot_renderer;
 pub use snapshot_manager::*;

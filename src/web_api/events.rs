@@ -1,5 +1,5 @@
-//! EventTarget and Event API implementation for Web standard
-//! Provides addEventListener, removeEventListener, dispatchEvent
+// EventTarget and Event API implementation for Web standard
+// Provides addEventListener, removeEventListener, dispatchEvent
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

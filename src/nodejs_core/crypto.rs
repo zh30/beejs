@@ -1,5 +1,5 @@
-//! Node.js Crypto模块实现
-//! 支持哈希、HMAC、加密、解密等常用功能
+// Node.js Crypto模块实现
+/// 支持哈希、HMAC、加密、解密等常用功能
 use anyhow::Result;
 use rusty_v8 as v8;
 use ring::digest;

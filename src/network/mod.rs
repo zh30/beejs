@@ -1,7 +1,7 @@
-//! Beejs 网络 I/O 优化模块
-//! Stage 30.3: 网络 I/O 零拷贝优化
-//!
-//! 提供高性能网络 I/O 功能，包括 epoll 事件驱动、零拷贝传输、批处理等
+// Beejs 网络 I/O 优化模块
+// Stage 30.3: 网络 I/O 零拷贝优化
+//
+// 提供高性能网络 I/O 功能，包括 epoll 事件驱动、零拷贝传输、批处理等
 pub mod epoll_manager;
 pub mod zero_copy_io;
 pub mod batch_processor;

@@ -1,5 +1,5 @@
-//! Beejs CLI 工具
-//! 提供类似于 Bun 的命令行接口
+// Beejs CLI 工具
+// 提供类似于 Bun 的命令行接口
 
 use beejs::runtime_core::::{CoreRuntime, MinimalRuntime, RuntimeError};
 use clap::{Parser, Subcommand};

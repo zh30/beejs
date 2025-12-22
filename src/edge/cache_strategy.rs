@@ -1,5 +1,5 @@
-//! Edge Caching Strategy
-//! Multi-layer intelligent caching for optimal performance
+// Edge Caching Strategy
+// Multi-layer intelligent caching for optimal performance
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};

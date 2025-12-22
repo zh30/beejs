@@ -1,7 +1,7 @@
-//! V8 API 兼容性检查器
-//!
-//! Stage 89 Phase 1: V8 API 兼容性修复
-//! 提供 V8 API 兼容性检查、版本验证和迁移工具
+// V8 API 兼容性检查器
+//
+// Stage 89 Phase 1: V8 API 兼容性修复
+// 提供 V8 API 兼容性检查、版本验证和迁移工具
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

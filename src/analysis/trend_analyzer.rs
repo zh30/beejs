@@ -1,13 +1,12 @@
-//! Performance trend analysis module
-//!
-//! This module provides tools to analyze historical performance data,
-//! identify trends, and predict future performance.
+// Performance trend analysis module
+//
+// This module provides tools to analyze historical performance data,
+// identify trends, and predict future performance.
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::collections::VecDeque;
-use std::time::SystemTime;
 
 /// A historical performance data point
 #[derive(Debug, Clone, Serialize, Deserialize)]

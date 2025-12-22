@@ -1,7 +1,7 @@
-//! WASM 零拷贝加载器
-//!
-//! 实现 WASM 模块的零拷贝加载，支持内存映射文件
-//! 实现 < 10ms 的加载时间和 90%+ 缓存命中率
+// WASM 零拷贝加载器
+//
+// 实现 WASM 模块的零拷贝加载，支持内存映射文件
+// 实现 < 10ms 的加载时间和 90%+ 缓存命中率
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};

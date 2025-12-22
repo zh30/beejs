@@ -1,5 +1,5 @@
-//! Python Runtime Integration
-//! Provides seamless integration between Beejs and Python
+// Python Runtime Integration
+// Provides seamless integration between Beejs and Python
 
 use anyhow::{Result, anyhow};
 use pyo3::::{PyObject, PyResult, Python, types::PyDict};

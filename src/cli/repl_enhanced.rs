@@ -1,12 +1,12 @@
-//! Enhanced REPL (Read-Eval-Print Loop)
-//! Stage 91 Phase 4.2 - Enhanced REPL with tab completion, syntax highlighting, and advanced commands
-//!
-//! Features:
-//! - Tab auto-completion for variables, properties, keywords, and built-ins
-//! - Syntax highlighting for better code readability
-//! - Arrow key history navigation using rustyline
-//! - Enhanced commands: .inspect, .time, .type, .await, .save
-//! - Multi-line editing with smart indentation
+// Enhanced REPL (Read-Eval-Print Loop)
+// Stage 91 Phase 4.2 - Enhanced REPL with tab completion, syntax highlighting, and advanced commands
+//
+// Features:
+// - Tab auto-completion for variables, properties, keywords, and built-ins
+// - Syntax highlighting for better code readability
+// - Arrow key history navigation using rustyline
+// - Enhanced commands: .inspect, .time, .type, .await, .save
+// - Multi-line editing with smart indentation
 
 use crate::cli::repl_completer::{CompletionCandidate, ReplCompleter};
 use crate::cli::repl_highlighter::{HighlightTheme, ReplHighlighter};

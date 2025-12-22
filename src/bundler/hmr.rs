@@ -1,4 +1,4 @@
-//! Hot Module Replacement (HMR) module
+// Hot Module Replacement (HMR) module
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

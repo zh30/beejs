@@ -1,7 +1,7 @@
-//! Performance visualization module
-//!
-//! This module provides tools to generate visualizations of performance data,
-//! including charts, graphs, and HTML reports.
+// Performance visualization module
+//
+// This module provides tools to generate visualizations of performance data,
+// including charts, graphs, and HTML reports.
 
 use crate::analysis::bottleneck_detector::{Bottleneck, BottleneckSeverity};
 use crate::performance_analyzer::PerformanceReport;

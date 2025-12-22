@@ -1,5 +1,5 @@
-//! 节点管理器模块
-//! 管理集群节点的注册、状态跟踪和元数据
+// 节点管理器模块
+// 管理集群节点的注册、状态跟踪和元数据
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};

@@ -1,5 +1,5 @@
-//! HTTP/3 服务器实现
-//! 基于 QUIC 协议的超低延迟 HTTP/3 服务器
+// HTTP/3 服务器实现
+// 基于 QUIC 协议的超低延迟 HTTP/3 服务器
 
 use crate::network::{NetworkConfig, NetworkError};
 use std::collections::BTreeMap;

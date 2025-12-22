@@ -1,5 +1,5 @@
-//! Service Mesh integration module
-//! Provides Istio/Linkerd integration, traffic management, and observability
+// Service Mesh integration module
+// Provides Istio/Linkerd integration, traffic management, and observability
 pub mod istio;
 pub mod observability;
 /// Re-export Istio types

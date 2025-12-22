@@ -1,12 +1,12 @@
-//! JavaScript 核心基准测试
-//! Stage 55.1.2: JavaScript 核心基准测试用例
-//!
-//! 该模块提供 JavaScript 核心功能的基准测试，包括：
-//! - V8 引擎性能测试
-//! - Web API 性能测试
-//! - TypeScript 编译性能测试
-//! - 模块加载性能测试
-//! - 并发执行性能测试
+// JavaScript 核心基准测试
+// Stage 55.1.2: JavaScript 核心基准测试用例
+//
+// 该模块提供 JavaScript 核心功能的基准测试，包括：
+// - V8 引擎性能测试
+// - Web API 性能测试
+// - TypeScript 编译性能测试
+// - 模块加载性能测试
+// - 并发执行性能测试
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use std::collections::{BTreeMap, HashMap};

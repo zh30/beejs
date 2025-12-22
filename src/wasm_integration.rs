@@ -1,7 +1,7 @@
-//! WebAssembly 集成模块
-//!
-//! 提供高性能的WASM模块加载和执行能力
-//! 使用Wasmtime运行时实现真正的WebAssembly执行
+// WebAssembly 集成模块
+//
+// 提供高性能的WASM模块加载和执行能力
+// 使用Wasmtime运行时实现真正的WebAssembly执行
 
 use anyhow::{Context, Result, anyhow};
 use std::collections::{BTreeMap, HashMap};

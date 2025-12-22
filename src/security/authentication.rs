@@ -1,6 +1,6 @@
-//! 身份验证系统
-//!
-//! 提供多因素认证 (MFA) 和 JWT 令牌管理功能
+// 身份验证系统
+//
+// 提供多因素认证 (MFA) 和 JWT 令牌管理功能
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

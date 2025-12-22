@@ -1,5 +1,5 @@
-//! 连接池
-//! 管理网络连接的重用，减少连接建立开销
+// 连接池
+// 管理网络连接的重用，减少连接建立开销
 
 use crate::network::{NetworkConfig, NetworkError};
 use std::collections::BTreeMap;

@@ -1,5 +1,5 @@
-//! Kubernetes Runtime Integration
-//! Provides native Kubernetes support for Beejs runtime
+// Kubernetes Runtime Integration
+// Provides native Kubernetes support for Beejs runtime
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};

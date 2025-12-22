@@ -1,5 +1,5 @@
-//! Docker 容器管理器
-//! 实现 Beejs 容器的构建、编排和管理功能
+// Docker 容器管理器
+// 实现 Beejs 容器的构建、编排和管理功能
 
 use std::collections::{BTreeMap, HashMap};
 

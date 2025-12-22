@@ -1,5 +1,5 @@
-//! Mobile Platform Runtime
-//! Provides native support for iOS and Android platforms
+// Mobile Platform Runtime
+// Provides native support for iOS and Android platforms
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};

@@ -1,5 +1,5 @@
-//! Traffic management for Istio
-//! Provides routing, load balancing, and traffic splitting capabilities
+// Traffic management for Istio
+/// Provides routing, load balancing, and traffic splitting capabilities
 use kube::Api;
 use tracing::info;
 use super::types::{

@@ -1,6 +1,6 @@
-//! 零拷贝网络 I/O JavaScript API 绑定
-//!
-//! 该模块将零拷贝网络功能暴露给 JavaScript
+// 零拷贝网络 I/O JavaScript API 绑定
+//
+// 该模块将零拷贝网络功能暴露给 JavaScript
 
 use crate::network::{ConnectionPool, NetworkStats};
 use std::collections::{BTreeMap, HashMap};

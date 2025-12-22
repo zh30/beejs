@@ -1,4 +1,4 @@
-//! 波前传播器实现
+/// 波前传播器实现
 use super::Complex;
 use std::collections::{HashMap, BTreeMap};
 /// 传播方法

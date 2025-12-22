@@ -1,6 +1,6 @@
-//! 分布式元宇宙网络模块
-//!
-//! 提供全球分布式节点、边缘计算、状态同步、资产互通和去中心化认证功能。
+// 分布式元宇宙网络模块
+//
+// 提供全球分布式节点、边缘计算、状态同步、资产互通和去中心化认证功能。
 pub mod metaverse_network;
 pub mod edge_computing;
 pub mod state_sync;

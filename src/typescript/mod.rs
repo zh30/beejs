@@ -1,6 +1,6 @@
-//! TypeScript 支持模块
-//!
-//! 提供 TypeScript 代码的编译、转译和执行支持。
+// TypeScript 支持模块
+//
+/// 提供 TypeScript 代码的编译、转译和执行支持。
 use std::path::Path;
 pub mod compiler;
 

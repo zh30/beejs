@@ -1,5 +1,5 @@
-//! Platform Support Module
-//! Provides cross-platform runtime support for mobile and WebAssembly
+// Platform Support Module
+// Provides cross-platform runtime support for mobile and WebAssembly
 pub mod mobile_runtime;
 pub mod wasm_runtime;
 

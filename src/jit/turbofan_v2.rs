@@ -1,5 +1,5 @@
-//! TurboFan v2 - Advanced JIT compiler
-//! Next-generation optimization engine
+// TurboFan v2 - Advanced JIT compiler
+// Next-generation optimization engine
 
 
 use anyhow::Result;

@@ -1,7 +1,7 @@
-//! npm 兼容层
-//! Stage 91 Phase 3.1.1 - npm 兼容性实现
-//!
-//! 提供完整的 npm 包管理功能兼容
+// npm 兼容层
+// Stage 91 Phase 3.1.1 - npm 兼容性实现
+//
+/// 提供完整的 npm 包管理功能兼容
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

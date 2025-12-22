@@ -1,7 +1,7 @@
-//! Angular 运行时支持
-//! Stage 91 Phase 3.3.3 - Angular 框架集成
-//!
-//! 提供 Angular 应用完整支持，包括 Ivy 渲染器、Zone.js 集成等
+// Angular 运行时支持
+// Stage 91 Phase 3.3.3 - Angular 框架集成
+//
+/// 提供 Angular 应用完整支持，包括 Ivy 渲染器、Zone.js 集成等
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

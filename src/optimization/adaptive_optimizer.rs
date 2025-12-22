@@ -1,6 +1,6 @@
-//! 性能自适应优化器 - Stage 78 Phase 4
-//!
-//! 提供动态优化策略、自动调优和机器学习驱动的性能优化能力
+// 性能自适应优化器 - Stage 78 Phase 4
+//
+// 提供动态优化策略、自动调优和机器学习驱动的性能优化能力
 
 
 use std::collections::{HashMap, BTreeMap};

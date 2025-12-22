@@ -1,5 +1,5 @@
-//! Blob API implementation per Web standard
-//! Provides binary data container with File API support
+// Blob API implementation per Web standard
+// Provides binary data container with File API support
 
 
 use anyhow::Result;

@@ -1,7 +1,7 @@
-//! 包管理器集成模块
-//! Stage 91 Phase 3.1 - 包管理器集成
-//!
-//! 提供 npm、Yarn、pnpm 的完整兼容性支持
+// 包管理器集成模块
+// Stage 91 Phase 3.1 - 包管理器集成
+//
+// 提供 npm、Yarn、pnpm 的完整兼容性支持
 pub mod npm;
 pub mod yarn;
 pub mod pnpm;

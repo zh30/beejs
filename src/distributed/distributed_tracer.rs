@@ -1,7 +1,7 @@
-//! 分布式链路追踪模块
-//! 提供分布式 tracing、性能分析和请求链路追踪功能
-//!
-//! Stage 29.7: 分布式监控与调试 - 实时性能指标和监控
+// 分布式链路追踪模块
+// 提供分布式 tracing、性能分析和请求链路追踪功能
+//
+// Stage 29.7: 分布式监控与调试 - 实时性能指标和监控
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};

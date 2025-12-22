@@ -1,7 +1,7 @@
-//! WASM 模块缓存系统
-//!
-//! 提供高效的 WebAssembly 模块缓存功能，包括多级缓存（L1 内存 + L2 文件）、
-//! 智能缓存策略、缓存预热和更新机制等
+// WASM 模块缓存系统
+//
+// 提供高效的 WebAssembly 模块缓存功能，包括多级缓存（L1 内存 + L2 文件）、
+// 智能缓存策略、缓存预热和更新机制等
 
 use anyhow::{Context, Result, anyhow};
 use std::collections::{BTreeMap, HashMap};

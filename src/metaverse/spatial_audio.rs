@@ -1,4 +1,4 @@
-//! 空间音频系统
+/// 空间音频系统
 use std::collections::HashMap;
 use std::collections::{BTreeMap};
 /// HRTF 配置文件

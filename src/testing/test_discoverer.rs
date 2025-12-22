@@ -1,5 +1,5 @@
-//! Test Discoverer - Fixed version
-//! Finds and loads test files
+// Test Discoverer - Fixed version
+// Finds and loads test files
 
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};

@@ -1,5 +1,5 @@
-//! Node.js Buffer模块实现
-//! 高性能二进制数据处理
+// Node.js Buffer模块实现
+/// 高性能二进制数据处理
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};

@@ -1,6 +1,6 @@
-//! AI 驱动运维 (AIOps) 模块
-//!
-//! 这个模块提供了 Beejs 的智能故障预测、自动根因分析、智能告警降噪和自动化修复功能。
+// AI 驱动运维 (AIOps) 模块
+//
+// 这个模块提供了 Beejs 的智能故障预测、自动根因分析、智能告警降噪和自动化修复功能。
 pub mod prediction_engine;
 pub mod anomaly_detection;
 pub mod root_cause_analysis;

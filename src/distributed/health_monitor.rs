@@ -1,5 +1,5 @@
-//! 健康监控模块
-//! 实现节点健康检查、状态监控和故障检测
+// 健康监控模块
+// 实现节点健康检查、状态监控和故障检测
 
 use crate::distributed::service_discovery::{DiscoveryConfig, NodeInfo, ServiceDiscovery};
 use std::collections::{BTreeMap, HashMap};

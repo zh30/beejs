@@ -1,7 +1,7 @@
-//! WASM 缓存管理器
-//!
-//! 实现智能缓存管理，支持 LRU、LFU、TTL 策略
-//! 实现 99%+ 缓存命中率和 < 1ms 缓存访问延迟
+// WASM 缓存管理器
+//
+// 实现智能缓存管理，支持 LRU、LFU、TTL 策略
+// 实现 99%+ 缓存命中率和 < 1ms 缓存访问延迟
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};

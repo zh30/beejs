@@ -1,6 +1,6 @@
-//! Remote Debug Client Module
-//!
-//! Provides client-side remote debugging capabilities
+// Remote Debug Client Module
+//
+// Provides client-side remote debugging capabilities
 
 
 use anyhow::Result;

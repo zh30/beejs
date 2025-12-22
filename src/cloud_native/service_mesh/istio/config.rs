@@ -1,5 +1,5 @@
-//! Istio Service Mesh integration
-//! Provides configuration and management for Istio
+// Istio Service Mesh integration
+// Provides configuration and management for Istio
 
 use std::collections::{BTreeMap, HashMap};
 

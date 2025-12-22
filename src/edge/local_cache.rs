@@ -1,5 +1,5 @@
-//! Local Cache System
-//! Provides offline code caching and data storage for edge computing
+// Local Cache System
+// Provides offline code caching and data storage for edge computing
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

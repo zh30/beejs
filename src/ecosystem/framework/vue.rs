@@ -1,7 +1,7 @@
-//! Vue 运行时支持
-//! Stage 91 Phase 3.3.2 - Vue 框架集成
-//!
-//! 提供 Vue 3 应用完整支持，包括模板编译、响应式系统、SFC 解析等
+// Vue 运行时支持
+// Stage 91 Phase 3.3.2 - Vue 框架集成
+//
+/// 提供 Vue 3 应用完整支持，包括模板编译、响应式系统、SFC 解析等
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

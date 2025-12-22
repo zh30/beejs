@@ -1,6 +1,6 @@
-//! V8 快照优化管理器
-//! 实现 < 1ms 的快照加载时间
-//! Stage 27.1: V8 引擎深度优化
+// V8 快照优化管理器
+// 实现 < 1ms 的快照加载时间
+// Stage 27.1: V8 引擎深度优化
 
 use anyhow::{Result, anyhow};
 use std::collections::{BTreeMap, HashMap};

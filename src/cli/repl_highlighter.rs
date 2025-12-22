@@ -1,6 +1,6 @@
-//! REPL Syntax Highlighting Module
-//! Stage 91 Phase 4.2 - Enhanced REPL
-//! Uses syntect for syntax highlighting
+// REPL Syntax Highlighting Module
+// Stage 91 Phase 4.2 - Enhanced REPL
+/// Uses syntect for syntax highlighting
 use colored::Colorize;
 /// Syntax highlighting theme
 #[derive(Debug, Clone)]

@@ -1,7 +1,7 @@
-//! Beejs 插件市场平台核心模块
-//! Stage 86 Phase 3 - 插件市场平台实现
-//!
-//! 提供插件搜索、发现、评分、评论和管理的完整功能
+// Beejs 插件市场平台核心模块
+// Stage 86 Phase 3 - 插件市场平台实现
+//
+// 提供插件搜索、发现、评分、评论和管理的完整功能
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};

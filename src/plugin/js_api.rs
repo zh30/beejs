@@ -1,4 +1,4 @@
-//! JavaScript plugin API
+/// JavaScript plugin API
 use anyhow::Result;
 pub struct JsPluginApi {
     pub runtime: String,

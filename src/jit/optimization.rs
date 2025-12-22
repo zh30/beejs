@@ -1,12 +1,12 @@
-//! Stage 55.3: JIT Compilation Optimization Implementation
-//!
-//! This module implements advanced JIT compilation optimizations for achieving
-//! 2-3x performance improvement over Bun:
-//! - V8 optimization configuration
-//! - Hot path optimization
-//! - Function inlining optimization
-//! - Escape analysis optimization
-//! - Dead code elimination
+// Stage 55.3: JIT Compilation Optimization Implementation
+//
+// This module implements advanced JIT compilation optimizations for achieving
+// 2-3x performance improvement over Bun:
+// - V8 optimization configuration
+// - Hot path optimization
+// - Function inlining optimization
+// - Escape analysis optimization
+// - Dead code elimination
 
 
 use serde::{Deserialize, Serialize};

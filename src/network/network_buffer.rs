@@ -1,5 +1,5 @@
-//! 网络缓冲区管理
-//! 高性能的网络缓冲区池，支持零拷贝和预分配
+// 网络缓冲区管理
+// 高性能的网络缓冲区池，支持零拷贝和预分配
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

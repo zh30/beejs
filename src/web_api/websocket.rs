@@ -1,5 +1,5 @@
-//! WebSocket API implementation for Web standard
-//! Provides real WebSocket client with network connectivity
+// WebSocket API implementation for Web standard
+// Provides real WebSocket client with network connectivity
 
 use futures_util::{SinkExt, StreamExt};
 use std::collections::{BTreeMap, HashMap};

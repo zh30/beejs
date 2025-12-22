@@ -1,4 +1,4 @@
-//! 状态同步系统
+/// 状态同步系统
 use std::collections::HashMap;
 use std::collections::{BTreeMap};
 use std::time::SystemTime;

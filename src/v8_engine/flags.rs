@@ -1,10 +1,10 @@
-//! V8 Engine Configuration Flags
-//!
-//! This module provides comprehensive V8 engine configuration options
-//! for performance optimization, allowing fine-tuned control over
-//! JIT compilation, memory management, and garbage collection.
-//!
-//! Stage 69 Phase 2: V8 Engine Deep Optimization
+// V8 Engine Configuration Flags
+//
+// This module provides comprehensive V8 engine configuration options
+// for performance optimization, allowing fine-tuned control over
+// JIT compilation, memory management, and garbage collection.
+//
+// Stage 69 Phase 2: V8 Engine Deep Optimization
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

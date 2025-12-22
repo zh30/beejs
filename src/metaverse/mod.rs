@@ -1,6 +1,6 @@
-//! 元宇宙渲染引擎模块
-//!
-//! 提供高性能 3D 渲染、WebXR/OpenXR 支持、实时光线追踪和多用户协作渲染。
+// 元宇宙渲染引擎模块
+//
+// 提供高性能 3D 渲染、WebXR/OpenXR 支持、实时光线追踪和多用户协作渲染。
 pub mod engine;
 pub mod xr_runtime;
 pub mod ray_tracer;

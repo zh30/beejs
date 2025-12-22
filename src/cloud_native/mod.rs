@@ -1,5 +1,5 @@
-//! Cloud Native Integration Module
-//! Provides Kubernetes, containerization, Service Mesh, and CI/CD features
+// Cloud Native Integration Module
+// Provides Kubernetes, containerization, Service Mesh, and CI/CD features
 pub mod k8s;
 /// Re-export Kubernetes module
 pub use k8s::{

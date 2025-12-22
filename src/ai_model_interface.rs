@@ -1,5 +1,5 @@
-//! AI模型统一接口
-//! 提供标准化的AI模型调用和管理接口
+// AI模型统一接口
+// 提供标准化的AI模型调用和管理接口
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

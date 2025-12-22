@@ -1,5 +1,5 @@
-//! Lifecycle management for cluster and workload resources
-//! Handles state transitions and lifecycle events
+// Lifecycle management for cluster and workload resources
+// Handles state transitions and lifecycle events
 
 use std::collections::{BTreeMap, HashMap};
 use super::super::crd::{ClusterPhase, Condition, ConditionStatus, ConditionType, WorkloadPhase};

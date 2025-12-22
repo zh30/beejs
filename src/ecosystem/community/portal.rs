@@ -1,5 +1,5 @@
-//! 社区门户
-//! 提供模块分享、协作和社区支持功能
+// 社区门户
+// 提供模块分享、协作和社区支持功能
 
 use std::collections::{BTreeMap};
 use std::collections::{HashMap, HashSet};

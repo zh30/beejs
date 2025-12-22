@@ -1,7 +1,7 @@
-//! Structured logging for Beejs runtime
-//!
-//! This module provides structured logging capabilities with JSON formatting,
-//! correlation IDs, and context-aware logging for better observability.
+// Structured logging for Beejs runtime
+//
+// This module provides structured logging capabilities with JSON formatting,
+// correlation IDs, and context-aware logging for better observability.
 
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, HashMap};

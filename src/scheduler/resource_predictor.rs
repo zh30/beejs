@@ -1,4 +1,4 @@
-//! 资源使用预测器 - Stage 90 Phase 5.3
+// 资源使用预测器 - Stage 90 Phase 5.3
 
 
 use std::collections::VecDeque;

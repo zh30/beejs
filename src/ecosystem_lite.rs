@@ -1,7 +1,7 @@
-//! Beejs 生态系统集成 - 简化版
-//! Stage 91 Phase 3 - 生态系统集成
-//!
-//! 自包含的生态系统集成模块，不依赖可能有问题的其他模块
+// Beejs 生态系统集成 - 简化版
+// Stage 91 Phase 3 - 生态系统集成
+//
+// 自包含的生态系统集成模块，不依赖可能有问题的其他模块
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

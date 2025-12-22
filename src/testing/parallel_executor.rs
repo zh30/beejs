@@ -1,5 +1,5 @@
-//! Parallel Test Executor
-//! Executes tests concurrently using thread pools
+// Parallel Test Executor
+// Executes tests concurrently using thread pools
 
 use crate::testing::test_context::{TestCase, TestResult, TestSuite};
 use std::collections::{BTreeMap, HashMap};

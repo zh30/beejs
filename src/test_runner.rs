@@ -1,5 +1,5 @@
-//! Beejs Test Runner
-//! 高性能测试运行器，支持 Jest 风格的测试
+// Beejs Test Runner
+// 高性能测试运行器，支持 Jest 风格的测试
 #[allow(unused_imports)]
 
 use anyhow::{Result, anyhow};

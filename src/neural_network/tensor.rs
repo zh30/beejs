@@ -1,6 +1,6 @@
-//! 张量 (Tensor) 实现
-//!
-//! 支持多维数组运算
+// 张量 (Tensor) 实现
+//
+// 支持多维数组运算
 
 use std::collections::{BTreeMap, HashMap};
 use std::ops::{Add, Mul};

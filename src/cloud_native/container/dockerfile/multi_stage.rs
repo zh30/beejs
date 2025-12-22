@@ -1,5 +1,5 @@
-//! Multi-stage Dockerfile builder for Beejs
-//! Generates optimized multi-stage Docker builds
+// Multi-stage Dockerfile builder for Beejs
+// Generates optimized multi-stage Docker builds
 /// Multi-stage Dockerfile generator
 pub struct MultiStageBuilder {
     /// Builder stage configuration

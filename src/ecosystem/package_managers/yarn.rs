@@ -1,7 +1,7 @@
-//! Yarn 兼容性层
-//! Stage 91 Phase 3.1.2 - Yarn 兼容性实现
-//!
-//! 支持 Yarn 1.x (Classic) 和 Yarn 2+ (Berry)
+// Yarn 兼容性层
+// Stage 91 Phase 3.1.2 - Yarn 兼容性实现
+//
+// 支持 Yarn 1.x (Classic) 和 Yarn 2+ (Berry)
 
 
 use super::*;

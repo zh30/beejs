@@ -1,11 +1,11 @@
-//! Template System Module
-//! Stage 91 Phase 4.3 - 快速启动模板系统
-//!
-//! 实现高级模板功能：
-//! - 模板变量替换引擎
-//! - 目录结构生成器
-//! - 模板注册表
-//! - 依赖安装集成
+// Template System Module
+// Stage 91 Phase 4.3 - 快速启动模板系统
+//
+// 实现高级模板功能：
+// - 模板变量替换引擎
+// - 目录结构生成器
+// - 模板注册表
+/// - 依赖安装集成
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;

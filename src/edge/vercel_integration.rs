@@ -1,5 +1,5 @@
-//! Vercel Edge Runtime Integration
-//! High-performance edge deployment via Vercel's global network
+// Vercel Edge Runtime Integration
+// High-performance edge deployment via Vercel's global network
 
 use std::collections::{BTreeMap, HashMap};
 use super::cdn_provider::::{CdnEndpoint, CdnProvider, CdnProviderType, DeploymentResult, DeploymentStatus, EndpointStatus, ProviderHealth};

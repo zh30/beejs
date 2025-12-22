@@ -1,5 +1,5 @@
-//! 批处理器实现
-//! 智能批处理网络请求，减少系统调用开销
+// 批处理器实现
+// 智能批处理网络请求，减少系统调用开销
 
 use crate::network::{NetworkConfig, NetworkError};
 use std::collections::{BTreeMap, HashMap};

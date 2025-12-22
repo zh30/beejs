@@ -1,4 +1,4 @@
-//! path polyfill
+/// path polyfill
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};
 use std::path::Path;

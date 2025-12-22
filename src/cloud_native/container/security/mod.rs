@@ -1,5 +1,5 @@
-//! Container security module
-//! Provides security scanning and compliance checking for container images
+// Container security module
+// Provides security scanning and compliance checking for container images
 pub mod scanner;
 // Re-export scanner types
 pub use scanner::{

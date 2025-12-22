@@ -1,7 +1,7 @@
-//! L2 Smart Cache - Hybrid LRU/LFU strategy with pattern recognition
-//!
-//! This module implements an intelligent cache that combines LRU (Least Recently Used)
-//! and LFU (Least Frequently Used) strategies with adaptive weight adjustment.
+// L2 Smart Cache - Hybrid LRU/LFU strategy with pattern recognition
+//
+// This module implements an intelligent cache that combines LRU (Least Recently Used)
+// and LFU (Least Frequently Used) strategies with adaptive weight adjustment.
 
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::time::{Duration, Instant};

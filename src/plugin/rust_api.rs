@@ -1,4 +1,4 @@
-//! Rust plugin API
+/// Rust plugin API
 use anyhow::Result;
 pub struct RustPluginApi {
     pub version: String,

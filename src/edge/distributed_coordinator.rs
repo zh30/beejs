@@ -1,5 +1,5 @@
-//! Distributed Coordinator
-//! Coordinates distributed consensus and task execution across edge nodes
+// Distributed Coordinator
+// Coordinates distributed consensus and task execution across edge nodes
 
 use crate::edge::{EdgeNode, NodeId, Task};
 use serde::{Deserialize, Serialize};

@@ -1,5 +1,5 @@
-//! 数据存储模块
-//! 负责高效存储和查询时序性能数据
+// 数据存储模块
+// 负责高效存储和查询时序性能数据
 
 use crate::monitor::performance_monitor::{MetricType, MetricValue};
 use std::collections::BTreeMap;

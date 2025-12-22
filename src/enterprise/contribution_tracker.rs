@@ -1,5 +1,5 @@
-//! 贡献度评估系统
-//! 提供开发者贡献度分析、生产力评估、团队绩效统计等功能
+// 贡献度评估系统
+// 提供开发者贡献度分析、生产力评估、团队绩效统计等功能
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};

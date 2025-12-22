@@ -1,4 +1,4 @@
-//! Debug Adapter Protocol Module
+// Debug Adapter Protocol Module
 
 use std::collections::{BTreeMap, HashMap};
 

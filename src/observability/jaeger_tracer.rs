@@ -1,8 +1,8 @@
-//! Jaeger distributed tracing for Beejs runtime
-//!
-//! This module provides distributed tracing capabilities using Jaeger.
-//! It allows tracking the execution of scripts, network operations,
-//! and other runtime activities across service boundaries.
+// Jaeger distributed tracing for Beejs runtime
+//
+// This module provides distributed tracing capabilities using Jaeger.
+// It allows tracking the execution of scripts, network operations,
+/// and other runtime activities across service boundaries.
 use anyhow::Result;
 use std::net::SocketAddr;
 use std::collections::{BTreeMap, HashMap};

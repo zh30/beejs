@@ -1,6 +1,6 @@
-//! 量子优化器 (Quantum Optimizer) 实现
-//!
-//! 优化量子电路：门消除、门合并、深度优化
+// 量子优化器 (Quantum Optimizer) 实现
+//
+/// 优化量子电路：门消除、门合并、深度优化
 use super::circuit::QuantumCircuit;
 use super::gates::GateType;
 use std::f64::consts::PI;

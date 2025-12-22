@@ -1,12 +1,12 @@
-//! 内存和资源基准测试
-//! Stage 55.1.4: 内存和资源基准测试
-//!
-//! 该模块提供内存和资源使用的基准测试，包括：
-//! - 内存分配/释放性能测试
-//! - 内存泄漏检测
-//! - 垃圾回收性能测试
-//! - CPU 使用率测试
-//! - 系统资源监控
+// 内存和资源基准测试
+// Stage 55.1.4: 内存和资源基准测试
+//
+// 该模块提供内存和资源使用的基准测试，包括：
+// - 内存分配/释放性能测试
+// - 内存泄漏检测
+// - 垃圾回收性能测试
+// - CPU 使用率测试
+// - 系统资源监控
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use std::alloc::{GlobalAlloc, Layout, System};

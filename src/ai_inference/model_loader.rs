@@ -1,5 +1,5 @@
-//! AI 模型加载器
-//! 支持多种 AI 模型格式的加载和转换
+// AI 模型加载器
+// 支持多种 AI 模型格式的加载和转换
 
 use std::collections::HashSet;
 

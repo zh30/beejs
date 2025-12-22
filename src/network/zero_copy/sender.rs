@@ -1,9 +1,9 @@
-//! 零拷贝发送器 - sendfile/splice 系统调用封装
-//!
-//! Stage 39.0: 网络零拷贝优化
-//!
-//! 该模块提供了高性能的零拷贝数据传输功能，通过 sendfile 和 splice 系统调用
-//! 实现文件到网络套接字的零拷贝传输，最小化数据在内核空间和用户空间之间的拷贝。
+// 零拷贝发送器 - sendfile/splice 系统调用封装
+//
+// Stage 39.0: 网络零拷贝优化
+//
+// 该模块提供了高性能的零拷贝数据传输功能，通过 sendfile 和 splice 系统调用
+// 实现文件到网络套接字的零拷贝传输，最小化数据在内核空间和用户空间之间的拷贝。
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};

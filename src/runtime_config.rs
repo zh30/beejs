@@ -1,5 +1,5 @@
-//! Stage 91 Phase 2.3: 运行时配置管理
-//! 提供动态配置管理、配置验证和自动调优功能
+// Stage 91 Phase 2.3: 运行时配置管理
+// 提供动态配置管理、配置验证和自动调优功能
 
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex, RwLock};

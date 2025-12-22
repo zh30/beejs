@@ -1,5 +1,5 @@
-//! AI 代码生成器
-//! 提供上下文感知的代码生成、补全和重构功能
+// AI 代码生成器
+// 提供上下文感知的代码生成、补全和重构功能
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

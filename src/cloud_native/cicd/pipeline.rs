@@ -1,5 +1,5 @@
-//! CI/CD Pipeline module
-//! Provides GitHub Actions, GitLab CI, and Jenkins pipeline support
+// CI/CD Pipeline module
+// Provides GitHub Actions, GitLab CI, and Jenkins pipeline support
 /// Pipeline configuration
 #[derive(Debug, Clone)]
 pub struct PipelineConfig {

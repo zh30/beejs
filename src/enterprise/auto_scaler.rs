@@ -1,5 +1,5 @@
-//! Intelligent Auto-Scaling System
-//! 实现基于指标的智能扩缩容系统，支持多种扩缩容策略
+// Intelligent Auto-Scaling System
+// 实现基于指标的智能扩缩容系统，支持多种扩缩容策略
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};

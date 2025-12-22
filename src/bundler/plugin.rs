@@ -1,4 +1,4 @@
-//! Plugin system module
+/// Plugin system module
 use anyhow::Result;
 pub trait Plugin {
     fn name(&self) -> &str;

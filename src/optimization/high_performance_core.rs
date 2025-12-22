@@ -1,14 +1,14 @@
-//! High-Performance Core Optimization Module
-//!
-//! This module provides ultra-high-performance optimizations for the Beejs runtime,
-//! designed to exceed Bun's performance through advanced memory management,
-//! concurrency optimization, and V8 engine tuning.
-//!
-//! Key optimizations:
-//! - Lock-free concurrent execution
-//! - Memory pooling and pre-allocation
-//! - Zero-copy data structures
-//! - Adaptive JIT compilation strategies
+// High-Performance Core Optimization Module
+//
+// This module provides ultra-high-performance optimizations for the Beejs runtime,
+// designed to exceed Bun's performance through advanced memory management,
+// concurrency optimization, and V8 engine tuning.
+//
+// Key optimizations:
+// - Lock-free concurrent execution
+// - Memory pooling and pre-allocation
+// - Zero-copy data structures
+// - Adaptive JIT compilation strategies
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

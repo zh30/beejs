@@ -1,5 +1,5 @@
-//! 实时指标收集器
-//! 收集 Beejs 运行时的各种性能指标，支持 Prometheus 导出
+// 实时指标收集器
+// 收集 Beejs 运行时的各种性能指标，支持 Prometheus 导出
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, atomic::Ordering};

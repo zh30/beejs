@@ -1,4 +1,4 @@
-//! crypto polyfill
+/// crypto polyfill
 use rusty_v8 as v8;
 pub fn register(scope: &mut v8::HandleScope, global: &v8::Local<v8::Object>) {
     let crypto_key: _ = v8::String::new(scope, "crypto").unwrap();

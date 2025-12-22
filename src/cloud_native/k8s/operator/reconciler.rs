@@ -1,5 +1,5 @@
-//! Reconciler implementation for Operator Controller
-//! Handles the actual reconciliation logic for cluster and workload resources
+// Reconciler implementation for Operator Controller
+// Handles the actual reconciliation logic for cluster and workload resources
 
 use std::sync::Arc;
 

@@ -1,8 +1,8 @@
-//! Debugger Engine
-//!
-//! The main debugger engine that coordinates all debugging functionality,
-//! integrates with V8's debugging capabilities, and provides the high-level
-//! API for debugging operations.
+// Debugger Engine
+//
+// The main debugger engine that coordinates all debugging functionality,
+// integrates with V8's debugging capabilities, and provides the high-level
+// API for debugging operations.
 
 
 use std::collections::HashMap;

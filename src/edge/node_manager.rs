@@ -1,5 +1,5 @@
-//! Edge Node Manager
-//! Manages and coordinates edge nodes for distributed JavaScript/TypeScript execution
+// Edge Node Manager
+// Manages and coordinates edge nodes for distributed JavaScript/TypeScript execution
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};

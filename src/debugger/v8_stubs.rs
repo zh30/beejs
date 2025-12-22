@@ -1,8 +1,8 @@
-//! V8 Debug API Stubs
-//!
-//! This module provides stub implementations for V8 Debug API types
-//! that are not available in the current version of rusty_v8.
-//! These will be replaced with actual V8 integrations in the future.
+// V8 Debug API Stubs
+//
+// This module provides stub implementations for V8 Debug API types
+// that are not available in the current version of rusty_v8.
+/// These will be replaced with actual V8 integrations in the future.
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};
 use std::task::Context;

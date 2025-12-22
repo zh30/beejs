@@ -1,6 +1,6 @@
-//! 数据加密引擎
-//!
-//! 提供 AES-256 数据加密和解密功能
+// 数据加密引擎
+//
+// 提供 AES-256 数据加密和解密功能
 
 
 use std::collections::{BTreeMap, HashMap};

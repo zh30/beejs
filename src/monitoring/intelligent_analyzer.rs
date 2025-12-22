@@ -1,4 +1,4 @@
-//! 智能性能分析器 - Stage 90 Phase 5.4
+/// 智能性能分析器 - Stage 90 Phase 5.4
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::hash::Hash;

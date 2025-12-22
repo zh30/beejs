@@ -1,5 +1,5 @@
-//! Intelligent Routing System
-//! AI-powered intelligent routing for distributed edge computing
+// Intelligent Routing System
+// AI-powered intelligent routing for distributed edge computing
 
 use crate::edge::{NodeId, NodeStatus, Task, TaskPriority};
 use serde::{Deserialize, Serialize};

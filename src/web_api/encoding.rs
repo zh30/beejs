@@ -1,5 +1,5 @@
-//! TextEncoder/TextDecoder API implementation
-//! Provides text encoding and decoding functionality per Web standards
+// TextEncoder/TextDecoder API implementation
+/// Provides text encoding and decoding functionality per Web standards
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::task::Context;

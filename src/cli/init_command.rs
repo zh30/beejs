@@ -1,7 +1,7 @@
-//! Init Command Module
-//! Stage 91 Phase 4.1 - 项目初始化命令
-//!
-//! 实现 `beejs init` 命令，用于快速初始化项目
+// Init Command Module
+// Stage 91 Phase 4.1 - 项目初始化命令
+//
+/// 实现 `beejs init` 命令，用于快速初始化项目
 use std::fs;
 use std::io::{self, Write};
 use std::path::Path;

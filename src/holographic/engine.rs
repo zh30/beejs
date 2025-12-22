@@ -1,4 +1,4 @@
-//! 全息计算引擎核心实现
+/// 全息计算引擎核心实现
 use super::wavefront_propagator::PropagationMethod;
 use std::collections::{HashMap, BTreeMap};
 /// 全息引擎配置

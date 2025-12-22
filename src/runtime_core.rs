@@ -1,5 +1,5 @@
-//! Beejs 运行时核心模块
-//! 包含 MinimalRuntime 的完整实现和扩展功能
+// Beejs 运行时核心模块
+// 包含 MinimalRuntime 的完整实现和扩展功能
 
 use std::sync::{Arc, Mutex};
 use std::collections::{HashMap};

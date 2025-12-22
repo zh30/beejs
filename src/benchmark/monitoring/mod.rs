@@ -1,6 +1,6 @@
-//! 性能监控模块
-//!
-//! 提供实时性能监控和仪表板功能
+// 性能监控模块
+//
+// 提供实时性能监控和仪表板功能
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

@@ -1,16 +1,16 @@
-//! Stage 69 Phase 3: Enhanced Inline Strategy - Stage 93 Phase 1.1 优化
-//!
-//! Implements intelligent function inlining decisions based on:
-//! - Call frequency analysis
-//! - Code size awareness
-//! - Recursion depth limits
-//! - Benefit prediction with cost/benefit ratio
-//! - Stage 93 增强功能:
-//!   * 智能阈值调整 - 根据运行时反馈动态调整参数
-//!   * 多维度优化 - 考虑缓存局部性、分支预测等
-//!   * 自适应配置 - 根据系统特征动态调整配置
-//!   * 热路径优先 - 对热点代码采用更激进的内联策略
-//!   * 性能预测 - 预测内联对性能的影响
+// Stage 69 Phase 3: Enhanced Inline Strategy - Stage 93 Phase 1.1 优化
+//
+// Implements intelligent function inlining decisions based on:
+// - Call frequency analysis
+// - Code size awareness
+// - Recursion depth limits
+// - Benefit prediction with cost/benefit ratio
+// - Stage 93 增强功能:
+//   * 智能阈值调整 - 根据运行时反馈动态调整参数
+//   * 多维度优化 - 考虑缓存局部性、分支预测等
+//   * 自适应配置 - 根据系统特征动态调整配置
+//   * 热路径优先 - 对热点代码采用更激进的内联策略
+//   * 性能预测 - 预测内联对性能的影响
 
 
 use std::collections::{BTreeMap, HashMap};

@@ -1,8 +1,8 @@
-//! 量子门 (Quantum Gates) 实现
-//!
-//! 支持的量子门:
-//! - 单比特门: H, X, Y, Z, S, T, Rx, Ry, Rz
-//! - 双比特门: CNOT, CZ, SWAP
+// 量子门 (Quantum Gates) 实现
+//
+// 支持的量子门:
+// - 单比特门: H, X, Y, Z, S, T, Rx, Ry, Rz
+/// - 双比特门: CNOT, CZ, SWAP
 use num_complex::Complex64;
 use std::f64::consts::{FRAC_PI_2, PI};
 use super::Qubit;

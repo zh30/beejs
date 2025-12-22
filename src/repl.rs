@@ -1,7 +1,7 @@
-//! REPL (Read-Eval-Print-Loop) module for interactive JavaScript execution
-//!
-//! This module provides an interactive shell that maintains V8 context
-//! across commands, enabling maximum performance for repeated executions.
+// REPL (Read-Eval-Print-Loop) module for interactive JavaScript execution
+//
+// This module provides an interactive shell that maintains V8 context
+// across commands, enabling maximum performance for repeated executions.
 
 
 use anyhow::Result;

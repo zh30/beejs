@@ -1,5 +1,5 @@
-//! Node.js querystring模块实现
-//! 查询字符串处理
+// Node.js querystring模块实现
+/// 查询字符串处理
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};

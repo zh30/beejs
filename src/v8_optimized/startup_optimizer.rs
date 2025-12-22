@@ -1,6 +1,6 @@
-//! V8 启动优化器
-//! 实现 < 2ms 的启动时间
-//! Stage 27.1: V8 引擎深度优化
+// V8 启动优化器
+// 实现 < 2ms 的启动时间
+// Stage 27.1: V8 引擎深度优化
 
 use anyhow::{Result, anyhow};
 use std::collections::{BTreeMap, HashMap};

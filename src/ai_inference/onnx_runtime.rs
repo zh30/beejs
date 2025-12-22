@@ -1,5 +1,5 @@
-//! ONNX Runtime 推理引擎实现
-//! 提供高性能的 ONNX 模型推理能力，支持 CPU 和 GPU 加速
+// ONNX Runtime 推理引擎实现
+// 提供高性能的 ONNX 模型推理能力，支持 CPU 和 GPU 加速
 
 
 use crate::ai_inference::engine_interface::{

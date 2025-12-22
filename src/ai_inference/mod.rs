@@ -1,5 +1,5 @@
-//! AI 推理引擎模块
-//! 专为 AI 工作负载优化的推理引擎
+// AI 推理引擎模块
+// 专为 AI 工作负载优化的推理引擎
 mod ai_inference_engine;
 mod engine_interface;
 mod model_loader;

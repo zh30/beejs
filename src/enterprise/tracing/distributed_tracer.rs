@@ -1,5 +1,5 @@
-//! 分布式追踪系统
-//! 提供链路追踪、上下文传播和Span管理功能
+// 分布式追踪系统
+// 提供链路追踪、上下文传播和Span管理功能
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};

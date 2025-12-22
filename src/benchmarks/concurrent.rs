@@ -1,11 +1,11 @@
-//! 并发性能基准测试
-//! Stage 31.3: 性能基准测试完善
-//!
-//! 该模块提供并发性能相关的基准测试，包括：
-//! - 多线程执行性能测试
-//! - 异步任务性能测试
-//! - 锁竞争性能测试
-//! - 工作窃取性能测试
+// 并发性能基准测试
+// Stage 31.3: 性能基准测试完善
+//
+// 该模块提供并发性能相关的基准测试，包括：
+// - 多线程执行性能测试
+// - 异步任务性能测试
+// - 锁竞争性能测试
+// - 工作窃取性能测试
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use std::collections::{BTreeMap, HashMap};

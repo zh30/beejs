@@ -1,5 +1,5 @@
-//! AI 智能调试器
-//! 提供 AI 驱动的错误诊断、根因分析和修复建议功能
+// AI 智能调试器
+// 提供 AI 驱动的错误诊断、根因分析和修复建议功能
 
 use std::collections::HashSet;
 use std::collections::{BTreeMap, HashMap};

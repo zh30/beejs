@@ -1,5 +1,5 @@
-//! Isolate 生命周期管理守卫
-//! 使用 RAII 模式确保 V8 Isolate 的正确清理
+// Isolate 生命周期管理守卫
+/// 使用 RAII 模式确保 V8 Isolate 的正确清理
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};
 /// Isolate 生命周期守卫

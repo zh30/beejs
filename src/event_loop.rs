@@ -1,5 +1,5 @@
-//! V8 事件循环实现
-//! 为 Beejs 提供异步 JavaScript 执行支持
+// V8 事件循环实现
+// 为 Beejs 提供异步 JavaScript 执行支持
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

@@ -1,5 +1,5 @@
-//! 智能内存分配器 - Stage 90 Phase 5.2
-//! 基于使用模式预测的智能内存分配器
+// 智能内存分配器 - Stage 90 Phase 5.2
+// 基于使用模式预测的智能内存分配器
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

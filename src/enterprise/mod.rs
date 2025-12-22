@@ -1,5 +1,5 @@
-//! Enterprise Module
-//! Provides enterprise-grade security, compliance, and governance features
+// Enterprise Module
+/// Provides enterprise-grade security, compliance, and governance features
 use std::time::SystemTime;
 pub mod security_manager;
 pub mod compliance_manager;

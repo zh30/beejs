@@ -1,5 +1,5 @@
-//! 模型缓存系统
-//! 实现智能的模型加载和缓存机制，包括分层缓存、压缩存储和智能预取
+// 模型缓存系统
+// 实现智能的模型加载和缓存机制，包括分层缓存、压缩存储和智能预取
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};

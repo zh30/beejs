@@ -1,5 +1,5 @@
-//! Stage 12.2: V8堆配置优化模块
-//! 提供V8引擎的自定义堆配置，优化不同场景的内存使用
+// Stage 12.2: V8堆配置优化模块
+/// 提供V8引擎的自定义堆配置，优化不同场景的内存使用
 use rusty_v8 as v8;
 /// V8堆配置预设
 #[derive(Debug, Clone, Copy, PartialEq)]

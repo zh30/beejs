@@ -1,9 +1,9 @@
-//! Multi-level cache system for ultra-fast script execution
-//!
-//! This module implements a three-tier caching architecture:
-//! - L1: Zero-copy hot cache for frequently accessed scripts
-//! - L2: Smart cache with LRU/LFU hybrid strategy
-//! - L3: Memory-mapped cache for large files and cold data
+// Multi-level cache system for ultra-fast script execution
+//
+// This module implements a three-tier caching architecture:
+// - L1: Zero-copy hot cache for frequently accessed scripts
+// - L2: Smart cache with LRU/LFU hybrid strategy
+/// - L3: Memory-mapped cache for large files and cold data
 use std::hash::Hash;
 pub mod l1_zero_copy;
 pub mod l2_smart;

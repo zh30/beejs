@@ -1,5 +1,5 @@
-//! 性能监控器模块
-//! 负责实时收集、聚合和分析性能指标
+// 性能监控器模块
+// 负责实时收集、聚合和分析性能指标
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

@@ -1,13 +1,13 @@
-//! Zero-Copy I/O Operations for Ultra-High Performance
-//!
-//! This module provides zero-copy I/O operations to minimize memory overhead
-//! and maximize throughput, crucial for exceeding Bun's performance.
-//!
-//! Key features:
-//! - Direct memory mapping for file I/O
-//! - Lock-free network I/O with io_uring
-//! - Scatter-gather I/O operations
-//! - Memory-mapped buffers for inter-process communication
+// Zero-Copy I/O Operations for Ultra-High Performance
+//
+// This module provides zero-copy I/O operations to minimize memory overhead
+// and maximize throughput, crucial for exceeding Bun's performance.
+//
+// Key features:
+// - Direct memory mapping for file I/O
+// - Lock-free network I/O with io_uring
+// - Scatter-gather I/O operations
+// - Memory-mapped buffers for inter-process communication
 
 use memmap2::{Mmap, MmapOptions};
 use std::collections::{BTreeMap, HashMap};

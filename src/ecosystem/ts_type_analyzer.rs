@@ -1,7 +1,7 @@
-//! TypeScript 类型分析器
-//! Stage 91 Phase 3.2.1 - TypeScript 类型分析
-//!
-//! 分析 JavaScript/TypeScript 源代码以提取类型信息
+// TypeScript 类型分析器
+// Stage 91 Phase 3.2.1 - TypeScript 类型分析
+//
+// 分析 JavaScript/TypeScript 源代码以提取类型信息
 
 
 use super::*;

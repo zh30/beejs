@@ -1,5 +1,5 @@
-//! Performance Regression Detector
-//! Detects performance regressions by comparing with historical data
+// Performance Regression Detector
+// Detects performance regressions by comparing with historical data
 
 use std::collections::{BTreeMap, HashMap};
 use serde::{Serialize, Deserialize};

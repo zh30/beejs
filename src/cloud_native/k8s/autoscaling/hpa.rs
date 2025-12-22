@@ -1,5 +1,5 @@
-//! Horizontal Pod Autoscaler (HPA) Implementation
-//! Provides automatic scaling for workloads based on metrics
+// Horizontal Pod Autoscaler (HPA) Implementation
+// Provides automatic scaling for workloads based on metrics
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

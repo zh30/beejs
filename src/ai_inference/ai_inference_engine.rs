@@ -1,5 +1,5 @@
-//! AI 推理引擎核心实现
-//! 提供高性能的 AI 模型推理能力
+// AI 推理引擎核心实现
+// 提供高性能的 AI 模型推理能力
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};

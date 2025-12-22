@@ -1,7 +1,7 @@
-//! 框架支持模块
-//! Stage 91 Phase 3.3 - React/Vue/Angular 框架支持
-//!
-//! 为主流前端框架提供完整的运行时支持
+// 框架支持模块
+// Stage 91 Phase 3.3 - React/Vue/Angular 框架支持
+//
+// 为主流前端框架提供完整的运行时支持
 pub mod react;
 pub mod vue;
 pub mod angular;

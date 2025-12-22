@@ -1,5 +1,5 @@
-//! io_uring 引擎
-//! 基于 Linux io_uring 的高性能异步 I/O
+// io_uring 引擎
+// 基于 Linux io_uring 的高性能异步 I/O
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, RwLock};

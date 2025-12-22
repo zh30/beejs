@@ -1,5 +1,5 @@
-//! CI/CD Integration module
-//! Provides GitOps workflows and CI/CD pipeline support
+// CI/CD Integration module
+// Provides GitOps workflows and CI/CD pipeline support
 pub mod gitops;
 pub mod pipeline;
 pub mod deployment;

@@ -1,7 +1,7 @@
-//! Breakpoint Management
-//!
-//! This module handles the management of breakpoints, including creation,
-//! deletion, enabling/disabling, and condition evaluation.
+// Breakpoint Management
+//
+// This module handles the management of breakpoints, including creation,
+// deletion, enabling/disabling, and condition evaluation.
 
 
 use std::collections::HashMap;

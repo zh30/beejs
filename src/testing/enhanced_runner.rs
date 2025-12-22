@@ -1,6 +1,6 @@
-//! Enhanced Test Runner
-//! Provides advanced test execution features including parallel execution,
-//! timeout control, test filtering, and retry mechanisms
+// Enhanced Test Runner
+// Provides advanced test execution features including parallel execution,
+// timeout control, test filtering, and retry mechanisms
 
 use crate::testing::parallel_executor::{ParallelConfig, ParallelExecutor};
 use crate::testing::test_context::{TestCase, TestResult, TestSuite};

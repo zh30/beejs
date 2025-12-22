@@ -1,7 +1,7 @@
-//! Beejs Server Mode
-//!
-//! This module provides a high-performance HTTP server for executing
-//! JavaScript/TypeScript code with runtime reuse optimization.
+// Beejs Server Mode
+//
+// This module provides a high-performance HTTP server for executing
+// JavaScript/TypeScript code with runtime reuse optimization.
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

@@ -1,9 +1,9 @@
-//! Debugger Inspector Module
-//!
-//! Provides inspection capabilities for:
-//! - Heap snapshots
-//! - Object tracing
-//! - Memory analysis
+// Debugger Inspector Module
+//
+// Provides inspection capabilities for:
+// - Heap snapshots
+// - Object tracing
+/// - Memory analysis
 use crate::runtime::JsValue;
 use anyhow::Result;
 use std::collections::HashMap;

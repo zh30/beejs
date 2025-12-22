@@ -1,6 +1,6 @@
-//! Tools Module
-//!
-//! Provides developer tools and integrations
+// Tools Module
+//
+// Provides developer tools and integrations
 
 use std::collections::{BTreeMap, HashMap};
 

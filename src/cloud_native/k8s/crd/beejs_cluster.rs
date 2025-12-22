@@ -1,5 +1,5 @@
-//! BeejsCluster Custom Resource Definition
-//! Defines the cluster-level configuration for Beejs runtime
+// BeejsCluster Custom Resource Definition
+/// Defines the cluster-level configuration for Beejs runtime
 use kube::CustomResource;
 use schemars::{gen::SchemaGenerator, schema::Schema, JsonSchema};
 use serde::{Deserialize, Serialize};

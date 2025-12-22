@@ -1,5 +1,5 @@
-//! 服务发现模块
-//! 实现基于 Gossip 协议的集群节点自动发现和注册
+// 服务发现模块
+// 实现基于 Gossip 协议的集群节点自动发现和注册
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};

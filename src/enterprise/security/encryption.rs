@@ -1,5 +1,5 @@
-//! Enterprise Encryption and Key Management
-//! Provides encryption, decryption, and key lifecycle management
+// Enterprise Encryption and Key Management
+// Provides encryption, decryption, and key lifecycle management
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};

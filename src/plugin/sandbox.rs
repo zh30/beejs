@@ -1,4 +1,4 @@
-//! Plugin sandbox module
+/// Plugin sandbox module
 use anyhow::Result;
 pub struct PluginSandbox {
     enabled: bool,

@@ -1,5 +1,5 @@
-//! GitOps Engine for Configuration Management
-//! 实现基于 Git 的配置管理和自动化部署工作流
+// GitOps Engine for Configuration Management
+// 实现基于 Git 的配置管理和自动化部署工作流
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};

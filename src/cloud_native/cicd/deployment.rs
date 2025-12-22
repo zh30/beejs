@@ -1,5 +1,5 @@
-//! Deployment strategies module
-//! Provides Blue-Green, Canary, and Rolling deployment support
+// Deployment strategies module
+// Provides Blue-Green, Canary, and Rolling deployment support
 /// Deployment configuration
 #[derive(Debug, Clone)]
 pub struct DeploymentConfig {

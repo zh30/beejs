@@ -1,7 +1,7 @@
-//! L3 Memory-Mapped Cache - Large files and cold data
-//!
-//! This module provides L3 cache using memory mapping for efficient handling
-//! of large script files and infrequently accessed cold data.
+// L3 Memory-Mapped Cache - Large files and cold data
+//
+// This module provides L3 cache using memory mapping for efficient handling
+// of large script files and infrequently accessed cold data.
 
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Write};

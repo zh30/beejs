@@ -1,7 +1,7 @@
-//! Trend Analyzer
-//!
-//! Analyzes time series data to detect trends, calculate trend strength,
-//! and predict future values.
+// Trend Analyzer
+//
+// Analyzes time series data to detect trends, calculate trend strength,
+// and predict future values.
 
 use crate::core::data_collector::::{Metric, MetricType};
 use crate::core::error::::{AIOpsError, Result};

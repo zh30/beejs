@@ -1,3 +1,3 @@
-//! simd module placeholder
+// simd module placeholder
 
 use std::collections::{BTreeMap, HashMap};

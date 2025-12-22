@@ -1,5 +1,5 @@
-//! Enterprise Monitoring and Metrics
-//! Provides comprehensive monitoring for Beejs enterprise features
+// Enterprise Monitoring and Metrics
+// Provides comprehensive monitoring for Beejs enterprise features
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

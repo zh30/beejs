@@ -1,5 +1,5 @@
-//! V8 Bindings for Testing Framework - Fixed version
-//! Registers test() / describe() / expect() functions in V8 context
+// V8 Bindings for Testing Framework - Fixed version
+/// Registers test() / describe() / expect() functions in V8 context
 use rusty_v8 as v8;
 use crate::testing::{register_suite, get_all_suites};
 use crate::testing::test_context::{TestSuite, TestCase};

@@ -1,7 +1,7 @@
-//! Lockfile 管理器
-//! Stage 91 Phase 3.1 - Lockfile 解析和管理
-//!
-//! 支持 package-lock.json、yarn.lock、pnpm-lock.yaml
+// Lockfile 管理器
+// Stage 91 Phase 3.1 - Lockfile 解析和管理
+//
+/// 支持 package-lock.json、yarn.lock、pnpm-lock.yaml
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

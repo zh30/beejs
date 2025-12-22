@@ -1,5 +1,5 @@
-//! Test Runner
-//! Executes test suites and collects results
+// Test Runner
+// Executes test suites and collects results
 
 use crate::testing::test_context::{TestCase, TestResult, TestSuite};
 use std::collections::{BTreeMap, HashMap};

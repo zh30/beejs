@@ -1,5 +1,5 @@
-//! Prometheus Metrics Integration for Beejs
-//! 实现 Prometheus 指标收集和导出功能
+// Prometheus Metrics Integration for Beejs
+// 实现 Prometheus 指标收集和导出功能
 
 
 use anyhow::{Result, Context};

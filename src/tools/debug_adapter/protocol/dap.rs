@@ -1,7 +1,7 @@
-//! Debug Adapter Protocol (DAP) Implementation for Beejs
-//!
-//! This module provides a Rust implementation of the Debug Adapter Protocol
-//! for integrating Beejs with VS Code and other IDEs.
+// Debug Adapter Protocol (DAP) Implementation for Beejs
+//
+// This module provides a Rust implementation of the Debug Adapter Protocol
+// for integrating Beejs with VS Code and other IDEs.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

@@ -1,5 +1,5 @@
-//! Snapshot Renderer
-//! Pretty-prints snapshots and generates diff views
+// Snapshot Renderer
+/// Pretty-prints snapshots and generates diff views
 use std::fmt;
 /// Snapshot pretty printer
 pub struct SnapshotPrettyPrinter {

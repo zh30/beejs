@@ -1,5 +1,5 @@
-//! Container security scanner
-//! Scans container images for vulnerabilities and compliance issues
+// Container security scanner
+// Scans container images for vulnerabilities and compliance issues
 
 
 use std::path::Path;

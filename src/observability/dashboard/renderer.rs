@@ -1,10 +1,10 @@
-//! Dashboard Renderer - Chart and Graph Rendering Engine
-//!
-//! This module provides advanced rendering capabilities for dashboards:
-//! - Real-time chart rendering (line, bar, pie, heatmap)
-//! - Topology and dependency graph visualization
-//! - Template engine for dynamic content
-//! - WebSocket-based live updates
+// Dashboard Renderer - Chart and Graph Rendering Engine
+//
+// This module provides advanced rendering capabilities for dashboards:
+// - Real-time chart rendering (line, bar, pie, heatmap)
+// - Topology and dependency graph visualization
+// - Template engine for dynamic content
+// - WebSocket-based live updates
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

@@ -1,6 +1,6 @@
-//! Remote Debugging Module
-//!
-//! Provides remote debugging capabilities via WebSocket
+// Remote Debugging Module
+//
+// Provides remote debugging capabilities via WebSocket
 pub mod server;
 pub mod client;
 

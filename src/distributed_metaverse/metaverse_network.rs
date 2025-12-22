@@ -1,4 +1,4 @@
-//! 元宇宙分布式网络
+/// 元宇宙分布式网络
 use std::collections::HashMap;
 use std::collections::{BTreeMap};
 /// 节点角色

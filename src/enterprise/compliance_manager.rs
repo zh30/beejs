@@ -1,5 +1,5 @@
-//! Enterprise Compliance Manager
-//! Provides compliance checking against various frameworks and regulations
+// Enterprise Compliance Manager
+// Provides compliance checking against various frameworks and regulations
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};

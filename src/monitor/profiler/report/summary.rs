@@ -1,4 +1,4 @@
-//! 性能摘要报告生成模块
+/// 性能摘要报告生成模块
 use chrono::{DateTime, Utc};
 use crate::monitor::profiler::{
     Hotspot, analyzer::stack_analyzer::{Bottleneck, CallStackAnalysis},

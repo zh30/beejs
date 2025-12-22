@@ -1,12 +1,12 @@
-//! Chart Components - High-performance chart rendering
-//!
-//! This module provides specialized chart components for different data visualization needs:
-//! - LineChart: Time series and continuous data
-//! - BarChart: Categorical and discrete data
-//! - PieChart: Proportional and percentage data
-//! - HeatMap: Density and intensity visualization
-//! - ScatterPlot: Correlation and distribution analysis
-//! - AreaChart: Cumulative and range data
+// Chart Components - High-performance chart rendering
+//
+// This module provides specialized chart components for different data visualization needs:
+// - LineChart: Time series and continuous data
+// - BarChart: Categorical and discrete data
+// - PieChart: Proportional and percentage data
+// - HeatMap: Density and intensity visualization
+// - ScatterPlot: Correlation and distribution analysis
+// - AreaChart: Cumulative and range data
 
 
 use anyhow::{Result, Context, anyhow};

@@ -1,6 +1,6 @@
-//! WASM 编译器模块
-//!
-//! 提供 Wasmtime 引擎管理和 JavaScript 到 WebAssembly 的编译功能
+// WASM 编译器模块
+//
+// 提供 Wasmtime 引擎管理和 JavaScript 到 WebAssembly 的编译功能
 
 use anyhow::{Context, Result, anyhow};
 use std::collections::{BTreeMap, HashMap};

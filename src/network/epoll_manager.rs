@@ -1,5 +1,5 @@
-//! epoll 高性能事件驱动管理器
-//! 支持 100万+ 并发连接
+// epoll 高性能事件驱动管理器
+// 支持 100万+ 并发连接
 
 use crate::network::{NetworkConfig, NetworkError};
 use std::collections::BTreeMap;

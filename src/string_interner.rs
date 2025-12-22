@@ -1,5 +1,5 @@
-//! Stage 12.2: 字符串Interning优化模块
-//! 通过字符串池化减少内存分配和比较开销
+// Stage 12.2: 字符串Interning优化模块
+// 通过字符串池化减少内存分配和比较开销
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, RwLock};

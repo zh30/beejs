@@ -1,5 +1,5 @@
-//! Enterprise Security Module
-//! Provides enterprise-grade security features including sandbox, encryption, and key management
+// Enterprise Security Module
+// Provides enterprise-grade security features including sandbox, encryption, and key management
 pub mod sandbox;
 pub mod encryption;
 pub use sandbox::*;

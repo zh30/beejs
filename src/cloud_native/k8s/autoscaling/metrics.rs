@@ -1,5 +1,5 @@
-//! Metrics collection for HPA
-//! Gathers resource usage metrics from Kubernetes
+// Metrics collection for HPA
+/// Gathers resource usage metrics from Kubernetes
 use kube::api::ListParams;
 use tracing::{debug, warn};
 use super::super::crd::CustomMetric;

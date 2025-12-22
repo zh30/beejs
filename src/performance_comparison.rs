@@ -1,7 +1,15 @@
-//! Stub module for performance comparison
-//! This module provides types for comparing performance across different runs
+// Stub module for performance comparison
+// This module provides types for comparing performance across different runs
 
 use std::collections::HashMap;
+
+/// Report format enum
+#[derive(Debug, Clone, PartialEq)]
+pub enum ReportFormat {
+    Html,
+    Markdown,
+    Json,
+}
 
 /// Configuration for performance reports
 #[derive(Debug, Clone)]
@@ -50,5 +58,27 @@ impl ResultCollector {
     /// Add a result
     pub fn add_result(&mut self, name: String, value: f64) {
         self.results.insert(name, value);
+    }
+}
+
+/// Report generator for performance results
+#[derive(Debug, Clone)]
+pub struct ReportGenerator {
+    pub config: ReportConfig,
+}
+
+impl ReportGenerator {
+    /// Create a new report generator
+    pub fn new(config: ReportConfig) -> Self {
+        Self { config }
+    }
+
+    /// Generate a report
+    pub fn generate(&self, format: ReportFormat) -> String {
+        match format {
+            ReportFormat::Html => "HTML report".to_string(),
+            ReportFormat::Markdown => "# Performance Report\n\n".to_string(),
+            ReportFormat::Json => "{}".to_string(),
+        }
     }
 }

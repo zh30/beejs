@@ -1,7 +1,7 @@
-//! DMA Direct Memory Access Engine
-//!
-//! This module provides zero-copy memory transfers using DMA (Direct Memory Access)
-//! to bypass CPU and achieve maximum I/O performance for AI workloads.
+// DMA Direct Memory Access Engine
+//
+// This module provides zero-copy memory transfers using DMA (Direct Memory Access)
+// to bypass CPU and achieve maximum I/O performance for AI workloads.
 
 use anyhow::{Result, anyhow};
 use libc::{c_void, posix_memalign};

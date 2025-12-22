@@ -1,6 +1,6 @@
-//! WASM 子模块
-//!
-//! 提供 WebAssembly 相关功能的实现
+// WASM 子模块
+//
+// 提供 WebAssembly 相关功能的实现
 pub mod module_cache;
 pub mod module_loader;
 pub mod simd_engine;

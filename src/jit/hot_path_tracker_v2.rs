@@ -1,11 +1,11 @@
-//! Stage 69 Phase 3: Enhanced Hot Path Tracker v2
-//!
-//! Implements dynamic threshold adjustment for better hot path detection.
-//! Features:
-//! - Adaptive threshold based on execution patterns
-//! - History window for trend analysis
-//! - Predictive hot path marking
-//! - Complexity-aware detection
+// Stage 69 Phase 3: Enhanced Hot Path Tracker v2
+//
+// Implements dynamic threshold adjustment for better hot path detection.
+// Features:
+// - Adaptive threshold based on execution patterns
+// - History window for trend analysis
+// - Predictive hot path marking
+// - Complexity-aware detection
 
 use std::collections::BTreeMap;
 use std::sync::{RwLock};

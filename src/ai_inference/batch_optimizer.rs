@@ -1,5 +1,5 @@
-//! ONNX 批处理优化器
-//! 智能批处理算法，动态调整批处理大小，优化推理性能
+// ONNX 批处理优化器
+// 智能批处理算法，动态调整批处理大小，优化推理性能
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

@@ -1,5 +1,5 @@
-//! Node.js URL模块实现
-//! WHATWG URL标准支持
+// Node.js URL模块实现
+// WHATWG URL标准支持
 
 use std::collections::HashSet;
 

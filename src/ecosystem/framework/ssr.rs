@@ -1,7 +1,7 @@
-//! 服务器端渲染 (SSR) 模块
-//! Stage 91 Phase 3.3.4 - SSR 渲染引擎
-//!
-//! 提供统一的 SSR 支持，包括流式渲染、水合机制、缓存策略等
+// 服务器端渲染 (SSR) 模块
+// Stage 91 Phase 3.3.4 - SSR 渲染引擎
+//
+// 提供统一的 SSR 支持，包括流式渲染、水合机制、缓存策略等
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;

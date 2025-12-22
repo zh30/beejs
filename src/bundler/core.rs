@@ -1,5 +1,5 @@
-//! High-performance bundler core
-//! Designed to exceed esbuild performance (100MB/s+)
+// High-performance bundler core
+// Designed to exceed esbuild performance (100MB/s+)
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};

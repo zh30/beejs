@@ -1,5 +1,5 @@
-//! 数据采集器模块
-//! 负责收集函数调用、内存分配等性能数据
+// 数据采集器模块
+// 负责收集函数调用、内存分配等性能数据
 
 use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};

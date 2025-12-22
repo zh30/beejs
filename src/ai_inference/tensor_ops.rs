@@ -1,5 +1,5 @@
-//! 张量操作模块
-//! 提供高性能的张量计算和操作
+// 张量操作模块
+// 提供高性能的张量计算和操作
 
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};

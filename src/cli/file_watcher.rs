@@ -1,5 +1,5 @@
-//! File Watcher Module
-//! Stage 36.0 - 实现文件监控功能
+// File Watcher Module
+// Stage 36.0 - 实现文件监控功能
 
 use std::collections::{BTreeMap, HashMap};
 use std::path::{Path, PathBuf};

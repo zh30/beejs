@@ -1,6 +1,6 @@
-//! Data Collector
-//!
-//! Collects system metrics and performance data for AI analysis.
+// Data Collector
+//
+// Collects system metrics and performance data for AI analysis.
 
 
 use crate::core::error::{AIOpsError, Result};

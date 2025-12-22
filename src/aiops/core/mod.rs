@@ -1,6 +1,6 @@
-//! Core module for AI Ops
-//!
-//! This module provides the core infrastructure for AI-driven operations.
+// Core module for AI Ops
+//
+// This module provides the core infrastructure for AI-driven operations.
 pub mod error;
 pub mod model_manager;
 pub mod data_collector;

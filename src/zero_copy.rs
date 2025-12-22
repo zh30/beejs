@@ -1,5 +1,5 @@
-//! 零拷贝数据传输优化模块
-//! 通过引用传递和内存映射实现高性能数据传输
+// 零拷贝数据传输优化模块
+// 通过引用传递和内存映射实现高性能数据传输
 
 use crate::lock_free_temp::{AtomicStats, LockFreeBufferPool, LockFreeCounter};
 use std::collections::{BTreeMap, HashMap};

@@ -1,7 +1,7 @@
-//! Debug Session Manager
-//!
-//! Orchestrates the interaction between RuntimeLite and DebuggerEngine
-//! to provide a complete debugging experience.
+// Debug Session Manager
+//
+// Orchestrates the interaction between RuntimeLite and DebuggerEngine
+// to provide a complete debugging experience.
 
 use anyhow::{Context, Result};
 use crate::{RuntimeLite, debugger};

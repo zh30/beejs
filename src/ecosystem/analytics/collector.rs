@@ -1,5 +1,5 @@
-//! 分析数据收集器
-//! 提供使用统计和性能基准功能
+// 分析数据收集器
+// 提供使用统计和性能基准功能
 
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};

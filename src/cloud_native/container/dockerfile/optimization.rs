@@ -1,5 +1,5 @@
-//! Dockerfile optimization strategies
-//! Provides various optimization techniques for container builds
+// Dockerfile optimization strategies
+// Provides various optimization techniques for container builds
 /// Dockerfile optimizer
 pub struct Optimizer {
     /// Optimization strategies

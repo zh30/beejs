@@ -1,7 +1,7 @@
-//! Info Command Module
-//! Stage 91 Phase 4.1 - 系统信息命令
-//!
-//! 实现 `beejs info` 命令，显示运行时和系统信息
+// Info Command Module
+// Stage 91 Phase 4.1 - 系统信息命令
+//
+/// 实现 `beejs info` 命令，显示运行时和系统信息
 use std::env;
 use std::path::Path;
 use super::output_formatter::OutputFormatter;

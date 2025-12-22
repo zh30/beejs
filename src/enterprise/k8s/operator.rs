@@ -1,5 +1,5 @@
-//! Enterprise Kubernetes Operator
-//! Implements a production-ready Kubernetes operator for Beejs
+// Enterprise Kubernetes Operator
+// Implements a production-ready Kubernetes operator for Beejs
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

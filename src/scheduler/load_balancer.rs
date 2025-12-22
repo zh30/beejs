@@ -1,4 +1,4 @@
-//! 智能负载均衡器 - Stage 90 Phase 5.3
+/// 智能负载均衡器 - Stage 90 Phase 5.3
 use serde::{Serialize, Deserialize};
 /// 负载均衡策略
 #[derive(Debug, Clone, Serialize, Deserialize)]

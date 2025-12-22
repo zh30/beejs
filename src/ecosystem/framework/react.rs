@@ -1,7 +1,7 @@
-//! React 运行时支持
-//! Stage 91 Phase 3.3.1 - React 框架集成
-//!
-//! 提供 React 应用完整支持，包括 JSX 转换、组件渲染、水合等
+// React 运行时支持
+// Stage 91 Phase 3.3.1 - React 框架集成
+//
+/// 提供 React 应用完整支持，包括 JSX 转换、组件渲染、水合等
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

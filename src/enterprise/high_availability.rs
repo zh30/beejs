@@ -1,5 +1,5 @@
-//! High Availability and Disaster Recovery System
-//! 实现高可用性和灾难恢复功能
+// High Availability and Disaster Recovery System
+// 实现高可用性和灾难恢复功能
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};

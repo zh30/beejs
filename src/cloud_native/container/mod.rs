@@ -1,5 +1,5 @@
-//! Container module for Docker builds and security
-//! Provides containerization support and optimization
+// Container module for Docker builds and security
+// Provides containerization support and optimization
 pub mod dockerfile;
 pub mod security;
 /// Re-export dockerfile types

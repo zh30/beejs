@@ -1,5 +1,5 @@
-//! 优化预编译缓存系统
-//! 实现快照优化、智能缓存管理、缓存压缩等启动优化功能
+// 优化预编译缓存系统
+// 实现快照优化、智能缓存管理、缓存压缩等启动优化功能
 // use crate::code_cache::::{BytecodeCache, CacheConfig};  // Temporarily disabled
 
 use anyhow::{Context, Result, anyhow};

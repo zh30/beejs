@@ -1,9 +1,9 @@
-//! 计算密集型工作负载
-//!
-//! 实现 CPU 密集型任务的性能测试，包括：
-//! - 数值计算 (Fibonacci, 素数计算)
-//! - 数组操作 (排序, 搜索)
-//! - 算法实现 (动态规划, 递归)
+// 计算密集型工作负载
+//
+// 实现 CPU 密集型任务的性能测试，包括：
+// - 数值计算 (Fibonacci, 素数计算)
+// - 数组操作 (排序, 搜索)
+// - 算法实现 (动态规划, 递归)
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

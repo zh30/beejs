@@ -1,6 +1,6 @@
-//! 全息计算引擎模块
-//!
-//! 提供全息图像生成、波前传播、体积捕捉和全息存储功能。
+// 全息计算引擎模块
+//
+// 提供全息图像生成、波前传播、体积捕捉和全息存储功能。
 pub mod engine;
 pub mod wavefront_propagator;
 pub mod hologram_generator;

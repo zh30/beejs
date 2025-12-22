@@ -1,6 +1,6 @@
-//! 性能分析器增强模块
-//! Stage 76: 企业级性能分析系统
-//! 提供函数跟踪、热点分析、性能报告等高级功能
+// 性能分析器增强模块
+// Stage 76: 企业级性能分析系统
+// 提供函数跟踪、热点分析、性能报告等高级功能
 
 use analyzer::{CallStackAnalyzer, Hotspot, HotspotAnalyzer, StackFrame};
 use analyzer::hotspot::{MemoryStats, TimeStats};

@@ -1,5 +1,5 @@
-//! TypeScript 编译器实现
-//! 将 TypeScript 代码转译为 JavaScript
+// TypeScript 编译器实现
+// 将 TypeScript 代码转译为 JavaScript
 
 use anyhow::{Result, bail};
 use std::collections::{BTreeMap, HashMap};

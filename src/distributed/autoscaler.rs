@@ -1,5 +1,5 @@
-//! 自动扩缩容器模块
-//! 负责根据集群负载自动调整节点数量
+// 自动扩缩容器模块
+// 负责根据集群负载自动调整节点数量
 
 use std::collections::{BTreeMap, HashMap};
 use tracing::{debug, info};

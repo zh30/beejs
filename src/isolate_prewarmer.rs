@@ -1,6 +1,6 @@
-//! Isolate Pre-warming System - Stage 21.3
-//! Enhanced pre-warming mechanism with V8 snapshots and context preparation
-//! Integrates with IsolatePool to provide fully-prepared isolates ready for execution
+// Isolate Pre-warming System - Stage 21.3
+// Enhanced pre-warming mechanism with V8 snapshots and context preparation
+// Integrates with IsolatePool to provide fully-prepared isolates ready for execution
 
 use anyhow::{Result, anyhow};
 use std::collections::{BTreeMap, HashMap};

@@ -1,11 +1,11 @@
-//! Enhanced Assertion Library
-//! Stage 93 Phase 3.3 - Extended Matchers
-//!
-//! Provides comprehensive assertion matchers including:
-//! - Extended matchers (toEqual, toMatch, toContain, etc.)
-//! - Async matchers for Promise-based tests
-//! - Custom matcher support
-//! - Deep equality checking
+// Enhanced Assertion Library
+// Stage 93 Phase 3.3 - Extended Matchers
+//
+// Provides comprehensive assertion matchers including:
+// - Extended matchers (toEqual, toMatch, toContain, etc.)
+// - Async matchers for Promise-based tests
+// - Custom matcher support
+// - Deep equality checking
 /// Core matcher trait
 pub trait Matcher<T> {
     type Output;

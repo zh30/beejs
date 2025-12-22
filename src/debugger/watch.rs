@@ -1,8 +1,8 @@
-//! Watch Variables Module
-//!
-//! Provides functionality for monitoring variable values during debugging sessions.
-//! Watch expressions are evaluated each time execution pauses, allowing developers
-//! to track how values change over time.
+// Watch Variables Module
+//
+// Provides functionality for monitoring variable values during debugging sessions.
+// Watch expressions are evaluated each time execution pauses, allowing developers
+/// to track how values change over time.
 use uuid::Uuid;
 /// A watch expression being monitored
 #[derive(Debug, Clone)]

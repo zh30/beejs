@@ -1,12 +1,12 @@
-//! Script Executor Module
-//! Stage 56.2 - Script Execution Engine
-//!
-//! Provides enhanced script execution capabilities including:
-//! - File type detection (JS, TS, MJS, CJS, JSON)
-//! - Execution context (__dirname, __filename, process.argv)
-//! - Module resolution (ES Modules and CommonJS)
-//! - Environment variable handling
-//! - Shebang detection
+// Script Executor Module
+// Stage 56.2 - Script Execution Engine
+//
+// Provides enhanced script execution capabilities including:
+// - File type detection (JS, TS, MJS, CJS, JSON)
+// - Execution context (__dirname, __filename, process.argv)
+// - Module resolution (ES Modules and CommonJS)
+// - Environment variable handling
+/// - Shebang detection
 use std::path::PathBuf;
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;

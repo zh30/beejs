@@ -1,5 +1,5 @@
-//! 异步I/O优化模块
-//! 提供高性能的非阻塞I/O操作，支持并发文件读取和脚本执行
+// 异步I/O优化模块
+// 提供高性能的非阻塞I/O操作，支持并发文件读取和脚本执行
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

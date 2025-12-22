@@ -1,5 +1,5 @@
-//! Multi-language Support Module
-//! Provides seamless integration between Beejs and multiple programming languages
+// Multi-language Support Module
+// Provides seamless integration between Beejs and multiple programming languages
 pub mod python_runtime;
 pub mod go_runtime;
 pub mod rust_native;

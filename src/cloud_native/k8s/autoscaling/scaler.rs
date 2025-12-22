@@ -1,5 +1,5 @@
-//! Scaler for applying scale actions to Kubernetes resources
-//! Implements the actual scaling logic for Deployments and StatefulSets
+// Scaler for applying scale actions to Kubernetes resources
+/// Implements the actual scaling logic for Deployments and StatefulSets
 use kube::Api;
 use k8s_openapi::api::apps::v1::{Deployment, StatefulSet};
 use tracing::{info, warn, error};

@@ -1,7 +1,7 @@
-//! Smart Prefetcher - Pattern analysis and predictive loading
-//!
-//! This module analyzes access patterns and predicts which scripts to prefetch
-//! based on frequency, timing, and dependency relationships.
+// Smart Prefetcher - Pattern analysis and predictive loading
+//
+// This module analyzes access patterns and predicts which scripts to prefetch
+// based on frequency, timing, and dependency relationships.
 
 use std::collections::{HashMap};
 use std::collections::BTreeMap;

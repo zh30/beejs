@@ -1,5 +1,5 @@
-//! Stage 93 零拷贝网络栈增强版
-//! 在 Stage 92 基础上进一步优化，实现 AI 驱动的智能零拷贝
+// Stage 93 零拷贝网络栈增强版
+// 在 Stage 92 基础上进一步优化，实现 AI 驱动的智能零拷贝
 
 use memmap2::{Mmap, MmapOptions};
 use std::collections::{BTreeMap, HashMap};

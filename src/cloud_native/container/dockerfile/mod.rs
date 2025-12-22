@@ -1,5 +1,5 @@
-//! Dockerfile builder and optimization module
-//! Provides multi-stage builds and optimization strategies
+// Dockerfile builder and optimization module
+// Provides multi-stage builds and optimization strategies
 pub mod multi_stage;
 pub mod optimization;
 // Re-export types for convenience

@@ -1,5 +1,5 @@
-//! Test Context Management
-//! Manages test suites, test cases, and lifecycle hooks
+// Test Context Management
+/// Manages test suites, test cases, and lifecycle hooks
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};
 use std::time::Duration;

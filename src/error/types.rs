@@ -1,5 +1,5 @@
-//! Stage 89 Phase 2: 统一错误处理类型定义
-//! 提供完整的错误分类、上下文信息和恢复建议
+// Stage 89 Phase 2: 统一错误处理类型定义
+// 提供完整的错误分类、上下文信息和恢复建议
 
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};

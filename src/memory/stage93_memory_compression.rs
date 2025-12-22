@@ -1,6 +1,6 @@
-//! Stage 93 Phase 1.2: 内存压缩
-//! 实现智能内存压缩，减少内存占用
-//! 目标: 内存使用减少 15%+, 压缩速度 100MB/s+
+// Stage 93 Phase 1.2: 内存压缩
+// 实现智能内存压缩，减少内存占用
+// 目标: 内存使用减少 15%+, 压缩速度 100MB/s+
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};

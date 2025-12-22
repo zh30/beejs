@@ -1,5 +1,5 @@
-//! Multi-tenant Isolation Engine
-//! 企业级多租户隔离引擎，提供租户隔离、资源配额和安全策略功能
+// Multi-tenant Isolation Engine
+// 企业级多租户隔离引擎，提供租户隔离、资源配额和安全策略功能
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, RwLock};

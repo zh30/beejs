@@ -1,5 +1,5 @@
-//! Autoscaling module for HPA and VPA
-//! Provides automatic scaling capabilities for workloads
+// Autoscaling module for HPA and VPA
+// Provides automatic scaling capabilities for workloads
 pub mod hpa;
 pub mod metrics;
 pub mod scaler;

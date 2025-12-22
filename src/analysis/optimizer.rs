@@ -1,8 +1,8 @@
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-//! Performance optimization suggestion generator
-//!
-//! This module generates actionable optimization suggestions based on
-//! performance analysis and bottleneck detection results.
+// Performance optimization suggestion generator
+//
+// This module generates actionable optimization suggestions based on
+/// performance analysis and bottleneck detection results.
 use crate::analysis::bottleneck_detector::{
     Bottleneck, BottleneckType, BottleneckDetector, BottleneckSeverity
 };

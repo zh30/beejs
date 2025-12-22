@@ -1,5 +1,5 @@
-//! HTTP/2 服务器实现
-//! 支持 HTTP/2 协议的多路复用特性
+// HTTP/2 服务器实现
+// 支持 HTTP/2 协议的多路复用特性
 
 use crate::network::{NetworkConfig, NetworkError};
 use std::collections::BTreeMap;

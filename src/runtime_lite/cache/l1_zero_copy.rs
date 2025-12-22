@@ -1,7 +1,7 @@
-//! L1 Zero-Copy Cache - Hot data cache with O(1) access
-//!
-//! This module provides the fastest cache level using Arc<[u8]> for zero-copy
-//! data sharing and pre-allocated buffer pools for minimal allocation overhead.
+// L1 Zero-Copy Cache - Hot data cache with O(1) access
+//
+// This module provides the fastest cache level using Arc<[u8]> for zero-copy
+// data sharing and pre-allocated buffer pools for minimal allocation overhead.
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, RwLock};

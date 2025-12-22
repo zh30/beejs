@@ -1,14 +1,14 @@
-//! V8 Engine Advanced Optimization Module
-//!
-//! This module provides advanced V8 engine optimizations specifically tuned
-//! for ultra-high performance JavaScript/TypeScript execution, surpassing Bun.
-//!
-//! Key optimizations:
-//! - Adaptive JIT compilation thresholds
-//! - Memory layout optimization for cache efficiency
-//! - Inline cache optimization
-//! - Hot path identification and optimization
-//! - Garbage collection tuning for minimal pause times
+// V8 Engine Advanced Optimization Module
+//
+// This module provides advanced V8 engine optimizations specifically tuned
+// for ultra-high performance JavaScript/TypeScript execution, surpassing Bun.
+//
+// Key optimizations:
+// - Adaptive JIT compilation thresholds
+// - Memory layout optimization for cache efficiency
+// - Inline cache optimization
+// - Hot path identification and optimization
+// - Garbage collection tuning for minimal pause times
 
 use std::sync::{Arc, Mutex, atomic::Ordering};
 use std::collections::{BTreeMap, HashMap};

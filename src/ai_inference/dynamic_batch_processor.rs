@@ -1,5 +1,5 @@
-//! 动态批处理优化器 - 简化版
-//! Stage 35.0 候选特性 - 动态调整批次大小以优化推理性能
+// 动态批处理优化器 - 简化版
+// Stage 35.0 候选特性 - 动态调整批次大小以优化推理性能
 
 use anyhow::Result;
 use std::collections::{BTreeMap, HashMap};

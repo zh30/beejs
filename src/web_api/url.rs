@@ -1,5 +1,5 @@
-//! URL API implementation for Web standard
-//! Provides URL, URLSearchParams API
+// URL API implementation for Web standard
+/// Provides URL, URLSearchParams API
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::task::Context;

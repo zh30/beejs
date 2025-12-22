@@ -1,5 +1,5 @@
-//! 临时 lock_free 模块
-//! 为兼容性提供临时定义，避免编译错误
+// 临时 lock_free 模块
+// 为兼容性提供临时定义，避免编译错误
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicUsize, Ordering};

@@ -1,6 +1,6 @@
-//! V8 嵌入式内置函数实现
-//! 提供 20+ 个高频操作的 Rust 实现，提升执行性能
-//! Stage 27.1: V8 引擎深度优化
+// V8 嵌入式内置函数实现
+// 提供 20+ 个高频操作的 Rust 实现，提升执行性能
+// Stage 27.1: V8 引擎深度优化
 
 use std::collections::BTreeSet;
 use std::collections::{BTreeMap, HashMap};

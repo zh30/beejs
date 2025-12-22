@@ -1,7 +1,7 @@
-//! CLI Output Formatter Module
-//! Stage 91 Phase 4.1 - 开发者体验提升
-//!
-//! 提供彩色终端输出、进度条、表格格式化等功能
+// CLI Output Formatter Module
+// Stage 91 Phase 4.1 - 开发者体验提升
+//
+// 提供彩色终端输出、进度条、表格格式化等功能
 
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Write, self};

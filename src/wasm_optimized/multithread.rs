@@ -1,7 +1,7 @@
-//! WASM 多线程支持
-//!
-//! 实现 WebAssembly Threads 支持，支持 SharedArrayBuffer 和 Atomics
-//! 实现线性性能扩展 (8 线程 7x+ 性能提升)
+// WASM 多线程支持
+//
+// 实现 WebAssembly Threads 支持，支持 SharedArrayBuffer 和 Atomics
+// 实现线性性能扩展 (8 线程 7x+ 性能提升)
 
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, HashMap};

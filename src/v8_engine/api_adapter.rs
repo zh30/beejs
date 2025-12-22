@@ -1,10 +1,10 @@
-//! V8 API 适配层
-//!
-//! Stage 96 Phase 1: V8 API 兼容性完善
-//! 提供向后兼容性和 API 适配功能
-//!
-//! 该模块实现了一个适配层，允许旧版本的 V8 API 在新版本上运行，
-//! 并提供自动迁移和兼容性检查功能。
+// V8 API 适配层
+//
+// Stage 96 Phase 1: V8 API 兼容性完善
+// 提供向后兼容性和 API 适配功能
+//
+// 该模块实现了一个适配层，允许旧版本的 V8 API 在新版本上运行，
+// 并提供自动迁移和兼容性检查功能。
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

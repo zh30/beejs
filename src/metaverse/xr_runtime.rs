@@ -1,4 +1,4 @@
-//! WebXR/OpenXR 运行时实现
+// WebXR/OpenXR 运行时实现
 
 
 use super::XRPlatform;

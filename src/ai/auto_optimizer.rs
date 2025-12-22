@@ -1,5 +1,5 @@
-//! AI 自动性能优化器
-//! 提供实时性能分析、热点检测和自动优化功能
+// AI 自动性能优化器
+// 提供实时性能分析、热点检测和自动优化功能
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

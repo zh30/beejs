@@ -1,10 +1,10 @@
-//! Graph Components - Advanced graph visualization
-//!
-//! This module provides specialized graph components for system architecture and relationship visualization:
-//! - TopologyGraph: System topology and service mesh visualization
-//! - DependencyGraph: Module dependency and import relationships
-//! - TraceGraph: Request flow and distributed tracing visualization
-//! - NetworkGraph: Network topology and connectivity visualization
+// Graph Components - Advanced graph visualization
+//
+// This module provides specialized graph components for system architecture and relationship visualization:
+// - TopologyGraph: System topology and service mesh visualization
+// - DependencyGraph: Module dependency and import relationships
+// - TraceGraph: Request flow and distributed tracing visualization
+// - NetworkGraph: Network topology and connectivity visualization
 
 use anyhow::{Context, Result, anyhow};
 use std::collections::BTreeMap;

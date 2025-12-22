@@ -1,7 +1,7 @@
-//! Custom metrics definitions for Beejs runtime
-//!
-//! This module provides a comprehensive metrics system for monitoring
-//! runtime performance, resource usage, and business metrics.
+// Custom metrics definitions for Beejs runtime
+//
+// This module provides a comprehensive metrics system for monitoring
+// runtime performance, resource usage, and business metrics.
 
 use prometheus::{Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Opts, Registry};
 use std::collections::{BTreeMap, HashMap};

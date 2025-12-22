@@ -1,5 +1,5 @@
-//! AI 模型接口模块
-//! 提供统一的 AI 模型管理接口
+// AI 模型接口模块
+// 提供统一的 AI 模型管理接口
 
 
 use std::collections::{BTreeMap, HashMap};

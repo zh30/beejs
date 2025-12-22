@@ -1,7 +1,7 @@
-//! 极致内存管理优化模块
-//!
-//! Stage 92 Phase 2: 实现极致内存优化，包括 DMA、内存映射、智能预取和 GC 优化
-//! 目标：80% 内存使用减少，支持 1000-5000x 性能提升
+// 极致内存管理优化模块
+//
+// Stage 92 Phase 2: 实现极致内存优化，包括 DMA、内存映射、智能预取和 GC 优化
+// 目标：80% 内存使用减少，支持 1000-5000x 性能提升
 
 use std::collections::{BTreeMap, HashMap};
 use std::time::{Duration, Instant};

@@ -1,5 +1,5 @@
-//! Fast Path Tests Module
-//! Tests for fast path optimization features
+// Fast Path Tests Module
+// Tests for fast path optimization features
 #[cfg(test)]
 mod tests {
     #[allow(unused_imports)]

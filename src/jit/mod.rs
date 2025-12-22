@@ -1,11 +1,11 @@
-//! JIT Compilation Optimization Module
-//!
-//! This module provides advanced JIT compilation optimizations including:
-//! - V8 optimization configuration
-//! - Hot path optimization with dynamic thresholds (v2)
-//! - Function inlining optimization with intelligent decisions
-//! - Escape analysis optimization
-//! - Dead code elimination
+// JIT Compilation Optimization Module
+//
+// This module provides advanced JIT compilation optimizations including:
+// - V8 optimization configuration
+// - Hot path optimization with dynamic thresholds (v2)
+// - Function inlining optimization with intelligent decisions
+// - Escape analysis optimization
+// - Dead code elimination
 pub mod optimization;
 pub mod hot_path_tracker_v2;
 pub mod inline_strategy;

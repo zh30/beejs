@@ -1,5 +1,5 @@
-//! Package.json Integration Module
-//! Stage 36.0 - 实现 package.json 解析和脚本执行
+// Package.json Integration Module
+/// Stage 36.0 - 实现 package.json 解析和脚本执行
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::collections::{BTreeMap, HashMap};

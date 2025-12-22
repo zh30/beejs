@@ -1,4 +1,4 @@
-//! 神经网络层 (Layers) 实现
+/// 神经网络层 (Layers) 实现
 use super::tensor::Tensor;
 use std::collections::{HashMap, BTreeMap};
 /// 激活函数类型

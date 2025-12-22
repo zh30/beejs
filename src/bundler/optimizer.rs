@@ -1,4 +1,4 @@
-//! Code optimization module
+/// Code optimization module
 use anyhow::Result;
 pub fn optimize_code(code: &str, level: u8) -> Result<String> {
     match level {

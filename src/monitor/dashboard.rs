@@ -1,5 +1,5 @@
-//! Web 仪表板模块
-//! 提供实时性能监控 Web 界面
+// Web 仪表板模块
+// 提供实时性能监控 Web 界面
 
 use crate::monitor::alerts::{AlertInstance, AlertSystem};
 use crate::monitor::data_store::{DataStore, ExportFormat, QueryCondition};

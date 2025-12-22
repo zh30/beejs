@@ -1,5 +1,5 @@
-//! 批量 I/O 操作引擎
-//! 通过批处理多个 I/O 操作来提高网络吞吐量
+// 批量 I/O 操作引擎
+// 通过批处理多个 I/O 操作来提高网络吞吐量
 
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex, RwLock};

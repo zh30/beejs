@@ -1,6 +1,6 @@
-//! Stage 92 Phase 2: 极致内存优化集成引擎
-//!
-//! 整合 DMA、内存映射、智能预取和 GC 优化，实现极致内存性能
+// Stage 92 Phase 2: 极致内存优化集成引擎
+//
+// 整合 DMA、内存映射、智能预取和 GC 优化，实现极致内存性能
 
 use anyhow::{Result, anyhow};
 use std::collections::{BTreeMap, HashMap};

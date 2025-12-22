@@ -1,7 +1,7 @@
-//! Variable Scope Management
-//!
-//! This module provides functionality to inspect and manage variable scopes
-//! in JavaScript contexts, including global, local, closure, and catch scopes.
+// Variable Scope Management
+//
+// This module provides functionality to inspect and manage variable scopes
+/// in JavaScript contexts, including global, local, closure, and catch scopes.
 use std::collections::HashMap;
 use rusty_v8 as v8;
 use crate::debugger::{DebugResult, config::DebugConfig};

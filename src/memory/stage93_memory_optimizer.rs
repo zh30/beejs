@@ -1,5 +1,5 @@
-//! Stage 93 Phase 1.2: 内存优化器综合集成
-//! 整合所有内存优化组件，提供统一的内存管理接口
+// Stage 93 Phase 1.2: 内存优化器综合集成
+// 整合所有内存优化组件，提供统一的内存管理接口
 
 use anyhow::{Result, anyhow};
 use crate::memory::stage93_adaptive_gc::::{Stage93AdaptiveGC, Stage93GCConfig};

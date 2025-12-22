@@ -1,5 +1,5 @@
-//! 向量化优化器
-//! Stage 92 Phase 4: 实现 SIMD 向量化优化
+// 向量化优化器
+// Stage 92 Phase 4: 实现 SIMD 向量化优化
 
 
 use std::collections::{HashMap, HashSet};

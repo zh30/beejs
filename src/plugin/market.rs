@@ -1,4 +1,4 @@
-//! Plugin market module
+/// Plugin market module
 use anyhow::Result;
 #[derive(Debug, Clone)]
 pub struct PluginInfo {

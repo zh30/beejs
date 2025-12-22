@@ -1,5 +1,5 @@
-//! 扩缩容管理器模块
-//! 负责管理集群的自动扩缩容、资源监控和节点生命周期
+// 扩缩容管理器模块
+// 负责管理集群的自动扩缩容、资源监控和节点生命周期
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

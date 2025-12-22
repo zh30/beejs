@@ -1,7 +1,7 @@
-//! 故障检测与恢复模块
-//! 实现智能故障检测、自动恢复和容错机制
-//!
-//! Stage 29.6: 故障检测与恢复 - 提供企业级容错能力
+// 故障检测与恢复模块
+// 实现智能故障检测、自动恢复和容错机制
+//
+// Stage 29.6: 故障检测与恢复 - 提供企业级容错能力
 
 use crate::distributed::service_discovery::{DiscoveryConfig, ServiceDiscovery};
 use std::collections::{BTreeMap, HashMap};

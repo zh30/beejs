@@ -1,8 +1,8 @@
-//! 性能优化模块 - Stage 78 Phase 4: 极致性能监控
-//! 提供动态优化、自适应调优和性能监控能力
-//!
-//! Stage 97: Ultra-High-Performance 优化
-//! 实现超越 Bun 的极致性能优化
+// 性能优化模块 - Stage 78 Phase 4: 极致性能监控
+// 提供动态优化、自适应调优和性能监控能力
+//
+// Stage 97: Ultra-High-Performance 优化
+// 实现超越 Bun 的极致性能优化
 pub mod adaptive_optimizer;
 pub mod performance_monitor;
 pub mod high_performance_core;

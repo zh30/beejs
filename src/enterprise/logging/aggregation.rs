@@ -1,5 +1,5 @@
-//! Log Aggregation System for Beejs
-//! 实现结构化日志记录和聚合功能
+// Log Aggregation System for Beejs
+// 实现结构化日志记录和聚合功能
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};

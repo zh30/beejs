@@ -1,5 +1,5 @@
-//! WebAssembly Runtime
-//! Provides WebAssembly (WASM) support for cross-platform execution
+// WebAssembly Runtime
+// Provides WebAssembly (WASM) support for cross-platform execution
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};

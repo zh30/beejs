@@ -1,25 +1,25 @@
-//! Observability module for Beejs runtime
-//!
-//! This module provides comprehensive monitoring and observability features including:
-//! - Prometheus metrics export
-//! - Structured logging
-//! - Custom metrics
-//!
-//! # Examples
-//!
-//! ```rust
-//! use beejs::observability::{
-//!     PrometheusExporter, StructuredLogger,
-//!     ObservabilityConfig, ObservableMetrics
-//! };
-//!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let config: _ = ObservabilityConfig::default();
-//! let mut observability = ObservableSystem::new(config).await?;
-//!
-//! # Ok(())
-//! # }
-//! ```
+// Observability module for Beejs runtime
+//
+// This module provides comprehensive monitoring and observability features including:
+// - Prometheus metrics export
+// - Structured logging
+// - Custom metrics
+//
+// # Examples
+//
+// ```rust
+// use beejs::observability::{
+//     PrometheusExporter, StructuredLogger,
+//     ObservabilityConfig, ObservableMetrics
+// };
+//
+// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+// let config: _ = ObservabilityConfig::default();
+// let mut observability = ObservableSystem::new(config).await?;
+//
+// # Ok(())
+// # }
+// ```
 pub mod prometheus_exporter;
 pub mod structured_logging;
 pub mod metrics;

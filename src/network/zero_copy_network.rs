@@ -1,5 +1,5 @@
-//! 零拷贝网络栈
-//! 实现基于 DMA 和内存映射的高性能网络 I/O
+// 零拷贝网络栈
+// 实现基于 DMA 和内存映射的高性能网络 I/O
 
 use memmap2::{Mmap, MmapOptions};
 use std::sync::{Arc, Mutex, RwLock};

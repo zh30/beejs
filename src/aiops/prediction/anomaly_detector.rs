@@ -1,7 +1,7 @@
-//! Anomaly Detector
-//!
-//! Detects anomalies in system metrics using statistical methods and machine learning.
-//! Supports various types of anomalies including spikes, drops, level shifts, and trends.
+// Anomaly Detector
+//
+// Detects anomalies in system metrics using statistical methods and machine learning.
+// Supports various types of anomalies including spikes, drops, level shifts, and trends.
 
 use crate::core::data_collector::::{Metric, MetricType};
 use crate::core::error::::{AIOpsError, Result};

@@ -1,10 +1,10 @@
-//! Dashboard Manager - Grafana Integration
-//!
-//! This module provides the core dashboard management functionality:
-//! - Create and manage Grafana dashboards
-//! - Real-time metric collection and visualization
-//! - Custom panel configuration
-//! - Template variable support
+// Dashboard Manager - Grafana Integration
+//
+// This module provides the core dashboard management functionality:
+// - Create and manage Grafana dashboards
+// - Real-time metric collection and visualization
+// - Custom panel configuration
+// - Template variable support
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

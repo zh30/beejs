@@ -1,6 +1,6 @@
-//! Performance analyzer for measuring and analyzing Beejs runtime performance
-//! This module provides tools to measure execution time, cache hit rates,
-//! and other performance metrics.
+// Performance analyzer for measuring and analyzing Beejs runtime performance
+// This module provides tools to measure execution time, cache hit rates,
+// and other performance metrics.
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

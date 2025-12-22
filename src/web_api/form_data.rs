@@ -1,7 +1,7 @@
-//! FormData API implementation per Web standard
-//!
-//! The FormData interface provides a way to construct a set of key/value pairs
-//! representing form fields and their values, which can be sent using fetch().
+// FormData API implementation per Web standard
+//
+// The FormData interface provides a way to construct a set of key/value pairs
+/// representing form fields and their values, which can be sent using fetch().
 use anyhow::Result;
 use rusty_v8 as v8;
 use std::collections::{HashMap, BTreeMap};

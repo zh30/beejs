@@ -1,29 +1,29 @@
-//! Grafana Dashboard Integration Module
-//!
-//! This module provides comprehensive Grafana dashboard integration for Beejs runtime:
-//! - Dashboard management and configuration
-//! - Real-time metric visualization
-//! - Custom chart and graph rendering
-//! - Grafana API integration
-//!
-//! # Examples
-//!
-//! ```rust
-//! use beejs::observability::dashboard::{
-//!     DashboardManager, DashboardConfig, PanelConfig,
-//!     GrafanaClient, ChartRenderer, GraphRenderer, TemplateEngine
-//! };
-//!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let config: _ = DashboardConfig::default();
-//! let manager: _ = DashboardManager::new(config).await?;
-//!
-//! // Create a new dashboard
-//! let dashboard: _ = manager.create_dashboard("beejs-overview")?;
-//!
-//! # Ok(())
-//! # }
-//! ```
+// Grafana Dashboard Integration Module
+//
+// This module provides comprehensive Grafana dashboard integration for Beejs runtime:
+// - Dashboard management and configuration
+// - Real-time metric visualization
+// - Custom chart and graph rendering
+// - Grafana API integration
+//
+// # Examples
+//
+// ```rust
+// use beejs::observability::dashboard::{
+//     DashboardManager, DashboardConfig, PanelConfig,
+//     GrafanaClient, ChartRenderer, GraphRenderer, TemplateEngine
+// };
+//
+// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+// let config: _ = DashboardConfig::default();
+// let manager: _ = DashboardManager::new(config).await?;
+//
+// // Create a new dashboard
+// let dashboard: _ = manager.create_dashboard("beejs-overview")?;
+//
+// # Ok(())
+// # }
+// ```
 pub mod manager;
 pub mod renderer;
 pub use manager::*;

@@ -1,5 +1,5 @@
-//! Kubernetes Operator Controller
-//! Implements the reconciliation loop for BeejsCluster and BeejsWorkload
+// Kubernetes Operator Controller
+// Implements the reconciliation loop for BeejsCluster and BeejsWorkload
 
 use std::sync::Arc;
 

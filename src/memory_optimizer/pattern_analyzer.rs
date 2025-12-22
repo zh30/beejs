@@ -1,5 +1,5 @@
-//! 内存使用模式分析器 - Stage 90 Phase 5.2
-//! 分析内存分配模式，识别优化机会
+// 内存使用模式分析器 - Stage 90 Phase 5.2
+// 分析内存分配模式，识别优化机会
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

@@ -1,5 +1,5 @@
-//! Bundler modules - Stage 43.0
-//! 高性能打包构建系统
+// Bundler modules - Stage 43.0
+// 高性能打包构建系统
 
 use std::collections::{BTreeMap, HashMap};
 

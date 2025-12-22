@@ -1,12 +1,12 @@
-//! AI 推理性能基准测试
-//! Stage 55.1.3: AI 推理性能基准测试
-//!
-//! 该模块提供 AI 推理引擎的基准测试，包括：
-//! - ONNX Runtime 推理性能测试
-//! - PyTorch TorchScript 推理性能测试
-//! - 流式推理延迟测试
-//! - 批处理推理吞吐量测试
-//! - GPU 加速性能测试
+// AI 推理性能基准测试
+// Stage 55.1.3: AI 推理性能基准测试
+//
+// 该模块提供 AI 推理引擎的基准测试，包括：
+// - ONNX Runtime 推理性能测试
+// - PyTorch TorchScript 推理性能测试
+// - 流式推理延迟测试
+// - 批处理推理吞吐量测试
+// - GPU 加速性能测试
 
 use crate::benchmarks::{BenchmarkConfig, BenchmarkFramework, BenchmarkResult, MetricType};
 use std::collections::{BTreeMap, HashMap};

@@ -1,4 +1,4 @@
-//! 去中心化认证系统
+// 去中心化认证系统
 
 
 use std::collections::HashMap;

@@ -1,17 +1,17 @@
-//! Beejs Testing Framework Module
-//! Stage 56.4 - Test Runner Implementation
-//!
-//! Provides Jest-compatible testing framework with:
-//! - test() / describe() / it() APIs
-//! - Assertions (expect, toBe, toEqual, etc.)
-//! - Lifecycle hooks (beforeEach, afterEach, beforeAll, afterAll)
-//! - Test discovery and execution
-//!
-//! Stage 93 Phase 3.3 - Enhanced Testing Framework:
-//! - Enhanced test runner with parallel execution
-//! - Timeout control and retry mechanisms
-//! - Test filtering and sorting
-//! - Performance benchmarking
+// Beejs Testing Framework Module
+// Stage 56.4 - Test Runner Implementation
+//
+// Provides Jest-compatible testing framework with:
+// - test() / describe() / it() APIs
+// - Assertions (expect, toBe, toEqual, etc.)
+// - Lifecycle hooks (beforeEach, afterEach, beforeAll, afterAll)
+// - Test discovery and execution
+//
+// Stage 93 Phase 3.3 - Enhanced Testing Framework:
+// - Enhanced test runner with parallel execution
+// - Timeout control and retry mechanisms
+// - Test filtering and sorting
+// - Performance benchmarking
 pub mod test_context;
 pub mod assertions;
 pub mod test_runner;

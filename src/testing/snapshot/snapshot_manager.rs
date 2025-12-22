@@ -1,5 +1,5 @@
-//! Snapshot Manager
-//! Handles snapshot storage, retrieval, and comparison
+// Snapshot Manager
+// Handles snapshot storage, retrieval, and comparison
 
 
 use std::fs;

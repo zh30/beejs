@@ -1,7 +1,7 @@
-//! Interactive Debug CLI
-//!
-//! Provides a command-line interface for debugging JavaScript/TypeScript code
-//! with support for breakpoints, stepping, and variable inspection.
+// Interactive Debug CLI
+//
+// Provides a command-line interface for debugging JavaScript/TypeScript code
+// with support for breakpoints, stepping, and variable inspection.
 
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Write, self};

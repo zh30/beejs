@@ -1,5 +1,5 @@
-//! Beejs Plugin Engine - Stage 86
-//! 高性能、安全的插件引擎核心实现
+// Beejs Plugin Engine - Stage 86
+// 高性能、安全的插件引擎核心实现
 
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};

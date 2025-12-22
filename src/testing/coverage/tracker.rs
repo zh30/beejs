@@ -1,5 +1,5 @@
-//! Coverage Tracker
-//! Tracks code coverage during test execution
+// Coverage Tracker
+// Tracks code coverage during test execution
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex};

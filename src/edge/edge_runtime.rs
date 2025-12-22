@@ -1,5 +1,5 @@
-//! Edge Runtime Management
-//! High-performance edge runtime with minimal cold start times and resource management
+// Edge Runtime Management
+// High-performance edge runtime with minimal cold start times and resource management
 
 use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};

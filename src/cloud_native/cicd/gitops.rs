@@ -1,5 +1,5 @@
-//! GitOps integration module
-//! Provides ArgoCD and Flux support for GitOps workflows
+// GitOps integration module
+// Provides ArgoCD and Flux support for GitOps workflows
 /// GitOps configuration
 #[derive(Debug, Clone)]
 pub struct GitOpsConfig {

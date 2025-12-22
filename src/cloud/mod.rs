@@ -1,12 +1,12 @@
-//! 云平台适配层模块
-//! Stage 31.2: 云原生增强
-//!
-//! 该模块提供对多个云平台的支持，包括：
-//! - AWS (Amazon Web Services)
-//! - Azure (Microsoft Azure)
-//! - GCP (Google Cloud Platform)
-//! - Cloudflare Workers
-//! - Vercel Edge
+// 云平台适配层模块
+// Stage 31.2: 云原生增强
+//
+// 该模块提供对多个云平台的支持，包括：
+// - AWS (Amazon Web Services)
+// - Azure (Microsoft Azure)
+// - GCP (Google Cloud Platform)
+// - Cloudflare Workers
+// - Vercel Edge
 pub mod aws;
 pub mod azure;
 pub mod gcp;

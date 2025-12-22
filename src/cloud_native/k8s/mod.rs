@@ -1,5 +1,5 @@
-//! Kubernetes integration module
-//! Provides CRDs, Operator controller, and Kubernetes-native features
+// Kubernetes integration module
+// Provides CRDs, Operator controller, and Kubernetes-native features
 pub mod crd;
 /// Re-export CRD types for convenient access
 pub use crd::{
