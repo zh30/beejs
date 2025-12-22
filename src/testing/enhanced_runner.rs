@@ -313,7 +313,7 @@ impl EnhancedRunner {
                     }
                 }
 
-                results.push(result);
+                results.push(result.clone());
 
                 // Bail out on first failure if configured
                 if self.config.bail && !result.passed {
@@ -334,7 +334,7 @@ impl EnhancedRunner {
                     }
                 }
 
-                results.push(result);
+                results.push(result.clone());
 
                 // Bail out on first failure if configured
                 if self.config.bail && !result.passed {
@@ -445,32 +445,29 @@ mod tests {
 
     #[test]
     fn test_test_sorter() {
-        let mut tests = vec![
-            TestCase::new(
-                "b_test".to_string(),
-                rusty_v8::Global::new(
-                    &mut rusty_v8::HandleScope::new(&mut rusty_v8::Isolate::new(rusty_v8::CreateParams::default())),
-                    rusty_v8::Function::new(
-                        &mut rusty_v8::HandleScope::new(&mut rusty_v8::Isolate::new(rusty_v8::CreateParams::default())),
-                        "test",
-                        |_, _, _, _| rusty_v8::undefined(&mut rusty_v8::HandleScope::new(&mut rusty_v8::Isolate::new(rusty_v8::CreateParams::default()))),
-                    ).unwrap(),
-                ),
-                Duration::from_secs(5),
-            ),
-            TestCase::new(
-                "a_test".to_string(),
-                rusty_v8::Global::new(
-                    &mut rusty_v8::HandleScope::new(&mut rusty_v8::Isolate::new(rusty_v8::CreateParams::default())),
-                    rusty_v8::Function::new(
-                        &mut rusty_v8::HandleScope::new(&mut rusty_v8::Isolate::new(rusty_v8::CreateParams::default())),
-                        "test",
-                        |_, _, _, _| rusty_v8::undefined(&mut rusty_v8::HandleScope::new(&mut rusty_v8::Isolate::new(rusty_v8::CreateParams::default()))),
-                    ).unwrap(),
-                ),
-                Duration::from_secs(5),
-            ),
-        ];
+        // Note: This test is simplified to avoid V8 API complexity.
+        // Full V8 integration tests are in tests/ directory.
+
+        // Create a simple mock test case structure
+        let mut tests = Vec::new();
+
+        let test_case1 = TestCase {
+            name: "b_test".to_string(),
+            function: unsafe { std::mem::zeroed() }, // Placeholder - not used in sorting
+            timeout: Duration::from_secs(5),
+            skip: false,
+            only: false,
+        };
+        tests.push(test_case1);
+
+        let test_case2 = TestCase {
+            name: "a_test".to_string(),
+            function: unsafe { std::mem::zeroed() }, // Placeholder - not used in sorting
+            timeout: Duration::from_secs(5),
+            skip: false,
+            only: false,
+        };
+        tests.push(test_case2);
 
         let sorter = TestSorter::ByName;
         sorter.sort(&mut tests, "suite");

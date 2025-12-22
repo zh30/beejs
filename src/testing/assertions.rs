@@ -65,11 +65,11 @@ impl AssertionCheck {
 
     pub fn failure(message: String, expected: Option<String>, actual: Option<String>) -> Self {
         AssertionCheck {
-            passed:,
+            passed: false,
+            message,
             expected,
             actual,
-        false,
-            message }
+        }
     }
 }
 
@@ -166,9 +166,9 @@ where
             ExtendedMatcher::Length(expected) => {
                 if let Ok(json) = serde_json::to_value(value) {
                     match json {
-                        Some(serde_json::Value::Array(arr)) => arr.len() == *expected,
-                        Some(serde_json::Value::Object(obj)) => obj.len() == *expected,
-                        Some(serde_json::Value::String(s)) => s.len() == *expected,
+                        serde_json::Value::Array(arr) => arr.len() == *expected,
+                        serde_json::Value::Object(obj) => obj.len() == *expected,
+                        serde_json::Value::String(s) => s.len() == *expected,
                         _ => false,
                     }
                 } else {
