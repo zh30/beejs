@@ -39,7 +39,7 @@ impl TrafficManager {
             // Canary route (e.g., 10% traffic)
             k8s::istio::networking::v1beta1::HTTPRoute {
                 name: Some(format!("{}-canary", service)),
-                match: Some(vec![
+                r#match: Some(vec![
                     k8s::istio::networking::v1beta1::HTTPMatchRequest {
                         name: None,
                         uri: None,
@@ -107,7 +107,7 @@ impl TrafficManager {
             // Stable route (remaining traffic)
             k8s::istio::networking::v1beta1::HTTPRoute {
                 name: Some(format!("{}-stable", service)),
-                match: None,
+                r#match: None,
                 route: Some(vec![
                     k8s::istio::networking::v1beta1::HTTPRouteDestination {
                         destination: Some(k8s::istio::networking::v1beta1::Destination {
@@ -202,7 +202,7 @@ impl TrafficManager {
             // Version A (e.g., 50% traffic)
             k8s::istio::networking::v1beta1::HTTPRoute {
                 name: Some(format!("{}-version-a", service)),
-                match: Some(vec![
+                r#match: Some(vec![
                     k8s::istio::networking::v1beta1::HTTPMatchRequest {
                         name: None,
                         uri: None,
@@ -270,7 +270,7 @@ impl TrafficManager {
             // Version B (remaining traffic)
             k8s::istio::networking::v1beta1::HTTPRoute {
                 name: Some(format!("{}-version-b", service)),
-                match: None,
+                r#match: None,
                 route: Some(vec![
                     k8s::istio::networking::v1beta1::HTTPRouteDestination {
                         destination: Some(k8s::istio::networking::v1beta1::Destination {

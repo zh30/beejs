@@ -2,11 +2,14 @@
 //! Implements the reconciliation loop for BeejsCluster and BeejsWorkload
 
 use kube::api::{ListParams, Patch, PatchParams};
-use kube::core::{object::HasStatus, Condition};
+use kube::core::object::HasStatus;
 use kube::runtime::controller::{Action, Controller};
 use kube::runtime::events::{Event, EventType, Recorder};
-use kube::runtime::reexport::{Client, Context, Finalizer};
-use kube::{Api, Resource, ResourceExt};
+use kube::{Client, Api, Resource, ResourceExt};
+use k8s_openapi::api::apps::v1::{StatefulSet, StatefulSetSpec};
+use k8s_openapi::api::core::v1::{Service, ServiceSpec, ServicePort, ConfigMap, Secret, PodSpec, Container, ContainerPort, EnvVar, EnvVarSource, ObjectFieldSelector, ResourceRequirements, VolumeMount, Volume, ConfigMapVolumeSource, PersistentVolumeClaim, PersistentVolumeClaimSpec};
+use k8s_openapi::apimachinery::pkg::apis::meta::v1::{ObjectMeta, LabelSelector, LabelSelectorRequirement};
+use k8s_openapi::apimachinery::pkg::util::intstr::IntOrString;
 use std::sync::Arc;
 use tokio::time::Duration;
 use tracing::{info, warn, error, debug};

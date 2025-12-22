@@ -226,7 +226,7 @@ impl IstioConfigManager {
                     http: Some(vec![
                         k8s::istio::networking::v1beta1::HTTPRoute {
                             name: Some(format!("{}-route", service.name)),
-                            match: None,
+                            r#match: None,
                             route: Some(vec![
                                 k8s::istio::networking::v1beta1::HTTPRouteDestination {
                                     destination: Some(k8s::istio::networking::v1beta1::Destination {
@@ -423,7 +423,7 @@ impl IstioConfigManager {
                         },
                     ]),
                     action: Some(k8s::istio::security::v1beta1::AuthorizationPolicy_Action::Allow),
-                    override: None,
+                    r#override: None,
                     provider: None,
                 }),
                 status: None,
